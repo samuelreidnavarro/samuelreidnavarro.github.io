@@ -53,7 +53,6 @@
         #gameWrapper {
             position: relative;
             width: 100%;
-            max-width: 960px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -61,6 +60,9 @@
             padding: 12px;
         }
 
+        body.embedded #gameWrapper { padding: 0; }
+        body.embedded #canvasContainer { max-width: calc(100vh * 2); max-width: calc(100dvh * 2); }
+        body.embedded #fxCanvas { box-shadow: none; }
         #canvasContainer {
             position: relative;
             width: 100%;
@@ -373,8 +375,8 @@
         }
     }
     function syncFsLabels() { const b = document.getElementById('fsPauseBtn'); if (b) b.textContent = fsLabel(); }
-    document.addEventListener('fullscreenchange', syncFsLabels);
-    document.addEventListener('webkitfullscreenchange', syncFsLabels);
+    document.addEventListener('fullscreenchange', () => { syncFsLabels(); pageBackground(); });
+    document.addEventListener('webkitfullscreenchange', () => { syncFsLabels(); pageBackground(); });
 
     // The date of the last change to the game, shown on the title page; set it with every update
     const LAST_UPDATE = '2026-11-03';
@@ -390,8 +392,22 @@
     const ctx = canvas.getContext('2d');
     // Logical game size is 800x400; the backing store is scaled for sharp rendering on high-density screens
     const W = 800, H = 400;
-    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+    let DPR = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = W * DPR; canvas.height = H * DPR;
+    // Inside the site page the game has no box of its own: it fills the frame, on the page's own background
+    const framed = window.self !== window.top;
+    if (framed) document.body.classList.add('embedded');
+    function pageBackground() { document.body.style.background = (framed && !isFullscreen()) ? 'transparent' : T.pageBg; }
+    // The game grows with the window, so the drawing resolution follows the size it is shown at
+    function fitResolution() {
+        const r = canvasContainer.getBoundingClientRect();
+        const s = Math.round(Math.min(3, Math.max(1, r.width * (window.devicePixelRatio || 1) / W)) * 4) / 4;
+        if (s === DPR) return;
+        DPR = s; canvas.width = W * DPR; canvas.height = H * DPR;
+        menuArt = null; fx.setTheme(T);
+    }
+    let fitTimer = 0;
+    window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitResolution, 200); });
     
     const pauseOverlay = document.getElementById('pauseOverlay');
     const pad = document.getElementById('pad');
@@ -686,7 +702,7 @@ let devInvincible = false;
                 if (T.print) { INSTALL_BTN.x = 690; INSTALL_BTN.y = 30; INSTALL_BTN.w = 72; INSTALL_BTN.h = 28; THEME_BTN.x = 566; THEME_BTN.y = 30; THEME_BTN.w = 118; THEME_BTN.h = 28; }
         else { INSTALL_BTN.x = 696; INSTALL_BTN.y = 16; INSTALL_BTN.w = 88; INSTALL_BTN.h = 30; THEME_BTN.x = 584; THEME_BTN.y = 16; THEME_BTN.w = 104; THEME_BTN.h = 30; }
         document.body.dataset.theme = key;
-        document.body.style.background = T.pageBg;
+        pageBackground();
         menuArt = null;
         fx.setTheme(T);
         const sel = document.getElementById('themeSelect'); if (sel) sel.value = key;
@@ -3152,6 +3168,7 @@ let devInvincible = false;
     try { savedTheme = localStorage.getItem('mensuratorTheme') || 'rubrica'; } catch (e) {}
     applyTheme(savedTheme);
     if (location.hash === '#install') { gameState = 'INSTALL_PROMPT'; history.replaceState(null, '', location.pathname); }
+    fitResolution();
     requestAnimationFrame(loop);
 </script>
 </body>

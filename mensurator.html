@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+Double+Pica:ital@0;1&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap">
-  <link rel="stylesheet" href="style.css?v=13">
+  <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
   <header class="banner">
@@ -23,8 +23,20 @@
       <li><a href="cantus-firmus.html">Cantus firmus</a></li>
     </ul>
   </nav>
-  <main class="wide">
-    <iframe class="game" src="games/mensurator.html?v=11" title="Mensurator" allow="fullscreen; autoplay"></iframe>
+  <main class="wide game-page">
+    <iframe class="game" src="games/mensurator.html?v=12" title="Mensurator" allow="fullscreen; autoplay"></iframe>
   </main>
+  <script>
+    // The game fills the window below the menu: as wide as fits, twice as wide as it is tall
+    const frame = document.querySelector('.game');
+    // (on a short screen, such as a phone on its side, it takes the whole height and the page scrolls to it)
+    function fit() {
+        const top = frame.getBoundingClientRect().top + window.scrollY, vh = window.innerHeight;
+        let h = vh - top - 16;
+        if (h < vh * 0.6) h = vh - 16;
+        frame.style.setProperty('--fit-h', Math.max(160, h) + 'px');
+    }
+    fit(); window.addEventListener('resize', fit); document.fonts && document.fonts.ready.then(fit);
+  </script>
 </body>
 </html>
