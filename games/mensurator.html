@@ -266,7 +266,6 @@
 
 <div id="pad" aria-hidden="true">
     <div class="pad-cluster pad-dir">
-        <div class="pad-btn" data-k="down">▼</div>
         <div class="pad-btn" data-k="left">◀</div>
         <div class="pad-btn" data-k="right">▶</div>
     </div>
@@ -283,11 +282,16 @@
         <h2>Modus Formatoris</h2>
         <p>Stadium Classicum (I–VIII) vel pugna cum Diabolo.</p>
         <div class="dev-stage-grid" id="devStageGrid"></div>
-        <button type="button" class="menu-btn danger block" id="devBossBtn">Pugna: MI-FA (Boss)</button>
+        <button type="button" class="menu-btn danger block" id="devBossBtn">Pugna: Mi contra Fa (Boss)</button>
         <div class="dev-warp">
             <label for="devEndlessLevelInput">Endless Mode Warp (0-23):</label>
             <input type="number" id="devEndlessLevelInput" min="0" max="23" value="0">
             <button type="button" class="menu-btn" id="devEndlessJumpBtn" style="margin: 0; padding: 7px 16px;">WARP</button>
+        </div>
+        <div class="dev-warp">
+            <label for="devBuildSelect">Build:</label>
+            <select id="devBuildSelect" style="font-family: inherit; font-size: 14px; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink);"></select>
+            <button type="button" class="menu-btn" id="devBuildBtn" style="margin: 0; padding: 7px 16px;">OPEN</button>
         </div>
         <button type="button" class="menu-btn ghost block" id="devLeaderboardBtn">Test: Nomen in Tabella</button>
         <button type="button" class="menu-btn block" id="devCloseBtn">Claudere</button>
@@ -372,6 +376,16 @@
     document.addEventListener('fullscreenchange', syncFsLabels);
     document.addEventListener('webkitfullscreenchange', syncFsLabels);
 
+    // The date of the last change to the game, shown on the title page; set it with every update
+    const LAST_UPDATE = '2026-11-03';
+    function lastUpdateText() { return new Date(LAST_UPDATE + 'T12:00:00').toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); }
+    // Earlier builds, kept beside the game and opened from the developer panel
+    const BUILDS = [
+        { file: 'mensurator.html', label: '2.1 · 3 November 2026 (this build)' },
+        { file: 'mensurator-v2.html', label: '2.0 · 28 October 2026' },
+        { file: 'mensurator-v1.html', label: '1.0 · 28 October 2026' }
+    ];
+
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     // Logical game size is 800x400; the backing store is scaled for sharp rendering on high-density screens
@@ -412,6 +426,13 @@
         closeDevPanel();
         if (gameState === 'PAUSE') togglePause();
         startGame();
+    });
+    const devBuildSelect = document.getElementById('devBuildSelect');
+    BUILDS.forEach(b => { const o = document.createElement('option'); o.value = b.file; o.textContent = b.label; devBuildSelect.appendChild(o); });
+    document.getElementById('devBuildBtn').addEventListener('click', () => {
+        const f = devBuildSelect.value;
+        if (f !== BUILDS[0].file) location.href = f;
+        else closeDevPanel();
     });
     const devLeaderboardBtn = document.getElementById('devLeaderboardBtn');
     devLeaderboardBtn.addEventListener('click', () => devTestLeaderboard());
@@ -465,7 +486,6 @@
     const fxVolSlider = document.getElementById('fxVol');
     const speedSlider = document.getElementById('speedSlider');
     const speedLabel = document.getElementById('speedLabel');
-    const decaySlider = document.getElementById('decaySlider');
 let isDevUnlocked = false;
 let devInvincible = false;
     // Dev Mode Physics Sliders
@@ -646,13 +666,11 @@ let devInvincible = false;
         () => { gameMode = 'CLASSIC'; currentLevel = 0; startGame(); },
         () => { gameMode = 'ENDLESS'; currentLevel = 0; startGame(); },
         () => { gameMode = 'GRADUS'; currentLevel = 0; startGame(); },
-        () => { gameMode = 'KART'; currentLevel = 0; startGame(); },
         () => { gameState = 'LEADERBOARD'; loadLeaderboard(); }
     ];
-    const MENU_LABELS = ['Ars Antiqua (Classic)', 'Ars Nova (Endless)', 'Gradus ad Parnassum', 'Cursus (Kart)', 'Magistri Mensurarum'];
-    const MODERN_MENU = [[150, 160], [406, 160], [150, 228], [406, 228]].map(([x, y], i) => ({ x, y, w: 244, h: 56, label: MENU_LABELS[i], primary: i === 0, action: MENU_ACTIONS[i] }));
-    const PRINT_MENU = MENU_LABELS.map((label, i) => ({ x: 232, y: 200 + i * 29, w: 330, h: 28, label, primary: i === 0, action: MENU_ACTIONS[i] }));
-    let MENU_BTNS = MODERN_MENU;
+    const MENU_LABELS = ['Ars Antiqua (Classic)', 'Ars Nova (Endless)', 'Gradus ad Parnassum', 'Magistri Mensurarum'];
+    const PRINT_MENU = MENU_LABELS.map((label, i) => ({ x: 232, y: 202 + i * 33, w: 330, h: 31, label, primary: i === 0, action: MENU_ACTIONS[i] }));
+    let MENU_BTNS = PRINT_MENU;
     const INSTALL_BTN = { x: 696, y: 16, w: 88, h: 30 };
     const THEME_BTN = { x: 584, y: 16, w: 104, h: 30 };
     const FS_BTN = { x: 0, y: 16, w: 0, h: 30 };
@@ -665,8 +683,7 @@ let devInvincible = false;
         if (!THEMES[key]) key = 'rubrica';
         themeKey = key; T = THEMES[key];
         Object.assign(C, MODERN_COLORS, T.colors);
-        MENU_BTNS = T.print ? PRINT_MENU : MODERN_MENU;
-        if (T.print) { INSTALL_BTN.x = 690; INSTALL_BTN.y = 30; INSTALL_BTN.w = 72; INSTALL_BTN.h = 28; THEME_BTN.x = 566; THEME_BTN.y = 30; THEME_BTN.w = 118; THEME_BTN.h = 28; }
+                if (T.print) { INSTALL_BTN.x = 690; INSTALL_BTN.y = 30; INSTALL_BTN.w = 72; INSTALL_BTN.h = 28; THEME_BTN.x = 566; THEME_BTN.y = 30; THEME_BTN.w = 118; THEME_BTN.h = 28; }
         else { INSTALL_BTN.x = 696; INSTALL_BTN.y = 16; INSTALL_BTN.w = 88; INSTALL_BTN.h = 30; THEME_BTN.x = 584; THEME_BTN.y = 16; THEME_BTN.w = 104; THEME_BTN.h = 30; }
         document.body.dataset.theme = key;
         document.body.style.background = T.pageBg;
@@ -1079,7 +1096,7 @@ let devInvincible = false;
                 if (!api.active) return;
                 gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, gameTex);
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-                const onPage = gameMode !== 'KART' && ['PLAY', 'PAUSE', 'SPLASH', 'DEATH_FREEZE'].includes(gameState);
+                const onPage = ['PLAY', 'PAUSE', 'SPLASH', 'DEATH_FREEZE'].includes(gameState);
                 gl.uniform2f(api.uScroll, onPage ? cameraX / W : 0, onPage ? cameraY / H : 0);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             }
@@ -1303,31 +1320,31 @@ let devInvincible = false;
         }
     }
 
+    // ===================== Game state =====================
     let gameState = 'MENU'; let previousState = 'MENU'; let gameMode = 'CLASSIC'; let currentLevel = 0;
-    let cameraX = 0; let cameraY = 0; let endlessDistance = 0; let endlessAutoScroll = 0; 
-    let levelTime = 0; let gradusTimer = 0; let lastTime = performance.now(); 
+    let cameraX = 0; let cameraY = 0; let endlessDistance = 0; let endlessAutoScroll = 0;
+    let levelTime = 0; let lastTime = performance.now();
     let accumulator = 0;
     const FIXED_DT_MS = 1000 / 60;
-    
+
     const keys = { right: false, left: false, up: false, down: false, space: false };
     let rightTapCount = 0; let leftTapCount = 0; let lastRightTap = 0; let lastLeftTap = 0;
-    let particles = []; let trail = []; let projectiles = []; 
+    let particles = []; let trail = []; let projectiles = [];
     let boss = { active: false, x: 0, y: 0, hp: 40, maxHp: 40, vy: 2.5, timer: 0, projectiles: [] };
     let lastKiller = null; let deathPlayerState = null;
 
-    function spawnDust(x, y) { for(let i=0; i<6; i++) particles.push({ x: x + 10, y: y + 30, vx: (Math.random() - 0.5) * 3, vy: Math.random() * -3 - 1, life: 1.0, size: Math.random() * 4 + 2 }); }
-    function spawnBlood(x, y, amount = 10) { for(let i=0; i<amount; i++) particles.push({ x: x + 10, y: y + 20, vx: (Math.random() - 0.5) * 8, vy: Math.random() * -6 - 2, life: 1.0, size: Math.random() * 5 + 2, color: '#b30000' }); }
+    function spawnDust(x, y) { for (let i = 0; i < 6; i++) particles.push({ x: x + 10, y: y + 30, vx: (Math.random() - 0.5) * 3, vy: Math.random() * -3 - 1, life: 1.0, size: Math.random() * 4 + 2 }); }
+    function spawnBlood(x, y, amount = 10) { for (let i = 0; i < amount; i++) particles.push({ x: x + 10, y: y + 20, vx: (Math.random() - 0.5) * 8, vy: Math.random() * -6 - 2, life: 1.0, size: Math.random() * 5 + 2, color: '#b30000' }); }
 
-    const player = { x: 50, y: 150, width: 24, height: 48, vx: 0, vy: 0, speed: 6.5, sprintSpeed: 12, jumpPower: -9, grounded: false, jumps: 0, stateValue: 4, invulnerableTimer: 0, isSprinting: false, isTripleSprinting: false, score: 0, currentSlope: 'none', tempusTimer: 0, colorationTimer: 0, allaBreveTimer: 0, history: [], bounceTimer: 0 };
+    const player = { x: 50, y: 150, width: 24, height: 48, vx: 0, vy: 0, speed: 6.5, sprintSpeed: 12, jumpPower: -9, grounded: false, jumps: 0, stateValue: 4, invulnerableTimer: 0, isSprinting: false, isTripleSprinting: false, score: 0, tempusTimer: 0, colorationTimer: 0, allaBreveTimer: 0, history: [], bounceTimer: 0, slide: 0, face: 1 };
     let currentLevelData = null; let respawnPoint = { x: 50, y: 150 };
 
-    // Get current dev mode physics values from sliders
     function getDevPhysics() {
         return {
-            gravity: parseFloat(gravitySlider?.value || 1.2),
-            jumpPower: parseFloat(jumpPowerSlider?.value || 12),
+            gravity: parseFloat(gravitySlider?.value || 0.6),
+            jumpPower: parseFloat(jumpPowerSlider?.value || 9),
             walkSpeed: parseFloat(walkSpeedSlider?.value || 6.5),
-            sprintSpeed: parseFloat(sprintSpeedSlider?.value || 10.5)
+            sprintSpeed: parseFloat(sprintSpeedSlider?.value || 12)
         };
     }
 
@@ -1336,133 +1353,734 @@ let devInvincible = false;
         startBGM(currentLevel);
     }
 
-    function generateLevel(levelIndex, isEndless) {
-        const platforms = [], enemies = [], flyingEnemies = [], jumpingFlats = [], fallingLongas = [];
-        const items = [], scoreNotes = [], checkpoints = [], tempusItems = [], dashPads = [], inkPots = [], allaBreves = [];
-        const groundChunks = [], walls = [], cfStars = []; 
-        let lastPowerupX = -1000;
-        
-        // Enemy generation helper scoped within generateLevel to access variables
-        const createEnemy = (minX, maxX, startX, basePy) => {
-            const types = ['BREVIS_REST', 'SEMIBREVIS_REST', 'MINIMA_REST'];
-            const type = types[Math.floor(Math.random() * types.length)];
-            let spaceY = 290;
-            if (gameMode !== 'GRADUS') {
-                const spaces = [230, 260, 290, 320];
-                spaceY = spaces[Math.floor(Math.random() * spaces.length)];
-            } else {
-                spaceY = basePy - 30; // Approximation for gradus platforms
-            }
+    // ===================== The staff and the gamut =====================
+    // The floor is the bottom line of a five-line staff; every note stands on a real line or space.
+    // p counts staff positions from the bottom line (0) to the top line (8); d counts diatonic steps from C3 (0).
+    const GAP = 36, STEP = GAP / 2, FLOOR = 350, STAFF_TOP = FLOOR - 4 * GAP;
+    const HH = 30, HW = 40, OBL = 36; // head height, head width, half an obliqua
+    const yP = p => FLOOR - p * STEP;
+    const PC = [0, 2, 4, 5, 7, 9, 11];
+    const dMod = d => ((d % 7) + 7) % 7;
+    const semis = d => 12 * Math.floor(d / 7) + PC[dMod(d)];
+    // clefs as the singers knew them: F on the 3rd or 4th line, C on the 2nd, 3rd or 4th
+    const CLEFS = { F3: { k: 'F', line: 3 }, F4: { k: 'F', line: 4 }, C2: { k: 'C', line: 2 }, C3: { k: 'C', line: 3 }, C4: { k: 'C', line: 4 } };
+    const pOf = (d, clef) => d - (clef.k === 'F' ? 3 : 7) + 2 * (clef.line - 1);
 
-            let h = 60, y = spaceY, mult = 1, vIndex = 32;
-            if (type === 'BREVIS_REST') {
-                h = 30;
-                y = gameMode === 'GRADUS' ? basePy - 30 : spaceY;
-                vIndex = 16;
-            } else if (type === 'SEMIBREVIS_REST') {
-                h = 15;
-                y = gameMode === 'GRADUS' ? basePy - 30 : spaceY;
-                vIndex = 8;
-            } else if (type === 'MINIMA_REST') {
-                h = 15;
-                y = gameMode === 'GRADUS' ? basePy - 15 : spaceY + 15;
-                mult = 1.4;
-                vIndex = 4;
-            }
-            
-            let spd = (gameMode === 'GRADUS' ? 1.5 : (1.5 + (levelIndex * 0.2))) * mult;
-            return { x: startX, y: y, w: 12, h: h, baseVx: spd, vx: spd, minX: minX, maxX: maxX, aggro: false, dead: false, damage: vIndex, valueIndex: vIndex, type: type };
-        };
+    // Final, plagal or authentic, the clef that fits the ambitus on the staff, and the reciting tone above the final
+    const MODE_THEORY = [
+        [1, 0, 'F3', 4], [1, 1, 'F4', 2], [2, 0, 'C4', 5], [2, 1, 'F4', 3], [3, 0, 'C4', 4], [3, 1, 'F3', 2],
+        [4, 0, 'C3', 4], [4, 1, 'F3', 3], [5, 0, 'C3', 4], [5, 1, 'C4', 2], [7, 0, 'C2', 4], [7, 1, 'C3', 2]
+    ];
+    function modeInfo(i) {
+        const [final, plagal, ck, dom] = MODE_THEORY[i % 12], clef = CLEFS[ck];
+        let lo = plagal ? final - 4 : final - 1, hi = plagal ? final + 5 : final + 7;
+        while (pOf(lo, clef) < 1) lo++;
+        while (pOf(hi, clef) > 9) hi--;
+        return { final, plagal, clef, dom: final + dom, lo, hi };
+    }
+    const NOTE_NAMES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
-        if (gameMode === 'GRADUS') {
-            const length = 50000; let py = 350; let px = 400; platforms.push({ x: -1000, y: 350, w: 3000, h: 50, type: 'ground', shakeTimer: 0, falling: false });
-            for(let i = 0; i < 2000; i++) {
-                py -= 40 + Math.random() * 30; px += (Math.random() > 0.5 ? 1 : -1) * (60 + Math.random() * 80); 
-                if (px < 50) px = 50 + Math.random()*50; if (px > 650) px = 650 - Math.random()*50;
-                let pType = 'normal'; let r = Math.random();
-                if (r > 0.8) pType = 'ice'; else if (r > 0.6) pType = 'descend'; else if (r > 0.4) pType = 'rising';
-                
-                let pw = 73 + Math.random() * 147;
-                platforms.push({ x: px, y: py, w: pw, h: 20, type: pType, shakeTimer: 0, falling: false });
-                
-                if (Math.random() > 0.52) scoreNotes.push({ x: px + 30, y: py - 30, w: 15, h: 15, active: true });
-                if (Math.random() > 0.86) enemies.push(createEnemy(px, px + 40, px, py));
-                if (Math.random() > 0.93) jumpingFlats.push({ x: px + 20, baseY: py - 20, y: py - 20, w: 20, h: 30, state: 'idle', timer: Math.random() * 60, vy: 0, dead: false, damage: 4, valueIndex: 4, type: 'FLAT' });
-                
-                if (py > -48000 && (px - lastPowerupX > 800 || lastPowerupX - px > 800)) {
-                    if (Math.random() > 0.95) { tempusItems.push({ x: px + pw/2, y: py - 50, w: 25, h: 25, active: true }); lastPowerupX = px; }
-                    else if (Math.random() > 0.95) { allaBreves.push({ x: px + pw/2, y: py - 50, w: 25, h: 25, active: true }); lastPowerupX = px; }
-                }
-            }
-            return { length, platforms, groundChunks, dashPads, walls, fallingLongas, inkPots, allaBreves, cfStars, enemies, flyingEnemies, jumpingFlats, items, scoreNotes, tempusItems, checkpoints, hasFuga: true, goal: {x:0, y:-50000, w:800, h:40} }; 
-        }
-
-        const length = isEndless ? 250000 : 8000 + (levelIndex * 2000); 
-        let cx = 0;
-        let gapChance = (levelIndex === 7) ? 0 : Math.min(0.1 + (levelIndex * 0.055), 0.48);
-        let enemyChance = Math.min(0.16 + (levelIndex * 0.065), 0.52);
-        let hazardChance = Math.min(levelIndex * 0.11, 0.46); 
-        let longaChance = Math.min(levelIndex * 0.11, 0.4);
-
-        let heightOptions = [295, 265];
-        if (levelIndex >= 2 || isEndless) heightOptions.push(235);
-        if (levelIndex >= 4 || isEndless) heightOptions.push(205);
-        if (levelIndex >= 6 || isEndless) heightOptions.push(175, 145);
-        
-        let inkPotSpawned = false;
-
-        while (cx < length) {
-            let w = Math.floor(Math.random() * 400) + 200; if (cx + w > length) w = length - cx;
-            let gap = (Math.random() < gapChance && levelIndex !== 7) ? Math.floor(Math.random() * (80 + levelIndex * 15)) + 80 : 0; if (cx === 0) gap = 0; 
-            groundChunks.push({ x: cx, w: w }); let hasWall = (levelIndex !== 7 && cx > 400 && Math.random() > 0.6);
-            if (hasWall) {
-                walls.push({ x: cx + w/2, y: 230, w: 4, h: 120 });
-                if (Math.random() < enemyChance) enemies.push(createEnemy(cx + 10, cx + w/2 - 20, cx + 20, 0));
-                if (Math.random() < enemyChance) enemies.push(createEnemy(cx + w/2 + 10, cx + w - 20, cx + w/2 + 20, 0));
-            } else { 
-                if (Math.random() < enemyChance) enemies.push(createEnemy(cx + 10, cx + w - 20, cx + w/2, 0)); 
-            }
-            if (Math.random() < hazardChance) jumpingFlats.push({ x: cx + w/3, baseY: 320, y: 320, w: 20, h: 30, state: 'idle', timer: Math.random() * 60 + 20, vy: 0, dead: false, damage: 4, valueIndex: 4, type: 'FLAT' }); cx += w + gap;
-        }
-
-        const platStride = 328 + Math.min(levelIndex * 24, 160);
-        for(let i=400; i<length-400; i+= platStride) {
-            let py = heightOptions[Math.floor(Math.random() * heightOptions.length)]; 
-            let pw = 73 + Math.random() * 147; 
-            let pType = 'normal'; let r = Math.random(); 
-            if (r > 0.8) pType = 'ice'; else if (r > 0.6) pType = 'descend'; else if (r > 0.4) pType = 'rising';
-            
-            platforms.push({ x: i, y: py, w: pw, h: 20, type: pType, shakeTimer: 0, falling: false });
-            
-            if (i - lastPowerupX > 800) {
-                if (Math.random() > 0.95) { tempusItems.push({ x: i + pw/2, y: py - 50, w: 25, h: 25, active: true }); lastPowerupX = i; }
-                else if (Math.random() > 0.95) { allaBreves.push({ x: i + pw/2, y: py - 50, w: 25, h: 25, active: true }); lastPowerupX = i; }
-                else if (!inkPotSpawned && Math.random() > 0.90) { inkPots.push({ x: i + pw/2, y: py - 50, w: 20, h: 25, active: true }); inkPotSpawned = true; lastPowerupX = i; }
-            }
-            
-            const aerialTone = 1 - Math.min(levelIndex * 0.05, 0.28);
-            if (Math.random() < hazardChance * aerialTone) { let flyY = Math.max(py - 80, 50); flyingEnemies.push({ x: i + 150, y: flyY, w: 20, h: 40, baseY: flyY, time: Math.random()*100, dead: false, damage: 4, valueIndex: 4, type: 'SHARP' }); }
-            if (Math.random() < longaChance * aerialTone) fallingLongas.push({ x: i + 200, baseY: 80, y: 80, w: 22, h: 60, vy: 0, state: 'idle', shakeTimer: 0, dead: false, damage: 16, valueIndex: 16, type: 'LONGA_REST' });
-        }
-
-        let scoreX = 400;
-        while (scoreX < length - 200) { scoreNotes.push({ x: scoreX, y: 150 + Math.sin(scoreX/150)*40, w: 15, h: 15, active: true }); scoreX += 275 + Math.min(levelIndex * 22, 120) + Math.random() * 100; }
-
-        if (!isEndless) {
-            checkpoints.push({ x: length * 0.33, w: 20, h: 150, active: true, label: "Clausula Media" }); checkpoints.push({ x: length * 0.66, w: 20, h: 150, active: true, label: "Clausula Tenoris" });
-            if (levelIndex === 7) checkpoints.push({ x: length - 1200, w: 20, h: 150, active: true, label: "Porta Diaboli" });
-        }
-        return { length: length, platforms: platforms, groundChunks: groundChunks, dashPads: dashPads, walls: walls, fallingLongas: fallingLongas, inkPots: inkPots, allaBreves: allaBreves, cfStars: cfStars, enemies: enemies, flyingEnemies: flyingEnemies, jumpingFlats: jumpingFlats, items: items, scoreNotes: scoreNotes, tempusItems: tempusItems, checkpoints: checkpoints, goal: { x: length - 200, y: 0, w: 40, h: 400 }, hasFuga: !isEndless && (levelIndex === 3 || levelIndex === 5 || levelIndex === 7) };
+    function pickW(R, list) { // [[value, weight], ...]
+        let t = 0; for (const e of list) t += e[1];
+        let r = R() * t;
+        for (const e of list) { if ((r -= e[1]) < 0) return e[0]; }
+        return list[list.length - 1][0];
     }
 
+    // A phrase: it opens on a note of the mode, climbs toward the reciting tone, and closes with a clausula.
+    // Mostly steps, some thirds, rare fourths and fifths; a leap is answered by a step the other way; never a tritone.
+    function composePhrase(R, M, start, end, peak, len, fromBelow) {
+        const ds = [start];
+        let lastIv = 0;
+        const body = len - 2;
+        for (let i = 1; i < body; i++) {
+            const cur = ds[i - 1], goal = i / body < 0.55 ? peak : end + 2;
+            const cands = [];
+            for (const iv of [-4, -3, -2, -1, 1, 2, 3, 4]) {
+                const d = cur + iv;
+                if (d < M.lo || d > M.hi) continue;
+                if (Math.abs(semis(d) - semis(cur)) === 6) continue;
+                if (Math.abs(lastIv) >= 3 && (Math.abs(iv) > 1 || Math.sign(iv) === Math.sign(lastIv))) continue;
+                if (i >= 2 && d === ds[i - 2] && Math.abs(iv) > 1) continue;
+                // two leaps the same way must not outline more than a fifth
+                if (Math.abs(lastIv) >= 2 && Math.abs(iv) >= 2 && Math.sign(iv) === Math.sign(lastIv) && Math.abs(iv + lastIv) > 4) continue;
+                let w = [0, 6, 3, 1.2, 0.7][Math.abs(iv)];
+                if (Math.abs(lastIv) >= 2 && Math.abs(iv) >= 2 && Math.sign(iv) === Math.sign(lastIv)) w *= 0.3;
+                if (iv <= -3) w *= 0.4;
+                const toward = Math.sign(goal - cur);
+                if (toward && Math.sign(iv) === toward) w *= 2.4; else if (toward) w *= 0.55;
+                cands.push([d, w]);
+            }
+            const d = cands.length ? pickW(R, cands) : cur + (cur < goal ? 1 : -1);
+            lastIv = d - cur; ds.push(d);
+        }
+        // the clausula: the step above the cadence note, or the step below it (raised where the mode needs it)
+        const pen = fromBelow ? end - 1 : end + 1;
+        let last = ds[ds.length - 1];
+        if (last === pen) { ds.push(end); return ds; }
+        // come down (or up) to the clausula by thirds and steps, never by a tritone
+        while (Math.abs(pen - last) > 2 || Math.abs(semis(last) - semis(pen)) === 6) {
+            let nx = last + Math.sign(pen - last) * 2;
+            if (Math.abs(semis(nx) - semis(last)) === 6) nx = last + Math.sign(pen - last);
+            if (nx === pen) break;
+            ds.push(nx); last = nx;
+        }
+        ds.push(pen, end);
+        return ds;
+    }
+
+    // ===================== Composing a level =====================
+    function newLevel(seed, modeIdx, diff, endless, levelIdx) {
+        return {
+            R: rng(seed), endless, diff, modeIdx, levelIdx, modeStartX: 0, target: 0,
+            systems: [], groups: [], rests: [], thwomps: [], flats: [], sharps: [], notes: [], powerups: [], checkpoints: [],
+            x: 0, sys: null, sysLen: 2000, queue: [], phrases: 0, lastEnd: null, prevGroup: null, labelNext: false, inkAt: 0,
+            goal: { x: Infinity }, length: Infinity, hasFuga: false, done: false, cps: 0, enemySpeed: 1.5, pruneT: 0, inscription: null, arenaX: Infinity
+        };
+    }
+
+    // A ligature follows the rules of the period:
+    //  first note: a stem down on the left makes a descending first note a breve (cum proprietate) and an ascending one a longa;
+    //              a stem up on the left makes the first two notes semibreves (cum opposita proprietate);
+    //  last note:  descending and square, a longa; descending in an obliqua, a breve; ascending, a breve unless it has a stem down on its right;
+    //  no pitch is repeated inside a ligature, and an obliqua joins exactly two notes.
+    function makeLigature(R, notes) {
+        const n = notes.length, asc0 = notes[1].d > notes[0].d, descEnd = notes[n - 1].d < notes[n - 2].d;
+        const r = R();
+        const stemL = r < 0.18 ? 'up' : r < 0.9 ? (asc0 ? null : 'down') : (asc0 ? 'down' : null);
+        const oblEnd = descEnd && R() < 0.38;
+        const oblStart = !asc0 && n >= 3 && (!oblEnd || n >= 4) && R() < 0.22;
+        if (oblStart) notes[0].obl = true;
+        if (oblEnd) notes[n - 2].obl = true;
+        return { kind: 'group', lig: true, notes, stemL, stemR: !descEnd && R() < 0.3 };
+    }
+    const single = (note, val) => ({ kind: 'group', lig: false, notes: [note], val });
+
+    function phraseEvents(L, last) {
+        const R = L.R, d = L.diff, M = modeInfo(L.modeIdx);
+        const len = 6 + Math.floor(R() * 4 + d * 4);
+        const inRange = x => x >= M.lo && x <= M.hi;
+        const opens = [M.final, M.final, M.final + 2, M.dom].filter(inRange);
+        const start = L.lastEnd != null && R() < 0.5 && inRange(L.lastEnd) ? L.lastEnd : opens[Math.floor(R() * opens.length)];
+        let end = last ? M.final : pickW(R, [[M.final, 4], [M.dom, 2], [M.final + 2, 1]]);
+        if (!inRange(end + 1)) end = M.final;
+        const peak = Math.min(M.hi, R() < 0.6 ? M.dom + Math.floor(R() * 3) : M.hi - Math.floor(R() * 2));
+        // a cadence from below: on D, G and A the leading note is raised with a written diesis; on C and F it is a semitone already; never on E
+        const em = dMod(end);
+        const fromBelow = inRange(end - 1) && [0, 1, 3, 4, 5].includes(em) && R() < 0.45;
+        const ds = composePhrase(R, M, start, end, peak, len, fromBelow);
+        L.lastEnd = end;
+        const notes = ds.map(x => ({ d: x }));
+        // musica ficta that the singer is told: "una nota super la semper est canendum fa", and the raised leading note
+        const flatModes = [1, 3].includes(dMod(M.final));
+        const write = R() < 0.3 + 0.7 * d;
+        notes.forEach((nt, i) => {
+            if (flatModes && dMod(nt.d) === 6 && i > 0 && i < notes.length - 1 && notes[i - 1].d === nt.d - 1 && (notes[i + 1].d === nt.d - 1 || notes[i + 1].d <= nt.d - 2) && write) nt.flat = true;
+        });
+        if (fromBelow && [1, 4, 5].includes(em) && write) notes[notes.length - 2].sharp = true;
+
+        // group the notes: ligatures and single notes, the last a longa (a maxima at the very end)
+        const groups = [];
+        let i = 0;
+        while (i < notes.length) {
+            if (i === notes.length - 1) { groups.push(single(notes[i], last ? 'MX' : 'L')); break; }
+            let size = Math.min(pickW(R, [[1, 3], [2, 4], [3, 3], [4, 1]]), notes.length - 1 - i);
+            for (let k = 1; k < size; k++) if (notes[i + k].d === notes[i + k - 1].d) { size = k; break; }
+            groups.push(size === 1 ? single(notes[i], R() < 0.3 ? 'L' : 'B') : makeLigature(R, notes.slice(i, i + size)));
+            i += size;
+        }
+        const colorP = 0.04 + 0.32 * d;
+        groups.forEach((g, k) => {
+            g.colored = k < groups.length - 1 && R() < colorP; // blackened notes crumble under the foot
+            const prev = k ? groups[k - 1].notes[groups[k - 1].notes.length - 1].d : null;
+            const rise = prev == null ? 0 : g.notes[0].d - prev;
+            g.pre = k === 0 ? 36 : 26 + 44 * d + R() * 28 + Math.max(0, rise - 2) * 6;
+        });
+        const lastG = groups[groups.length - 1];
+        lastG.phraseEnd = true;
+        if (last) lastG.fermata = true;
+        L.phrases++;
+        return groups;
+    }
+
+    function restZone(L) {
+        const R = L.R, d = L.diff;
+        const easy = !L.endless && L.levelIdx === 0 && L.phrases <= 1;
+        const n = easy ? 0 : Math.max(0, Math.round(R() * (1 + 2 * d) + 0.3 + d));
+        const list = [];
+        for (let i = 0; i < n; i++) list.push(pickW(R, [['MINIMA', 1.3 - d], ['SEMIBREVIS', 1], ['BREVIS', 0.2 + 1.3 * d], ['LONGA', Math.max(0, d - 0.35) * 1.6]]));
+        return { kind: 'rest', pre: 30, w: 170 + n * 120, list, thwomp: !easy && d > 0.12 && R() < 0.12 + 0.4 * d, run: R() < 0.6 };
+    }
+
+    // rests stand where they are written: the minim rest on a line, the semibreve rest hanging from one, the breve rest filling a space, the longa two
+    const REST_TYPES = {
+        MINIMA: { value: 4, top: FLOOR - STEP, h: STEP, mult: 1.4 },
+        SEMIBREVIS: { value: 8, top: FLOOR - GAP, h: STEP, mult: 1 },
+        BREVIS: { value: 16, top: FLOOR - GAP, h: GAP, mult: 1 },
+        LONGA: { value: 32, top: FLOOR - 2 * GAP, h: 2 * GAP, mult: 0.8 }
+    };
+
+    function systemGap(L) { return L.levelIdx === 0 && !L.endless ? 60 + L.R() * 30 : 70 + 150 * L.diff + L.R() * 40; }
+
+    function openSystem(L) {
+        const M = modeInfo(L.modeIdx), first = L.systems.length === 0;
+        const sys = { x0: L.x, x1: Infinity, clef: M.clef, modeIdx: L.modeIdx, first, label: first || L.labelNext, custos: null, final: false };
+        L.labelNext = false;
+        L.systems.push(sys); L.sys = sys; L.prevGroup = null;
+        L.sysLen = 1500 + L.R() * 900;
+        L.x += first ? 150 : 76;
+        // a new mensuration may stand at the head of a line: tempus perfectum slows the beat, the stroke through the C doubles it
+        if (!first && L.R() < 0.3) {
+            L.powerups.push({ kind: L.R() < 0.5 ? 'tempus' : 'dupla', x: L.x - 10, y: yP(4) - 12.5, w: 25, h: 25, active: true });
+            L.x += 46;
+        }
+    }
+
+    function closeSystem(L, nextD, final) {
+        const sys = L.sys;
+        L.x += final ? 24 : 50;
+        sys.x1 = L.x; sys.final = !!final;
+        if (!final && nextD != null) sys.custos = Math.max(-1, Math.min(10, pOf(nextD, sys.clef)));
+        L.sys = null; L.prevGroup = null;
+        if (!final) L.x += systemGap(L);
+    }
+
+    function firstPitch(ev, queue) {
+        if (ev.kind === 'group') return ev.notes[0].d;
+        for (const e of queue) if (e.kind === 'group') return e.notes[0].d;
+        return null;
+    }
+
+    function planMore(L) {
+        let fresh = false;
+        if (L.endless && L.x - L.modeStartX > 7200) {
+            L.modeIdx = (L.modeIdx + 1) % modesData.length; L.modeStartX = L.x; L.labelNext = true; L.lastEnd = null;
+            L.diff = Math.min(1, L.diff + 0.06); L.enemySpeed += 0.15; fresh = true;
+        }
+        const last = !L.endless && L.x > L.target;
+        const evs = phraseEvents(L, last);
+        if (fresh) evs[0].newSystem = true;
+        L.queue.push(...evs);
+        if (last) { L.queue.push({ kind: 'end' }); return; }
+        L.queue.push(restZone(L));
+    }
+
+    function placeGroup(L, g) {
+        let x = L.x;
+        const n = g.notes;
+        for (let i = 0; i < n.length; i++) {
+            if (n[i].obl) { n[i].x = x; n[i].w = OBL; n[i + 1].x = x + OBL; n[i + 1].w = OBL; x += 2 * OBL; i++; continue; }
+            n[i].x = x; n[i].w = g.val === 'MX' ? 2 * OBL : HW; x += n[i].w;
+        }
+        g.x = L.x; g.w = x - L.x; g.dy = 0; g.vy = 0; g.shake = 0; g.falling = false; g.stepped = false; g.clef = L.sys.clef; const oy = g.oy = L.oy || 0;
+        n.forEach(nt => { nt.p = pOf(nt.d, g.clef); });
+        g.surf = [];
+        for (let i = 0; i < n.length; i++) {
+            if (n[i].obl) { g.surf.push({ x: n[i].x, w: 2 * OBL, t0: yP(n[i].p) - HH / 2 + oy, t1: yP(n[i + 1].p) - HH / 2 + oy }); i++; }
+            else g.surf.push({ x: n[i].x, w: n[i].w, t0: yP(n[i].p) - HH / 2 + oy, t1: yP(n[i].p) - HH / 2 + oy });
+        }
+        L.groups.push(g);
+        // the written accidentals: a b-rotundum before the ligature on the line or space of its B, a diesis over the raised note
+        const fl = n.find(nt => nt.flat);
+        if (fl) L.flats.push({ x: g.x - 24, baseY: yP(fl.p) - 31 + oy, y: yP(fl.p) - 31 + oy, w: 20, h: 38, state: 'idle', timer: Math.random() * 60 + 30, vy: 0, dead: false, damage: 4, valueIndex: 4, type: 'FLAT', d: fl.d });
+        n.filter(nt => nt.sharp).forEach(nt => L.sharps.push({ x: nt.x + nt.w / 2 - 10, baseY: yP(nt.p) - 78 + oy, y: yP(nt.p) - 78 + oy, w: 20, h: 30, time: Math.random() * 6, dead: false, damage: 4, valueIndex: 4, type: 'SHARP' }));
+        // a leap between two notes is filled in with running semiminims, as a singer would diminish it
+        const pg = L.prevGroup;
+        if (pg) {
+            const a = pg.notes[pg.notes.length - 1].d, b = n[0].d, gap = g.x - (pg.x + pg.w);
+            if (Math.abs(b - a) >= 2 && gap >= 44) {
+                const dir = Math.sign(b - a), cnt = Math.min(Math.abs(b - a) - 1, Math.floor(gap / 22));
+                for (let k = 1; k <= cnt; k++) {
+                    const dd = a + dir * k;
+                    L.notes.push({ x: pg.x + pg.w + gap * k / (cnt + 1) - 7, p: pOf(dd, g.clef), oy, active: true });
+                }
+            }
+        }
+        // the coloration of the scribe's ink pot, over the top of a phrase
+        if (!L.inkPlaced && g.phraseEnd === undefined && L.x > L.inkAt && L.R() < 0.08) {
+            const top = n.reduce((m, nt) => nt.p > m.p ? nt : m, n[0]);
+            L.powerups.push({ kind: 'ink', x: top.x + top.w / 2 - 10, y: yP(top.p) - 92 + oy, w: 20, h: 25, active: true });
+            L.inkAt = L.x + (L.endless ? 6000 : Infinity);
+            if (!L.endless) L.inkPlaced = true;
+        }
+        L.prevGroup = g;
+        // a clausula in the middle of the piece, marked with a fermata, is where a fallen singer starts again
+        if (g.phraseEnd && !L.endless && L.cps < 2 && L.x > L.target * (L.cps === 0 ? 0.33 : 0.66) && L.x < L.target) {
+            L.cps++;
+            L.checkpoints.push({ x: x + 22, active: true, label: L.cps === 1 ? 'Clausula media' : 'Clausula tenoris' });
+            x += 40;
+        }
+        return x - L.x;
+    }
+
+    function placeRest(L, ev) {
+        const n = ev.list.length, seg = (ev.w - 40) / Math.max(1, n);
+        ev.list.forEach((type, i) => {
+            const t = REST_TYPES[type], minX = L.x + 20 + i * seg, maxX = minX + seg - 16, spd = L.enemySpeed * t.mult;
+            L.rests.push({ x: minX + seg / 2 - 6, y: t.top, w: 12, h: t.h, baseVx: spd, vx: L.R() < 0.5 ? spd : -spd, minX, maxX, aggro: false, dead: false, damage: t.value, valueIndex: t.value, type: type + '_REST' });
+        });
+        // a perfect longa rest, three spaces tall, waits above the staff and drops into its place
+        if (ev.thwomp) L.thwomps.push({ x: L.x + ev.w / 2 - 11, baseY: 86, y: 86, w: 22, h: 3 * GAP, vy: 0, state: 'idle', shakeTimer: 0, dead: false, damage: 48, valueIndex: 48, type: 'LONGA_REST' });
+        // a run of semiminims over the rests, rising and falling by step
+        if (ev.run) {
+            const cnt = Math.max(3, Math.floor(ev.w / 44)), base = 4 + Math.floor(L.R() * 2);
+            for (let k = 0; k < cnt; k++) {
+                const up = Math.min(k, cnt - 1 - k);
+                L.notes.push({ x: L.x + 24 + (ev.w - 48) * k / Math.max(1, cnt - 1) - 7, p: Math.min(9, base + up), active: true });
+            }
+        }
+        return ev.w;
+    }
+
+    function finishLevel(L) {
+        if (L.levelIdx === 7 && !L.endless) { L.x += 60; L.arenaX = L.x; L.x += 800 - 60; }
+        L.goal = { x: L.x + 20, y: 0, w: 40, h: 400 };
+        L.x += 40;
+        closeSystem(L, null, true);
+        L.length = L.x;
+        if (L.levelIdx === 7) L.length = L.arenaX + 800;
+        L.done = true;
+    }
+
+    function fill(L, untilX) {
+        while (!L.done && L.x < untilX) {
+            if (L.queue.length < 3) planMore(L);
+            const ev = L.queue.shift();
+            if (ev.kind === 'end') { finishLevel(L); break; }
+            if (ev.newSystem && L.sys) closeSystem(L, firstPitch(ev, L.queue));
+            if (!L.sys) openSystem(L);
+            if (L.x + (ev.pre || 0) + (ev.w || 120) > L.sys.x0 + L.sysLen && L.x > L.sys.x0 + 500) { closeSystem(L, firstPitch(ev, L.queue)); openSystem(L); }
+            else L.x += ev.pre || 0;
+            L.x += ev.kind === 'group' ? placeGroup(L, ev) : placeRest(L, ev);
+        }
+    }
+
+    function prune(L) {
+        const cut = cameraX - 600, keep = o => (o.x + (o.w || 20)) > cut;
+        L.groups = L.groups.filter(keep); L.rests = L.rests.filter(keep); L.thwomps = L.thwomps.filter(keep);
+        L.flats = L.flats.filter(keep); L.sharps = L.sharps.filter(keep); L.notes = L.notes.filter(keep); L.powerups = L.powerups.filter(keep);
+        L.systems = L.systems.filter(s => s.x1 > cut);
+    }
+
+    function generateLevel(levelIndex, isEndless) {
+        const seed = isEndless ? (Math.random() * 1e9) | 0 : 1201 + levelIndex * 7919;
+        const L = newLevel(seed, levelIndex, isEndless ? Math.min(1, levelIndex * 0.05) : levelIndex / 7, isEndless, levelIndex);
+        L.enemySpeed = 1.5 + levelIndex * 0.2;
+        L.hasFuga = levelIndex === 3 || levelIndex === 5 || levelIndex === 7;
+        if (L.hasFuga && !isEndless) L.inscription = 'Fuga in unisono post tempus';
+        if (isEndless) { L.inkAt = 3000; fill(L, W * 3); }
+        else { L.target = 7000 + levelIndex * 1700; L.inkAt = L.target * 0.3; fill(L, Infinity); }
+        return L;
+    }
+
+    // ===================== Gradus ad Parnassum =====================
+    // A page of staves climbed from the bottom up. Each line is read left to right and climbs the staff in a sequence,
+    // as in a solmization exercise; at the end of a line the custos shows the first note of the line above,
+    // and the singer runs off the right edge of the page to come back on the left.
+    const PERIOD = 4 * GAP + 72;
+    const SEQUENCES = [ // [intervals repeated, first position, how hard]
+        [[1], 1, 0], [[2, -1], 2, 0.2], [[1, 1, -1], 3, 0.35], [[2, 2, -3], 1, 0.55], [[3, -2], 2, 0.75]
+    ];
+    function gradusLevel(modeIdx) {
+        const L = newLevel((Math.random() * 1e9) | 0, modeIdx, 0.1, true, modeIdx);
+        L.gradus = true; L.staff = 0; L.gradusT = 0; L.next = null;
+        return L;
+    }
+    function pickSequence(L) {
+        const R = L.R, fit = SEQUENCES.filter(q => q[2] <= L.diff + 0.25);
+        const q = fit[Math.floor(R() * fit.length)];
+        return { iv: q[0], p0: q[1] };
+    }
+    function gradusStaff(L) {
+        const R = L.R, k = L.staff++, oy = -k * PERIOD;
+        if (k > 0 && k % 6 === 0) { L.modeIdx = (L.modeIdx + 1) % modesData.length; L.labelNext = true; L.diff = Math.min(1, L.diff + 0.12); }
+        L.diff = Math.min(1, L.diff + 0.015);
+        const M = modeInfo(L.modeIdx), clef = M.clef;
+        const sys = { x0: 0, x1: W, clef, modeIdx: L.modeIdx, first: k === 0, label: k === 0 || L.labelNext, custos: null, final: false, oy, floor: k === 0 };
+        L.labelNext = false; L.systems.push(sys); L.sys = sys; L.oy = oy; L.prevGroup = null;
+        let x = k === 0 ? 150 : 76;
+        if (k > 0 && R() < 0.25) { L.powerups.push({ kind: R() < 0.5 ? 'tempus' : 'dupla', x: x - 10, y: yP(4) + oy - 12.5, w: 25, h: 25, active: true }); x += 46; }
+
+        // the climb, from a low line of the staff to its top
+        const seq = L.next || pickSequence(L);
+        L.next = pickSequence(L);
+        const dOf = p => p + (clef.k === 'F' ? 3 : 7) - 2 * (clef.line - 1);
+        const notes = [{ d: dOf(seq.p0) }];
+        for (let i = 0; notes.length < 14; i++) {
+            const cur = notes[notes.length - 1].d;
+            let nx = cur + seq.iv[i % seq.iv.length];
+            if (Math.abs(semis(nx) - semis(cur)) === 6) nx = cur + Math.sign(nx - cur) * (Math.abs(nx - cur) - 1);
+            if (pOf(nx, clef) > 9) break;
+            notes.push({ d: nx });
+            if (pOf(nx, clef) >= 8 && i % seq.iv.length === seq.iv.length - 1) break;
+        }
+        // b-rotundum for a B between two A's in the modes on D and F
+        if ([1, 3].includes(dMod(M.final))) notes.forEach((nt, i) => { if (dMod(nt.d) === 6 && i > 0 && i < notes.length - 1 && notes[i - 1].d === nt.d - 1 && notes[i + 1].d === nt.d - 1 && R() < 0.6) nt.flat = true; });
+        const groups = [];
+        for (let i = 0; i < notes.length;) {
+            if (i === notes.length - 1) { groups.push(single(notes[i], 'L')); break; }
+            const size = Math.min(pickW(R, [[1, 3], [2, 4], [3, 2]]), notes.length - 1 - i);
+            groups.push(size === 1 ? single(notes[i], R() < 0.3 ? 'L' : 'B') : makeLigature(R, notes.slice(i, i + size)));
+            i += size;
+        }
+        const widthOf = g => g.notes.reduce((w, nt, i) => w + (nt.obl || (i > 0 && g.notes[i - 1].obl) ? OBL : g.val === 'MX' ? 2 * OBL : HW), 0);
+        const room = (W - 50) - x - groups.reduce((w, g) => w + widthOf(g), 0);
+        const gapBase = Math.max(16, Math.min(70 + 40 * L.diff, room / groups.length));
+        groups.forEach((g, i) => {
+            g.colored = i < groups.length - 1 && R() < 0.08 + 0.3 * L.diff;
+            const gap = i === 0 ? 0 : gapBase * (0.75 + R() * 0.5);
+            // a rest written in a wide gap, where the singer must leap through or over it
+            if (gap > 58 && R() < 0.15 + 0.45 * L.diff) {
+                const pg = groups[i - 1], lp = 2 * Math.min(4, Math.round((pOf(pg.notes[pg.notes.length - 1].d, clef) + 3) / 2));
+                const breve = R() < 0.4 * L.diff, top = yP(lp) + oy;
+                L.rests.push({ x: x + gap / 2 - 6, y: top, w: 12, h: breve ? GAP : STEP, baseVx: 0, vx: 0, minX: x + gap / 2 - 6, maxX: x + gap / 2 - 6, aggro: false, dead: false, damage: breve ? 16 : 8, valueIndex: breve ? 16 : 8, type: breve ? 'BREVIS_REST' : 'SEMIBREVIS_REST' });
+            }
+            L.x = x + gap;
+            x = L.x + placeGroup(L, g);
+        });
+        // the next line may be in a new mode and clef: the custos names its first note on this line's staff
+        const nextClef = modeInfo((k + 1) % 6 === 0 ? (L.modeIdx + 1) % modesData.length : L.modeIdx).clef;
+        const nextD = L.next.p0 + (nextClef.k === 'F' ? 3 : 7) - 2 * (nextClef.line - 1);
+        sys.custos = Math.max(-1, Math.min(10, pOf(nextD, clef)));
+        L.x = 0;
+    }
+    function pruneGradus(L) {
+        const low = cameraY + H + 400;
+        L.groups = L.groups.filter(g => FLOOR + g.oy - 200 < low); L.rests = L.rests.filter(o => o.y < low); L.flats = L.flats.filter(o => o.y < low);
+        L.notes = L.notes.filter(n => yP(n.p) + (n.oy || 0) < low); L.powerups = L.powerups.filter(o => o.y < low);
+        L.systems = L.systems.filter(s => STAFF_TOP + s.oy < low);
+    }
+
+    // ===================== Running the game =====================
+    function startGame() {
+        unlockAudio();
+        previousState = 'PLAY';
+        // Read the board now so the end of the run knows whether the score makes it
+        const lbMode = gameMode === 'ENDLESS' ? 'ENDLESS' : 'CLASSIC';
+        if (gameMode !== 'GRADUS' && Date.now() - (boardReadAt[lbMode] || 0) > 30000) { boardReadAt[lbMode] = Date.now(); loadLeaderboard(lbMode); }
+
+        // Back from a fall in Ars Antiqua: the same piece, from the last clausula, keeping time and score
+        if (gameState === 'DEATH_FREEZE' && gameMode === 'CLASSIC') {
+            boss.active = false;
+            boss.projectiles = [];
+            currentLevelData = generateLevel(currentLevel, false);
+            currentLevelData.checkpoints.forEach(cp => { if (cp.x < respawnPoint.x) cp.active = false; });
+            resetPlayer(respawnPoint.x, respawnPoint.y);
+            gameState = 'SPLASH';
+            return;
+        }
+
+        levelTime = 0;
+        player.score = 0;
+        endlessDistance = 0;
+        respawnPoint = { x: 50, y: 150 };
+        boss = { active: false, x: 0, y: 0, hp: 40, maxHp: 40, vy: 2.5, timer: 0, projectiles: [] };
+        if (gameMode === 'ENDLESS' && window.endlessStartLevel > 0) { currentLevel = window.endlessStartLevel; window.endlessStartLevel = null; }
+        currentLevelData = gameMode === 'GRADUS' ? gradusLevel(currentLevel) : generateLevel(currentLevel, gameMode === 'ENDLESS');
+
+        if (window.skipToBoss) { respawnPoint.x = currentLevelData.arenaX - 300; window.skipToBoss = false; }
+        resetPlayer(respawnPoint.x, respawnPoint.y);
+        gameState = 'SPLASH';
+    }
+
+    function updateFlashingEffects() {
+        if (player.tempusTimer > 0) { if (player.tempusTimer < 60 && Math.floor(Date.now() / 100) % 2 === 0) canvas.classList.remove('bullet-time'); else canvas.classList.add('bullet-time'); } else canvas.classList.remove('bullet-time');
+        if (player.allaBreveTimer > 0) { if (player.allaBreveTimer < 60 && Math.floor(Date.now() / 100) % 2 === 0) canvas.classList.remove('alla-breve'); else canvas.classList.add('alla-breve'); } else canvas.classList.remove('alla-breve');
+    }
+
+    function resetPlayer(startX, startY) {
+        Object.assign(player, { x: startX, y: startY, vx: 0, vy: 0, jumps: 0, stateValue: 4, invulnerableTimer: 60, isSprinting: false, isTripleSprinting: false, tempusTimer: 0, colorationTimer: 0, allaBreveTimer: 0, history: [], bounceTimer: 0, slide: 0, grounded: false, face: 1 });
+        rightTapCount = 0; leftTapCount = 0;
+        updateFlashingEffects(); trail = []; projectiles = []; particles = [];
+        cameraX = Math.max(0, player.x - W / 3); endlessAutoScroll = cameraX; cameraY = 0;
+    }
+
+    function checkCollision(r1, r2) { return r1.x < r2.x + (r2.width || r2.w) && r1.x + (r1.width || r1.w) > r2.x && r1.y < r2.y + (r2.height || r2.h) && r1.y + (r1.height || r1.h) > r2.y; }
+
+    function getStateIndex(value) {
+        for (let i = 0; i < noteValues.length; i++) if (noteValues[i] === value) return i;
+        for (let i = noteValues.length - 1; i >= 0; i--) if (noteValues[i] <= value) return i;
+        return 0;
+    }
+
+    function takeDamage(amount = 2, killer = null, isHalving = false) {
+        if (devInvincible) return;
+        const before = player.stateValue;
+        // a rest longer than the note that meets it silences it at once
+        if (killer && killer.type && killer.type.includes('REST') && killer.valueIndex > before) {
+            lastKiller = killer; deathPlayerState = before;
+            die(true); return;
+        }
+        playSound('damage'); spawnBlood(player.x, player.y, 40);
+        player.score = Math.max(0, player.score - 5);
+        player.isSprinting = false; player.isTripleSprinting = false;
+        if (isHalving) player.stateValue = Math.floor(player.stateValue / 2);
+        else player.stateValue -= Math.floor(killer && killer.valueIndex !== undefined ? killer.valueIndex : amount);
+        if (player.stateValue <= 0) { player.stateValue = 0; lastKiller = killer; deathPlayerState = before; die(true); }
+        else player.invulnerableTimer = 60;
+    }
+
+    function stompBounce(value) {
+        const sm = speedSettings[difficultyIndex].mult;
+        player.vy = -11 * sm; player.vx = 15 * sm * player.face; player.bounceTimer = 15; player.jumps = 1;
+        player.stateValue = Math.min(player.stateValue + (value || 4), 64);
+        player.score += 10;
+        playSound('bounce');
+    }
+
+    function handleEnemyCollision(enemy, halving) {
+        if (enemy.dead) return;
+        const pRect = { x: player.x + 2, y: player.y + 2, w: player.width - 4, h: player.height - 4 };
+        const eRect = { x: enemy.x + 2, y: enemy.y + 2, w: enemy.w - 4, h: enemy.h - 4 };
+        if (!checkCollision(pRect, eRect)) return;
+        const centered = player.x + player.width / 2 > enemy.x - 15 && player.x + player.width / 2 < enemy.x + enemy.w + 15;
+        const stomp = player.vy > 0 && player.y + player.height - player.vy <= enemy.y + 20 && centered;
+        if (stomp) { enemy.dead = true; stompBounce(enemy.valueIndex); spawnDust(enemy.x, enemy.y); spawnBlood(enemy.x, enemy.y); }
+        else if (player.colorationTimer > 0) { enemy.dead = true; playSound('smash'); spawnDust(enemy.x, enemy.y); spawnBlood(enemy.x, enemy.y); }
+        else if (player.invulnerableTimer <= 0) takeDamage(enemy.valueIndex || 2, enemy, halving);
+    }
+
+    // where the foot comes down: the bottom line of a staff, or the top of a note head (an obliqua is a slope)
+    function surfaceTop(s, g, fx) { const t = Math.min(1, Math.max(0, (fx - s.x) / s.w)); return s.t0 + (s.t1 - s.t0) * t + g.dy; }
+    function findFooting(L, prevFeet, wasGrounded) {
+        const fx = player.x + player.width / 2, feet = player.y + player.height;
+        let best = null;
+        for (const sys of L.systems) if (sys.floor !== false && fx >= sys.x0 - 4 && fx <= sys.x1 + 4 && prevFeet <= FLOOR + 2 && feet >= FLOOR) best = { top: FLOOR, g: null, s: null };
+        for (const g of L.groups) {
+            if (g.falling || fx < g.x - 8 || fx > g.x + g.w + 8) continue;
+            for (const s of g.surf) {
+                if (fx < s.x - 7 || fx > s.x + s.w + 7) continue;
+                const top = surfaceTop(s, g, fx);
+                // land from above, or walk up a single step of the staff
+                const ok = (prevFeet <= top + 3 && feet >= top) || (wasGrounded && feet >= top && feet - top <= STEP + 4);
+                if (ok && (!best || top < best.top)) best = { top, g, s };
+            }
+        }
+        return best;
+    }
+
+    function die(silent) {
+        if (!silent) playSound('death');
+        player.vx = 0; player.vy = 0;
+        gameState = 'DEATH_FREEZE';
+        if (musicTimeout) clearTimeout(musicTimeout);
+    }
+
+    function update() {
+        if (gameState !== 'PLAY') return;
+        const L = currentLevelData;
+        const speedMult = speedSettings[difficultyIndex].mult;
+        const phys = getDevPhysics();
+
+        if (player.tempusTimer > 0) player.tempusTimer -= speedMult;
+        if (player.allaBreveTimer > 0) player.allaBreveTimer -= speedMult;
+        if (player.colorationTimer > 0) player.colorationTimer -= speedMult;
+        updateFlashingEffects();
+        let timeModBase = player.tempusTimer > 0 ? 0.5 : 1.0;
+        if (player.colorationTimer > 0) timeModBase *= 0.6;
+        const timeMod = timeModBase * speedMult;
+
+        if (L.gradus) { while (-L.staff * PERIOD > cameraY - 2 * H) gradusStaff(L); if (++L.pruneT % 120 === 0) pruneGradus(L); }
+        else if (L.endless) { fill(L, cameraX + W * 3); if (++L.pruneT % 120 === 0) prune(L); }
+
+        player.history.push({ x: player.x, y: player.y, state: getStateIndex(player.stateValue) }); if (player.history.length > 60) player.history.shift();
+        if ((player.isSprinting || player.isTripleSprinting) && (keys.left || keys.right)) { if (trail.length > 5) trail.shift(); trail.push({ x: player.x, y: player.y, state: getStateIndex(player.stateValue) }); } else if (trail.length > 0) trail.shift();
+
+        // puncta fired by the player
+        const shootables = L.rests.concat(L.flats, L.sharps);
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            const p = projectiles[i]; p.x += p.vx * speedMult; let hit = false;
+            if (boss.active && boss.hp > 0 && checkCollision({ x: p.x, y: p.y, w: 8, h: 8 }, { x: boss.x - 20, y: boss.y, w: 90, h: 80 })) {
+                boss.hp--; hit = true; playSound('bossHit'); spawnBlood(boss.x, boss.y + 20);
+                if (boss.hp <= 0) { boss.active = false; player.score += 50; endRun(); return; }
+            }
+            shootables.forEach(e => { if (!e.dead && checkCollision({ x: p.x, y: p.y, w: 8, h: 8 }, e)) { e.dead = true; hit = true; playSound('smash'); spawnBlood(e.x, e.y); } });
+            if (hit || p.x > cameraX + 900 || p.x < cameraX - 100) projectiles.splice(i, 1);
+        }
+
+        // Mi contra fa: the devil in music waits at the end of the eighth mode
+        if (gameMode === 'CLASSIC' && L.levelIdx === 7 && !boss.active && boss.hp > 0 && player.x > L.arenaX) {
+            cameraX = L.arenaX; boss.active = true; boss.x = cameraX + 640; boss.y = 200; L.hasFuga = false;
+        }
+        if (boss.active) {
+            boss.y += boss.vy * speedMult; if (boss.y < 110 || boss.y > 270) boss.vy *= -1;
+            boss.timer += speedMult;
+            if (Math.floor(boss.timer) % 50 === 0) boss.projectiles.push({ x: boss.x, y: boss.y + 30, vx: -10, mi: boss.projectiles.length % 2 === 0 });
+            for (let i = boss.projectiles.length - 1; i >= 0; i--) {
+                const bp = boss.projectiles[i]; bp.x += bp.vx * speedMult;
+                if (player.invulnerableTimer <= 0 && checkCollision({ x: bp.x, y: bp.y, w: 20, h: 20 }, player)) { takeDamage(2, { type: 'BOSS_PROJ' }); player.invulnerableTimer = 60; boss.projectiles.splice(i, 1); }
+                else if (bp.x < cameraX - 50) boss.projectiles.splice(i, 1);
+            }
+            if (gameState !== 'PLAY') return;
+        }
+
+        for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.vy += 0.3 * speedMult; p.x += p.vx * speedMult; p.y += p.vy * speedMult; p.life -= 0.02 * speedMult; if (p.life <= 0) particles.splice(i, 1); }
+
+        // --- walking and running ---
+        let walk = phys.walkSpeed * speedMult, sprint = phys.sprintSpeed * speedMult;
+        if (player.isTripleSprinting) sprint *= 1.8;
+        if (player.allaBreveTimer > 0) { walk *= 1.6; sprint *= 1.6; }
+        player.jumpPower = -phys.jumpPower;
+        if (keys.right) player.face = 1; else if (keys.left) player.face = -1;
+        if (player.bounceTimer > 0) {
+            player.bounceTimer -= speedMult; player.vx *= 0.96;
+            if (keys.right) player.vx += 0.5 * speedMult; if (keys.left) player.vx -= 0.5 * speedMult;
+        } else {
+            const running = player.isSprinting || player.isTripleSprinting;
+            const target = keys.right ? (running ? sprint : walk) : keys.left ? -(running ? sprint : walk) : 0;
+            player.vx = target + player.slide;
+        }
+        player.slide *= player.onSlope ? 1 : 0.9;
+        if (boss.active && player.x + player.vx < cameraX) player.vx = 0;
+        player.x += player.vx;
+        if (player.x < 0 && gameMode !== 'GRADUS') player.x = 0;
+
+        // --- the camera ---
+        if (gameMode === 'GRADUS') {
+            // the page climbs on its own after a moment; the ink rises behind
+            L.gradusT += speedMult;
+            if (L.gradusT > 120) endlessAutoScroll -= (1.1 + currentLevel * 0.25) * timeMod;
+            cameraY = Math.min(0, endlessAutoScroll, player.y - H * 0.6); cameraX = 0;
+            endlessDistance = Math.max(0, Math.floor(-player.y / 150));
+            if (player.x < -20) player.x = W; if (player.x > W) player.x = -20;
+        } else if (gameMode === 'ENDLESS') {
+            const smod = 2.5 + currentLevel * 0.7 + endlessDistance / 500;
+            endlessAutoScroll += smod * timeMod; cameraX = endlessAutoScroll; endlessDistance = Math.floor(cameraX / 150);
+            if (player.x < cameraX - 24) { if (devInvincible) { player.x = cameraX - 24; } else { die(); return; } }
+            if (player.x > cameraX + W - player.width) player.x = cameraX + W - player.width;
+        } else if (!boss.active) {
+            cameraX = Math.max(0, Math.min(player.x - W / 3, L.length - W));
+        } else if (player.x > cameraX + W - player.width) player.x = cameraX + W - player.width;
+
+        // --- falling and landing ---
+        const wasGrounded = player.grounded;
+        let gravity = phys.gravity * speedMult;
+        if (keys.up && player.vy < 0) gravity *= 0.625;
+        player.vy = Math.min(player.vy + gravity, 18 * speedMult);
+        const prevFeet = player.y + player.height;
+        player.y += player.vy;
+        player.grounded = false; player.onSlope = false;
+        if (player.vy >= 0) {
+            const f = findFooting(L, prevFeet, wasGrounded && player.vy <= gravity + 0.01);
+            if (f) {
+                player.y = f.top - player.height; player.vy = 0; player.grounded = true; player.jumps = 0;
+                if (f.g) {
+                    f.g.stepped = true;
+                    if (f.s.t1 !== f.s.t0) { player.onSlope = true; player.slide = Math.max(-7, Math.min(7, player.slide + Math.sign(f.s.t1 - f.s.t0) * 0.45 * speedMult)); }
+                }
+            }
+        }
+        if (player.y > cameraY + H + 50) { die(); return; }
+
+        // blackened ligatures give way a moment after they are trodden on
+        for (const g of L.groups) {
+            if (g.colored && g.stepped && !g.falling) { g.shake += timeMod; if (g.shake > 30) g.falling = true; }
+            if (g.falling) { g.vy += 0.5 * timeMod; g.dy += g.vy; }
+        }
+
+        // perfect longa rests drop into the staff
+        L.thwomps.forEach(t => {
+            if (t.dead) return;
+            const landY = FLOOR - t.h;
+            if (t.state === 'idle') { if (Math.abs(player.x + player.width / 2 - (t.x + t.w / 2)) < 150) { t.state = 'shaking'; t.shakeTimer = 30; } }
+            else if (t.state === 'shaking') { t.shakeTimer -= timeMod; if (t.shakeTimer <= 0) t.state = 'falling'; }
+            else if (t.state === 'falling') { t.vy += 1.5 * timeMod; t.y += t.vy * timeMod; if (t.y >= landY) { t.y = landY; t.vy = 0; t.state = 'grounded'; t.timer = 60; playSound('smash'); spawnDust(t.x + t.w / 2, FLOOR - 30); } }
+            else if (t.state === 'grounded') { t.timer -= timeMod; if (t.timer <= 0) t.state = 'rising'; }
+            else if (t.state === 'rising') { t.y -= 2 * timeMod; if (t.y <= t.baseY) { t.y = t.baseY; t.state = 'idle'; } }
+            handleEnemyCollision(t, false);
+        });
+
+        if (player.invulnerableTimer > 0) player.invulnerableTimer -= speedMult;
+        if (gameState !== 'PLAY') return;
+        // the canon: the same note, one tempus behind
+        if (L.hasFuga && player.history.length === 60 && player.invulnerableTimer <= 0 && player.colorationTimer <= 0) {
+            const g = player.history[0];
+            if (checkCollision(player, { x: g.x, y: g.y, width: player.width, height: player.height })) takeDamage(2, { type: 'GHOST' });
+        }
+
+        // rests pace their silence, and hurry toward a note that comes near
+        L.rests.forEach(e => {
+            if (e.dead) return;
+            const dist = player.x - e.x;
+            if (Math.abs(dist) < 250 && Math.abs(player.y - e.y) < 100) {
+                e.aggro = true;
+                e.vx = dist > 0 && e.x < e.maxX ? e.baseVx * 1.8 : dist < 0 && e.x > e.minX ? -e.baseVx * 1.8 : 0;
+            } else {
+                e.aggro = false;
+                if (Math.abs(e.vx) !== e.baseVx) e.vx = e.vx >= 0 ? e.baseVx : -e.baseVx;
+                if (e.x <= e.minX) e.vx = e.baseVx; if (e.x >= e.maxX) e.vx = -e.baseVx;
+            }
+            e.x = Math.max(e.minX, Math.min(e.maxX, e.x + e.vx * timeMod));
+            handleEnemyCollision(e, false);
+        });
+
+        // the b-rotundum springs up from its B; the diesis hovers over the note it raises
+        L.flats.forEach(f => {
+            if (f.dead) return;
+            f.timer -= timeMod;
+            if (f.state === 'idle' && f.timer <= 0) { f.state = 'jumping'; f.vy = -9 * speedMult; }
+            else if (f.state === 'jumping') { f.vy += 0.5 * timeMod; f.y += f.vy * timeMod; if (f.y >= f.baseY && f.vy > 0) { f.y = f.baseY; f.state = 'idle'; f.timer = Math.random() * 60 + 40; } }
+            handleEnemyCollision(f, true);
+        });
+        L.sharps.forEach(s => {
+            if (s.dead) return;
+            s.time += 0.05 * timeMod; s.y = s.baseY + Math.sin(s.time) * 34;
+            handleEnemyCollision(s, true);
+        });
+
+        // semiminims and signs to gather
+        L.notes.forEach(n => {
+            if (!n.active) return;
+            if (checkCollision(player, { x: n.x, y: yP(n.p) - 26 + (n.oy || 0), w: 16, h: 36 })) {
+                n.active = false; player.score += 1;
+                if (player.stateValue < 64) player.stateValue = Math.min(player.stateValue * 1.5, 64);
+                playSound('point');
+                if (!player.grounded && player.vy > -6) { player.vy = -7 * speedMult; player.jumps = Math.min(player.jumps, 1); }
+            }
+        });
+        L.powerups.forEach(it => {
+            if (!it.active || !checkCollision(player, it)) return;
+            it.active = false;
+            if (it.kind === 'tempus') { player.tempusTimer = 360; playSound('tempus'); }
+            else if (it.kind === 'dupla') { player.allaBreveTimer = 480; playSound('allaBreve'); }
+            else { player.colorationTimer = 360; playSound('point'); }
+            updateFlashingEffects();
+        });
+
+        if (gameMode === 'CLASSIC') {
+            L.checkpoints.forEach(cp => { if (cp.active && player.x + player.width >= cp.x) { cp.active = false; respawnPoint = { x: cp.x + 24, y: 150 }; playSound('point'); } });
+            if (player.x >= L.goal.x && !boss.active && L.levelIdx !== 7) {
+                if (currentLevel + 1 < 8) {
+                    currentLevel++; respawnPoint = { x: 50, y: 150 };
+                    currentLevelData = generateLevel(currentLevel, false);
+                    resetPlayer(respawnPoint.x, respawnPoint.y);
+                    if (musicTimeout) clearTimeout(musicTimeout);
+                    gameState = 'SPLASH';
+                } else endRun();
+            }
+        } else if (gameMode === 'GRADUS') {
+            for (const s of L.systems) {
+                if (s.label && s.modeIdx !== currentLevel && player.y + player.height < FLOOR + s.oy) { currentLevel = s.modeIdx; startBGM(currentLevel); }
+            }
+        } else {
+            // a new mode begins where its rubric stands at the head of a line
+            for (const s of L.systems) {
+                if (s.label && s.modeIdx !== currentLevel && player.x > s.x0 && s.x0 > 0) {
+                    currentLevel = s.modeIdx; startBGM(currentLevel);
+                    L.hasFuga = currentLevel === 3 || currentLevel === 5 || currentLevel === 7;
+                    player.history = [];
+                }
+            }
+        }
+    }
     // --- Inputs & Unified Menu Handling ---
     function pressRight() { keys.right = true; let now = Date.now(); if (now - lastRightTap < 250) rightTapCount++; else rightTapCount = 1; lastRightTap = now; if (rightTapCount >= 3) player.isTripleSprinting = true; else if (rightTapCount >= 2) player.isSprinting = true; }
     function releaseRight() { keys.right = false; player.isSprinting = false; player.isTripleSprinting = false; }
     function pressLeft() { keys.left = true; let now = Date.now(); if (now - lastLeftTap < 250) leftTapCount++; else leftTapCount = 1; lastLeftTap = now; if (leftTapCount >= 3) player.isTripleSprinting = true; else if (leftTapCount >= 2) player.isSprinting = true; }
     function releaseLeft() { keys.left = false; player.isSprinting = false; player.isTripleSprinting = false; }
-    function pressJump() { keys.up = true; if (gameMode === 'KART') return; if (gameState === 'PLAY') { let sm = speedSettings[difficultyIndex].mult; let maxJumps = (player.stateIndex >= 11) ? 3 : 2; if (player.jumps < maxJumps) { player.vy = player.jumpPower * sm; spawnDust(player.x, player.y); player.grounded = false; player.jumps++; playSound('jump'); } } }
+    function pressJump() { keys.up = true; if (gameState === 'PLAY') { let sm = speedSettings[difficultyIndex].mult; let maxJumps = (getStateIndex(player.stateValue) >= 10) ? 3 : 2; if (player.jumps < maxJumps) { player.vy = player.jumpPower * sm; spawnDust(player.x, player.y); player.grounded = false; player.jumps++; playSound('jump'); } } }
     function releaseJump() { keys.up = false; }
-    function pressShoot() { keys.space = true; if (gameMode === 'KART') { if (gameState === 'PLAY' && kart) kartUseItem(kart.p); return; } if (gameState === 'PLAY') { projectiles.push({x: player.x + 12, y: player.y + 25, vx: keys.left ? -25 : 25, active: true}); playSound('shoot'); } }
+    function pressShoot() { keys.space = true; if (gameState === 'PLAY') { projectiles.push({x: player.x + 12, y: player.y + 25, vx: player.face < 0 ? -25 : 25, active: true}); playSound('shoot'); } }
     function releaseShoot() { keys.space = false; }
     
     function togglePause() {
@@ -1511,7 +2129,6 @@ let devInvincible = false;
     function syncTouchGameChrome() {
         const playLike = isTouchDevice && (gameState === 'PLAY' || gameState === 'SPLASH');
         if (pad.classList.contains('show') !== playLike) pad.classList.toggle('show', playLike);
-        pad.classList.toggle('kart', gameMode === 'KART');
         const pauseShown = isTouchDevice && gameState === 'PLAY';
         tPause.style.display = pauseShown ? 'flex' : 'none';
         if (playLike) updateMobileControlLayout();
@@ -1593,7 +2210,6 @@ let devInvincible = false;
                 if (e.key === '1') { gameMode = 'CLASSIC'; currentLevel = 0; startGame(); }
                 else if (e.key === '2') { gameMode = 'ENDLESS'; currentLevel = 0; startGame(); }
                 else if (e.key === '3') { gameMode = 'GRADUS'; currentLevel = 0; startGame(); }
-                else if (e.key === '4') { gameMode = 'KART'; currentLevel = 0; startGame(); }
             }
             return;
         }
@@ -1765,10 +2381,9 @@ let devInvincible = false;
         setPadKey('right', held.has('right'), pressRight, releaseRight, keys.right);
         setPadKey('jump', held.has('jump'), pressJump, releaseJump, keys.up);
         setPadKey('shoot', held.has('shoot'), pressShoot, releaseShoot, keys.space);
-        setPadKey('down', held.has('down'), () => { keys.down = true; }, () => { keys.down = false; }, keys.down);
     }
 
-    const PAD_DIR = ['left', 'right', 'down'];
+    const PAD_DIR = ['left', 'right'];
     const padFingers = new Map(); // touch id -> 'dir' or 'act'
 
     function setPadKey(k, now, press, release, was) {
@@ -1883,409 +2498,6 @@ let devInvincible = false;
         }
     });
 
-    function startGame() {
-        unlockAudio(); 
-        previousState = 'PLAY';
-        if (gameMode === 'KART') { kartStart(); return; }
-        // Read the board now so the end of the run knows whether the score makes it
-        const lbMode = gameMode === 'ENDLESS' ? 'ENDLESS' : 'CLASSIC';
-        if (gameMode !== 'GRADUS' && Date.now() - (boardReadAt[lbMode] || 0) > 30000) { boardReadAt[lbMode] = Date.now(); loadLeaderboard(lbMode); }
-
-        // 1. If respawning from a Classic mode death, DO NOT reset time or score!
-        if (gameState === 'DEATH_FREEZE' && gameMode === 'CLASSIC') { 
-            boss.active = false; 
-            boss.projectiles = []; 
-            currentLevelData = generateLevel(currentLevel, false); 
-            resetPlayer(respawnPoint.x, respawnPoint.y); 
-            gameState = 'SPLASH'; 
-            return; 
-        }
-
-        // 2. If we reach here, it's a completely fresh run (Menu, Dev Stage, etc.)
-        levelTime = 0; 
-        player.score = 0;
-        endlessDistance = 0; 
-
-        if (gameMode === 'GRADUS') { 
-            respawnPoint = { x: 400, y: 300 }; 
-        } else { 
-            respawnPoint = { x: 50, y: 150 }; 
-        }
-
-        boss = { active: false, x: 0, y: 0, hp: 40, maxHp: 40, vy: 2.5, timer: 0, projectiles: [] };
-        currentLevelData = generateLevel(currentLevel, gameMode === 'ENDLESS'); 
-
-        // 3. Catch the Dev Boss flag and teleport the respawn point
-        if (window.skipToBoss) {
-            respawnPoint.x = currentLevelData.length - 750; // Just past the boss trigger line
-            window.skipToBoss = false; // Reset the flag
-        }
-
-        resetPlayer(respawnPoint.x, respawnPoint.y); 
-        
-        if (gameMode === 'ENDLESS' && window.endlessStartLevel > 0) {
-            currentLevel = window.endlessStartLevel;
-            endlessDistance = currentLevel * 50;
-            endlessAutoScroll = endlessDistance * 150;
-            cameraX = endlessAutoScroll;
-            player.x = cameraX + 100;
-            player.y = 50; // Drop from sky
-            // Generate a guaranteed safety pad underneath warp-in point
-            currentLevelData.platforms.push({ x: player.x - 50, y: 150, w: 300, h: 20, type: 'normal', shakeTimer: 0, falling: false });
-            window.endlessStartLevel = null;
-        }
-        
-        gameState = 'SPLASH'; 
-    }
-
-    function updateFlashingEffects() {
-        if (player.tempusTimer > 0) { if (player.tempusTimer < 60 && Math.floor(Date.now() / 100) % 2 === 0) canvas.classList.remove('bullet-time'); else canvas.classList.add('bullet-time'); } else canvas.classList.remove('bullet-time');
-        if (player.allaBreveTimer > 0) { if (player.allaBreveTimer < 60 && Math.floor(Date.now() / 100) % 2 === 0) canvas.classList.remove('alla-breve'); else canvas.classList.add('alla-breve'); } else canvas.classList.remove('alla-breve');
-    }
-
-    function resetPlayer(startX, startY) {
-        player.x = startX; player.y = startY; player.vx = 0; player.vy = 0; player.jumps = 0; player.stateValue = 4; player.invulnerableTimer = 60; player.isSSprint = false; player.isTripleSprinting = false; player.tempusTimer = 0; player.colorationTimer = 0; player.allaBreveTimer = 0; player.history = []; player.bounceTimer = 0; rightTapCount = 0; leftTapCount = 0; gradusTimer = 0; player.currentSlope = 'none';
-        updateFlashingEffects(); trail = []; projectiles = []; cameraX = player.x - W / 3; endlessAutoScroll = gameMode === 'GRADUS' ? 0 : cameraX; cameraY = gameMode === 'GRADUS' ? 0 : 0;
-    }
-
-    function checkCollision(r1, r2) { return r1.x < r2.x + (r2.width || r2.w) && r1.x + (r1.width || r1.w) > r2.x && r1.y < r2.y + (r2.height || r2.h) && r1.y + (r1.height || r1.h) > r2.y; }
-    function getPhysicsBuff() { return 1; }
-    
-    function getStateIndex(value) {
-        for (let i = 0; i < noteValues.length; i++) {
-            if (noteValues[i] === value) return i;
-        }
-        for (let i = noteValues.length - 1; i >= 0; i--) {
-            if (noteValues[i] <= value) return i;
-        }
-        return 0;
-    }
-
-    function takeDamage(amount = 2, killer = null, isHalving = false) { 
-        if (devInvincible) return;
-        let stateBeforeDamage = player.stateValue; 
-        
-        // Check if killed by bigger rest - FREEZE AT POINT OF IMPACT (no subtraction, no blood)
-        let killerIsBiggerRest = killer && killer.type && killer.type.includes('REST') && killer.valueIndex !== undefined && killer.valueIndex > stateBeforeDamage;
-        if (killerIsBiggerRest) { 
-            lastKiller = killer; 
-            deathPlayerState = stateBeforeDamage; 
-            gameState = 'DEATH_FREEZE'; 
-            player.vx = 0; 
-            player.vy = 0; 
-            return; 
-        }
-        
-        playSound('damage'); spawnBlood(player.x, player.y, 40); 
-        player.score = Math.max(0, player.score - 5); 
-        player.isSprinting = false; player.isTripleSprinting = false; 
-        
-        // Reduce player value
-        if (isHalving) {
-            player.stateValue = Math.floor(player.stateValue / 2);
-        } else {
-            const damageAmount = Math.floor(killer && killer.valueIndex !== undefined ? killer.valueIndex : amount); 
-            player.stateValue -= damageAmount; 
-        }
-        
-        if (player.stateValue <= 0) { 
-            player.stateValue = 0; 
-            lastKiller = killer; 
-            deathPlayerState = stateBeforeDamage; 
-            gameState = 'DEATH_FREEZE'; 
-            player.vx = 0; 
-            player.vy = 0; 
-        } else { 
-            player.invulnerableTimer = 60; 
-        } 
-    }
-
-    function handleEnemyCollision(enemy, isStompable = false) {
-        if (enemy.dead) return;
-        let pRect = { x: player.x + 2, y: player.y + 2, w: player.width - 4, h: player.height - 4 }; 
-        let eW = (enemy.w !== undefined) ? enemy.w : (enemy.width || 20);
-        let eH = (enemy.h !== undefined) ? enemy.h : (enemy.height || 30);
-        let eRect = { x: enemy.x + 2, y: enemy.y + 2, w: eW - 4, h: eH - 4 };
-        
-        if (checkCollision(pRect, eRect)) {
-            let buff = getPhysicsBuff(); let speedMult = speedSettings[difficultyIndex].mult;
-            let isCentered = (player.x + player.width/2 > enemy.x - 15) && (player.x + player.width/2 < enemy.x + eW + 15);
-            
-            let isRest = enemy.type && enemy.type.includes('REST');
-            let isStomp = isStompable && player.vy > 0 && (player.y + player.height - player.vy <= enemy.y + 20) && isCentered;
-
-            if (isStomp) {
-                enemy.dead = true;
-                player.vy = -11 * buff * speedMult;
-                if (gameMode !== 'GRADUS') player.vx = 15 * buff * speedMult; 
-                player.bounceTimer = 15;
-                player.jumps = 1;
-                
-                if (enemy.valueIndex !== undefined) {
-                    player.stateValue += enemy.valueIndex;
-                    player.stateValue = Math.min(player.stateValue, 64); 
-                    player.score += 10;
-                }
-                playSound('bounce'); spawnDust(enemy.x, enemy.y); spawnBlood(enemy.x, enemy.y);
-            }
-            else if (player.colorationTimer > 0) { 
-                enemy.dead = true; playSound('smash'); spawnDust(enemy.x, enemy.y); spawnBlood(enemy.x, enemy.y); 
-            } 
-            else if (player.invulnerableTimer <= 0) { 
-                takeDamage(enemy.valueIndex || 2, enemy, false); 
-            }
-        }
-    }
-
-    function update() {
-        if (gameMode === 'KART') { if ((gameState === 'PLAY' || gameState === 'WIN') && kart) kartUpdate(); return; }
-        if (gameState !== 'PLAY') return;
-        
-        const speedMult = speedSettings[difficultyIndex].mult;
-        const devPhysics = getDevPhysics();
-        
-        if (player.tempusTimer > 0) player.tempusTimer -= speedMult; if (player.allaBreveTimer > 0) player.allaBreveTimer -= speedMult; if (player.colorationTimer > 0) player.colorationTimer -= speedMult; updateFlashingEffects();
-        let timeModBase = (player.tempusTimer > 0 ? 0.5 : 1.0);
-        if (player.colorationTimer > 0) timeModBase *= 0.6;
-        const timeMod = timeModBase * speedMult; 
-        const buff = getPhysicsBuff();
-        
-        player.history.push({x: player.x, y: player.y, state: getStateIndex(player.stateValue)}); if (player.history.length > 60) player.history.shift(); 
-        if ((player.isSprinting || player.isTripleSprinting) && (keys.left || keys.right)) { if (trail.length > 5) trail.shift(); trail.push({x: player.x, y: player.y, state: getStateIndex(player.stateValue)}); } else { if (trail.length > 0) trail.shift(); }
-
-        for (let i = projectiles.length - 1; i >= 0; i--) {
-            let p = projectiles[i]; p.x += p.vx * speedMult; let hit = false;
-            if (boss.active && boss.hp > 0 && checkCollision({x:p.x, y:p.y, w:8, h:8}, {x: boss.x-20, y: boss.y, w: 80, h: 80})) { boss.hp--; hit = true; playSound('bossHit'); spawnBlood(boss.x, boss.y + 20); if (boss.hp <= 0) { boss.active = false; player.score += 50; endRun(); return; } }
-            let checkList = currentLevelData.enemies.concat(currentLevelData.jumpingFlats).concat(currentLevelData.flyingEnemies);
-            checkList.forEach(e => { if (!e.dead && checkCollision({x:p.x, y:p.y, w:8, h:8}, e)) { e.dead = true; hit = true; playSound('smash'); spawnBlood(e.x, e.y); } });
-            if (hit || p.x > cameraX + 900 || p.x < cameraX - 100) projectiles.splice(i, 1);
-        }
-
-        if (gameMode === 'CLASSIC' && currentLevel === 7 && !boss.active && boss.hp > 0) { if (player.x > currentLevelData.length - 800) { cameraX = currentLevelData.length - 800; boss.active = true; boss.x = cameraX + 650; boss.y = 200; currentLevelData.hasFuga = false; } }
-        if (boss.active) {
-            boss.y += boss.vy * speedMult; if (boss.y < 120 || boss.y > 300) boss.vy *= -1; boss.timer += speedMult; if (Math.floor(boss.timer) % 50 === 0) { boss.projectiles.push({x: boss.x, y: boss.y + 30, vx: -10, active: true}); }
-            for (let i = boss.projectiles.length - 1; i >= 0; i--) { let bp = boss.projectiles[i]; bp.x += bp.vx * speedMult; if (player.invulnerableTimer <= 0 && checkCollision({x:bp.x, y:bp.y, w:20, h:20}, player)) { takeDamage(2, {type: 'BOSS_PROJ'}); player.invulnerableTimer = 60; boss.projectiles.splice(i, 1); } else if (bp.x < cameraX - 50) { boss.projectiles.splice(i, 1); } }
-        }
-
-        for (let i = particles.length - 1; i >= 0; i--) { let p = particles[i]; p.vy += 0.3 * speedMult; p.x += p.vx * speedMult; p.y += p.vy * speedMult; p.life -= 0.02 * speedMult; if (p.life <= 0) particles.splice(i, 1); }
-
-        let activeSpeed = devPhysics.walkSpeed * buff * speedMult; let activeSprint = devPhysics.sprintSpeed * buff * speedMult; if (player.isTripleSprinting) activeSprint *= 1.8;
-        if (player.allaBreveTimer > 0) { activeSpeed *= 1.6; activeSprint *= 1.6; } player.jumpPower = -devPhysics.jumpPower * buff; 
-
-        if (player.bounceTimer > 0) { player.bounceTimer -= speedMult; player.vx *= 0.96; if (keys.right) player.vx += 0.5 * buff * speedMult; if (keys.left) player.vx -= 0.5 * buff * speedMult; } 
-        else { let targetSpeed = 0; if (keys.right) targetSpeed = (player.isSprinting || player.isTripleSprinting) ? activeSprint : activeSpeed; else if (keys.left) targetSpeed = -((player.isSprinting || player.isTripleSprinting) ? activeSprint : activeSpeed); if (Math.abs(player.vx) > activeSprint && !player.onIce) player.vx *= 0.95; else if (player.onIce) player.vx += (targetSpeed - player.vx) * 0.05; else player.vx = targetSpeed; }
-        
-        if (player.currentSlope === 'up') player.vx -= 1.5 * speedMult;
-        if (player.currentSlope === 'down') player.vx += 1.5 * speedMult;
-        player.currentSlope = 'none'; 
-        
-        if (boss.active && player.x + player.vx < cameraX) player.vx = 0;
-        player.x += player.vx;
-        currentLevelData.walls.forEach(wall => { if (checkCollision(player, wall)) { if (player.vx > 0) player.x = wall.x - player.width; else if (player.vx < 0) player.x = wall.x + wall.w; } });
-        if (player.x < 0) player.x = 0;
-        
-        if (gameMode === 'GRADUS') {
-            gradusTimer += speedMult; if (gradusTimer > 120) { endlessAutoScroll -= (1.5 + currentLevel * 0.3) * timeMod; } if (endlessAutoScroll > 0) endlessAutoScroll = 0; 
-            let targetCamY = player.y - H * 0.6; cameraY = Math.min(endlessAutoScroll, targetCamY); if (cameraY > 0) cameraY = 0; cameraX = 0; endlessDistance = Math.max(0, Math.floor(-player.y / 150));
-            if (player.x < -20) player.x = W; if (player.x > W) player.x = -20; if (player.y > cameraY + H + 100) { die(); return; } 
-        } else if (gameMode === 'ENDLESS') {
-            let smod = 2.5 + (currentLevel * 0.7) + (endlessDistance / 500); endlessAutoScroll += smod * timeMod; cameraX = endlessAutoScroll; endlessDistance = Math.floor(cameraX / 150);
-            if (player.x < cameraX - 24) { 
-                if (devInvincible) { player.x = cameraX - 24; player.vx = smod * timeMod; } 
-                else { die(); return; } 
-            } 
-            if (player.x > cameraX + W - player.width) player.x = cameraX + W - player.width;
-        } else if (!boss.active) { if (player.x < 0) player.x = 0; cameraX = player.x - W / 3; if (cameraX < 0) cameraX = 0; if (cameraX > currentLevelData.length - W) cameraX = currentLevelData.length - W; }
-        else if (player.x > cameraX + W - player.width) player.x = cameraX + W - player.width; // keep the boss fight on screen
-
-        let gravity = devPhysics.gravity * speedMult; 
-        if (keys.up && player.vy < 0) gravity = devPhysics.gravity * 0.625 * speedMult;
-        player.vy += gravity;
-        const vyCap = 18 * speedMult;
-        if (player.vy > vyCap) player.vy = vyCap; 
-        player.y += player.vy; player.grounded = false; player.onIce = false;
-        if (gameMode !== 'GRADUS' && player.y > H + 50) { die(); return; }
-
-        if (gameMode !== 'GRADUS') { currentLevelData.groundChunks.forEach(chunk => { if (player.vy > 0 && player.y + player.height - player.vy <= 350 && player.y + player.height >= 350) { if (player.x + player.width > chunk.x && player.x < chunk.x + chunk.w) { player.y = 350 - player.height; player.vy = 0; player.grounded = true; player.jumps = 0; } } }); }
-
-        currentLevelData.platforms.forEach(plat => {
-            let isColliding = checkCollision(player, plat);
-            if (plat.type === 'ice') { 
-                if (!plat.falling && player.x + player.width > plat.x && player.x < plat.x + plat.w) {
-                    let relativeX = (player.x + player.width/2) - plat.x;
-                    let effY = plat.y - (relativeX * (20 / plat.w));
-                    if (player.vy >= 0 && player.y + player.height >= effY - 10 && player.y + player.height - player.vy <= effY + 20) {
-                        player.y = effY - player.height; player.vy = 0; player.grounded = true; player.jumps = 0; plat.steppedOn = true; player.onIce = true; player.currentSlope = 'up';
-                    }
-                }
-            } else if (plat.type === 'descend') { 
-                if (!plat.falling && player.x + player.width > plat.x && player.x < plat.x + plat.w) {
-                    let relativeX = (player.x + player.width/2) - plat.x;
-                    let effY = (plat.y - 20) + (relativeX * (20 / plat.w));
-                    if (player.vy >= 0 && player.y + player.height >= effY - 10 && player.y + player.height - player.vy <= effY + 20) {
-                        player.y = effY - player.height; player.vy = 0; player.grounded = true; player.jumps = 0; plat.steppedOn = true; player.onIce = true; player.currentSlope = 'down';
-                    }
-                }
-            } else { 
-                // the lower note of a rising ligature sits a step below the higher one
-                const top = (plat.type === 'rising' && player.x + player.width / 2 < plat.x + plat.w / 2) ? plat.y + 15 : plat.y;
-                if (top !== plat.y) isColliding = checkCollision(player, { x: plat.x, y: top, width: plat.w, height: plat.h });
-                if (!plat.falling && isColliding) { if (player.vy > 0 && player.y + player.height - player.vy <= top + 15) { player.y = top - player.height; player.vy = 0; player.grounded = true; player.jumps = 0; plat.steppedOn = true; } }
-            }
-            if (plat.steppedOn && !plat.falling && plat.type !== 'ground') { plat.shakeTimer += timeMod; if (plat.shakeTimer > 30) plat.falling = true; } if (plat.falling) { plat.vy = (plat.vy || 0) + 0.5 * timeMod; plat.y += plat.vy; }
-        });
-
-        currentLevelData.fallingLongas.forEach(longa => {
-            if (longa.dead) return;
-            if (longa.state === 'idle') { if (Math.abs(player.x + player.width/2 - (longa.x + longa.w/2)) < 150) { longa.state = 'shaking'; longa.shakeTimer = 30; } } 
-            else if (longa.state === 'shaking') { longa.shakeTimer -= timeMod; if (longa.shakeTimer <= 0) longa.state = 'falling'; } 
-            else if (longa.state === 'falling') { longa.vy += (1.5 * timeMod); longa.y += (longa.vy * timeMod); if (longa.y >= 290) { longa.y = 290; longa.vy = 0; longa.state = 'grounded'; longa.timer = 60; playSound('hit'); spawnDust(longa.x + longa.w/2, longa.y + 60); } } 
-            else if (longa.state === 'grounded') { longa.timer -= timeMod; if (longa.timer <= 0) longa.state = 'rising'; } 
-            else if (longa.state === 'rising') { longa.y -= (2 * timeMod); if (longa.y <= longa.baseY) { longa.y = longa.baseY; longa.state = 'idle'; } }
-            
-            if (checkCollision(player, longa)) { 
-                let isStomp = player.vy > 0 && (player.y + player.height - player.vy <= longa.y + 20);
-
-                if (isStomp) { 
-                    player.vy = -11 * buff * speedMult; 
-                    if (gameMode !== 'GRADUS') player.vx = 15 * buff * speedMult; 
-                    player.bounceTimer = 15; 
-                    player.jumps = 1; 
-                    
-                    if (longa.valueIndex !== undefined) {
-                        player.stateValue += longa.valueIndex;
-                        player.stateValue = Math.min(player.stateValue, 64); 
-                        player.score += 10;
-                    }
-                    playSound('bounce'); spawnDust(player.x, player.y + player.height); 
-                    longa.dead = true; 
-                } 
-                else if (player.colorationTimer > 0) { longa.dead = true; playSound('smash'); spawnDust(longa.x, longa.y); } 
-                else if (player.invulnerableTimer <= 0) { takeDamage(longa.valueIndex || 16, longa, false); } 
-            }
-        });
-
-        currentLevelData.dashPads.forEach(pad => { if (checkCollision(player, pad)) { player.vx = keys.left ? -25 * buff * speedMult : 25 * buff * speedMult; player.vy = -3 * speedMult; player.bounceTimer = 10; player.grounded = false; playSound('dash'); spawnDust(player.x, player.y + 40); } });
-        if (player.invulnerableTimer > 0) player.invulnerableTimer -= speedMult;
-        if (currentLevelData.hasFuga && player.history.length === 60 && player.invulnerableTimer <= 0 && player.colorationTimer === 0) { let ghost = player.history[0]; let ghostRect = { x: ghost.x, y: ghost.y, width: player.width, height: player.height }; if (checkCollision(player, ghostRect)) takeDamage(2, {type: 'GHOST'}); }
-
-        currentLevelData.enemies.forEach(enemy => {
-            if (enemy.dead) return; let dist = player.x - enemy.x;
-            if (Math.abs(dist) < 250 && Math.abs(player.y - enemy.y) < 100) { enemy.aggro = true; if (dist > 0 && enemy.x < enemy.maxX) enemy.vx = enemy.baseVx * 1.8; else if (dist < 0 && enemy.x > enemy.minX) enemy.vx = -enemy.baseVx * 1.8; else enemy.vx = 0; enemy.x += (enemy.vx * timeMod); } 
-            else { enemy.aggro = false; if (Math.abs(enemy.vx) !== enemy.baseVx) enemy.vx = enemy.vx > 0 ? enemy.baseVx : -enemy.baseVx; enemy.x += (enemy.vx * timeMod); if (enemy.x <= enemy.minX) { enemy.x = enemy.minX; enemy.vx = enemy.baseVx; } if (enemy.x >= enemy.maxX) { enemy.x = enemy.maxX; enemy.vx = -enemy.baseVx; } }
-            if (enemy.x < enemy.minX) enemy.x = enemy.minX; if (enemy.x > enemy.maxX) enemy.x = enemy.maxX; handleEnemyCollision(enemy, true); 
-        });
-
-        currentLevelData.jumpingFlats.forEach(flat => { 
-            if (flat.dead) return; 
-            flat.timer -= timeMod; 
-            if (flat.state === 'idle' && flat.timer <= 0) { 
-                flat.state = 'jumping'; flat.vy = -14 * speedMult; 
-            } else if (flat.state === 'jumping' || flat.state === 'falling') { 
-                flat.vy += (0.8 * timeMod); flat.y += (flat.vy * timeMod); 
-                if (flat.vy > 0) flat.state = 'falling'; 
-                if (flat.y >= flat.baseY) { 
-                    flat.y = flat.baseY; flat.state = 'idle'; flat.timer = Math.random() * 60 + 20; 
-                } 
-            }
-            
-            if (checkCollision(player, flat)) { 
-                const hitboxSize = 140; 
-                const hitboxX = flat.x + 15 - hitboxSize/2;
-                const hitboxY = flat.y + 15 - hitboxSize/2;
-                const hitboxRect = {x: hitboxX, y: hitboxY, w: hitboxSize, h: hitboxSize};
-                
-                let isStomp = player.vy > 0 && checkCollision(player, hitboxRect);
-                
-                if (isStomp) { 
-                    player.vy = -11 * buff * speedMult; 
-                    if (gameMode !== 'GRADUS') player.vx = 15 * buff * speedMult; 
-                    player.bounceTimer = 15; 
-                    player.jumps = 1; 
-                    
-                    player.stateValue += flat.valueIndex || 4;
-                    player.stateValue = Math.min(player.stateValue, 64);
-                    player.score += 10;
-                    
-                    playSound('bounce'); spawnDust(player.x, player.y + player.height); 
-                    flat.dead = true; 
-                } 
-                else if (player.colorationTimer > 0) { flat.dead = true; playSound('smash'); spawnDust(flat.x, flat.y); } 
-                else if (player.invulnerableTimer <= 0) { takeDamage(0, flat, true); } 
-            }
-        });
-        currentLevelData.flyingEnemies.forEach(enemy => { if (enemy.dead) return; enemy.time += (0.05 * timeMod); enemy.y = enemy.baseY + Math.sin(enemy.time) * 50; 
-            if (checkCollision(player, enemy)) {
-                let isStomp = player.vy > 0 && player.y + player.height - player.vy <= enemy.y + 20;
-                if (isStomp) {
-                    player.vy = -11 * buff * speedMult;
-                    if (gameMode !== 'GRADUS') player.vx = 15 * buff * speedMult;
-                    player.bounceTimer = 15;
-                    player.jumps = 1;
-                    
-                    player.stateValue += enemy.valueIndex || 4;
-                    player.stateValue = Math.min(player.stateValue, 64);
-                    player.score += 10;
-                    
-                    playSound('bounce'); spawnDust(player.x, player.y + player.height);
-                    enemy.dead = true;
-                } else if (player.colorationTimer > 0) {
-                    enemy.dead = true; playSound('smash'); spawnDust(enemy.x, enemy.y);
-                } else if (player.invulnerableTimer <= 0) {
-                    takeDamage(0, enemy, true);
-                }
-            }
-        });
-
-        currentLevelData.items.forEach(item => { 
-            if (item.active && checkCollision(player, item)) { 
-                item.active = false; 
-                if (player.stateValue < 64) { 
-                    player.stateValue = Math.min(player.stateValue * 1.5, 64); 
-                } 
-                playSound('point'); 
-            } 
-        });
-        currentLevelData.scoreNotes.forEach(note => { 
-            if (note.active && checkCollision(player, note)) { 
-                note.active = false; player.score += 1; 
-                if (player.stateValue < 64) { 
-                    player.stateValue = Math.min(player.stateValue * 1.5, 64); 
-                } 
-                playSound('point'); 
-                if (player.vx > 0) player.vx += 7.8 * speedMult; else if (player.vx < 0) player.vx -= 7.8 * speedMult; 
-                player.vy = -9 * buff * speedMult; player.grounded = false; 
-                player.jumps = 1; 
-            } 
-        });
-        currentLevelData.tempusItems.forEach(item => { if (item.active && checkCollision(player, item)) { item.active = false; player.tempusTimer = 360; playSound('tempus'); updateFlashingEffects(); } });
-        currentLevelData.allaBreves.forEach(item => { if (item.active && checkCollision(player, item)) { item.active = false; player.allaBreveTimer = 480; playSound('allaBreve'); updateFlashingEffects(); } });
-        currentLevelData.inkPots.forEach(pot => { if (pot.active && checkCollision(player, pot)) { pot.active = false; player.colorationTimer = 360; playSound('point'); updateFlashingEffects(); } });
-
-        if (gameMode === 'CLASSIC') {
-            currentLevelData.checkpoints.forEach(cp => { if (cp.active && player.x + player.width >= cp.x && player.x <= cp.x + cp.w) { cp.active = false; respawnPoint = { x: cp.x + 20, y: 150 }; playSound('point'); } });
-            if (player.x >= currentLevelData.goal.x && !boss.active) { 
-                if (currentLevel + 1 < 8) { 
-                    currentLevel++; respawnPoint = { x: 50, y: 150 }; 
-                    currentLevelData = generateLevel(currentLevel, false); 
-                    resetPlayer(respawnPoint.x, respawnPoint.y); 
-                    if (musicTimeout) clearTimeout(musicTimeout);
-                    gameState = 'SPLASH'; 
-                } else { 
-                    endRun();
-                } 
-            }
-        } else if (gameMode === 'ENDLESS' || gameMode === 'GRADUS') {
-            if (endlessDistance > 0 && endlessDistance % 50 === 0 && endlessDistance !== currentLevel * 50) { currentLevel = (currentLevel + 1) % modesData.length; startBGM(currentLevel); if (gameMode === 'ENDLESS') { currentLevelData.hasFuga = (currentLevel === 3 || currentLevel === 5 || currentLevel === 7); } }
-        }
-    }
-
-    function die() { 
-        playSound('death'); 
-        gameState = 'DEATH_FREEZE'; 
-        if (musicTimeout) clearTimeout(musicTimeout); 
-        
-    }
     function drawDiamond(ctx, x, y, size, filled) { ctx.beginPath(); ctx.moveTo(x, y - size); ctx.lineTo(x + size, y); ctx.lineTo(x, y + size); ctx.lineTo(x - size, y); ctx.closePath(); if (filled) ctx.fill(); else { ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke(); ctx.lineJoin = 'miter'; } }
 
     function drawMensuralNote(ctx, x, y, stateName, isInvulnerable, opacity = 1, isColored = false, isGhost = false) {
@@ -2342,29 +2554,12 @@ let devInvincible = false;
         ctx.quadraticCurveTo(x, y, x + r, y);
         ctx.closePath();
     }
-
-    function drawCheckpoint(ctx, cp) {
-        const col = cp.active ? C.mark : rgba(C.mark, T.mono ? 1 : 0.28);
-        ctx.fillStyle = col; ctx.strokeStyle = col;
-        if (T.print) {
-            if (T.hand) { nib(ctx, wob(cp.x + 1.5, 230, cp.x + 1.5, 350, 0.6), 2.8); nib(ctx, wob(cp.x + 11.5, 230, cp.x + 11.5, 350, 0.6), 2.8); }
-            else { ctx.fillRect(cp.x, 230, 3, 120); ctx.fillRect(cp.x + 10, 230, 3, 120); }
-            ctx.fillStyle = col; printFermata(ctx, cp.x + 6.5, 216);
-        } else {
-            pathRoundRect(ctx, cp.x, 230, 3, 120, 1.5); ctx.fill();
-            pathRoundRect(ctx, cp.x + 10, 230, 3, 120, 1.5); ctx.fill();
-            ctx.textAlign = 'left'; ctx.font = `40px ${MUSIC}`; ctx.fillText('𝄐', cp.x - 10, 220);
-        }
-        if (cp.active) { ctx.textAlign = 'left'; ctx.font = font(12, 600, false, 'sc'); ctx.fillText(cp.label, cp.x - 20, 180); }
-    }
-
-    // Platforms are ligatures in white notation: void square heads joined side by side, oblique for the slopes,
-    // with the stems that tell their values. A ligature about to fall is blackened (coloration) as a warning.
+    // Notes in white notation: void square heads cut as the broad pen makes them, heavy upright sides and thin top and bottom
     function ligHead(c, x, y, w, h, filled, k) {
         if (T.segments) y += (hashf(k * 5.3 + x) - 0.5) * 1.2; // each head its own sort
         if (filled) { c.fillRect(x, y, w, h); return; }
         if (T.hand) { voidRect(c, x + 1.5, y + 1.5, w - 3, h - 3, 4.6); return; }
-        const t = 4.2, v = 2.4;
+        const t = 2.6, v = 4.4;
         c.fillRect(x, y, w, t); c.fillRect(x, y + h - t, w, t); c.fillRect(x, y, v, h); c.fillRect(x + w - v, y, v, h);
     }
     function ligStem(c, x, y0, y1) {
@@ -2375,40 +2570,166 @@ let devInvincible = false;
         // a parallelogram with upright ends, as the obliqua is cut
         const band = (dy, t) => { c.beginPath(); c.moveTo(x, y0 + dy); c.lineTo(x + w, y1 + dy); c.lineTo(x + w, y1 + dy + t); c.lineTo(x, y0 + dy + t); c.closePath(); c.fill(); };
         if (filled) { band(0, h); return; }
-        if (!T.hand) { band(0, 4.2); band(h - 4.2, 4.2); c.fillRect(x, y0, 2.4, h); c.fillRect(x + w - 2.4, y1, 2.4, h); return; }
+        if (!T.hand) { band(0, 2.6); band(h - 2.6, 2.6); c.fillRect(x, y0, 4.4, h); c.fillRect(x + w - 4.4, y1, 4.4, h); return; }
         nib(c, [[x + 1.5, y0 + 1.5], [x + w - 1.5, y1 + 1.5], [x + w - 1.5, y1 + h - 1.5], [x + 1.5, y0 + h - 1.5], [x + 1.5, y0 + 1.5]], 4.6);
     }
-    function drawLigature(ctx, plat) {
-        if (plat.type === 'ground') return;
-        const shaking = plat.shakeTimer > 0 && plat.shakeTimer <= 30;
-        const y = plat.y + (shaking ? Math.sin(plat.shakeTimer * 2) * 2 : 0), x = plat.x, w = plat.w, h = plat.h;
-        const filled = shaking || plat.falling;
-        ctx.fillStyle = C.ink; ctx.strokeStyle = C.ink;
-        const seed = hashf(x * 0.013 + 3.1);
-        if (plat.type === 'ice' || plat.type === 'descend') {
-            // obliqua: rising for 'ice', falling for 'descend' (with the stem down on the left that makes its first note a breve)
-            const up = plat.type === 'ice', y0 = up ? y : y - 20, y1 = up ? y - 20 : y;
-            ligOblique(ctx, x, y0, w, y1, h, filled);
-            if (!up) ligStem(ctx, x + 1.2, y0 + h - 2, y0 + h + 22);
-            return;
+
+    // ===================== Drawing the page =====================
+    // the mensural C clef: two square heads either side of its line, on a stem
+    function printCClef(c, x, y) {
+        if (T.hand) {
+            nib(c, wob(x, y - 24, x, y + 24, 0.6), 2.8);
+            c.fillRect(x + 4, y - 15, 12, 10); c.fillRect(x + 4, y + 5, 12, 10);
+            nib(c, wob(x + 16, y - 15, x + 16.3, y + 15, 0.3), 2.2);
+        } else {
+            c.fillRect(x, y - 25, 2.6, 50);
+            c.fillRect(x + 4.5, y - 15, 12.5, 10.5); c.fillRect(x + 4.5, y + 4.5, 12.5, 10.5);
+            c.fillRect(x + 15, y - 15, 2, 30);
         }
-        if (plat.type === 'rising') {
-            // two notes a step apart, the higher joined to the lower by its side
-            const half = w / 2, n = Math.max(1, Math.round(half / 34)), hw = half / n;
-            for (let i = 0; i < n; i++) ligHead(ctx, x + i * hw, y + 15, hw + 0.5, h, filled, i);
-            for (let i = 0; i < n; i++) ligHead(ctx, x + half + i * hw, y, hw + 0.5, h, filled, i + 9);
-            ligStem(ctx, x + half + 1.2, y + h - 2, y + 15 + h);
-            if (seed < 0.5) ligStem(ctx, x + 1.2, y + 15 + h - 2, y + 15 + h + 22);
-            return;
-        }
-        const n = Math.max(2, Math.round(w / 34)), hw = w / n;
-        for (let i = 0; i < n; i++) ligHead(ctx, x + i * hw, y, hw + 0.5, h, filled, i);
-        // first note: stem up on the left (cum opposita proprietate) or down (cum proprietate); last: a longa's tail on the right
-        if (seed < 0.4) ligStem(ctx, x + 1.2, y + 2, y - 24);
-        else if (seed < 0.75) ligStem(ctx, x + 1.2, y + h - 2, y + h + 22);
-        if (seed > 0.3) ligStem(ctx, x + w - 1.2, y + h - 2, y + h + 26);
+    }
+    function drawClef(c, x, clef, oy = 0) {
+        const y = FLOOR - (clef.line - 1) * GAP + oy;
+        c.save(); c.translate(x, y); c.scale(1.2, 1.2);
+        if (clef.k === 'F') printFClef(c, 0, 0); else printCClef(c, 0, 0);
+        c.restore();
+    }
+    // b durum, the square b of mi
+    function printQuadratum(c, x, y, s = 1) {
+        c.save(); c.translate(x, y); c.scale(s, s);
+        if (T.hand) nib(c, wob(0, -30, 0, 6, 0.4), 2.8); else c.fillRect(-1.3, -30, 2.6, 36);
+        c.fillRect(-1.3, -11, 13, 3.2); c.fillRect(9, -11, 3, 17); c.fillRect(-1.3, 3, 13, 3.2);
+        c.restore();
+    }
+    function finalBar(c, x) {
+        if (T.hand) { nib(c, wob(x, STAFF_TOP, x, FLOOR, 0.6), 2.6); nib(c, wob(x + 9, STAFF_TOP, x + 9, FLOOR, 0.6), 7); }
+        else { c.fillRect(x - 1.2, STAFF_TOP, 2.4, FLOOR - STAFF_TOP); c.fillRect(x + 6, STAFF_TOP, 6, FLOOR - STAFF_TOP); }
     }
 
+    function drawGroup(c, g) {
+        const n = g.notes, shaking = g.colored && g.stepped && !g.falling;
+        const dy = g.dy + (g.oy || 0) + (shaking ? Math.sin(g.shake * 2) * 2 : 0);
+        const filled = g.colored;
+        const y = p => yP(p) + dy;
+        c.fillStyle = C.ink; c.strokeStyle = C.ink;
+        for (let i = 0; i < n.length; i++) {
+            const a = n[i];
+            if (a.obl) { const b = n[i + 1]; ligOblique(c, a.x, y(a.p) - HH / 2, a.w + b.w, y(b.p) - HH / 2, HH, filled); i++; continue; }
+            ligHead(c, a.x, y(a.p) - HH / 2, a.w + 0.5, HH, filled, i + Math.round(g.x));
+        }
+        // where two notes of different pitch meet, a stroke joins them
+        for (let i = 0; i < n.length - 1; i++) {
+            if (n[i].obl) continue;
+            const a = n[i], b = n[i + 1];
+            if (a.p === b.p) continue;
+            const y0 = Math.min(y(a.p), y(b.p)) - HH / 2, y1 = Math.max(y(a.p), y(b.p)) + HH / 2;
+            ligStem(c, b.x + 1.2, y0, y1);
+        }
+        const f = n[0], l = n[n.length - 1], tail = 1.4 * GAP;
+        if (g.stemL === 'down') ligStem(c, f.x + 1.2, y(f.p) + HH / 2 - 2, y(f.p) + HH / 2 + tail);
+        else if (g.stemL === 'up') ligStem(c, f.x + 1.2, y(f.p) - HH / 2 + 2, y(f.p) - HH / 2 - tail);
+        if (g.stemR || g.val === 'L' || g.val === 'MX') ligStem(c, l.x + l.w - 1.2, y(l.p) + HH / 2 - 2, y(l.p) + HH / 2 + tail);
+        if (g.fermata) printFermata(c, l.x + l.w / 2, Math.min(y(l.p) - HH / 2 - 12, STAFF_TOP + (g.oy || 0) - 14));
+    }
+
+    function drawCheckpoint(c, cp) {
+        const col = cp.active ? C.mark : rgba(C.mark, T.mono ? 1 : 0.3);
+        c.fillStyle = col; c.strokeStyle = col;
+        if (T.hand) { nib(c, wob(cp.x + 1.5, STAFF_TOP, cp.x + 1.5, FLOOR, 0.6), 2.6); nib(c, wob(cp.x + 9.5, STAFF_TOP, cp.x + 9.5, FLOOR, 0.6), 2.6); }
+        else { c.fillRect(cp.x, STAFF_TOP, 2.6, FLOOR - STAFF_TOP); c.fillRect(cp.x + 8, STAFF_TOP, 2.6, FLOOR - STAFF_TOP); }
+        printFermata(c, cp.x + 5.3, STAFF_TOP - 14);
+        if (cp.active) { c.textAlign = 'center'; c.font = font(13, 600, true); c.fillText(cp.label, cp.x + 5, STAFF_TOP - 38); }
+    }
+
+    function drawSystem(c, s) {
+        const x0 = Math.max(s.x0, cameraX - 40), x1 = Math.min(s.x1, cameraX + W + 40), oy = s.oy || 0;
+        if (x1 <= x0 || STAFF_TOP + oy > cameraY + H + 60 || FLOOR + oy < cameraY - 60) return;
+        drawStaff(c, x0, x1, STAFF_TOP + oy, GAP);
+        c.fillStyle = C.ink; c.strokeStyle = C.ink;
+        if (s.x0 > cameraX - 200) {
+            drawClef(c, s.x0 + 16, s.clef, oy);
+            if (s.first) printSignature(c, s.x0 + 98, yP(4) + oy, GAP);
+            if (s.label) {
+                // the rubric naming the mode at the head of its first line
+                c.fillStyle = (T.mono || T.hand) ? C.red : C.red; c.textAlign = 'left'; c.font = font(15, 600, true);
+                c.fillText(modesData[s.modeIdx].name, s.x0 + (oy ? 90 : 4), STAFF_TOP + oy - (oy ? 12 : 22));
+                c.fillStyle = C.ink;
+            }
+        }
+        if (s.x1 < cameraX + W + 60 && s.x1 !== Infinity) {
+            c.strokeStyle = C.ink; c.fillStyle = C.ink;
+            if (s.final) finalBar(c, s.x1 - 16);
+            else if (s.custos != null) printCustos(c, s.x1 - 30, yP(s.custos) + oy);
+        }
+    }
+
+    function drawWorld() {
+        const L = currentLevelData;
+        ctx.save(); ctx.translate(-cameraX, -cameraY);
+        const vis = (x, w = 60) => x + w > cameraX - 60 && x < cameraX + W + 60;
+
+        L.systems.forEach(s => drawSystem(ctx, s));
+        if (L.inscription && vis(150, 300)) { ctx.fillStyle = C.inkSoft; ctx.textAlign = 'left'; ctx.font = font(15, 400, true); ctx.fillText(L.inscription, 150, STAFF_TOP - 22); }
+
+        ctx.textAlign = 'left';
+        L.checkpoints.forEach(cp => { if (vis(cp.x)) drawCheckpoint(ctx, cp); });
+        if (gameMode === 'CLASSIC' && L.goal.x < Infinity && vis(L.goal.x - 40, 100)) {
+            ctx.fillStyle = C.mark; ctx.font = font(16, 600, true); ctx.textAlign = 'right';
+            ctx.fillText('Finalis', L.goal.x - 10, STAFF_TOP - 24);
+        }
+
+        if (boss.active) {
+            ctx.textAlign = 'left';
+            ctx.fillStyle = C.red; ctx.strokeStyle = C.red;
+            // mi contra fa: b durum against b rotundum, the forbidden tritone
+            printQuadratum(ctx, boss.x - 6, boss.y + 52, 1.8); printFlat(ctx, boss.x + 40, boss.y + 52, 1.8);
+            pill(boss.x - 20, boss.y - 20, 90, 6, C.line);
+            if (boss.hp > 0) pill(boss.x - 20, boss.y - 20, Math.max(6, 90 * (boss.hp / boss.maxHp)), 6, C.red);
+            ctx.fillStyle = C.red; ctx.font = font(13, 600, true); ctx.fillText('Mi contra Fa, diabolus in musica', boss.x - 70, boss.y - 30);
+            boss.projectiles.forEach(bp => { if (bp.mi) printQuadratum(ctx, bp.x + 4, bp.y + 16, 0.7); else printFlat(ctx, bp.x + 4, bp.y + 16, 0.7); });
+        }
+
+        // the perfect longa rests waiting above the staff
+        L.thwomps.forEach(t => {
+            if (t.dead || !vis(t.x)) return;
+            const lx = t.x + (t.state === 'shaking' ? (Math.random() > 0.5 ? 2 : -2) : 0);
+            ctx.fillStyle = (t.state === 'shaking' || t.state === 'falling') ? C.redHot : C.red;
+            printRest(ctx, lx + t.w / 2, t.y, t.h, 9);
+        });
+
+        L.groups.forEach(g => { if (vis(g.x, g.w) && g.dy < 500) drawGroup(ctx, g); });
+
+        // semiminims to gather: black heads with their stems
+        ctx.fillStyle = C.ink; ctx.strokeStyle = C.ink;
+        L.notes.forEach(n => { if (n.active && vis(n.x)) { const cy = yP(n.p) + (n.oy || 0); lozenge(ctx, n.x + 7.5, cy, 6.5, 8.5, true); ligStem(ctx, n.x + 7.5, cy - 4, cy - 30); } });
+
+        L.powerups.forEach(it => {
+            if (!it.active || !vis(it.x)) return;
+            if (it.kind === 'dupla') { ctx.fillStyle = C.blue; ctx.strokeStyle = C.blue; printMensuration(ctx, it.x + 12.5, it.y + 12.5, 'C|', 14); }
+            else if (it.kind === 'tempus') { ctx.fillStyle = C.ink; ctx.strokeStyle = C.ink; printMensuration(ctx, it.x + 12.5, it.y + 12.5, 'O', 14); }
+            else { ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(it.x + 10, it.y + 15, 10, 0, Math.PI * 2); ctx.fill(); pathRoundRect(ctx, it.x + 5, it.y, 10, 10, 2); ctx.fill(); }
+        });
+
+        L.rests.forEach(e => {
+            if (e.dead || !vis(e.x)) return;
+            ctx.fillStyle = e.aggro ? C.redHot : C.red;
+            printRest(ctx, e.x + e.w / 2, e.y, e.h, e.aggro ? 9 : 8);
+        });
+        ctx.fillStyle = C.red; ctx.strokeStyle = C.red;
+        L.flats.forEach(f => { if (!f.dead && vis(f.x)) printFlat(ctx, f.x + 5, f.y + 34, 1.15); });
+        L.sharps.forEach(s => { if (!s.dead && vis(s.x)) printSharp(ctx, s.x + 2, s.y + 15, 0.95); });
+        ctx.fillStyle = C.ink; projectiles.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill(); });
+
+        if (gameMode === 'GRADUS') { ctx.fillStyle = C.ink; ctx.fillRect(-1000, cameraY + H + 24, W + 2000, 1000); ctx.fillStyle = C.red; ctx.fillRect(-1000, cameraY + H + 24, W + 2000, 2); }
+        if (gameMode === 'ENDLESS') { ctx.fillStyle = C.ink; ctx.fillRect(cameraX - 1000, -500, 1000 - 24, H + 1000); ctx.fillStyle = C.red; ctx.fillRect(cameraX - 26, -500, 2, H + 1000); }
+
+        if (L.hasFuga && player.history.length === 60) { const g = player.history[0]; drawMensuralNote(ctx, g.x, g.y, noteStates[g.state], false, 0.6, false, true); }
+        const isColored = player.colorationTimer > 0;
+        trail.forEach((t, i) => drawMensuralNote(ctx, t.x, t.y, noteStates[t.state], false, (i + 1) / 14, isColored));
+        if (!(player.invulnerableTimer > 0 && gameState === 'PLAY' && Math.floor(Date.now() / 80) % 2 === 0)) drawMensuralNote(ctx, player.x, player.y, noteStates[getStateIndex(player.stateValue)], player.invulnerableTimer > 0, 1, isColored);
+
+        particles.forEach(p => { ctx.fillStyle = p.color === '#b30000' ? C.red : (p.color || rgba(C.soft, 0.45)); ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2); ctx.fill(); });
+        ctx.restore();
+    }
     function drawFsButton() {
         if (!fsAvailable) { FS_BTN.w = 0; return; }
         const label = fsLabel(), b = FS_BTN;
@@ -2476,7 +2797,7 @@ let devInvincible = false;
         drawThemeButton();
         drawFsButton();
 
-        const credit = 'Feedback > mensuratorgame@gmail.com  Samuel Reid Navarro  ·  ' + new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+        const credit = 'Feedback > mensuratorgame@gmail.com  Samuel Reid Navarro  ·  ' + lastUpdateText();
         ctx.fillStyle = C.ink; ctx.textAlign = 'center';
         ctx.font = T.hand ? `400 13px ${GOTH}` : `italic 13px ${FELL}`;
         ctx.fillText(credit, W / 2, T.hand ? 368 : 362);
@@ -2548,7 +2869,7 @@ let devInvincible = false;
         drawThemeButton();
         drawFsButton();
 
-        const credit = 'Feedback > mensuratorgame@gmail.com  Samuel Reid Navarro  ·  ' + new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+        const credit = 'Feedback > mensuratorgame@gmail.com  Samuel Reid Navarro  ·  ' + lastUpdateText();
         ctx.fillStyle = C.soft;
         ctx.font = font(11, 500);
         ctx.fillText(credit, W / 2, 374);
@@ -2567,138 +2888,16 @@ let devInvincible = false;
         ctx.fillText(text, W - 35, y + 15);
         return y + 28;
     }
-
     function draw() {
         ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
         ctx.clearRect(0, 0, W, H);
         ctx.textBaseline = 'alphabetic';
-
         titleDevBtn.style.display = (gameState === 'MENU') ? 'block' : 'none';
         syncTouchGameChrome();
+        if (gameState === 'MENU') { drawMenu(); return; }
 
-        if (gameState === 'MENU' || gameState === 'OPTIONS') { drawMenu(); return; }
-        if (gameMode === 'KART' && kart && ['PLAY', 'SPLASH', 'WIN', 'PAUSE'].includes(gameState)) { kartDraw(); return; }
-
-        if (gameState === 'PLAY' || gameState === 'SPLASH' || gameState === 'DEATH_FREEZE' || gameState === 'WIN') {
-            ctx.save(); ctx.translate(-cameraX, -cameraY);
-            ctx.strokeStyle = C.staff; ctx.lineWidth = 1.5;
-            if (gameMode !== 'GRADUS' && currentLevelData && currentLevelData.groundChunks) {
-                currentLevelData.groundChunks.forEach(chunk => {
-                    const x0 = Math.max(chunk.x, cameraX - 40), x1 = Math.min(chunk.x + chunk.w, cameraX + W + 40);
-                    if (x1 > x0) drawStaff(ctx, x0, x1, 230, 30);
-                });
-            } else if (gameMode === 'GRADUS') {
-                let startY = Math.floor(cameraY / 100) * 100;
-                ctx.fillStyle = C.staff;
-                for (let i = 0; i < 5; i++) {
-                    if (T.print) { ctx.fillRect(100 + i * 150 - 0.8, cameraY - 40, 1.6, H + 80); continue; }
-                    ctx.beginPath();
-                    ctx.moveTo(100 + i * 150, startY - 1000);
-                    ctx.lineTo(100 + i * 150, cameraY + H + 1000);
-                    ctx.stroke();
-                }
-            }
-
-        if (gameMode !== 'GRADUS') {
-            // F clef on the fourth line, then the sign of the chosen Mensura
-            ctx.fillStyle = C.ink; ctx.strokeStyle = C.ink;
-            printFClef(ctx, 20, 260); printSignature(ctx, 86, 290, 30);
-        }
-        if (gameMode === 'CLASSIC') {
-            ctx.textAlign = 'left';
-            currentLevelData.checkpoints.forEach(cp => drawCheckpoint(ctx, cp));
-            if (!boss.active) {
-                ctx.strokeStyle = rgba(C.mark, T.mono ? 0.6 : 0.35);
-                ctx.lineWidth = 2;
-                ctx.setLineDash([6, 8]);
-                ctx.beginPath();
-                ctx.moveTo(currentLevelData.goal.x + 20, 0);
-                ctx.lineTo(currentLevelData.goal.x + 20, H);
-                ctx.stroke();
-                ctx.setLineDash([]);
-
-                ctx.fillStyle = C.mark;
-                ctx.textAlign = 'left';
-                if (T.print) {
-                    // final double bar with a custos, as at the end of a part
-                    const gx = currentLevelData.goal.x;
-                    if (T.hand) { nib(ctx, wob(gx + 4, 230, gx + 4, 350, 0.6), 2.6); nib(ctx, wob(gx + 13, 230, gx + 13, 350, 0.6), 7); }
-                    else { ctx.fillRect(gx + 3, 230, 2.4, 120); ctx.fillRect(gx + 10, 230, 6, 120); }
-                    ctx.strokeStyle = C.mark; printCustos(ctx, gx + 22, 300);
-                } else {
-                    ctx.font = `60px ${MUSIC}`;
-                    ctx.fillText('𝄡', currentLevelData.goal.x, 320);
-                }
-
-                // "Finalis" label
-                ctx.font = font(16, 600, true);
-                ctx.fillText('Finalis', currentLevelData.goal.x - 8, 150);
-            }
-        }
-
-        if (boss.active) {
-            ctx.textAlign = 'left';
-            ctx.fillStyle = C.red; ctx.strokeStyle = C.red;
-            if (T.print) { printSharp(ctx, boss.x - 14, boss.y + 38, 1.6); printFlat(ctx, boss.x + 34, boss.y + 52, 1.6); }
-            else { ctx.font = `60px ${MUSIC}`; ctx.fillText('♯ ♭', boss.x - 20, boss.y + 60); }
-            pill(boss.x - 20, boss.y - 20, 80, 6, C.line); 
-            if (boss.hp > 0) pill(boss.x - 20, boss.y - 20, Math.max(6, 80 * (boss.hp / boss.maxHp)), 6, C.red);
-            ctx.fillStyle = C.red; ctx.font = font(12, 600, false, 'sc'); ctx.fillText('MI-FA (Diabolus in Musica)', boss.x - 40, boss.y - 30);
-            ctx.fillStyle = C.red; ctx.strokeStyle = C.red; ctx.font = `26px ${MUSIC}`;
-            boss.projectiles.forEach(bp => {
-                if (bp.fl === undefined) bp.fl = Math.random() > 0.5;
-                const fl = bp.fl;
-                if (T.print) { if (fl) printFlat(ctx, bp.x + 3, bp.y + 16, 0.7); else printSharp(ctx, bp.x + 2, bp.y + 8, 0.7); }
-                else ctx.fillText(fl ? '♭' : '♯', bp.x, bp.y + 20);
-            });
-        }
-
-        currentLevelData.walls.forEach(wall => { ctx.fillStyle = C.ink; if (T.hand) nib(ctx, wob(wall.x + wall.w / 2, wall.y, wall.x + wall.w / 2, wall.y + wall.h, 0.6), Math.max(3, wall.w)); else { pathRoundRect(ctx, wall.x, wall.y, wall.w, wall.h, T.print ? 0 : 3); ctx.fill(); } });
-        currentLevelData.fallingLongas.forEach(l => {
-            if (!l.dead) {
-                let lx = l.x;
-                if (l.state === 'shaking') lx += (Math.random() > 0.5 ? 2 : -2);
-                ctx.fillStyle = (l.state === 'shaking' || l.state === 'falling') ? C.redHot : C.red;
-                printRest(ctx, lx + l.w / 2, l.y, l.h, 9); // a longa rest spans two spaces
-            }
-        });
-        currentLevelData.platforms.forEach(plat => drawLigature(ctx, plat));
-
-        // score notes: blackened semiminims
-        ctx.fillStyle = C.ink; ctx.strokeStyle = C.ink;
-        currentLevelData.scoreNotes.forEach(note => { if (note.active) { lozenge(ctx, note.x + 7.5, note.y + 9, 6, 8, true); ligStem(ctx, note.x + 7.5, note.y + 4, note.y - 13); } });
-
-        // alla breve: the cut C; tempus perfectum: the circle
-        ctx.fillStyle = C.blue; ctx.strokeStyle = C.blue;
-        currentLevelData.allaBreves.forEach(item => { if (item.active) printMensuration(ctx, item.x + 12.5, item.y + 12.5, 'C|', 13); });
-        ctx.fillStyle = C.ink; ctx.strokeStyle = C.ink;
-        currentLevelData.tempusItems.forEach(item => { if (item.active) printMensuration(ctx, item.x + 12.5, item.y + 12.5, 'O', 13); });
-        ctx.fillStyle = C.ink; currentLevelData.inkPots.forEach(pot => { if (pot.active) { ctx.beginPath(); ctx.arc(pot.x + 10, pot.y + 15, 10, 0, Math.PI*2); ctx.fill(); pathRoundRect(ctx, pot.x + 5, pot.y, 10, 10, 2); ctx.fill(); } });
-
-        currentLevelData.enemies.forEach(e => {
-            if (e.dead) return;
-            // breve rest fills a space, semibreve rest hangs from a line, minim rest stands on one
-            ctx.fillStyle = e.aggro ? C.redHot : C.red;
-            printRest(ctx, e.x + e.w / 2, e.y, e.h, e.aggro ? 8 : 7);
-        });
-        ctx.fillStyle = C.red; ctx.strokeStyle = C.red; ctx.font = `30px ${MUSIC}`;
-        currentLevelData.jumpingFlats.forEach(flat => { if (!flat.dead && flat.state !== 'hidden') { if (T.print) printFlat(ctx, flat.x + 4, flat.y + 22); else ctx.fillText('♭', flat.x, flat.y + 25); } });
-        ctx.fillStyle = C.red; ctx.strokeStyle = C.red; ctx.font = `40px ${MUSIC}`;
-        currentLevelData.flyingEnemies.forEach(e => { if (!e.dead) { if (T.print) printSharp(ctx, e.x + 5, e.y + 20); else ctx.fillText('♯', e.x, e.y + 35); } });
-        ctx.fillStyle = C.ink; projectiles.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill(); });
-
-        if (gameMode === 'ENDLESS') { ctx.fillStyle = rgba(C.ink, T.print ? 1 : 0.9); ctx.fillRect(cameraX - 1000, -500, 1000 - 24, H + 1000); ctx.fillStyle = C.red; ctx.fillRect(cameraX - 26, -500, 2, H + 1000); }
-        else if (gameMode === 'GRADUS') { ctx.fillStyle = rgba(C.ink, T.print ? 1 : 0.9); ctx.fillRect(-1000, cameraY + H + 24, W + 2000, 1000); ctx.fillStyle = C.red; ctx.fillRect(-1000, cameraY + H + 24, W + 2000, 2); }
-
-        if (currentLevelData.hasFuga && player.history.length === 60) { let ghost = player.history[0]; drawMensuralNote(ctx, ghost.x, ghost.y, noteStates[ghost.state], false, 0.6, false, true); }
-
-        const isColored = player.colorationTimer > 0;
-        trail.forEach((t, i) => drawMensuralNote(ctx, t.x, t.y, noteStates[t.state], false, (i+1)/14, isColored));
-        drawMensuralNote(ctx, player.x, player.y, noteStates[getStateIndex(player.stateValue)], player.invulnerableTimer > 0, 1, isColored);
-
-        particles.forEach(p => { ctx.fillStyle = p.color === '#b30000' ? C.red : (p.color || rgba(C.soft, 0.45)); ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2); ctx.fill(); });
-        ctx.restore();
-
+        if (currentLevelData && ['PLAY', 'SPLASH', 'DEATH_FREEZE', 'WIN', 'PAUSE'].includes(gameState)) {
+            drawWorld();
         if (gameState === 'SPLASH') {
             veil(0.95);
 
@@ -2752,6 +2951,10 @@ let devInvincible = false;
             ctx.fillStyle = rgba(C.mark, T.print ? 1 : 0.55 + Math.sin(Date.now() / 300) * 0.45);
             ctx.font = font(14, 600);
             ctx.fillText('Press any key or tap to continue', W / 2, H - 40);
+            // the mode's two pillars: where its melodies end, and where they recite
+            const mi = modeInfo(currentLevel), nm = d => NOTE_NAMES[dMod(d)];
+            ctx.fillStyle = C.soft; ctx.font = font(14, 500, true);
+            ctx.fillText(`Finalis ${nm(mi.final)}   ·   Repercussio ${nm(mi.dom)}   ·   ${mi.plagal ? 'plagalis' : 'authenticus'}`, W / 2, H - 76);
         } else if (gameState !== 'DEATH_FREEZE' && gameState !== 'WIN' && gameState !== 'MENU' && gameState !== 'PAUSE') {
             if (currentLevel === 0 && gameMode === 'CLASSIC') {
                 ctx.save();
@@ -2928,504 +3131,6 @@ let devInvincible = false;
             ctx.font = font(13, 600);
             ctx.fillText('Tap anywhere to return', W / 2, H - 30);
         }
-    }
-
-    // ===== Cursus: a kart race along a staff, drawn as a pseudo-3D road =====
-    const KART = { SEG: 200, ROAD: 1000, DRAW: 170, CAM_H: 1000, HY: 166, VS: 200, LAPS: 3, KW: 0.14 };
-    KART.depth = 1 / Math.tan(50 * Math.PI / 180);
-    KART.playerZ = KART.CAM_H * KART.depth;
-    const RIVALS = [
-        { name: 'Maxima', note: 'MAXIMA', skill: 0.955 }, { name: 'Longa', note: 'LONGA', skill: 0.965 },
-        { name: 'Brevis', note: 'BREVIS', skill: 0.985 }, { name: 'Semibrevis', note: 'SEMIBREVIS', skill: 0.975 },
-        { name: 'Fusa', note: 'FUSA', skill: 0.995 }
-    ];
-    const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI'];
-    let kart = null, kartTrack = null;
-    const kmod = (n, m) => ((n % m) + m) % m;
-    const klerp = (a, b, t) => a + (b - a) * t;
-
-    function kartBuildTrack() {
-        const S = KART.SEG, segs = [];
-        const lastY = () => segs.length ? segs[segs.length - 1].p2.y : 0;
-        const add = (curve, y) => { const i = segs.length; segs.push({ i, curve, p1: { y: lastY(), z: i * S }, p2: { y, z: (i + 1) * S }, sprites: [] }); };
-        const easeIn = (a, b, t) => a + (b - a) * t * t;
-        const easeInOut = (a, b, t) => a + (b - a) * (-Math.cos(t * Math.PI) / 2 + 0.5);
-        const road = (enter, hold, leave, curve, hill) => {
-            const y0 = lastY(), y1 = y0 + hill * S, n = enter + hold + leave; let k = 0;
-            for (let i = 0; i < enter; i++) add(easeIn(0, curve, i / enter), easeInOut(y0, y1, ++k / n));
-            for (let i = 0; i < hold; i++) add(curve, easeInOut(y0, y1, ++k / n));
-            for (let i = 0; i < leave; i++) add(easeInOut(curve, 0, i / leave), easeInOut(y0, y1, ++k / n));
-        };
-        road(10, 60, 10, 0, 0);
-        road(30, 60, 30, 3, 0);
-        road(20, 50, 20, 0, 18);
-        road(30, 80, 30, -4, 0);
-        road(25, 40, 25, 0, -18);
-        road(25, 50, 25, 5, 0);
-        road(25, 50, 25, -5, 0);
-        road(20, 60, 20, 0, 26);
-        road(30, 90, 30, 3, -26);
-        road(25, 50, 25, -2.5, 0);
-        road(15, 50, 15, 0, 0);
-        const N = segs.length, r = rng(11), signs = ['O', 'C', 'O.', 'C.', 'C|'];
-        segs[3].sprites.push({ kind: 'banner', x: 0 });
-        for (let i = 14; i < N - 6; i++) {
-            const c = segs[i].curve;
-            // mensuration signs on the outside of every bend
-            if (Math.abs(c) > 1.5 && i % 6 === 0) segs[i].sprites.push({ kind: 'sign', x: c > 0 ? -1.3 : 1.3, sign: signs[(i / 6) % signs.length | 0], solid: true, hw: 0.13 });
-            if (i % 5 === 0 && r() < 0.75) { const side = r() < 0.5 ? -1 : 1; segs[i].sprites.push({ kind: r() < 0.8 ? 'tree' : 'leaf', x: side * (1.5 + r() * 2.2), solid: true, hw: 0.2, seed: r() }); }
-            if (i % 9 === 4 && r() < 0.5) segs[i].sprites.push({ kind: 'leaf', x: (r() < 0.5 ? -1 : 1) * (1.25 + r() * 0.3), solid: false, seed: r() });
-        }
-        const boxes = [];
-        [0.16, 0.47, 0.76].forEach(f => [-0.6, -0.2, 0.2, 0.6].forEach(x => boxes.push({ seg: Math.floor(N * f), x, hidden: 0 })));
-        return { segs, len: N * S, boxes };
-    }
-
-    function kartStart() {
-        if (!kartTrack) kartTrack = kartBuildTrack();
-        kartTrack.boxes.forEach(b => b.hidden = 0);
-        const S = KART.SEG;
-        resetPlayer(0, 0);
-        const racer = (o, k) => Object.assign({ x: k % 2 ? 0.42 : -0.42, total: -S * (2 + Math.floor(k / 2) * 3), speed: 0, lap: 0, item: null, itemT: 0, roll: 0, drift: 0, charge: 0, hop: 0, boost: 0, star: 0, spin: 0, finish: null, lean: 0 }, o);
-        const cars = RIVALS.map((r, i) => racer(Object.assign({ lane: 0 }, r), i < 4 ? i : 5));
-        cars.forEach(c => c.lane = c.x);
-        kart = {
-            t: 0, count: 3.6, done: false, doneT: 0, bg: 0, tempus: 0, banner: 0, shake: 0, frame: 0,
-            maxSpeed: S * 60 * 0.9 * speedSettings[difficultyIndex].mult,
-            p: racer({ name: 'Minima', note: 'MINIMA', me: true, upWas: false, rocket: 0 }, 4),
-            cars, flats: [], sharps: [], best: null
-        };
-        try { const b = parseFloat(localStorage.getItem('mensuratorKartBest')); if (b > 0) kart.best = b; } catch (e) {}
-        currentLevel = 4; levelTime = 0;
-        gameState = 'SPLASH';
-    }
-
-    const kartSeg = total => kartTrack.segs[Math.floor(kmod(total, kartTrack.len) / KART.SEG) % kartTrack.segs.length];
-    const kartRacers = () => [kart.p, ...kart.cars];
-    function kartOrder() {
-        return kartRacers().sort((a, b) => (a.finish != null && b.finish != null) ? a.finish - b.finish : a.finish != null ? -1 : b.finish != null ? 1 : b.total - a.total);
-    }
-    function kartPickItem(place) {
-        const tables = [
-            [['flat', 5], ['sharp', 4], ['allabreve', 1]],
-            [['sharp', 35], ['flat', 25], ['allabreve', 30], ['tempus', 5], ['ink', 5]],
-            [['allabreve', 35], ['ink', 20], ['tempus', 20], ['sharp', 25]]
-        ];
-        const t = tables[place === 1 ? 0 : place <= 3 ? 1 : 2];
-        let r = Math.random() * t.reduce((s, e) => s + e[1], 0);
-        for (const [k, w] of t) { if ((r -= w) < 0) return k; }
-        return t[0][0];
-    }
-    function kartSpin(r) {
-        if (r.star > 0 || r.spin > 0) return;
-        r.spin = 1; r.drift = 0; r.charge = 0;
-        playSound(r.me ? 'damage' : 'smash');
-    }
-    function kartUseItem(r) {
-        const it = r.item;
-        if (!it || r.roll > 0 || !kart || kart.count > 0) return;
-        r.item = null;
-        const L = kartTrack.len;
-        if (it === 'allabreve') { r.boost = 1.2; if (r.me) playSound('allaBreve'); }
-        else if (it === 'flat') { kart.flats.push({ z: kmod(r.total - 170, L), x: r.x }); if (r.me) playSound('shoot'); }
-        else if (it === 'sharp') { kart.sharps.push({ total: r.total + 170, x: r.x, speed: Math.max(r.speed, kart.maxSpeed) * 1.45, life: 4, owner: r, spin: 0 }); if (r.me) playSound('shoot'); }
-        else if (it === 'tempus') { kart.tempus = 3.5; playSound('tempus'); }
-        else if (it === 'ink') { r.star = 5; playSound('point'); }
-    }
-
-    function kartUpdate() {
-        const dt = 1 / 60, S = KART.SEG, L = kartTrack.len, N = kartTrack.segs.length, p = kart.p, max = kart.maxSpeed;
-        kart.frame++;
-        if (kart.count > 0) {
-            const before = Math.ceil(kart.count);
-            kart.count -= dt;
-            p.rocket = keys.up ? p.rocket + dt : 0;
-            if (Math.ceil(kart.count) !== before && before <= 3 && kart.count > 0) playSound('point');
-            if (kart.count <= 0) { playSound('allaBreve'); if (p.rocket > 0.1 && p.rocket < 1.1) p.boost = 1; p.upWas = keys.up; }
-            return;
-        }
-        if (!kart.done) kart.t += dt; else kart.doneT += dt;
-        if (kart.done && kart.doneT > 2.5 && gameState === 'PLAY') { gameState = 'WIN'; if (musicTimeout) clearTimeout(musicTimeout); }
-        if (kart.tempus > 0) kart.tempus -= dt;
-        if (kart.banner > 0) kart.banner -= dt;
-        if (kart.shake > 0) kart.shake -= dt;
-
-        // --- the player ---
-        const seg = kartSeg(p.total), pct = p.speed / max;
-        const auto = kart.done;
-        const ahead = kartTrack.segs[(seg.i + 10) % N];
-        const steer = auto ? Math.sign(Math.round((-ahead.curve * 0.08 - p.x) * 4)) : (keys.left ? -1 : 0) + (keys.right ? 1 : 0);
-        const up = !auto && keys.up, down = !auto && keys.down;
-        // hop on the drift key; hold it through a bend for a burst of speed when released
-        if (up && !p.upWas) { p.hop = 0.22; playSound('jump'); if (steer !== 0 && pct > 0.4 && p.spin <= 0) { p.drift = steer; p.charge = 0; } }
-        if (p.drift && (!up || pct < 0.3 || p.spin > 0)) {
-            if (!up && p.spin <= 0 && p.charge > 0.75) { p.boost = p.charge > 1.6 ? 1.1 : 0.6; playSound('allaBreve'); }
-            p.drift = 0; p.charge = 0;
-        }
-        p.upWas = up;
-        if (p.hop > 0) p.hop -= dt;
-        const dx = dt * 2.2 * pct;
-        if (p.drift) { p.x += dx * (p.drift * 0.62 + steer * 0.55); p.charge += dt * (steer === p.drift ? 1.4 : 0.8); p.x -= dx * pct * seg.curve * 0.14; }
-        else { p.x += dx * steer; p.x -= dx * pct * seg.curve * 0.24; }
-        p.lean += ((p.drift ? p.drift * 1.6 : steer) - p.lean) * 0.2;
-
-        if (p.boost > 0) p.boost -= dt;
-        if (p.star > 0) { p.star -= dt; player.colorationTimer = Math.max(0, p.star * 60); } else player.colorationTimer = 0;
-        const top = max * (p.boost > 0 ? 1.3 : 1) * (p.star > 0 ? 1.15 : 1);
-        const off = Math.abs(p.x) > 1;
-        if (p.spin > 0) { p.spin -= dt; p.speed *= 0.94; }
-        else if (down) p.speed -= max * 1.2 * dt;
-        else if (p.speed < top) p.speed = Math.min(top, p.speed + max * (p.boost > 0 ? 1.6 : 0.3) * dt);
-        else p.speed = Math.max(top, p.speed - max * 0.4 * dt);
-        if (off && p.star <= 0 && p.speed > max * 0.35) p.speed -= max * 0.9 * dt;
-        p.speed = Math.max(0, p.speed);
-        p.x = Math.max(-2.3, Math.min(2.3, p.x));
-        if (off) for (const s of seg.sprites) {
-            if (s.solid && Math.abs(p.x - s.x) < s.hw + KART.KW) {
-                if (p.star > 0) break;
-                p.speed = Math.min(p.speed, max * 0.12); p.x += (p.x > s.x ? 1 : -1) * 0.07; kart.shake = 0.3; playSound('damage');
-                break;
-            }
-        }
-        const dz = p.speed * dt;
-        p.total += dz;
-        kart.bg += seg.curve * (dz / S) * 0.0016;
-
-        // --- rivals ---
-        for (const c of kart.cars) {
-            const cs = kartSeg(c.total), ca = kartTrack.segs[(cs.i + 12) % N];
-            if (c.boost > 0) c.boost -= dt;
-            if (c.spin > 0) { c.spin -= dt; c.speed *= 0.94; }
-            else {
-                const gap = (p.total - c.total) / L;
-                const rubber = Math.max(0.9, Math.min(1.15, 1 + gap * 0.8));
-                const ctop = max * c.skill * rubber * (c.boost > 0 ? 1.3 : 1) * (kart.tempus > 0 ? 0.6 : 1) * (1 - Math.abs(cs.curve) * 0.006);
-                c.speed = c.speed < ctop ? Math.min(ctop, c.speed + max * 0.3 * dt) : Math.max(ctop, c.speed - max * 0.6 * dt);
-                if (Math.random() < 0.004) c.lane = (Math.random() - 0.5) * 1.2;
-                // the inside of the coming bend, and round anyone slower ahead
-                let tx = c.lane - ca.curve * 0.09;
-                const block = kartRacers().find(o => o !== c && o.total - c.total > 0 && o.total - c.total < S * 8 && Math.abs(o.x - tx) < 0.3 && o.speed < c.speed);
-                if (block) tx = block.x > 0 ? block.x - 0.42 : block.x + 0.42;
-                tx = Math.max(-0.82, Math.min(0.82, tx));
-                c.x += (tx - c.x) * Math.min(1, dt * 2.5);
-                if (c.item) { c.itemT -= dt; if (c.itemT <= 0) kartUseItem(c); }
-            }
-            c.total += c.speed * dt;
-            if (c.finish == null && c.total >= KART.LAPS * L) c.finish = kart.t + kart.doneT;
-        }
-
-        // bumping
-        for (const c of kart.cars) {
-            const gz = c.total - p.total, ox = c.x - p.x;
-            if (Math.abs(gz) < 140 && Math.abs(ox) < KART.KW * 2) {
-                if (p.star > 0) { kartSpin(c); continue; }
-                const side = ox >= 0 ? 1 : -1;
-                if (gz > 0 && p.speed > c.speed) { p.speed = c.speed * 0.9; p.x -= side * 0.05; playSound('bounce'); }
-                else if (gz <= 0 && c.speed > p.speed) { c.speed = p.speed * 0.9; c.x += side * 0.05; }
-                else { p.x -= side * 0.02; c.x += side * 0.02; }
-            }
-        }
-
-        // item boxes
-        for (const b of kartTrack.boxes) {
-            if (b.hidden > 0) { b.hidden -= dt; continue; }
-            const bz = b.seg * S + S / 2;
-            for (const r of kartRacers()) {
-                const d = Math.abs(kmod(r.total, L) - bz);
-                if (Math.min(d, L - d) < 110 && Math.abs(r.x - b.x) < 0.17 && r.total > 0) {
-                    b.hidden = 2.5;
-                    if (!r.item && !(r.roll > 0)) {
-                        if (r.me) { if (!kart.done) { r.roll = 1.1; playSound('point'); } }
-                        else { r.item = ['allabreve', 'flat', 'sharp'][Math.random() * 3 | 0]; r.itemT = 1 + Math.random() * 3; }
-                    }
-                    break;
-                }
-            }
-        }
-        if (p.roll > 0) { p.roll -= dt; if (p.roll <= 0) p.item = kartPickItem(kartOrder().indexOf(p) + 1); }
-
-        // flats lie where they fell; sharps fly straight down the road
-        for (let i = kart.flats.length - 1; i >= 0; i--) {
-            const f = kart.flats[i];
-            for (const r of kartRacers()) {
-                const d = Math.abs(kmod(r.total, L) - f.z);
-                if (Math.min(d, L - d) < 90 && Math.abs(r.x - f.x) < 0.16) { kartSpin(r); kart.flats.splice(i, 1); break; }
-            }
-        }
-        for (let i = kart.sharps.length - 1; i >= 0; i--) {
-            const s = kart.sharps[i];
-            s.total += s.speed * dt; s.life -= dt; s.spin += dt * 12;
-            let hit = s.life <= 0;
-            if (!hit) for (const r of kartRacers()) {
-                if (r === s.owner && s.life > 3.6) continue;
-                if (Math.abs(r.total - s.total) < 130 && Math.abs(r.x - s.x) < 0.2) { kartSpin(r); hit = true; break; }
-            }
-            if (hit) kart.sharps.splice(i, 1);
-        }
-
-        // circuits and the finish
-        const lap = Math.floor(p.total / L) + 1;
-        if (lap > p.lap) {
-            p.lap = lap;
-            if (lap === KART.LAPS) { kart.banner = 2.5; playSound('tempus'); }
-            if (lap > KART.LAPS && p.finish == null) {
-                p.finish = kart.t; kart.done = true; p.item = null; p.roll = 0;
-                playSound('point');
-                if (!kart.best || p.finish < kart.best) { kart.best = p.finish; kart.newBest = true; try { localStorage.setItem('mensuratorKartBest', String(p.finish)); } catch (e) {} }
-            }
-        }
-    }
-
-    // ----- drawing -----
-    function kartTime(t) { if (t == null) return '–'; const m = Math.floor(t / 60), s = t - m * 60; return `${m}:${s < 10 ? '0' : ''}${s.toFixed(2)}`; }
-
-    function kartBackdrop(off) {
-        const HY = KART.HY;
-        ctx.fillStyle = C.line; ctx.fillRect(0, HY - 0.5, W, 1);
-        // far hills, then near hills with a village, cut like a woodblock
-        const ridge = (wx, a) => a * (0.55 + 0.3 * Math.sin(wx * 6.283) + 0.18 * Math.sin(wx * 17.1 + 1) + 0.08 * Math.sin(wx * 41.3 + 2));
-        [[0.5, 30, C.line, 1], [1, 46, C.ink, 1.4]].forEach(([par, amp, col, lw]) => {
-            const o = off * par + (par < 1 ? 0.37 : 0);
-            ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath();
-            for (let X = 0; X <= W; X += 4) { const y = HY - ridge(X / W + o, amp); X ? ctx.lineTo(X, y) : ctx.moveTo(X, y); }
-            ctx.stroke();
-            if (par === 1) {
-                ctx.lineWidth = 0.8; ctx.beginPath();
-                for (let X = 2; X <= W; X += 5) { const h = ridge(X / W + o, amp), y = HY - h; ctx.moveTo(X, y + 3); ctx.lineTo(X - 1.5, y + 3 + h * 0.4); }
-                ctx.stroke();
-                // church towers stand on the ridge
-                ctx.lineWidth = 1.2; ctx.fillStyle = col;
-                [0.12, 0.47, 0.81].forEach((t, k) => {
-                    const X = kmod((t - o) * W, W * 1.0);
-                    if (X < -20 || X > W + 20) return;
-                    const y = HY - ridge(X / W + o, amp), w = 7 + k * 2, h = 18 + k * 6;
-                    ctx.strokeRect(X - w / 2, y - h, w, h);
-                    ctx.beginPath(); ctx.moveTo(X - w / 2 - 1, y - h); ctx.lineTo(X, y - h - w * 1.8); ctx.lineTo(X + w / 2 + 1, y - h); ctx.stroke();
-                    ctx.fillRect(X - 0.6, y - h - w * 1.8 - 6, 1.2, 6); ctx.fillRect(X - 2.5, y - h - w * 1.8 - 4.5, 5, 1.2);
-                    ctx.fillRect(X - 1, y - h * 0.6, 2, 4);
-                });
-            }
-        });
-    }
-
-    function kartTree(sx, sy, k, seed) {
-        // a woodcut tree: scalloped crown, a few cuts of shade, a plain trunk
-        ctx.save(); ctx.translate(sx, sy); ctx.scale(k, k);
-        ctx.fillStyle = C.ink; ctx.strokeStyle = C.ink;
-        ctx.fillRect(-24, -380, 48, 380);
-        const rx = 210 + seed * 70, ry = 250 + seed * 60, cy = -380 - ry * 0.85, rb = rx * 0.45;
-        const bumps = []; for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + seed; bumps.push([Math.cos(a) * rx * 0.7, cy + Math.sin(a) * ry * 0.7]); }
-        ctx.lineWidth = 34; ctx.beginPath(); bumps.forEach(([x, y]) => { ctx.moveTo(x + rb, y); ctx.arc(x, y, rb, 0, Math.PI * 2); }); ctx.stroke();
-        ctx.fillStyle = C.paper; ctx.beginPath(); bumps.forEach(([x, y]) => { ctx.moveTo(x + rb, y); ctx.arc(x, y, rb, 0, Math.PI * 2); }); ctx.ellipse(0, cy, rx * 0.75, ry * 0.75, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.lineWidth = 12; ctx.beginPath();
-        for (let i = 0; i < 7; i++) { const x0 = rx * (0.05 + i * 0.09), y0 = cy - ry * 0.35 + i * ry * 0.13; ctx.moveTo(x0, y0); ctx.lineTo(x0 + rx * 0.3, y0 + 14); }
-        ctx.stroke();
-        ctx.restore();
-    }
-
-    function kartKart(r, sx, sy, f) {
-        ctx.save();
-        ctx.translate(sx, sy - (r.hop > 0 ? Math.sin(r.hop / 0.22 * Math.PI) * 14 * f : 0));
-        ctx.scale(f * 1.25, f * 1.25);
-        if (r.spin > 0) ctx.rotate(Math.sin(r.spin * 18) * 0.5); else ctx.rotate(r.lean * 0.05);
-        const body = r.me ? C.ink : C.red;
-        ctx.fillStyle = rgba(C.soft, 0.3); ctx.beginPath(); ctx.ellipse(0, -2, 50, 6, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = C.ink;
-        ctx.fillRect(-46, -26, 15, 26); ctx.fillRect(31, -26, 15, 26);
-        ctx.fillStyle = body;
-        ctx.fillRect(-38, -34, 76, 4.5); ctx.fillRect(-38, -14.5, 76, 4.5); ctx.fillRect(-38, -34, 3, 24); ctx.fillRect(35, -34, 3, 24);
-        ctx.fillRect(-31, -16, 62, 2);
-        drawMensuralNote(ctx, -12, -87, r.note, false, 1, r.me && r.star > 0);
-        // sparks while drifting, puffs while boosting
-        if (r.drift) {
-            ctx.fillStyle = r.charge > 1.6 ? C.red : r.charge > 0.75 ? C.ink : C.soft;
-            for (let i = 0; i < 4; i++) { const s = r.drift > 0 ? -1 : 1; lozenge(ctx, s * (40 + Math.random() * 16), -4 - Math.random() * 12, 2.5, 3.5, true); lozenge(ctx, -s * (40 + Math.random() * 6), -2 - Math.random() * 6, 2, 3, true); }
-        }
-        if (r.boost > 0) { ctx.fillStyle = rgba(C.soft, 0.5); for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc((Math.random() - 0.5) * 50, 4 + Math.random() * 10, 3 + Math.random() * 4, 0, Math.PI * 2); ctx.fill(); } }
-        ctx.restore();
-    }
-
-    function kartItemGlyph(it, x, y, s = 1) {
-        ctx.fillStyle = C.red; ctx.strokeStyle = C.red;
-        if (it === 'allabreve') { ctx.fillStyle = C.blue; ctx.strokeStyle = C.blue; printMensuration(ctx, x, y, 'C|', 12 * s); }
-        else if (it === 'tempus') { ctx.fillStyle = C.ink; ctx.strokeStyle = C.ink; printMensuration(ctx, x, y, 'O', 12 * s); }
-        else if (it === 'flat') printFlat(ctx, x - 4 * s, y + 13 * s, 0.8 * s);
-        else if (it === 'sharp') printSharp(ctx, x - 8 * s, y, 0.8 * s);
-        else if (it === 'ink') { ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(x, y + 4 * s, 9 * s, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(x - 4.5 * s, y - 11 * s, 9 * s, 8 * s); }
-    }
-
-    function kartDraw() {
-        const K = KART, tr = kartTrack, segs = tr.segs, N = segs.length, L = tr.len, S = K.SEG, p = kart.p;
-        const shake = kart.shake > 0 ? (Math.random() - 0.5) * 4 : 0;
-        ctx.save(); ctx.translate(shake, 0);
-        kartBackdrop(kart.bg);
-
-        const camZ = kmod(p.total - K.playerZ, L);
-        const base = segs[Math.floor(camZ / S) % N], basePct = (camZ % S) / S;
-        const pz = kmod(p.total, L), pseg = segs[Math.floor(pz / S) % N];
-        const camY = klerp(pseg.p1.y, pseg.p2.y, (pz % S) / S) + K.CAM_H, camX = p.x * K.ROAD;
-        const proj = (pt, xoff, z) => { const s = K.depth / z; return { x: W / 2 + s * (xoff - camX) * W / 2, y: K.HY + s * (camY - pt.y) * K.VS, w: s * K.ROAD * W / 2, s, z }; };
-
-        const paths = {};
-        const P = (key, b) => (paths[key + b] || (paths[key + b] = { key, b, path: new Path2D() })).path;
-        const strip = (path, n, f, u0, u1, pn = 0, pf = 0) => {
-            path.moveTo(n.x + u0 * n.w - pn, n.y); path.lineTo(n.x + u1 * n.w + pn, n.y);
-            path.lineTo(f.x + u1 * f.w + pf, f.y); path.lineTo(f.x + u0 * f.w - pf, f.y); path.closePath();
-        };
-        const mid = (a, b, t) => ({ x: klerp(a.x, b.x, t), y: klerp(a.y, b.y, t), w: klerp(a.w, b.w, t) });
-        let maxy = H, xo = 0, dxo = -(base.curve * basePct);
-        for (let n = 0; n < K.DRAW; n++) {
-            const seg = segs[(base.i + n) % N], loop = seg.i < base.i ? L : 0;
-            const a = proj(seg.p1, xo, seg.p1.z + loop - camZ), b = proj(seg.p2, xo + dxo, seg.p2.z + loop - camZ);
-            seg.a = a; seg.b = b; seg.frame = kart.frame + 0.5; seg.n = n; seg.clip = maxy; seg.ok = a.z > K.depth;
-            xo += dxo; dxo += seg.curve;
-            if (!seg.ok || b.y >= a.y || b.y >= maxy) continue;
-            const near = a.y > maxy ? mid(a, b, (a.y - maxy) / (a.y - b.y)) : a;
-            const bk = n < 40 ? 0 : n < 80 ? 1 : n < 125 ? 2 : 3;
-            strip(P('band', bk), near, b, -1, 1);
-            strip(P(Math.floor(seg.i / 2) % 2 ? 'ink' : 'red', bk), near, b, -1.1, -1);
-            strip(P(Math.floor(seg.i / 2) % 2 ? 'ink' : 'red', bk), near, b, 1, 1.1);
-            for (const u of [-0.8, -0.4, 0, 0.4, 0.8]) strip(P('staff', bk), near, b, u, u, Math.max(0.35, near.w * 0.007), Math.max(0.35, b.w * 0.007));
-            if (seg.i % 12 === 0 && seg.i > 0) strip(P('ink', bk), near, mid(a, b, 0.16), -1, 1);
-            if (seg.i === 0) { strip(P('ink', bk), mid(a, b, 0.0), mid(a, b, 0.1), -1, 1); strip(P('ink', bk), mid(a, b, 0.28), mid(a, b, 0.75), -1, 1); }
-            if (Math.floor(seg.i / 3) % 2 === 0) {
-                const hp = P('hatch', bk);
-                for (let y = Math.ceil(b.y); y <= near.y; y++) {
-                    if (y % (T.mono ? 4 : 3)) continue;
-                    const t = (a.y - y) / (a.y - b.y), xc = klerp(a.x, b.x, t), wc = klerp(a.w, b.w, t);
-                    const l = xc - wc * 1.16, rr = xc + wc * 1.16;
-                    if (l > 0) hp.rect(0, y, l, 0.8);
-                    if (rr < W) hp.rect(rr, y, W - rr, 0.8);
-                }
-            }
-            maxy = b.y;
-        }
-        const colorOf = { band: C.band, ink: C.ink, red: T.mono ? null : C.red, staff: C.staff, hatch: T.mono ? C.ink : C.line };
-        const alphaOf = [1, 0.85, 0.6, 0.35];
-        ['band', 'hatch', 'ink', 'red', 'staff'].forEach(key => [3, 2, 1, 0].forEach(b => {
-            const e = paths[key + b]; if (!e || !colorOf[key]) return;
-            ctx.globalAlpha = alphaOf[b]; ctx.fillStyle = colorOf[key]; ctx.fill(e.path);
-        }));
-        ctx.globalAlpha = 1;
-
-        // everything standing on the road, back to front
-        const bucket = new Map();
-        const put = (z, o) => { const i = Math.floor(kmod(z, L) / S) % N; (bucket.get(i) || bucket.set(i, []).get(i)).push([(kmod(z, L) % S) / S, o]); };
-        kartRacers().forEach(r => put(r.total, { kind: 'kart', r }));
-        tr.boxes.forEach(b => { if (b.hidden <= 0) put(b.seg * S + S / 2, { kind: 'box', x: b.x }); });
-        kart.flats.forEach(f => put(f.z, { kind: 'flat', x: f.x }));
-        kart.sharps.forEach(s => put(s.total, { kind: 'sharp', x: s.x, spin: s.spin }));
-        for (let n = K.DRAW - 1; n > 0; n--) {
-            const seg = segs[(base.i + n) % N];
-            if (!seg.ok) continue;
-            const items = (bucket.get(seg.i) || []).sort((u, v) => v[0] - u[0]);
-            const all = seg.sprites.map(s => [0.5, s]).concat(items);
-            for (const [pc, o] of all) {
-                const s = klerp(seg.a.s, seg.b.s, pc), x0 = klerp(seg.a.x, seg.b.x, pc), sy = klerp(seg.a.y, seg.b.y, pc);
-                const ox = o.kind === 'kart' ? o.r.x : o.x;
-                const sx = x0 + s * ox * K.ROAD * W / 2, k = s * W / 2;
-                if (sx < -1300 * k - 50 || sx > W + 1300 * k + 50) continue;
-                const clipped = sy > seg.clip;
-                if (clipped) { if (sy - 1000 * k > seg.clip) continue; ctx.save(); ctx.beginPath(); ctx.rect(-10, -10, W + 20, seg.clip + 10); ctx.clip(); }
-                if (o.kind === 'tree') kartTree(sx, sy, k, o.seed);
-                else if (o.kind === 'leaf') { ctx.fillStyle = C.red; ctx.strokeStyle = C.red; ctx.fillRect(sx - 8 * k, sy - 300 * k, 16 * k, 300 * k); fleuron(ctx, sx, sy - 300 * k, k * 14); }
-                else if (o.kind === 'sign') {
-                    ctx.fillStyle = C.ink; ctx.strokeStyle = C.ink;
-                    ctx.fillRect(sx - 12 * k, sy - 520 * k, 24 * k, 520 * k);
-                    ctx.lineWidth = Math.max(1, 16 * k); ctx.strokeRect(sx - 130 * k, sy - 780 * k, 260 * k, 260 * k);
-                    ctx.fillStyle = C.red; ctx.strokeStyle = C.red; printMensuration(ctx, sx, sy - 650 * k, o.sign, 85 * k);
-                } else if (o.kind === 'banner') {
-                    ctx.fillStyle = C.ink; const pw = Math.max(1, 30 * k), bx = 1.18 * K.ROAD * k;
-                    ctx.fillRect(sx - bx - pw / 2, sy - 1050 * k, pw, 1050 * k); ctx.fillRect(sx + bx - pw / 2, sy - 1050 * k, pw, 1050 * k);
-                    ctx.fillRect(sx - bx, sy - 1050 * k, bx * 2, 14 * k); ctx.fillRect(sx - bx, sy - 800 * k, bx * 2, 14 * k);
-                    ctx.fillStyle = (T.hand || T.mono) ? C.ink : C.red; ctx.textAlign = 'center';
-                    ctx.font = `${Math.max(1, 200 * k)}px ${T.display}`; if (!T.hand) spacing(30 * k);
-                    ctx.fillText(T.hand ? 'Finalis' : 'FINALIS', sx, sy - 855 * k); spacing(0);
-                } else if (o.kind === 'box') {
-                    const sz = 130 * k, by = sy - 80 * k - sz + Math.sin(kart.t * 3 + o.x * 5) * 15 * k;
-                    ctx.fillStyle = C.ink; ligHead(ctx, sx - sz / 2, by, sz, sz, false, 0);
-                    ctx.fillStyle = C.red; ctx.textAlign = 'center'; ctx.font = `${Math.max(1, sz * 0.8)}px ${T.display}`;
-                    ctx.fillText('?', sx, by + sz * 0.78);
-                } else if (o.kind === 'flat') { ctx.fillStyle = C.red; ctx.strokeStyle = C.red; printFlat(ctx, sx - 20 * k, sy - 10 * k, k * 5); }
-                else if (o.kind === 'sharp') { ctx.fillStyle = C.red; ctx.strokeStyle = C.red; ctx.save(); ctx.translate(sx, sy - 90 * k); ctx.rotate(o.spin); printSharp(ctx, -8 * k * 4.5, 0, k * 4.5); ctx.restore(); }
-                else if (o.kind === 'kart') {
-                    kartKart(o.r, sx, sy, k / 0.4);
-                    if (!o.r.me && k / 0.4 > 0.45) { ctx.fillStyle = C.soft; ctx.textAlign = 'center'; ctx.font = font(11 * Math.min(1.2, k / 0.4 + 0.3), 500, true); ctx.fillText(o.r.name, sx, sy - 100 * k / 0.4); }
-                }
-                if (clipped) ctx.restore();
-            }
-        }
-        ctx.restore();
-        kartHud();
-    }
-
-    function kartHud() {
-        const p = kart.p, order = kartOrder(), place = order.indexOf(p) + 1;
-        if (gameState === 'SPLASH') { kartSplash(); return; }
-        ctx.textAlign = 'left';
-        ctx.fillStyle = C.mark; ctx.font = font(13, 700, false, 'sc'); spacing(3); ctx.fillText('LOCUS', 26, 42); spacing(0);
-        ctx.fillStyle = C.red; ctx.font = font(40, 800, false, 'display'); ctx.fillText(ROMAN[place], 24, 84);
-        const pw = ctx.measureText(ROMAN[place]).width;
-        ctx.fillStyle = C.ink; ctx.font = font(18, 500, false, 'display'); ctx.fillText('/ VI', 32 + pw, 84);
-        ctx.font = font(15, 500, true); ctx.fillText(`Circuitus ${ROMAN[Math.max(1, Math.min(KART.LAPS, p.lap))]} / ${ROMAN[KART.LAPS]}`, 26, 108);
-
-        // item slot
-        const bx = W / 2 - 25, by = 18;
-        ctx.fillStyle = C.ink; ligHead(ctx, bx, by, 50, 50, false, 0);
-        if (p.roll > 0) kartItemGlyph(['allabreve', 'flat', 'sharp', 'tempus', 'ink'][Math.floor(kart.frame / 5) % 5], W / 2, by + 25, 1);
-        else if (p.item) kartItemGlyph(p.item, W / 2, by + 25, 1);
-
-        ctx.textAlign = 'right'; ctx.fillStyle = C.ink; ctx.font = font(26, 700, false, 'display');
-        ctx.fillText(kartTime(kart.t), W - 24, 52);
-        let y = 60;
-        if (kart.best) { ctx.fillStyle = C.soft; ctx.font = font(13, 500, true); ctx.fillText('Optimum ' + kartTime(kart.best), W - 24, y + 14); y += 22; }
-        if (kart.tempus > 0) y = drawStatusPill('Tempus perfectum', C.ink, y);
-        if (p.star > 0) y = drawStatusPill('Color', C.red, y);
-        if (p.boost > 0) y = drawStatusPill('Alla breve', C.blue, y);
-
-        ctx.textAlign = 'center';
-        if (kart.count > 0 && kart.count <= 3) {
-            ctx.fillStyle = C.red; ctx.font = font(84, 800, false, 'display');
-            ctx.fillText(ROMAN[Math.ceil(kart.count)], W / 2, 190);
-        } else if (kart.count <= 0 && kart.t < 0.9 && !kart.done) {
-            ctx.fillStyle = C.ink; ctx.font = font(56, 800, false, 'display'); ctx.fillText('Incipite!', W / 2, 180);
-        }
-        if (kart.count > 0) { ctx.fillStyle = C.soft; ctx.font = font(13, 500, true); ctx.fillText(isTouchDevice ? 'Hold ▲ as I falls for a fast start' : 'Hold ↑ as I falls for a fast start', W / 2, 220); }
-        if (kart.banner > 0) { ctx.fillStyle = C.red; ctx.font = font(30, 700, true, 'display'); ctx.fillText('Circuitus ultimus', W / 2, 150); }
-        if (kart.done && gameState !== 'WIN') { ctx.fillStyle = C.red; ctx.font = font(60, 800, false, 'display'); ctx.fillText(place === 1 ? 'Victoria!' : 'Finis', W / 2, 180); }
-        if (gameState === 'WIN') kartResults(order);
-    }
-
-    function kartSplash() {
-        veil(0.95);
-        ctx.textAlign = 'center';
-        ctx.fillStyle = C.mark; ctx.font = font(13, 700, false, 'sc'); spacing(3); ctx.fillText('CURSUS', W / 2 + 1.5, 92); spacing(0);
-        ctx.fillStyle = C.ink; ctx.font = font(42, 800, false, 'display'); ctx.fillText('Circus Maximus', W / 2, 142);
-        ctx.fillStyle = C.line; ctx.fillRect(W / 2 - 24, 166, 48, 2);
-        ctx.fillStyle = C.inkSoft; ctx.font = font(17, 400, true);
-        if (isTouchDevice) { ctx.fillText('◀ ▶ steer   ·   ▲ hop and drift   ·   ▼ brake   ·   ● item', W / 2, 206); ctx.fillText('Hold a drift through a bend, then let go for a burst of speed.', W / 2, 230); }
-        else { ctx.fillText('← → steer   ·   ↑ hop and drift   ·   ↓ brake   ·   Space item', W / 2, 206); ctx.fillText('Hold a drift through a bend, then let go for a burst of speed.', W / 2, 230); }
-        ctx.fillStyle = C.soft; ctx.font = font(13, 500); ctx.fillText('Three circuits against five rivals', W / 2, 258);
-        ctx.fillStyle = C.mark; ctx.font = font(14, 600); ctx.fillText('Press any key or tap to continue', W / 2, H - 40);
-    }
-
-    function kartResults(order) {
-        veil(0.93);
-        ctx.textAlign = 'center';
-        const place = order.indexOf(kart.p) + 1;
-        ctx.fillStyle = C.mark; ctx.font = font(13, 700, false, 'sc'); spacing(3); ctx.fillText('CURSUS', W / 2 + 1.5, 62); spacing(0);
-        ctx.fillStyle = C.ink; ctx.font = font(40, 800, false, 'display'); ctx.fillText(place === 1 ? 'Victoria!' : `Locus ${ROMAN[place]}`, W / 2, 106);
-        order.forEach((r, i) => {
-            const y = 146 + i * 28;
-            ctx.fillStyle = r.me ? C.red : C.ink;
-            ctx.font = font(18, r.me ? 700 : 500, false, 'display');
-            ctx.textAlign = 'right'; ctx.fillText(ROMAN[i + 1], 300, y);
-            ctx.textAlign = 'left'; ctx.fillText(r.name, 324, y);
-            ctx.textAlign = 'right'; ctx.font = font(16, 500); ctx.fillText(kartTime(r.finish), 520, y);
-        });
-        ctx.textAlign = 'center';
-        if (kart.best) { ctx.fillStyle = kart.newBest ? C.red : C.soft; ctx.font = font(14, 500, true); ctx.fillText((kart.newBest ? 'New optimum ' : 'Optimum ') + kartTime(kart.best), W / 2, 330); }
-        ctx.fillStyle = C.mark; ctx.font = font(14, 600); ctx.fillText('Press any key or tap to continue', W / 2, H - 30);
     }
 
     function loop(now) { 
