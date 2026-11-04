@@ -397,11 +397,7 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
     <label class="ctl">Volume <input type="range" id="vol" min="0" max="100" step="1" style="width:84px"></label>
     <div class="grow podg">
     <label class="ctl">a′ =
-      <select id="ref">
-        <option value="415">415 Hz</option>
-        <option value="440">440 Hz</option>
-        <option value="466">466 Hz</option>
-      </select>
+      <input type="number" id="ref" min="100" max="1000" step="any" inputmode="decimal" aria-label="Pitch of a′ in Hz"> Hz
     </label>
     <label class="ctl">Sound
       <select id="reg"><option value="gedackt">Gedackt 8′ (stopped flute)</option><option value="principal">Principal 8′</option><option value="plenum">Principal chorus (8′ 4′ 2′)</option><option value="flute">Open flute 8′</option><option value="regal">Regal (soft reed)</option><option value="sine">Sine</option><option value="custom">Your own (drawbars)</option></select>
@@ -660,7 +656,7 @@ function loadAll(){
     if (DUR[p.unit]) ui.unit = p.unit;
     else if (({4:'B', 2:'S', 1:'M'})[p.unit]) ui.unit = ({4:'B', 2:'S', 1:'M'})[p.unit];
     if (p.tempo >= 10 && p.tempo <= 300) ui.tempo = p.tempo === 67 ? 60 : p.tempo;   /* 67 was the old default */
-    if ([415,440,466].includes(p.ref)) ui.ref = p.ref;
+    if (p.ref >= 100 && p.ref <= 1000) ui.ref = p.ref;
     if (p.vol >= 0 && p.vol <= 100) ui.vol = p.vol;
     if (REGISTERS[p.reg]) ui.reg = p.reg;
     if (p.bright >= 0 && p.bright <= 100) ui.bright = p.bright;
@@ -2074,7 +2070,8 @@ function wire(){
   applySettingsOpen();
   $('#loop').addEventListener('click', () => { ui.loop = !ui.loop; setPressed($('#loop'), ui.loop); save(); render(); });
   wireTempo();
-  $('#ref').addEventListener('change', e => { ui.ref = Number(e.target.value); stopPlayback(); save(); });
+  $('#ref').addEventListener('input', e => { const v = Number(e.target.value); if (e.target.value !== '' && v >= 100 && v <= 1000) { ui.ref = v; stopPlayback(); save(); } });
+  $('#ref').addEventListener('change', e => { e.target.value = String(ui.ref); });
   $('#vol').addEventListener('input', e => {
     ui.vol = Number(e.target.value);
     if (audio.master) audio.master.gain.setTargetAtTime(masterLevel(), audio.ctx.currentTime, 0.03);
