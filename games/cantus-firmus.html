@@ -318,6 +318,8 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
           <div class="btns col">
             <button class="tb" id="octup" title="Move the whole cantus firmus up an octave">Octave up</button>
             <button class="tb" id="octdn" title="Move the whole cantus firmus down an octave">Octave down</button>
+            <button class="tb" id="tonup" title="Move the whole cantus firmus up to the next key on C D E F G A B♭, adding sharps and flats to the notes where needed">Transpose tone up</button>
+            <button class="tb" id="tondn" title="Move the whole cantus firmus down to the previous key on C D E F G A B♭, adding sharps and flats to the notes where needed">Transpose tone down</button>
             <button class="tb" id="dbl" title="Doubles every note and rest: brevis becomes longa, and so on">Double all values</button>
             <button class="tb" id="hlv" title="Halves every note and rest: brevis becomes semibrevis, and so on">Halve all values</button>
           </div>
@@ -975,6 +977,37 @@ function syncTools(){
   const pn = n.filter(x => !x.r);
   $('#octdn').disabled = !pn.length || pn.some(x => x.s - 7 < STEP_MIN);
   $('#octup').disabled = !pn.length || pn.some(x => x.s + 7 > STEP_MAX);
+  $('#tonup').disabled = tonePlan(1) === null;
+  $('#tondn').disabled = tonePlan(-1) === null;
+}
+/* Diatonic transposition: the final moves to the next (or previous) of C D E F G A Bb, which is a tone or a
+   semitone. Every note moves one step on the staff, and the sharps and flats needed to keep the intervals
+   exact go on the individual notes, never into a signature. */
+const KEYS = [0, 2, 4, 5, 7, 9, 10];
+const midiOf = n => 12 * (Math.floor(n.s / 7) + 1) + SEMI[mod7(n.s)] + alterOf(n);
+function tonePlan(dir){
+  const pn = doc.notes.filter(x => !x.r);
+  if (!pn.length) return null;
+  const pc = ((midiOf(pn[pn.length - 1]) % 12) + 12) % 12;
+  let semis = 0;
+  for (let k = 1; k <= 12; k++) { if (KEYS.includes((((pc + dir * k) % 12) + 12) % 12)) { semis = dir * k; break; } }
+  if (!semis || pn.some(x => x.s + dir < STEP_MIN || x.s + dir > STEP_MAX)) return null;
+  return semis;
+}
+function transposeTone(dir){
+  const semis = tonePlan(dir);
+  if (semis === null) return;
+  mutate(() => {
+    doc.notes.forEach(x => {
+      if (x.r) return;
+      const target = midiOf(x) + semis;
+      x.s = x.s + dir;
+      const nat = 12 * (Math.floor(x.s / 7) + 1) + SEMI[mod7(x.s)];
+      const want = Math.max(-1, Math.min(1, target - nat));
+      const sig = (doc.bflat && mod7(x.s) === 6) ? -1 : 0;
+      x.a = want === sig ? '' : (want < 0 ? 'b' : want > 0 ? '#' : 'n');
+    });
+  });
 }
 function shiftOctave(dir){
   mutate(() => { doc.notes.forEach(x => { if (!x.r) x.s = clampStep(x.s + 7 * dir); }); });
@@ -1994,6 +2027,8 @@ function wire(){
   $('#hlv').addEventListener('click', () => scaleAll(1));
   $('#octdn').addEventListener('click', () => shiftOctave(-1));
   $('#octup').addEventListener('click', () => shiftOctave(1));
+  $('#tonup').addEventListener('click', () => transposeTone(1));
+  $('#tondn').addEventListener('click', () => transposeTone(-1));
   $('#clear').addEventListener('click', () => {
     mutate(() => { doc.notes = []; ui.sel = null; ui.caret = 0; });
     toast('All notes cleared. Undo brings them back.');
