@@ -20,7 +20,7 @@
   --ground:#FBF7EF; --surface:#F4EDE0; --text:#2A2218; --muted:#7D6F5B; --line:#D6C8B0;
   --accent:#8E2A1E; --accent-ink:#F7F2E6;
   --leaf:#F3E8CC; --leaf-ink:#2A2218; --leaf-muted:#7A6A4E; --rule:#8E2A1E;
-  --sel:#8E2A1E; --hov:#B8624A; --play:#8E2A1E; --del:#8E2A1E;
+  --chant:#C3301C; --sel:#8E2A1E; --hov:#B8624A; --play:#8E2A1E; --del:#8E2A1E;
   --paper:none;
   color-scheme: light;
 }
@@ -111,6 +111,7 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 #score svg{display:block;overflow:visible}
 #score .staff{stroke:var(--rule)}
 #score .ledger{stroke:var(--leaf-ink)}
+#score.four .staff,#score.four .ledger{stroke:var(--chant)}
 #score use,#score .bar,#score .dot{fill:var(--leaf-ink)}
 #score use.clefhov{fill:var(--hov)}
 #score .it.hov use{fill:var(--hov)}
@@ -164,6 +165,8 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 #clefMenu li svg{width:40px;height:78px;overflow:visible}
 #clefMenu li.flatopt{grid-column:span 5;flex-direction:row;justify-content:center;gap:8px;padding:4px 8px;border-top:1px solid var(--line);border-radius:0 0 4px 4px;margin-top:2px}
 #clefMenu li.flatopt svg{width:40px;height:30px}
+#clefMenu li.flatopt + li.flatopt{border-top:0;margin-top:0}
+#clefMenu li.off{opacity:.3;pointer-events:none}
 .stepper{display:flex}
 .stepper button{min-width:38px;padding:0;font-size:20px;border-radius:0}
 .stepper button:first-child{border-radius:6px 0 0 6px}
@@ -519,6 +522,9 @@ const ACC = {
 };
 const STEP_MIN = 7, STEP_MAX = 55;          /* C1 to B7 */
 const clampStep = s => Math.max(STEP_MIN, Math.min(STEP_MAX, Math.round(s)));
+/* staff of 5 or 4 lines; the bottom line stays put, a 4-line staff drops the top one */
+const topPos = () => doc.lines === 4 ? 6 : 8;
+const midPos = () => topPos() / 2;
 
 /* ------------------------------------------------------------------ */
 /* Document and interface state                                        */
@@ -526,7 +532,7 @@ const clampStep = s => Math.max(STEP_MIN, Math.min(STEP_MAX, Math.round(s)));
 const FUX = [22,24,23,22,25,24,26,25,24,23,22];   /* D F E D G F A G F E D */
 const defaultDoc = () => ({
   title: 'Cantus firmus after Fux, dorian',
-  clef: 'treble8', bflat: false,
+  clef: 'treble8', bflat: false, lines: 5,
   notes: FUX.map((s, i) => ({d: i === FUX.length - 1 ? 'L' : 'B', r: false, s, a: ''}))
 });
 let doc = defaultDoc();
@@ -567,8 +573,9 @@ function sanitizeDoc(d){
   if (!d || !Array.isArray(d.notes)) return null;
   return {
     title: typeof d.title === 'string' ? d.title.slice(0, 120) : '',
-    clef: CLEFS[d.clef] ? d.clef : 'treble8',
+    clef: CLEFS[d.clef] ? (d.lines === 4 && d.clef === 'c5' ? 'c4' : d.clef) : 'treble8',
     bflat: !!d.bflat,
+    lines: d.lines === 4 ? 4 : 5,
     notes: d.notes.filter(n => n && DUR[n.d]).slice(0, 3000).map(n => ({
       d: n.d, r: !!n.r, s: clampStep(Number(n.s) || 26), a: ACC[n.a] ? n.a : ''
     }))
@@ -589,6 +596,7 @@ function shareURL(){
   const p = new URLSearchParams();
   p.set('clef', CLEFS[doc.clef].code);
   if (doc.bflat) p.set('flat', '1');
+  if (doc.lines === 4) p.set('lines', '4');
   p.set('notes', doc.notes.map(n => n.d + '-' + (n.r ? 'r' : pitchToken(n))).join('.'));
   if (doc.title) p.set('title', doc.title);
   return location.href.split('#')[0] + '#' + p.toString();
@@ -607,7 +615,7 @@ function docFromHash(){
     notes.push({d: m[1], r: false, s: clampStep(7 * Number(m[5]) + LET.indexOf(m[3])),
                 a: ({b:'b', n:'n', s:'#'})[m[4]] || ''});
   }
-  return sanitizeDoc({title: p.get('title') || '', clef, bflat: p.get('flat') === '1', notes});
+  return sanitizeDoc({title: p.get('title') || '', clef, bflat: p.get('flat') === '1', lines: p.get('lines') === '4' ? 4 : 5, notes});
 }
 function loadAll(){
   let stored = null;
@@ -650,7 +658,7 @@ function loadAll(){
 /* Undo                                                                */
 /* ------------------------------------------------------------------ */
 const undoStack = [], redoStack = [];
-const snapshot = () => JSON.stringify({title: doc.title, clef: doc.clef, bflat: doc.bflat, notes: doc.notes});
+const snapshot = () => JSON.stringify({title: doc.title, clef: doc.clef, bflat: doc.bflat, lines: doc.lines, notes: doc.notes});
 function pushUndo(before){
   undoStack.push(before);
   if (undoStack.length > 300) undoStack.shift();
@@ -665,7 +673,7 @@ function mutate(fn){
 }
 function restore(json){
   const s = JSON.parse(json);
-  doc.title = s.title || ''; doc.clef = s.clef; doc.bflat = s.bflat; doc.notes = s.notes;
+  doc.title = s.title || ''; doc.clef = s.clef; doc.bflat = s.bflat; doc.lines = s.lines === 4 ? 4 : 5; doc.notes = s.notes;
   ui.sel = null;
   ui.caret = Math.min(ui.caret, doc.notes.length);
   syncSettings();
@@ -677,10 +685,10 @@ function redo(){ if (!redoStack.length) return; stopPlayback(); undoStack.push(s
 /* Layout (all units are staff spaces)                                 */
 /* ------------------------------------------------------------------ */
 const gapAfter = m => 1.0 + 1.05 * Math.log2(1 + m);
-function sigPos(clef){
+function sigPos(clef, top = topPos()){
   let best = null;
-  for (let p = 0; p <= 8; p++)
-    if (mod7(clef.bottom + p) === 6 && (best === null || Math.abs(p - 4) < Math.abs(best - 4))) best = p;
+  for (let p = 0; p <= top; p++)
+    if (mod7(clef.bottom + p) === 6 && (best === null || Math.abs(p - top / 2) < Math.abs(best - top / 2))) best = p;
   return best;
 }
 function measure(n, i, clef){
@@ -689,7 +697,7 @@ function measure(n, i, clef){
   if (n.r) { it.w = n.d === 'Mx' ? 1.6 : 1.1; it.pos = 4; it.flip = false; return it; }
   const pos = n.s - clef.bottom;
   it.pos = pos;
-  it.flip = (D.stem && pos >= 7) || (D.tail && pos <= -3);
+  it.flip = (D.stem && pos >= midPos() + 3) || (D.tail && pos <= -3);
   it.headW = n.d === 'Mx' ? 2.5 : (n.d === 'L' || n.d === 'B') ? 1.3 : 1.28;
   it.w = Math.max(gw(n.d), 1.1);
   if (n.a) { it.accW = gw(ACC[n.a].g); it.lead = it.accW + 0.3; }
@@ -758,11 +766,11 @@ const use = (k, x, y, extra='') => `<use href="#g-${k}" x="${f(x)}" y="${f(y)}"$
 const useT = (k, x, y, sx, sy) => `<use href="#g-${k}" transform="translate(${f(x)} ${f(y)}) scale(${sx} ${sy})"/>`;
 const hline = (x1, x2, y, cls, w) => `<line class="${cls}" x1="${f(x1)}" x2="${f(x2)}" y1="${f(y)}" y2="${f(y)}" stroke-width="${w}"/>`;
 
-function ledgers(pos, x, w, top){
+function ledgers(pos, x, w, top, tl = topPos()){
   let s = '';
   const a = x - 0.42, b = x + w + 0.42;
   for (let p = -2; p >= pos; p -= 2) s += hline(a, b, top + 4 - p * 0.5, 'ledger', 0.16);
-  for (let p = 10; p <= pos; p += 2) s += hline(a, b, top + 4 - p * 0.5, 'ledger', 0.16);
+  for (let p = tl + 2; p <= pos; p += 2) s += hline(a, b, top + 4 - p * 0.5, 'ledger', 0.16);
   return s;
 }
 function noteGlyph(d, pos, flip, x, top){
@@ -776,6 +784,7 @@ function restGlyph(d, cx, top){
   return use(k, cx - gw(k) / 2, y);
 }
 function mensSign(cx, cy, hov){
+  if (doc.lines === 4) cy += 0.5;
   const r = 1.05, a = `fill="none" stroke="currentColor" stroke-width="0.2" stroke-linecap="round"${hov ? ' class="menshov"' : ''}`;
   if (ui.tempus === 'O') return `<circle cx="${f(cx)}" cy="${f(cy)}" r="${r}" ${a}/>`;
   const x1 = cx + r * 0.643, y1 = cy - r * 0.766, y2 = cy + r * 0.766;
@@ -822,7 +831,7 @@ function drawGhost(g){
   const top = g.line.staffTop, h = g.h;
   if (g.asRest) return `<g class="ghost">${restGlyph(g.d, g.x + g.w / 2, top)}</g>`;
   const d = g.d, D = DUR[d];
-  const flip = (D.stem && h.pos >= 7) || (D.tail && h.pos <= -3);
+  const flip = (D.stem && h.pos >= midPos() + 3) || (D.tail && h.pos <= -3);
   return `<g class="ghost">${ledgers(h.pos, g.x, g.w, top)}${noteGlyph(d, h.pos, flip, g.x, top)}</g>`;
 }
 function drawCaret(){
@@ -843,7 +852,8 @@ function drawScore(L, exp){
   L.lines.forEach((line, li) => {
     const top = line.staffTop, isLast = li === L.lines.length - 1;
     const xr = (exp && isLast && L.finalX !== null) ? L.finalX + 0.9 : L.staffR;
-    for (let k = 0; k < 5; k++) o += hline(L.staffL, xr, top + k, 'staff', 0.12);
+    const t0 = 5 - (doc.lines === 4 ? 4 : 5);
+    for (let k = t0; k < 5; k++) o += hline(L.staffL, xr, top + k, 'staff', 0.12);
     const hv = !exp && ui.hover && ui.hover.li === li ? ui.hover.type : '';
     o += clefUse(clef, L.clefX, top, hv === 'clef' ? ' class="clefhov"' : '');
     const fy = top + 4 - L.sigPos * 0.5;
@@ -857,14 +867,15 @@ function drawScore(L, exp){
       const nx = L.lines[li + 1].items[0];
       if (nx && !nx.n.r) {
         const y = top + 4 - nx.pos * 0.5;
-        o += `<use href="#g-${nx.pos >= 5 ? 'cd' : 'cu'}" transform="translate(${f(L.staffR - 2.25)} ${f(y + 0.4)}) scale(0.8)"/>`;
+        o += `<use href="#g-${nx.pos >= midPos() + 1 ? 'cd' : 'cu'}" transform="translate(${f(L.staffR - 2.25)} ${f(y + 0.4)}) scale(0.8)"/>`;
       }
     }
     const bx = exp ? L.finalX : (L.barX ?? L.finalX);
     if (isLast && bx !== null) {
-      if (ui.loop && !exp) o += `<circle class="dot" cx="${f(bx - 0.5)}" cy="${f(top + 1.5)}" r="0.2"/><circle class="dot" cx="${f(bx - 0.5)}" cy="${f(top + 2.5)}" r="0.2"/>`;
-      o += `<rect class="bar" x="${f(bx)}" y="${f(top)}" width="0.16" height="4"/>`;
-      o += `<rect class="bar" x="${f(bx + 0.4)}" y="${f(top)}" width="0.5" height="4"/>`;
+      const d1 = 1.5, d2 = t0 ? 3.5 : 2.5, bh = 4 - t0;
+      if (ui.loop && !exp) o += `<circle class="dot" cx="${f(bx - 0.5)}" cy="${f(top + d1)}" r="0.2"/><circle class="dot" cx="${f(bx - 0.5)}" cy="${f(top + d2)}" r="0.2"/>`;
+      o += `<rect class="bar" x="${f(bx)}" y="${f(top + t0)}" width="0.16" height="${bh}"/>`;
+      o += `<rect class="bar" x="${f(bx + 0.4)}" y="${f(top + t0)}" width="0.5" height="${bh}"/>`;
     }
   });
   return o;
@@ -876,6 +887,7 @@ function render(){
   const S = ui.size;
   const g = ghostInfo();
   if (g && g.atEnd && g.line === lay.lines[lay.lines.length - 1]) lay.barX = Math.max(lay.finalX ?? 0, g.x + g.w + 1.2);
+  scoreEl.classList.toggle('four', doc.lines === 4);
   scoreEl.innerHTML =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(lay.W)} ${f(lay.H)}" width="${f(lay.W * S)}" height="${f(lay.H * S)}" aria-hidden="true">` +
     drawScore(lay, false) + drawGhost(g) + drawCaret() + '</svg>';
@@ -1723,11 +1735,12 @@ function wireTempo(){
 /* ------------------------------------------------------------------ */
 /* Clef menu (opened by clicking the clef on the staff)                */
 /* ------------------------------------------------------------------ */
-const CLEF_KEYS = [...Object.keys(CLEFS), 'flat'];   /* the last entry toggles the B flat */
+const CLEF_KEYS = [...Object.keys(CLEFS), 'flat', 'four'];   /* the last entries toggle the B flat and the 4-line staff */
 let clefActive = 0;
 function clefIcon(k){
   const c = CLEFS[k];
-  if (!c) return `<svg viewBox="-0.3 0.4 3.6 4.2" aria-hidden="true">${[0,1,2,3,4].map(i => `<line x1="-0.3" x2="3.3" y1="${i}" y2="${i}" stroke="currentColor" stroke-opacity=".5" stroke-width="0.1"/>`).join('')}<use href="#g-fl" x="1.3" y="${4 - sigPos(CLEFS[doc.clef]) * 0.5}"/></svg>`;
+  if (k === 'four') return `<svg viewBox="-0.3 0.4 3.6 4.2" aria-hidden="true">${[1,2,3,4].map(i => `<line x1="-0.3" x2="3.3" y1="${i}" y2="${i}" stroke="var(--chant)" stroke-width="0.14"/>`).join('')}</svg>`;
+  if (!c) return `<svg viewBox="-0.3 0.4 3.6 4.2" aria-hidden="true">${[0,1,2,3,4].map(i => `<line x1="-0.3" x2="3.3" y1="${i}" y2="${i}" stroke="currentColor" stroke-opacity=".5" stroke-width="0.1"/>`).join('')}<use href="#g-fl" x="1.3" y="${4 - sigPos(CLEFS[doc.clef], 8) * 0.5}"/></svg>`;
   let lines = '';
   for (let i = 0; i < 5; i++) lines += `<line x1="-0.3" x2="3.3" y1="${i}" y2="${i}" stroke="currentColor" stroke-opacity=".5" stroke-width="0.1"/>`;
   return `<svg viewBox="-0.3 -1.9 3.6 8.8" aria-hidden="true">${lines}${clefUse(c, 0.25, 0)}</svg>`;
@@ -1737,8 +1750,8 @@ function buildClefMenu(){
   CLEF_KEYS.forEach(k => {
     const li = document.createElement('li');
     li.setAttribute('role', 'option'); li.dataset.k = k; li.id = 'clefopt-' + k;
-    li.innerHTML = clefIcon(k) + `<span>${CLEFS[k] ? CLEFS[k].short : 'B♭ in the signature'}</span>`;
-    li.title = CLEFS[k] ? CLEFS[k].label : 'B flat in the signature';
+    li.innerHTML = clefIcon(k) + `<span>${CLEFS[k] ? CLEFS[k].short : k === 'four' ? '4 lines' : 'B♭ in the signature'}</span>`;
+    li.title = CLEFS[k] ? CLEFS[k].label : k === 'four' ? '4 lines' : 'B flat in the signature';
     if (!CLEFS[k]) li.className = 'flatopt';
     li.addEventListener('click', () => chooseClef(k));
     menu.appendChild(li);
@@ -1758,7 +1771,9 @@ function buildClefMenu(){
 function markClef(){
   document.querySelectorAll('#clefMenu li').forEach((li, i) => {
     li.classList.toggle('active', i === clefActive);
-    li.setAttribute('aria-selected', (li.dataset.k === 'flat' ? doc.bflat : li.dataset.k === doc.clef) ? 'true' : 'false');
+    const k = li.dataset.k;
+    li.setAttribute('aria-selected', (k === 'flat' ? doc.bflat : k === 'four' ? doc.lines === 4 : k === doc.clef) ? 'true' : 'false');
+    li.classList.toggle('off', doc.lines === 4 && k === 'c5');
   });
   $('#clefMenu').setAttribute('aria-activedescendant', 'clefopt-' + CLEF_KEYS[clefActive]);
 }
@@ -1783,7 +1798,8 @@ function closeClefMenu(focusScore){
 function chooseClef(k){
   closeClefMenu(true);
   if (k === 'flat') { mutate(() => { doc.bflat = !doc.bflat; }); return; }
-  if (k === doc.clef) return;
+  if (k === 'four') { mutate(() => { doc.lines = doc.lines === 4 ? 5 : 4; if (doc.lines === 4 && doc.clef === 'c5') doc.clef = 'c4'; }); syncSettings(); return; }
+  if (k === doc.clef || (doc.lines === 4 && k === 'c5')) return;
   mutate(() => { doc.clef = k; });
   syncSettings();
 }
@@ -1821,7 +1837,7 @@ const LIBRARY = [
   ]}
 ];
 function presetDoc(item){
-  return {title: item.title, clef: 'treble8', bflat: false,
+  return {title: item.title, clef: 'treble8', bflat: false, lines: doc.lines,
           notes: item.s.map((s, i) => ({d: i === item.s.length - 1 ? 'L' : 'B', r: false, s, a: ''}))};
 }
 function previewSVG(item){
@@ -1832,7 +1848,7 @@ function previewSVG(item){
   item.s.forEach((s, i) => {
     const d = i === item.s.length - 1 ? 'L' : 'B';
     const pos = s - clef.bottom;
-    o += ledgers(pos, x, 1.3, top);
+    o += ledgers(pos, x, 1.3, top, 8);
     o += noteGlyph(d, pos, d === 'L' && pos <= -3, x, top);
     x += 2.2;
   });
