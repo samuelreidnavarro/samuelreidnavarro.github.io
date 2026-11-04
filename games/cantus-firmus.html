@@ -91,8 +91,9 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px;margin:0}
 .popbody .btns:not(.col){flex-wrap:nowrap}
 .popbody .col{flex-direction:column}
 .popbody .col .tb{justify-content:flex-start;text-align:left;white-space:nowrap}
-#popStaff .popbody{left:auto;right:-6px}
-@media (max-width:700px){#popStaff{position:static}#popStaff .popbody{left:14px;right:14px;width:auto}.staffset{grid-template-columns:auto 1fr}.staffset input[type=range]{width:100%}}
+#popStaff .popbody{left:-6px}
+.staffrow{position:relative;margin-top:12px}
+@media (max-width:700px){#popStaff{position:static}#popStaff .popbody{left:0;right:0;width:auto}.staffset{grid-template-columns:auto 1fr}.staffset input[type=range]{width:100%}}
 .staffset{display:grid;grid-template-columns:auto 150px;gap:8px 12px;align-items:center;padding:4px 8px}
 .staffset input[type=range]{width:150px}
 .staffset .btns{display:flex;gap:2px}
@@ -339,14 +340,6 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
         </div>
       </div></div>
       <div class="grow">
-      <div class="podg"><div class="pop" id="popStaff">
-        <button class="tb popbtn" aria-haspopup="true">Staff<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-        <div class="popbody"><div class="staffset">
-          <label class="ctl" for="size">Size</label><input type="range" id="size" min="8" max="26" step="1">
-          <span class="ctl" id="linesLabel">Lines</span><div class="btns" id="linesBtns" role="group" aria-labelledby="linesLabel"><button class="tb" data-lines="5" data-keep aria-pressed="true">5</button><button class="tb" data-lines="4" data-keep aria-pressed="false">4</button></div>
-          <label class="ctl" for="spacing">Spacing</label><input type="range" id="spacing" min="50" max="250" step="5">
-        </div></div>
-      </div></div>
       <div class="podg" id="libPod">
       <div class="libwrap">
         <button id="libBtn" class="libbtn" aria-haspopup="true" aria-expanded="false" aria-controls="library">Cantus firmi<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
@@ -371,6 +364,15 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
     <div id="score" tabindex="0" role="application" aria-label="Staff. Click to add notes; use the keyboard shortcuts listed below." aria-describedby="status"></div>
     <ul id="clefMenu" class="menu" role="listbox" aria-label="Clef" tabindex="-1" hidden></ul>
   </section>
+  <div class="staffrow"><div class="podg">
+<div class="pop" id="popStaff">
+        <button class="tb popbtn" aria-haspopup="true">Staff<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <div class="popbody"><div class="staffset">
+          <label class="ctl" for="size">Size</label><input type="range" id="size" min="8" max="26" step="1">
+          <span class="ctl" id="linesLabel">Lines</span><div class="btns" id="linesBtns" role="group" aria-labelledby="linesLabel"><button class="tb" data-lines="5" data-keep aria-pressed="true">5</button><button class="tb" data-lines="4" data-keep aria-pressed="false">4</button></div>
+          <label class="ctl" for="spacing">Spacing</label><input type="range" id="spacing" min="50" max="250" step="5">
+        </div></div>
+      </div></div></div>
   <p id="status" class="sr"></p>
 
   <section class="transport" aria-label="Playback and sound">
@@ -2065,7 +2067,7 @@ function wire(){
     p.querySelector('.popbtn').addEventListener('click', e => { e.stopPropagation(); const was = p.classList.contains('open'); closePops(); if (!was) p.classList.add('open'); });
     p.querySelector('.popbody').addEventListener('click', e => { if (e.target.closest('button') && !e.target.closest('[data-keep]')) setTimeout(() => { closePops(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }, 0); });
   });
-  document.addEventListener('click', () => closePops());
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#popStaff .popbody')) return; closePops(); });
   $('#toggleSet').addEventListener('click', () => { ui.setOpen = !ui.setOpen; applySettingsOpen(); save(); });
   applySettingsOpen();
   $('#loop').addEventListener('click', () => { ui.loop = !ui.loop; setPressed($('#loop'), ui.loop); save(); render(); });
