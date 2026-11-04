@@ -289,7 +289,15 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
 .handbox[data-beat="pendulum"] #handRot,.handbox[data-beat="hand"] #pendG{display:none}
 .handbox[data-beat="tick"]{display:none}
 #reg{width:178px}
-@media (max-width:700px){ .podg{flex-wrap:wrap} }
+@media (max-width:700px){
+  .podg{flex-wrap:wrap}
+  .grow{display:contents;margin-left:0}
+  #libPod{order:-2;width:100%}
+  #libPod .libwrap{display:block;width:100%}
+  #libPod .libbtn{width:100%;justify-content:center}
+  #libPod .library{position:static;width:auto;max-height:60vh;margin-top:6px}
+  #editPod{order:-1}
+}
 </style>
 </head>
 <body>
@@ -303,6 +311,11 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
 
   <section class="tools" aria-label="Notation tools">
     <div class="bar">
+      <div class="podg" id="editPod">
+        <button class="ib" id="undo" aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5V13.2c4.6-.4 7.4.6 9.6 4.3-.5-5.2-3.6-8.6-9.6-9.2Z"/></svg></button>
+        <button class="ib" id="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5v-3.8c-4.6-.4-7.4.6-9.6 4.3.5-5.2 3.6-8.6 9.6-9.2Z"/></svg></button>
+        <button class="ib" id="del" aria-label="Delete selected note" title="Delete the selected note (Delete)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 4h7l.8 1.5H20V7.5H4V5.5h3.7ZM6 9h12l-.9 11H6.9Z"/></svg></button>
+      </div>
       <div class="podg">
       <div class="pop" id="popDur">
         <span class="sr" id="durLabel">Note value</span>
@@ -334,19 +347,21 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
           <label class="ctl" for="spacing">Spacing</label><input type="range" id="spacing" min="50" max="250" step="5">
         </div></div>
       </div></div>
-      <div class="podg">
-      <button id="clear">Clear</button>
+      <div class="podg" id="libPod">
       <div class="libwrap">
         <button id="libBtn" class="libbtn" aria-haspopup="true" aria-expanded="false" aria-controls="library">Cantus firmi<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div id="library" class="library" role="dialog" aria-label="Cantus firmi to start from" hidden></div>
       </div>
+      </div>
+      <div class="podg">
+      <button id="clear">Clear</button>
       <button id="copyLink" title="Copy a link that opens this exact cantus firmus">Copy link</button>
       </div>
       </div>
     </div>
     <div hidden>
       <button id="stepUp"></button><button id="stepDown"></button>
-      <button id="del"></button><button id="undo"></button><button id="redo"></button>
+
     </div>
   </section>
 
@@ -415,7 +430,7 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
   <details class="help">
     <summary>How to enter and edit</summary>
     <p>Pick a note value, then left-click on the staff where the note should go: between two notes inserts it there, after the last note adds it at the end. A left-click on a rest puts a note in its place. Right-click a note to turn it into a rest of the same value; right-click a rest to remove it. Left-click a note to select it (Play and the space bar then start from it); drag it up or down to change its pitch. Click the clef to change it, or the faint B flat beside it to add one.</p>
-    <p>With a note selected, the value, rest and accidental buttons change that note. With nothing selected, they apply to the next note you enter. On a touch screen, tap a note to select it. Tap an empty place on the staff to preview a note there, and tap the same place again to put it down. Press and hold a note to turn it into a rest, or to remove a rest. Scrolling the page with a finger on the score does nothing to it.</p>
+    <p>With a note selected, the value, rest and accidental buttons change that note. With nothing selected, they apply to the next note you enter. On a touch screen, tap a note to select it. Tap an empty place on the staff to put a note down there; the Undo, Redo and Delete buttons are at the top. Press and hold a note to turn it into a rest, or to remove a rest. Scrolling the page with a finger on the score does nothing to it.</p>
     <table>
       <tr><td><kbd>A</kbd> to <kbd>G</kbd></td><td>Add that note, in the octave closest to the previous note</td></tr>
       <tr><td><kbd>R</kbd></td><td>Add a rest</td></tr>
@@ -1185,7 +1200,7 @@ function selectItem(i){
 }
 scoreEl.addEventListener('contextmenu', e => e.preventDefault());
 /* Touch: nothing happens on the first contact, so the page can be scrolled with a finger on the score.
-   A short tap selects a note, or previews a note on the staff (tap the same spot again to place it).
+   A short tap selects a note, or places a note on the staff (Undo is in the top bar).
    Press and hold on a note turns it into a rest (a rest is removed). A tap that turns into a scroll does nothing. */
 let touchPress = null;
 function cancelTouch(){ if (touchPress) { clearTimeout(touchPress.timer); touchPress = null; } }
@@ -1218,14 +1233,11 @@ function touchUp(cancelled){
   if (h.type === 'mens') { setTempus(ui.tempus === 'O' ? 'C' : 'O'); return; }
   if (h.type === 'sig') { mutate(() => { doc.bflat = !doc.bflat; }); return; }
   if (h.type === 'item') { ui.hover = null; selectItem(h.i); return; }
-  const c = ui.hover;
-  const same = c && c.type === h.type && c.li === h.li && (h.type === 'repl' ? c.i === h.i : c.idx === h.idx) && Math.abs(c.pos - h.pos) <= 1;
-  if (!same) { ui.hover = h; render(); return; }
   ui.hover = null;
-  if (c.type === 'repl') {
-    mutate(() => { const o = doc.notes[c.i]; doc.notes[c.i] = {d: o.d, r: false, s: clampStep(CLEFS[doc.clef].bottom + c.pos), a: ''}; ui.sel = null; ui.caret = c.i + 1; });
-    audition(doc.notes[c.i]);
-  } else insertAt(c.idx, {d: ui.inDur, r: ui.inRest, s: clampStep(CLEFS[doc.clef].bottom + c.pos), a: ''});
+  if (h.type === 'repl') {
+    mutate(() => { const o = doc.notes[h.i]; doc.notes[h.i] = {d: o.d, r: false, s: clampStep(CLEFS[doc.clef].bottom + h.pos), a: ''}; ui.sel = null; ui.caret = h.i + 1; });
+    audition(doc.notes[h.i]);
+  } else insertAt(h.idx, {d: ui.inDur, r: ui.inRest, s: clampStep(CLEFS[doc.clef].bottom + h.pos), a: ''});
 }
 scoreEl.addEventListener('pointerdown', e => {
   if (!lay || (e.button !== 0 && e.button !== 2)) return;
