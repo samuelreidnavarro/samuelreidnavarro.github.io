@@ -74,6 +74,9 @@ h1{font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif;font-weight
 .cfitem .pv .staff{stroke:var(--rule)}
 .cfitem .pv use{fill:var(--leaf-ink)}
 .cfitem .pv .ledger{stroke:var(--leaf-ink)}
+.cfitem .t,.cfitem .d,.catitem .d,.catitem .first{white-space:normal}
+.catitem .pv .punct,.cfitem .pv .punct,.catitem .pv .prest,.cfitem .pv .prest{fill:var(--leaf-ink)}
+#dotBtn svg{width:20px;height:20px;fill:currentColor}
 
 button{font:inherit;font-size:15.5px;color:var(--text);background:var(--surface);border:1px solid var(--line);
   border-radius:6px;min-height:40px;padding:0 14px;cursor:pointer;line-height:1}
@@ -139,6 +142,10 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 #score .staff{stroke:var(--rule)}
 #score .ledger{stroke:var(--leaf-ink)}
 #score use,#score .bar,#score .dot{fill:var(--leaf-ink)}
+#score .punct,#score .prest{fill:var(--leaf-ink)}
+#score .it.hov .punct,#score .it.hov .prest{fill:var(--hov)}
+#score .it.sel .punct,#score .it.sel .prest{fill:var(--sel)}
+#score .it.play .punct,#score .it.play .prest{fill:var(--play)}
 #score use.clefhov{fill:var(--hov)}
 #score .it.hov use{fill:var(--hov)}
 #score .it.hov .ledger{stroke:var(--hov)}
@@ -457,11 +464,13 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
       <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Move the note a step up or down; with <kbd>Shift</kbd>, an octave</td></tr>
       <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Select the previous or next note</td></tr>
       <tr><td><kbd>-</kbd> <kbd>N</kbd> <kbd>=</kbd></td><td>Flat, natural, sharp (press again to remove)</td></tr>
+      <tr><td><kbd>.</kbd></td><td>Dot (punctus) after the note; press again to remove</td></tr>
       <tr><td><kbd>Backspace</kbd></td><td>Delete the selected note, or the one before the cursor</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>Deselect</td></tr>
       <tr><td><kbd>Space</kbd></td><td>Play or stop</td></tr>
       <tr><td><kbd>Ctrl/⌘</kbd> <kbd>Z</kbd></td><td>Undo; add <kbd>Shift</kbd> to redo</td></tr>
     </table>
+    <p>In tempus perfectum (click the C on the staff to turn it into O) the notes are read as the theorists teach: a brevis lasts three semibreves, a single semibreve next to a brevis makes it imperfect, and of two semibreves between breves the second is doubled. A dot after a brevis keeps it perfect; a dot between two semibreves separates the perfections; a dot after a semibreve followed by a minima adds half its value. In tempus imperfectum every dot adds half the value.</p>
     <p>Your work is kept in this browser automatically. Copy link gives you an address that opens this exact cantus firmus anywhere, for instance to send to a student.</p>
   </details>
 
@@ -609,7 +618,7 @@ function freqOf(n){
   const midi = 12 * (Math.floor(n.s / 7) + 1) + SEMI[mod7(n.s)] + alterOf(n);
   return ui.ref * Math.pow(2, (midi - 69) / 12);
 }
-function noteWord(n){ return DUR[n.d].name.toLowerCase(); }
+function noteWord(n){ return (n.p && !n.r ? 'dotted ' : '') + DUR[n.d].name.toLowerCase(); }
 function describe(n){ return n.r ? `${noteWord(n)} rest` : `${noteWord(n)} on ${pitchName(n)}`; }
 
 /* ------------------------------------------------------------------ */
@@ -624,7 +633,7 @@ function sanitizeDoc(d){
     bflat: !!d.bflat,
     lines: d.lines === 4 ? 4 : 5,
     notes: d.notes.filter(n => n && DUR[n.d]).slice(0, 3000).map(n => ({
-      d: n.d, r: !!n.r, s: clampStep(Number(n.s) || 26), a: ACC[n.a] ? n.a : ''
+      d: n.d, r: !!n.r, s: clampStep(Number(n.s) || 26), a: ACC[n.a] ? n.a : '', p: !!n.p && !n.r
     }))
   };
 }
@@ -644,7 +653,8 @@ function shareURL(){
   p.set('clef', CLEFS[doc.clef].code);
   if (doc.bflat) p.set('flat', '1');
   if (doc.lines === 4) p.set('lines', '4');
-  p.set('notes', doc.notes.map(n => n.d + '-' + (n.r ? 'r' : pitchToken(n))).join('.'));
+  if (ui.tempus === 'O') p.set('t', 'O');
+  p.set('notes', doc.notes.map(n => n.d + (n.p && !n.r ? 'p' : '') + '-' + (n.r ? 'r' : pitchToken(n))).join('.'));
   if (doc.title) p.set('title', doc.title);
   return location.href.split('#')[0] + '#' + p.toString();
 }
@@ -656,13 +666,15 @@ function docFromHash(){
   const clef = Object.keys(CLEFS).find(k => CLEFS[k].code === p.get('clef')) || 'treble8';
   const notes = [];
   for (const tok of (p.get('notes') || '').split('.')) {
-    const m = /^(Mx|Sm|L|B|S|M|F)-(?:(r)|([A-G])([bns]?)(\d))$/.exec(tok);
+    const m = /^(Mx|Sm|L|B|S|M|F)(p?)-(?:(r)|([A-G])([bns]?)(\d))$/.exec(tok);
     if (!m) continue;
-    if (m[2]) { notes.push({d: m[1], r: true, s: CLEFS[clef].bottom + 4, a: ''}); continue; }
-    notes.push({d: m[1], r: false, s: clampStep(7 * Number(m[5]) + LET.indexOf(m[3])),
-                a: ({b:'b', n:'n', s:'#'})[m[4]] || ''});
+    if (m[3]) { notes.push({d: m[1], r: true, s: CLEFS[clef].bottom + 4, a: ''}); continue; }
+    notes.push({d: m[1], r: false, s: clampStep(7 * Number(m[6]) + LET.indexOf(m[4])),
+                a: ({b:'b', n:'n', s:'#'})[m[5]] || '', p: m[2] === 'p'});
   }
-  return sanitizeDoc({title: p.get('title') || '', clef, bflat: p.get('flat') === '1', lines: p.get('lines') === '4' ? 4 : 5, notes});
+  const d = sanitizeDoc({title: p.get('title') || '', clef, bflat: p.get('flat') === '1', lines: p.get('lines') === '4' ? 4 : 5, notes});
+  if (d) d.tempus = p.get('t') === 'O' ? 'O' : 'C';
+  return d;
 }
 function loadAll(){
   let stored = null;
@@ -694,6 +706,7 @@ function loadAll(){
   }
   const fromLink = docFromHash();
   if (fromLink) {
+    ui.tempus = fromLink.tempus; delete fromLink.tempus;
     doc = fromLink;
     try { history.replaceState(null, '', location.href.split('#')[0]); } catch (e) {}
   } else if (stored && stored.doc) {
@@ -706,7 +719,7 @@ function loadAll(){
 /* Undo                                                                */
 /* ------------------------------------------------------------------ */
 const undoStack = [], redoStack = [];
-const snapshot = () => JSON.stringify({title: doc.title, clef: doc.clef, bflat: doc.bflat, lines: doc.lines, notes: doc.notes});
+const snapshot = () => JSON.stringify({title: doc.title, clef: doc.clef, bflat: doc.bflat, lines: doc.lines, notes: doc.notes, tempus: ui.tempus});
 function pushUndo(before){
   undoStack.push(before);
   if (undoStack.length > 300) undoStack.shift();
@@ -722,6 +735,7 @@ function mutate(fn){
 function restore(json){
   const s = JSON.parse(json);
   doc.title = s.title || ''; doc.clef = s.clef; doc.bflat = s.bflat; doc.lines = s.lines === 4 ? 4 : 5; doc.notes = s.notes;
+  if (s.tempus === 'O' || s.tempus === 'C') ui.tempus = s.tempus;
   ui.sel = null;
   ui.caret = Math.min(ui.caret, doc.notes.length);
   syncSettings();
@@ -748,6 +762,7 @@ function measure(n, i, clef){
   it.flip = (D.stem && pos >= midPos() + 3) || (D.tail && pos <= -3);
   it.headW = n.d === 'Mx' ? 2.5 : (n.d === 'L' || n.d === 'B') ? 1.3 : 1.28;
   it.w = Math.max(gw(n.d), 1.1);
+  if (n.p) it.w = it.headW + 0.75;
   if (n.a) { it.accW = gw(ACC[n.a].g); it.lead = it.accW + 0.3; }
   return it;
 }
@@ -825,10 +840,16 @@ function noteGlyph(d, pos, flip, x, top){
   const y = top + 4 - pos * 0.5;
   return flip ? useT(d, x, y, 1, -1) : use(d, x, y);
 }
+/* the punctus: in the space beside the note head (or the space above, when the head sits on a line) */
+function dotMark(x, pos, top){
+  const y = top + 4 - (pos % 2 === 0 ? pos + 1 : pos) * 0.5;
+  return `<circle class="punct" cx="${f(x)}" cy="${f(y)}" r="0.19"/>`;
+}
 function restGlyph(d, cx, top){
   const y = top + 2;
   if (d === 'Mx') return use('rL', cx - 0.45, y) + use('rL', cx + 0.26, y);
   const k = REST[d];
+  if (d === 'B' && ui.tempus === 'O') return `<rect class="prest" x="${f(cx - gw(k) / 2)}" y="${f(top + 0.5)}" width="${f(gw(k))}" height="1.5"/>`;
   return use(k, cx - gw(k) / 2, y);
 }
 function mensSign(cx, cy, hov){
@@ -855,6 +876,7 @@ function drawItem(it, top, exp){
     s += ledgers(it.pos, it.hx, it.headW, top);
     if (n.a) s += use(ACC[n.a].g, it.hx - it.accW - 0.3, top + 4 - it.pos * 0.5);
     s += noteGlyph(n.d, it.pos, it.flip, it.hx, top);
+    if (n.p) s += dotMark(it.hx + it.headW + 0.32, it.pos, top);
   }
   return s + '</g>';
 }
@@ -974,6 +996,13 @@ function buildTools(){
     b.addEventListener('click', () => toggleAcc(a));
     accBtns.appendChild(b);
   });
+  const db = document.createElement('button');
+  db.className = 'ib'; db.id = 'dotBtn';
+  db.title = 'Dot, punctus (.)';
+  db.setAttribute('aria-label', 'Dot (punctus)');
+  db.innerHTML = '<svg viewBox="-1 -1 2 2" aria-hidden="true"><circle r="0.3"/></svg>';
+  db.addEventListener('click', toggleDot);
+  accBtns.appendChild(db);
 }
 function targetIndex(){
   if (ui.sel !== null) return ui.sel;
@@ -995,6 +1024,8 @@ function syncTools(){
     setPressed(b, !!t && !t.r && t.a === b.dataset.a);
     b.disabled = !t || t.r;
   });
+  setPressed($('#dotBtn'), !!t && !t.r && !!t.p);
+  $('#dotBtn').disabled = !t || t.r;
   $('#stepUp').disabled = $('#stepDown').disabled = !t || t.r;
   $('#del').disabled = !t;
   $('#undo').disabled = !undoStack.length;
@@ -1091,7 +1122,9 @@ function updateStatus(){
   } else if (!doc.notes.length) {
     msg = 'Pick a note value above, then click on the staff. Letters A to G add notes from the keyboard.';
   } else {
-    msg = 'Click between notes to insert, after the last note to continue. Click a note to turn it into a rest, click a rest to remove it.';
+    const odd = ui.tempus === 'O' ? readValues(doc.notes, 'O').odd : [];
+    msg = odd.length ? `In tempus perfectum, the values around note ${odd[0] + 1} do not fill whole perfections.`
+                     : 'Click between notes to insert, after the last note to continue. Click a note to turn it into a rest, click a rest to remove it.';
   }
   statusEl.textContent = msg;
 }
@@ -1137,7 +1170,7 @@ function setDur(k){
 function setRestMode(rest){
   ui.inRest = rest;
   if (ui.sel !== null && doc.notes[ui.sel].r !== rest) mutate(() => {
-    const n = doc.notes[ui.sel]; n.r = rest; if (rest) n.a = '';
+    const n = doc.notes[ui.sel]; n.r = rest; if (rest) { n.a = ''; n.p = false; }
   });
   else render();
 }
@@ -1146,6 +1179,11 @@ function toggleAcc(a){
   if (ti === null || doc.notes[ti].r) return;
   mutate(() => { const n = doc.notes[ti]; n.a = n.a === a ? '' : a; });
   audition(doc.notes[ti]);
+}
+function toggleDot(){
+  const ti = targetIndex();
+  if (ti === null || doc.notes[ti].r) return;
+  mutate(() => { const n = doc.notes[ti]; n.p = !n.p; });
 }
 function stepPitch(delta){
   const ti = targetIndex();
@@ -1235,7 +1273,7 @@ function touchDown(e){
     mutate(() => {
       const n = doc.notes[i];
       if (n.r) { doc.notes.splice(i, 1); ui.sel = null; ui.caret = i; }
-      else { n.r = true; n.a = ''; ui.sel = null; ui.caret = i + 1; }
+      else { n.r = true; n.a = ''; n.p = false; ui.sel = null; ui.caret = i + 1; }
       ui.hover = null;
     });
   }, 500);
@@ -1273,7 +1311,7 @@ scoreEl.addEventListener('pointerdown', e => {
   if (h.type === 'mens') { if (e.button === 0) setTempus(ui.tempus === 'O' ? 'C' : 'O'); return; }
   if (h.type === 'sig') { if (e.button === 0) mutate(() => { doc.bflat = !doc.bflat; }); return; }
   if (isMouse && e.button === 2) {
-    if (h.type === 'item') mutate(() => { const n = doc.notes[h.i]; n.r = true; n.a = ''; ui.sel = null; ui.caret = h.i + 1; ui.hover = null; });
+    if (h.type === 'item') mutate(() => { const n = doc.notes[h.i]; n.r = true; n.a = ''; n.p = false; ui.sel = null; ui.caret = h.i + 1; ui.hover = null; });
     else if (h.type === 'repl') mutate(() => { doc.notes.splice(h.i, 1); ui.sel = null; ui.caret = h.i; ui.hover = null; });
     return;
   }
@@ -1329,7 +1367,7 @@ function endPress(cancelled){
   if (d.sel && !d.rest) { selectItem(d.i); return; }   /* mouse: a plain left click selects */
   /* touch tap: a note becomes a rest of the same value, a rest disappears */
   if (d.rest) mutate(() => { doc.notes.splice(d.i, 1); ui.sel = null; ui.caret = d.i; ui.hover = null; });
-  else mutate(() => { const n = doc.notes[d.i]; n.r = true; n.a = ''; ui.sel = null; ui.caret = d.i + 1; });
+  else mutate(() => { const n = doc.notes[d.i]; n.r = true; n.a = ''; n.p = false; ui.sel = null; ui.caret = d.i + 1; });
 }
 scoreEl.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') touchUp(false); else endPress(false); });
 scoreEl.addEventListener('pointercancel', () => { touchUp(true); endPress(true); });
@@ -1371,6 +1409,7 @@ document.addEventListener('keydown', e => {
   if (k === '-' || k === '_') { e.preventDefault(); toggleAcc('b'); return; }
   if (k === '=' || k === '+' || k === '#') { e.preventDefault(); toggleAcc('#'); return; }
   if (k === 'n' || k === 'N') { e.preventDefault(); toggleAcc('n'); return; }
+  if (k === '.') { e.preventDefault(); toggleDot(); return; }
 });
 
 /* ------------------------------------------------------------------ */
@@ -1557,6 +1596,70 @@ function metroClick(ctx, dest, t){
   o.start(t); o.stop(t + 0.08);
   return {osc: o, g};
 }
+/* MENS-BEGIN */
+/* Mensural reading: how long every note and rest lasts, in minims.
+   C, tempus imperfectum: a brevis is two semibreves; a dot adds half the value (punctus additionis).
+   O, tempus perfectum: a brevis is three semibreves, read by the rules of the theorists:
+   - a brevis next to a single semibreve (or its worth in smaller notes or rests) loses a third: imperfection,
+     preferably by what follows it (a parte post), otherwise by what precedes it (a parte ante);
+   - of two semibreves between breves, the second is doubled: alteration;
+   - a dot after a brevis or longa keeps it perfect (punctus perfectionis); a dot after a semibreve that is
+     followed by a semibreve or a longer value separates the perfections (punctus divisionis);
+     any other dot adds half the value (punctus additionis).
+   Prolatio minor and modus imperfectus throughout: a longa is two breves, a maxima two longae. */
+const BIG = {Mx: 1, L: 1, B: 1};
+function readValues(notes, tempus){
+  const N = notes.length, v = new Array(N), odd = [];
+  const dotted = i => !!notes[i].p && !notes[i].r;
+  if (tempus !== 'O') {
+    for (let i = 0; i < N; i++) v[i] = DUR[notes[i].d].m * (dotted(i) ? 1.5 : 1);
+    return {v, odd};
+  }
+  const isDiv = i => dotted(i) && notes[i].d === 'S' && (i + 1 >= N || DUR[notes[i + 1].d].m >= 2);
+  for (let i = 0; i < N; i++) {
+    const m = DUR[notes[i].d].m;
+    v[i] = BIG[notes[i].d] ? m * 1.5 : (dotted(i) && !isDiv(i) ? m * 1.5 : m);
+  }
+  const done = new Set();
+  const canImp = j => j !== null && !notes[j].r && !dotted(j) && !done.has(j);
+  const imperfect = j => { done.add(j); v[j] -= 2; };
+  const alter = seg => {
+    const k = seg[seg.length - 1], n = notes[k];
+    if (seg.length < 2 || n.r || n.d !== 'S' || dotted(k)) return false;
+    v[k] = 4; return true;
+  };
+  const rest6 = seg => (((Math.round(seg.reduce((a, k) => a + v[k], 0) * 8)) % 48) + 48) % 48 / 8;
+  let X = null, run = [];
+  const settle = Y => {
+    if (!run.length) return;
+    const segs = [[]];
+    run.forEach(k => { segs[segs.length - 1].push(k); if (isDiv(k)) segs.push([]); });
+    if (!segs[segs.length - 1].length) segs.pop();
+    if (segs.length === 1) {
+      const s = segs[0], r = rest6(s);
+      if (r === 2) { if (canImp(X)) imperfect(X); else if (canImp(Y)) imperfect(Y); else odd.push(s[0]); }
+      else if (r === 4) { if (!alter(s)) { if (canImp(X) && canImp(Y)) { imperfect(X); imperfect(Y); } else odd.push(s[0]); } }
+      else if (r !== 0) odd.push(s[0]);
+    } else {
+      segs.forEach((s, j) => {
+        const r = rest6(s);
+        if (r === 0) return;
+        if (r === 2 && j === 0 && canImp(X)) { imperfect(X); return; }
+        if (r === 2 && j === segs.length - 1 && canImp(Y)) { imperfect(Y); return; }
+        if (r === 4 && alter(s)) return;
+        odd.push(s[0]);
+      });
+    }
+    run = [];
+  };
+  for (let i = 0; i < N; i++) {
+    if (BIG[notes[i].d]) { settle(i); X = i; }
+    else run.push(i);
+  }
+  settle(null);
+  return {v, odd};
+}
+/* MENS-END */
 const beatSeconds = () => 60 / ui.tempo;
 /* Tempus perfectum: the brevis (and the longer notes) count three semibreves, not two */
 const mv = k => DUR[k].m * (ui.tempus === 'O' && DUR[k].m >= 4 ? 1.5 : 1);
@@ -1569,15 +1672,15 @@ function startPlayback(from){
   if (!ctx) { toast('This browser cannot play sound.'); return; }
   stopPlayback();
   from = Math.max(0, Math.min(doc.notes.length - 1, from || 0));
-  const spm = secondsPerMinim(), beat = beatSeconds();
+  const spm = secondsPerMinim(), beat = beatSeconds(), vals = readValues(doc.notes, ui.tempus).v;
   let offset = 0;
-  for (let i = 0; i < from; i++) offset += mv(doc.notes[i].d) * spm;
+  for (let i = 0; i < from; i++) offset += vals[i] * spm;
   const t0 = ctx.currentTime + 0.12;
   const origin = t0 - offset;                 /* where the piece "began" */
   let t = t0;
   const tl = [];
   for (let i = from; i < doc.notes.length; i++) {
-    const n = doc.notes[i], d = mv(n.d) * spm;
+    const n = doc.notes[i], d = vals[i] * spm;
     if (!n.r) audio.voices.push(Synth.voice(ctx, audio.bus, freqOf(n), t, t + d - 0.012));
     tl.push({i, t0: t, t1: t + d});
     t += d;
@@ -1921,69 +2024,68 @@ const LIBRARY = [
     {title: 'Salve Regina, simple tone', desc: 'Antiphon, mode 5. Liber usualis, p. 279', s: [21,23,25,26,25,26,28,27,26,25,26,25,25,28,25,26,24,24,22,23,24,25,23,23,22,21]}
   ]}
 ];
-/* Chanson: tenors with their rhythm. Token = step, optional accidental, value; r = rest.  */
-/* Values are those of the Josquin Research Project editions, without dots; where a source */
-/* used dotted values the whole excerpt is rescaled. Last note always a longa.             */
-LIBRARY.push({group: 'Chanson', note: 'Famous tenors of the 15th and 16th centuries, with their rhythm.', items: [
-  {title: 'L’homme armé', desc: 'The whole tune, as in Josquin’s edition. Tempus perfectum, B♭.', t: 'O', b: true,
-   n: '25M 28M 27M 26M 25M 29M 25M 29M 29M 28M 27M 26M 25M 32M 31M 31M 32Sm 29Sm 32Sm 31Sm 32Sm 30Sm 29Sm 32Sm 33S 32S 31S 30S 29B'},
-  {title: 'De tous biens plaine', desc: 'Hayne van Ghizeghem. Opening of the tenor in Josquin’s setting. B♭.', t: 'C', b: true,
-   n: '25L 27B 26B 25S 27B 28S 29B 30bS 29S 27B 28S 27S 29B 28S 29S 25B 26B 25L'},
-  {title: 'La Spagna', desc: 'Opening of the ostinato tenor in Josquin’s La Spagna.', t: 'C', b: false,
-   n: '26B 26S 26B 24M 25M 26B 26S 26B 26S'},
-  {title: 'Se la face ay pale', desc: 'Dufay. Opening of the tenor in his Missa Se la face ay pale, Kyrie.', t: 'C', b: false,
-   n: '28L 28B 27L 26B 28S 29S 30B 31B 30B 29L 28B 25S 26B 27S 28L'},
-  {title: 'Fortuna desperata', desc: 'Anonymous chanson. Opening of the tenor. Tempus perfectum, B♭.', t: 'O', b: true,
-   n: '24S 24M 25M 26S 25S 24S rM 28M 29M 29M 27M 28M 29S 29M 27M 27S 28M 27M 26M 24M 25S 24B'},
-  {title: 'Malheur me bat', desc: 'Opening of the tenor of the chanson.', t: 'C', b: false,
-   n: '23B 27S 27S 28S 28S 27S 25S 26S 26S 25M 25S 24Sm 23Sm 24S 24S'},
-  {title: 'Hercules dux Ferrariae', desc: 'Josquin’s soggetto cavato: re ut re ut re fa mi re.', t: 'C', b: false,
-   n: '22B 21B 22B 21B 22B 24B 23B 22B'},
-  {title: 'La sol fa re mi', desc: 'Josquin’s soggetto cavato: la sol fa re mi, as in the Kyrie.', t: 'C', b: false,
-   n: '30B 29S 28B 26S 27S'},
-  {title: 'Scaramella', desc: 'Opening of the tenor in Josquin’s Scaramella.', t: 'C', b: false,
-   n: '28B 29S 30B 30S 30B 30S 29B 27B 29S 29S 28B 27S 26S 27B 28S 27S 28S'},
-  {title: 'Adieu mes amours', desc: 'From the Kyrie of Obrecht’s Missa Adieu mes amours. B♭.', t: 'C', b: true,
-   n: '25S 27S 26S 25S 29B 28S 27M 27S 26Sm 25Sm 24S 25S 27S 26S 25S 29B 28S'},
-  {title: 'Faisant regretz', desc: 'From the Kyrie of Josquin’s Missa Faisant regretz. Tempus perfectum, B♭.', t: 'O', b: true,
-   n: '31S 29S 30S 29S rM 31M 29M 30M 29M 31S 29M 30S 29S rM 27M 25M 26S 25M rM 27S 25M 26S 25S'},
-  {title: 'L’homme armé, Busnois', desc: 'From the Kyrie of Busnois’s Missa L’homme armé. B♭.', t: 'C', b: true,
-   n: '25B 25S 28B 28S 27S 26B 25S rS rS 29S 29S 25S rS 29S 29S 29S 28B 27S 26B 25B rS 29S 29S 29S 25B rS 32B 32S 31B 31S 32B 32S'},
-  {title: 'Missa Caput', desc: 'Ockeghem. Beginning of the tenor in the Kyrie. Tempus perfectum.', t: 'O', b: false,
-   n: '20L 22L 21L 22B rS rS 20S 23B'}
+/* Chanson: the famous tenors of the 15th and 16th centuries, complete and with their rhythm.
+   Token = diatonic step (C4 = 28), accidental (b n #), value, and '.' for a dot; r = rest.
+   Taken from the Josquin Research Project editions (the sounding values of the tenor), read back
+   with readValues() note by note before they went in: in tempus perfectum the breves are made
+   perfect or imperfect by the theorists' rules, with a punctus where the source needs one.
+   Editorial accidentals are left out; the source's own accidentals stay. */
+LIBRARY.push({group: 'Chanson', note: 'Famous tenors of the 15th and 16th centuries, complete, with their rhythm.', items: [
+  {title: "L’homme armé", desc: "The whole tune, A B A, as it runs through the tenor of Busnois’s Kyrie. Tempus perfectum.", t: 'O', b: true,
+   n: '25B 25S 28B 28S. 27S 26B 25S rS rS 29S 29S 25S rS 29S 29S 29S 28B 27S 26B 25B rS 29S 29S 29S 25B rS 32B 32S 31B 31S 32B 32S 29B 32B 32S 31B 31S 32B 32S 29S rS rS 32B 32S 33B 32S. 31S 30B 29B rB rB 25B 25S 28B 28S. 27S 26B 25S rS rS 29S 29S 25S rS 29S 29S 29S 28B 27S 26B 25L'},
+  {title: "De tous biens plaine", desc: "Hayne van Ghizeghem. The complete tenor, kept unchanged in Josquin’s setting.", t: 'C', b: true,
+   n: '25L 27B 26B 25S 27B 28S 29B 30bS 29S 27B 28S 27S 29B 28S 29S 25B 26B 25L rS 25S 24S 24S 27S 27S 26S 29S. 28Sm 27Sm 28S 29S. 28Sm 27Sm 26S 27S 28B 26B 25S 24S 23B 22L rS 29S 28S 27S 25B 26B 25S 27B 28S 26B 25B 27S 26S 24S 25B 24S 25L rS 25S 26S 24S 25S 22S 23B 22L rS 22S 24B 25S 25S 26S 27S 28S 29B 30S 29S 27B 28S 29S 28S 29S 27S 26B 25L'},
+  {title: "La Spagna", desc: "The basse danse tenor complete, 45 perfect breves, as in Josquin’s Propter peccata.", t: 'O', b: false,
+   n: '26B 26B 23B 22B 24B 23B 22B 22B 24B 25B 26B 26B 28B 27B 26B 28B 29B 29B 25B 26B 25B 25B 29B 29B 28B 28B 29B 25B 24B 27bB 26B 26B 22B 23B 25B 26B 28B 27B 26B 25B 24B 23B 22B 26B 22L'},
+  {title: "Se la face ay pale", desc: "Du Fay. The complete tenor of his ballade, the model of his mass. Tempus perfectum.", t: 'O', b: false,
+   n: '28B 28S 27B 26S 28M 29M 30S 31S. 30S 29B 28S 25M 26S 27M 28B rS 32B 32S 28B 27S 28M 29M 30M 31M 29S 28B rS 33S 33M 33S 33M 32B rM 28M 29M 30M 31S 29S 28S rS 29S 28S 25S 32M 32M 32M 32M 28S rM 29M 28S 27bS 26S 25S rS rS 28B 27S 28B 29S 30S 28S rS 32M 32M 30M 31M 32S rS 28S 29M 30M 31M 30M 28M 25M 26M 27M 28M 30S 28M 32M 30M 28M rM 32M 30M 32M 31M 29S 28S rM 29M 28M 26S 27M 28M 26M 25M 28S 30M 29S 28L'},
+  {title: "Fortuna desperata", desc: "The complete tenor of the anonymous song behind Josquin’s and Obrecht’s masses.", t: 'C', b: true,
+   n: '24B 24S 25S 26B 25B 24B rS 28S 29S 29S 27S 28S 29B 29S 27S 27B 28S 27S 26S 24S 25B 24L. rB rB rB 31B 31S 29S 30B 32S 31M 30M 29B 30S 31S 32B. 31S 31S 30M 29M 30B 31B rS 31S 31S 30M 29S 28M 26S 27B 26B 28B 29B 28B 30B rS 30S 31S 29S 28B 29S 30S. 29M 28M 27M 28B 29B 29M. 28Sm 27S 26B 27B 25B 26B 27S 26S 29S. 28M 27S 26S 25B 24L'},
+  {title: "D’ung aultre amer", desc: "Ockeghem. The complete tenor, as Josquin takes it into his mass.", t: 'C', b: true,
+   n: '25S. 23M 24S 25S 27B 28B 29S. 28M 27S 26S 25B 22B 27S 26S 27S 25S 24M 24S 23Sm 24Sm 25S 21B 25S 24M 25S 24Sm 23Sm 24M 22M 21S 25B 22S 24S 23B 22B 27B 28S 28S 29B 30B 29S 31B 27S 26B 27B 31S 30S 31S 29B 30S 31S 27S 28B 27S. 26M 25S 24S 25B 22B 23B 24B 25B 27S 26S 28B 29S 27M 28M 29M. 28Sm 26M 25S 27M 26S 25L'},
+  {title: "Fors seulement l’attente", desc: "Ockeghem. The complete tenor, at its own high pitch, so in the plain G clef.", t: 'C', b: false, c: "treble",
+   n: '33B 33S 33S 33S. 32Sm 31Sm 30S 30S 32S 33S 34S 35S 36S. 35M 34M 33M 32S rS 33S 31S 29S 30B 29S 33S 34S 35S 36S 37S 38S 38S 38S 37S 36S. 35Sm 34Sm 35L rB rS 35S 36S 37S 38S. 37Sm 36Sm 35B 35S 35S 36B 37B 36S 35S 34B 33L. rB rB rB rB rB 35B 36S 36S 35S 33S 34bS 34bS 33S 31S 32B 31S. 30Sm 29Sm 28S rS 35B 33S 33S 31B 30S. 31M 32S 33S 32M 31M 30S rS 29B 31S. 32M 33S. 34M 35S. 34M 32S. 33M 34M 35M 36S. 35M 33M 32M 35S 34M 33S 32M 33L'},
+  {title: "Ma bouche rit", desc: "Ockeghem. The complete tenor of his bergerette, the model of Martini’s mass.", t: 'C', b: false,
+   n: '26B 23S 23S 26S 26S 25M. 24Sm 23M 22M 25M 26M 28M. 27Sm 25S rS 30B 29S. 28M 26S 26S 25S rM 25S 26M 27S 28S 26S 25M 23S 21M 22S 21S rB rB 30S 28M 29S 27M 26S 25S rM 25M 28M. 29Sm 30S 29M. 28Sm 26S 25S 28S. 27M 26S 25S rM 28S 29M 30S 28S 31S 30M 28M 29S 28S rS 27S 28S 29M 29S 28M 29S rM 28M 29M 31M 30S 29S. 28M 27S 26M. 25F 24F 23S 25M 26M 27S 28S 27M 28M 29M. 28Sm 26S 25M 26M 27M 25M 26M 24M 23S 22S 24S 25M 26M 27M 28M 26S 23M 25M 24S 23L 27B 28S 28S 29S. 28M 26S 26S 22M 25S 26M 27S 28M. 27Sm 25S rS rS 28S. 24M 24B 24S 24S 21B 28S 27S 28S 29S 27S 28S 26S rM 26M 25M 28M. 27Sm 28M 29M 27M 28M. 29Sm 30S 26S rS 26B 26S 25S 26M 25M 28M 29M 30S 30S 30S 28M 29M 30M 26M 27S 26L'},
+  {title: "Malheur me bat", desc: "The complete tenor of the chanson behind the masses of Josquin and Agricola.", t: 'C', b: false,
+   n: '23B 27S 27S 28S 28S 27S 25S 26S 26S 25M 25S 24Sm 23Sm 24S 24S 23M. 24Sm 25M 26M. 25Sm 23M 24M 25M 26M 23M 24S 23B rS 30S 28S 29M 30S 26M 27S 28S 27M 25S 26M 27S 23M 30S 29Sm 28Sm 29Sm 28Sm 27Sm 26Sm 25M. 26Sm 27M 28M 27M 30M. 29Sm 27M 28S 27M 30M. 29Sm 31M 30M 28M 29S rM 28S 27M 28M 26S 25M 26M 28M 27S 26M 30S 29M 28M 30S 29M 30S 30M 29Sm 28Sm 27M 28M 27M 25M. 26Sm 27M 23M 30S 29Sm 28Sm 27S 26M 28S 29M 30M. 29Sm 27M 28S 27Sm 26Sm 27S 23S 23S 23S 24S 23S rM 26S 25M 26S 27S 28S 27M 25M 26S 25M 25S 24M 25S rS 25S. 28S 29M 30S. 31S 30Sm 29Sm 28S. 29M. 28Sm 26M 27S 28B rS 28S 29S 30S 28M. 29Sm 30M 31M. 30Sm 29Sm 28Sm 29S 28M 28S 27M 28S rS 28S 29M 30S 29Sm 28Sm 27M 28S 27Sm 26Sm 25M 26M. 25Sm 23M 24S 23L'},
+  {title: "J’ay pris amours", desc: "The complete tenor of the anonymous chanson, probably its original version.", t: 'C', b: false,
+   n: '26B 26S 26S 25B 26S. 25M 23B rS 25S 26S 27S 28S 27M 25M 26S 25S rS 27S 28S 29S 30M 28S 29M 28M 26M 27S 26B 26S 25S 24B 23B rS 30S 31S 30S 28B 29B 28B. 27S 26B 25S 28B 29S 30B 26B 28S 27S 28S 29S 30S. 29Sm 28Sm 27S rS 23B 24S 23S 26S 25S 24B 23L rS 25S 26S 27S 28S. 27M 25S 27S 26B 25B. rS rS 23S 24S 25S 26S 23S rS 25S 26S 25S 28S. 27M 26S 25S 28S 29S 26B 27B 26L'},
+  {title: "Je ne demande", desc: "Busnois. The complete tenor of his chanson, the model of Obrecht’s mass.", t: 'C', b: true,
+   n: '24S. 25M 26S 27S 25S 24S rS 28S 27S 26S 25B 24S 25M 26S 25Sm 26Sm 27Sm 26Sm 25Sm 24Sm 23M. 21Sm 22M 21S 24S 23M 24S rS 25S 26S 27S 28B 26S 25B 24S 21M 24S 25M 26S 25M 23M 24S 23S rS 21S. 22M 23S 24S 25S 25S 24M 23Sm 22Sm 21M 24M. 25Sm 26M. 27Sm 28S 29M 30S 31S 30M 29Sm 28Sm 29S 28M 28S 26M 25S 24S rS rB rB 28B 29S 28S 26S 24S 27S 26S 24M 28M. 27Sm 26S 25M 26M 24M 28S 26S 27S 26M 27M. 26Sm 25Sm 24Sm 25S 26S rS rB rB 24B 23S 21S 24S 23S 22B 21M. 22Sm 23M 24M. 25Sm 26Sm 27Sm 25M 28S 27Sm 26Sm 27S 28M. 29Sm 30M 31M 28M 29M 27M 28M. 24Sm 26M 25S 24S rS rB 24S 25M. 26Sm 27M 28M 26S 27M 25S 26M 24S 23M 23S 22Sm 23Sm 24M 26S 25Sm 24Sm 25S 24M 28M. 29Sm 30M. 29Sm 28Sm 27Sm 29M 28M. 26Sm 27M 25S 24L'},
+  {title: "Adieu mes amours", desc: "The popular tune in the tenor of Josquin’s chanson, complete, as Obrecht uses it.", t: 'C', b: true,
+   n: '25S 27S 26S 25S 29B rB rB rB rB 28S. 27M 26S 25S 24B rB rB 25S 27S 26S 25S 29B 28S. 27M 25S 26S 25L rB rB rB 25S 29S 29S 28S 29B 28S. 27M 25S 26S 25L rB rB rB 25S 29S 29S 28S 29B 28S. 27M 25S 26S 25B rB 25S 27S 26S 25S 29B rB rB rB rB 28S. 27M 26S 25S 24B rB rB 25S 27S 26S 25S 29B 28S. 27M 25S 26S 25L'},
+  {title: "Mille regretz", desc: "The complete tenor of the chanson printed under Josquin’s name (16th century).", t: 'C', b: false,
+   n: '23S. 24M 25S 25S 26S rM 26M 25M 23M 24M 22M 26B rB rB 28B 25S 26S 23B rB rB rM 30M 30M 30M 30M 30M 29S 30S 30S 28S 28S 27B rB rS 30S 29S. 28M 27M 26M 25S 26B 25B rS 27S 29S 29S 26B rS 29S 27M 28M 27M 28M. 27Sm 26S 25M 26S rM 26M 25M 23M 24M 22M 26M 26M 28M 28M 28S 26M. 27Sm 28M 26M 28M 28M 28S 26M. 27Sm 28M 26M 25M 26M 25S 26S 25L'}
 ]});
-function parseTokens(str, bflat){
+function parseTokens(str){
   const out = []; let prev = 26;
   str.trim().split(/\s+/).forEach(tok => {
-    const m = /^(r)?(\d+)?([bn#])?(Mx|Sm|L|B|S|M|F)$/.exec(tok);
+    const m = /^(r)?(\d+)?([bn#])?(Mx|Sm|L|B|S|M|F)(\.)?$/.exec(tok);
     if (!m) throw new Error('bad token ' + tok);
     const s = m[2] ? Number(m[2]) : prev;
-    const a = (m[3] === 'b' && bflat && mod7(s) === 6) ? '' : (m[3] || '');
-    out.push({d: m[4], r: !!m[1], s, a: m[1] ? '' : a});
+    out.push({d: m[4], r: !!m[1], s, a: m[1] ? '' : (m[3] || ''), p: !m[1] && !!m[5]});
     if (!m[1]) prev = s;
   });
   return out;
 }
 function itemNotes(item){
-  if (item.n) {
-    const ns = parseTokens(item.n, !!item.b);
-    ns[ns.length - 1].d = 'L';
-    return ns;
-  }
-  return item.s.map((s, i) => ({d: i === item.s.length - 1 ? 'L' : 'B', r: false, s, a: ''}));
+  if (item.n) return parseTokens(item.n);
+  return item.s.map((s, i) => ({d: i === item.s.length - 1 ? 'L' : 'B', r: false, s, a: '', p: false}));
 }
 function presetDoc(item){
-  return {title: item.title, clef: 'treble8', bflat: !!item.b, notes: itemNotes(item)};
+  return {title: item.title, clef: CLEFS[item.c] ? item.c : 'treble8', bflat: !!item.b, lines: 5, notes: itemNotes(item)};
 }
 function previewSVG(item){
-  const clef = CLEFS.treble8, top = 0;
+  const clef = CLEFS[item.c] || CLEFS.treble8, top = 0, O = item.t === 'O';
   let o = '', x = 0.5;
   o += clefUse(clef, x, top);
   x += gw(clef.g) + 0.9;
   if (item.b) { o += use('fl', x, top + 4 - sigPos(clef) * 0.5); x += gw('fl') + 0.8; }
-  itemNotes(item).forEach(n => {
+  itemNotes(item).slice(0, 40).forEach(n => {
     if (n.r) {
-      o += restGlyph(n.d, x + 0.6, top);
+      const k = REST[n.d], cx = x + 0.6;
+      o += (n.d === 'B' && O) ? `<rect x="${f(cx - gw(k) / 2)}" y="${f(top + 0.5)}" width="${f(gw(k))}" height="1.5" class="prest"/>` : restGlyph(n.d, cx, top);
       x += 2.2;
       return;
     }
@@ -1991,6 +2093,7 @@ function previewSVG(item){
     if (n.a) { const aw = gw(ACC[n.a].g); o += use(ACC[n.a].g, x, top + 4 - pos * 0.5); x += aw + 0.3; }
     o += ledgers(pos, x, 1.3, top);
     o += noteGlyph(n.d, pos, n.d === 'L' && pos <= -3, x, top);
+    if (n.p) { o += dotMark(x + 1.62, pos, top); x += 0.6; }
     x += 2.2;
   });
   const w = x + 0.4;
@@ -2035,8 +2138,7 @@ function buildLibrary(){
     if (!b) return;
     const item = LIBRARY[Number(b.dataset.g)].items[Number(b.dataset.i)];
     closeLibrary(false);
-    ui.tempus = item.t === 'O' ? 'O' : 'C';
-    mutate(() => { doc = presetDoc(item); ui.sel = null; ui.caret = doc.notes.length; ui.hover = null; });
+    mutate(() => { doc = presetDoc(item); ui.tempus = item.t === 'O' ? 'O' : 'C'; ui.sel = null; ui.caret = doc.notes.length; ui.hover = null; });
     syncSettings();
     toast(`${item.title} loaded. Undo brings back what you had.`);
     scoreEl.focus({preventScroll: true});
