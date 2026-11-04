@@ -25,9 +25,10 @@
   color-scheme: light;
 }
 *{box-sizing:border-box}
+.embedded,.embedded body{overflow:hidden;height:auto}
 .embedded #title{display:none}
 .embedded header.top .lede, .embedded header.top h1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.embedded header.top{justify-content:flex-end;padding-right:112px;margin-bottom:6px}
+.embedded header.top{justify-content:flex-end;margin-bottom:6px}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--ground);color:var(--text);
   font:400 19px/1.45 "IM Fell English","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif}
@@ -254,8 +255,7 @@ label.ctl{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font
 #reg{width:176px}
 .grow{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
 .tp-side{flex-direction:row}
-.embedded .bar{padding-right:112px}
-@media (max-width:700px){ .embedded .bar{padding-right:0} .vsep{display:none} .bar .spacer,.transport .spacer{flex-basis:100%;height:0} }
+@media (max-width:700px){ .vsep{display:none} .bar .spacer,.transport .spacer{flex-basis:100%;height:0} }
 /* ================= Design E: grouped pods, one red, parchment score ================= */
 :root{--h:34px}
 button,select,input[type=number]{height:var(--h);min-height:var(--h)}
@@ -2112,8 +2112,13 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 /* inside the website's frame: tell the page how tall the app is, so the page scrolls and the frame doesn't */
 try {
   if (window.parent !== window && window.ResizeObserver) {
-    const post = () => parent.postMessage({cantusFirmusHeight: Math.ceil(document.body.getBoundingClientRect().height)}, '*');
-    new ResizeObserver(post).observe(document.body); post();
+    let last = 0;
+    const post = () => {
+      const h = Math.ceil(Math.max(document.documentElement.scrollHeight, document.body.getBoundingClientRect().bottom + window.scrollY));
+      if (h !== last) { last = h; parent.postMessage({cantusFirmusHeight: h}, '*'); }
+    };
+    new ResizeObserver(post).observe(document.body); new ResizeObserver(post).observe(document.documentElement); post();
+    setInterval(post, 400);     /* menus that open below the page's end */
   }
 } catch (e) {}
 })();

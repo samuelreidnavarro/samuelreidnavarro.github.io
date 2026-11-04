@@ -25,20 +25,13 @@
   </nav>
   <main class="edge">
     <div class="embed edge">
-      <button class="fs" type="button" id="fs">Full screen</button>
-      <iframe class="game" id="cf" src="games/cantus-firmus.html?v=24" title="Cantus firmus" allow="fullscreen; autoplay; clipboard-write"></iframe>
+      <iframe class="game" id="cf" src="games/cantus-firmus.html?v=25" title="Cantus firmus" scrolling="no" allow="autoplay; clipboard-write"></iframe>
     </div>
     <script>
       window.addEventListener("message", function (e) {
         var f = document.getElementById("cf");
         if (e.source !== f.contentWindow || !e.data || !e.data.cantusFirmusHeight) return;
-        f.style.height = Math.max(420, e.data.cantusFirmusHeight) + "px";
-      });
-      document.getElementById("fs").addEventListener("click", function () {
-        var f = document.getElementById("cf");
-        if (f.requestFullscreen) f.requestFullscreen();
-        else if (f.webkitRequestFullscreen) f.webkitRequestFullscreen();
-        else window.location.href = f.src;
+        f.style.height = e.data.cantusFirmusHeight + "px";
       });
     </script>
   </main>
