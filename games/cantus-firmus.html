@@ -889,7 +889,7 @@ function drawScore(L, exp){
     o += clefUse(clef, L.clefX, top, hv === 'clef' ? ' class="clefhov"' : '');
     const fy = top + 4 - L.sigPos * 0.5;
     if (doc.bflat) o += use('fl', L.sigX, fy, hv === 'sig' ? ' class="clefhov"' : '');
-    else if (!exp && (hv === 'clef' || hv === 'sig' || COARSE))
+    else if (!exp && (hv === 'clef' || hv === 'sig'))
       o += use('fl', L.sigX, fy, ` class="sigghost${hv === 'sig' ? ' on' : ''}"`);
     o += mensSign(L.mensX + 1.1, top + 2, hv === 'mens');
     for (const it of line.items) o += drawItem(it, top, exp);
