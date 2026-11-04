@@ -20,7 +20,7 @@
   --ground:#FBF7EF; --surface:#F4EDE0; --text:#2A2218; --muted:#7D6F5B; --line:#D6C8B0;
   --accent:#8E2A1E; --accent-ink:#F7F2E6;
   --leaf:#F3E8CC; --leaf-ink:#2A2218; --leaf-muted:#7A6A4E; --rule:#8E2A1E;
-  --chant:#C3301C; --sel:#8E2A1E; --hov:#B8624A; --play:#8E2A1E; --del:#8E2A1E;
+  --sel:#8E2A1E; --hov:#B8624A; --play:#8E2A1E; --del:#8E2A1E;
   --paper:none;
   color-scheme: light;
 }
@@ -91,6 +91,12 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px;margin:0}
 .popbody .btns:not(.col){flex-wrap:nowrap}
 .popbody .col{flex-direction:column}
 .popbody .col .tb{justify-content:flex-start;text-align:left;white-space:nowrap}
+#popStaff .popbody{left:auto;right:-6px}
+@media (max-width:700px){#popStaff{position:static}#popStaff .popbody{left:14px;right:14px;width:auto}.staffset{grid-template-columns:auto 1fr}.staffset input[type=range]{width:100%}}
+.staffset{display:grid;grid-template-columns:auto 150px;gap:8px 12px;align-items:center;padding:4px 8px}
+.staffset input[type=range]{width:150px}
+.staffset .btns{display:flex;gap:2px}
+.staffset .btns .tb{min-width:44px}
 .tools .row .spacer{flex:1}
 .tools .row .ctl{align-self:flex-start;margin-top:20px}
 .tools .row #clear{align-self:flex-start;margin-top:15px}
@@ -111,7 +117,6 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 #score svg{display:block;overflow:visible}
 #score .staff{stroke:var(--rule)}
 #score .ledger{stroke:var(--leaf-ink)}
-#score.four .staff,#score.four .ledger{stroke:var(--chant)}
 #score use,#score .bar,#score .dot{fill:var(--leaf-ink)}
 #score use.clefhov{fill:var(--hov)}
 #score .it.hov use{fill:var(--hov)}
@@ -165,7 +170,6 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 #clefMenu li svg{width:40px;height:78px;overflow:visible}
 #clefMenu li.flatopt{grid-column:span 5;flex-direction:row;justify-content:center;gap:8px;padding:4px 8px;border-top:1px solid var(--line);border-radius:0 0 4px 4px;margin-top:2px}
 #clefMenu li.flatopt svg{width:40px;height:30px}
-#clefMenu li.flatopt + li.flatopt{border-top:0;margin-top:0}
 #clefMenu li.off{opacity:.3;pointer-events:none}
 .stepper{display:flex}
 .stepper button{min-width:38px;padding:0;font-size:20px;border-radius:0}
@@ -320,7 +324,14 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
         </div>
       </div></div>
       <div class="grow">
-      <label class="ctl">Size <input type="range" id="size" min="8" max="26" step="1" style="width:100px"></label>
+      <div class="podg"><div class="pop" id="popStaff">
+        <button class="tb popbtn" aria-haspopup="true">Staff<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <div class="popbody"><div class="staffset">
+          <label class="ctl" for="size">Size</label><input type="range" id="size" min="8" max="26" step="1">
+          <span class="ctl" id="linesLabel">Lines</span><div class="btns" id="linesBtns" role="group" aria-labelledby="linesLabel"><button class="tb" data-lines="5" data-keep aria-pressed="true">5</button><button class="tb" data-lines="4" data-keep aria-pressed="false">4</button></div>
+          <label class="ctl" for="spacing">Spacing</label><input type="range" id="spacing" min="50" max="250" step="5">
+        </div></div>
+      </div></div>
       <div class="podg">
       <button id="clear">Clear</button>
       <div class="libwrap">
@@ -538,7 +549,7 @@ const defaultDoc = () => ({
 let doc = defaultDoc();
 const ui = {
   sel: null, caret: 0, inDur: 'B', inRest: false, hover: null, playing: -1,
-  size: window.innerWidth < 640 ? 11 : 16,
+  size: window.innerWidth < 640 ? 11 : 16, spacing: 1,
   beat: 'hand', tempus: 'C', unit: 'S', tempo: 60, ref: 440, vol: 70, reg: 'custom', bright: 50, room: 40, atk: 180, rel: 150, chiff: 7, ens: 0.3, wind: 10, scoop: 5, draw: [100, 71, 55, 48, 37, 22, 12, 8, 0, 0, 0, 0], audition: true, loop: false, metro: false, setOpen: false
 };
 let lay = null;          /* last computed layout, used for hit testing */
@@ -584,7 +595,7 @@ function sanitizeDoc(d){
 function save(){
   try {
     localStorage.setItem(STORE, JSON.stringify({doc, prefs: {
-      inDur: ui.inDur, size: ui.size, unit: ui.unit, tempo: ui.tempo, ref: ui.ref,
+      inDur: ui.inDur, size: ui.size, spacing: ui.spacing, unit: ui.unit, tempo: ui.tempo, ref: ui.ref,
       vol: ui.vol, reg: ui.reg, bright: ui.bright, room: ui.room, atk: ui.atk, rel: ui.rel, chiff: ui.chiff, ens: ui.ens, wind: ui.wind, scoop: ui.scoop, draw: ui.draw, audition: ui.audition, loop: ui.loop, beat: ui.beat, tempus: ui.tempus
     }}));
   } catch (e) { /* storage unavailable: work continues, just not kept */ }
@@ -624,6 +635,7 @@ function loadAll(){
     const p = stored.prefs;
     if (DUR[p.inDur]) ui.inDur = p.inDur;
     if (p.size >= 8 && p.size <= 26) ui.size = p.size;
+    if (p.spacing >= 0.5 && p.spacing <= 2.5) ui.spacing = p.spacing;
     if (DUR[p.unit]) ui.unit = p.unit;
     else if (({4:'B', 2:'S', 1:'M'})[p.unit]) ui.unit = ({4:'B', 2:'S', 1:'M'})[p.unit];
     if (p.tempo >= 10 && p.tempo <= 300) ui.tempo = p.tempo === 67 ? 60 : p.tempo;   /* 67 was the old default */
@@ -684,7 +696,7 @@ function redo(){ if (!redoStack.length) return; stopPlayback(); undoStack.push(s
 /* ------------------------------------------------------------------ */
 /* Layout (all units are staff spaces)                                 */
 /* ------------------------------------------------------------------ */
-const gapAfter = m => 1.0 + 1.05 * Math.log2(1 + m);
+const gapAfter = m => (1.0 + 1.05 * Math.log2(1 + m)) * ui.spacing;
 function sigPos(clef, top = topPos()){
   let best = null;
   for (let p = 0; p <= top; p++)
@@ -887,7 +899,6 @@ function render(){
   const S = ui.size;
   const g = ghostInfo();
   if (g && g.atEnd && g.line === lay.lines[lay.lines.length - 1]) lay.barX = Math.max(lay.finalX ?? 0, g.x + g.w + 1.2);
-  scoreEl.classList.toggle('four', doc.lines === 4);
   scoreEl.innerHTML =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(lay.W)} ${f(lay.H)}" width="${f(lay.W * S)}" height="${f(lay.H * S)}" aria-hidden="true">` +
     drawScore(lay, false) + drawGhost(g) + drawCaret() + '</svg>';
@@ -968,9 +979,14 @@ function syncTools(){
 function shiftOctave(dir){
   mutate(() => { doc.notes.forEach(x => { if (!x.r) x.s = clampStep(x.s + 7 * dir); }); });
 }
+function syncLines(){
+  document.querySelectorAll('#linesBtns button').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.lines) === doc.lines ? 'true' : 'false'));
+}
 function syncSettings(){
   $('#title').value = doc.title;
   $('#size').value = ui.size;
+  $('#spacing').value = Math.round(ui.spacing * 100);
+  syncLines();
   $('#tempo').value = ui.tempo;
   syncUnit();
   syncBeat();
@@ -1735,11 +1751,10 @@ function wireTempo(){
 /* ------------------------------------------------------------------ */
 /* Clef menu (opened by clicking the clef on the staff)                */
 /* ------------------------------------------------------------------ */
-const CLEF_KEYS = [...Object.keys(CLEFS), 'flat', 'four'];   /* the last entries toggle the B flat and the 4-line staff */
+const CLEF_KEYS = [...Object.keys(CLEFS), 'flat'];   /* the last entry toggles the B flat */
 let clefActive = 0;
 function clefIcon(k){
   const c = CLEFS[k];
-  if (k === 'four') return `<svg viewBox="-0.3 0.4 3.6 4.2" aria-hidden="true">${[1,2,3,4].map(i => `<line x1="-0.3" x2="3.3" y1="${i}" y2="${i}" stroke="var(--chant)" stroke-width="0.14"/>`).join('')}</svg>`;
   if (!c) return `<svg viewBox="-0.3 0.4 3.6 4.2" aria-hidden="true">${[0,1,2,3,4].map(i => `<line x1="-0.3" x2="3.3" y1="${i}" y2="${i}" stroke="currentColor" stroke-opacity=".5" stroke-width="0.1"/>`).join('')}<use href="#g-fl" x="1.3" y="${4 - sigPos(CLEFS[doc.clef], 8) * 0.5}"/></svg>`;
   let lines = '';
   for (let i = 0; i < 5; i++) lines += `<line x1="-0.3" x2="3.3" y1="${i}" y2="${i}" stroke="currentColor" stroke-opacity=".5" stroke-width="0.1"/>`;
@@ -1750,8 +1765,8 @@ function buildClefMenu(){
   CLEF_KEYS.forEach(k => {
     const li = document.createElement('li');
     li.setAttribute('role', 'option'); li.dataset.k = k; li.id = 'clefopt-' + k;
-    li.innerHTML = clefIcon(k) + `<span>${CLEFS[k] ? CLEFS[k].short : k === 'four' ? '4 lines' : 'B♭ in the signature'}</span>`;
-    li.title = CLEFS[k] ? CLEFS[k].label : k === 'four' ? '4 lines' : 'B flat in the signature';
+    li.innerHTML = clefIcon(k) + `<span>${CLEFS[k] ? CLEFS[k].short : 'B♭ in the signature'}</span>`;
+    li.title = CLEFS[k] ? CLEFS[k].label : 'B flat in the signature';
     if (!CLEFS[k]) li.className = 'flatopt';
     li.addEventListener('click', () => chooseClef(k));
     menu.appendChild(li);
@@ -1772,7 +1787,7 @@ function markClef(){
   document.querySelectorAll('#clefMenu li').forEach((li, i) => {
     li.classList.toggle('active', i === clefActive);
     const k = li.dataset.k;
-    li.setAttribute('aria-selected', (k === 'flat' ? doc.bflat : k === 'four' ? doc.lines === 4 : k === doc.clef) ? 'true' : 'false');
+    li.setAttribute('aria-selected', (k === 'flat' ? doc.bflat : k === doc.clef) ? 'true' : 'false');
     li.classList.toggle('off', doc.lines === 4 && k === 'c5');
   });
   $('#clefMenu').setAttribute('aria-activedescendant', 'clefopt-' + CLEF_KEYS[clefActive]);
@@ -1798,7 +1813,6 @@ function closeClefMenu(focusScore){
 function chooseClef(k){
   closeClefMenu(true);
   if (k === 'flat') { mutate(() => { doc.bflat = !doc.bflat; }); return; }
-  if (k === 'four') { mutate(() => { doc.lines = doc.lines === 4 ? 5 : 4; if (doc.lines === 4 && doc.clef === 'c5') doc.clef = 'c4'; }); syncSettings(); return; }
   if (k === doc.clef || (doc.lines === 4 && k === 'c5')) return;
   mutate(() => { doc.clef = k; });
   syncSettings();
@@ -1833,22 +1847,31 @@ const LIBRARY = [
     {title: 'Pange lingua gloriosi', desc: 'Hymn, mode 3. Liber usualis, p. 957', s: [
       23,23,24,23,22,25,25,26,28,28, 28,29,28,28,27,26,28,27,26,25,
       25,26,28,27,26,25,26,25, 26,27,25,25,23,26,26,22,
-      23,25,25,23,25,26,26,25, 26,27,25,26,25,24,23,22,23]}
+      23,25,25,23,25,26,26,25, 26,27,25,26,25,24,23,22,23]},
+    {title: 'Ut queant laxis', desc: 'Hymn, mode 2. Liber usualis, p. 1504', s: [21,22,24,22,23,22,22,22,21,22,23,23,23,24,25,23,22,23,21,22,24,25,26,25,24,22,22,25,26,25,24,23,24,25,22,26,25,26,24,25,26,26,25,24,23,22,21,23,22]},
+    {title: 'Conditor alme siderum', desc: 'Hymn, mode 4. Antiphonale monasticum, 1934, p. 182', s: [23,21,23,25,26,26,24,25,25,26,24,25,24,23,22,23,25,24,22,23,24,23,22,21,21,23,24,25,24,23,22,23]},
+    {title: 'Vexilla regis prodeunt', desc: 'Hymn, mode 1. Liber usualis, p. 575', s: [24,25,26,27,26,25,24,25,25,26,25,24,23,22,25,25,26,24,22,24,23,24,22,21,22,22,22,24,22,21,24,24,25,26,25,25,24,24,24,26,27,26,25,26,24,22,24,23,24,22,21,22], a: ['','','','b','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','b','','','','','','','','','','','']},
+    {title: 'Adoro te devote', desc: 'Hymn, mode 5. Liber usualis, p. 1855', s: [24,26,28,28,28,28,29,28,27,26,25,24,24,24,26,28,28,28,29,28,27,26,25,24,24,28,28,29,30,31,31,30,28,29,28,27,26,25,26,28,27,26,25,24,25,26,24,25,24,24], bflat: true},
+    {title: 'Victimae paschali laudes', desc: 'Sequence, mode 1. Liber usualis, p. 780', s: [22,21,22,24,25,24,23,22,26,25,23,25,24,23,22]},
+    {title: 'Dies irae', desc: 'Sequence, mode 1. Liber usualis, p. 1810', s: [24,23,24,22,23,21,22,22,24,24,25,24,23,22,21,23,24,23,22,19,21,22,22,22,21,23,24,23,22]},
+    {title: 'Salve Regina, simple tone', desc: 'Antiphon, mode 5. Liber usualis, p. 279', s: [21,23,25,26,25,26,28,27,26,25,26,25,25,28,25,26,24,24,22,23,24,25,23,23,22,21]}
   ]}
 ];
 function presetDoc(item){
-  return {title: item.title, clef: 'treble8', bflat: false, lines: doc.lines,
-          notes: item.s.map((s, i) => ({d: i === item.s.length - 1 ? 'L' : 'B', r: false, s, a: ''}))};
+  return {title: item.title, clef: 'treble8', bflat: !!item.bflat, lines: doc.lines,
+          notes: item.s.map((s, i) => ({d: i === item.s.length - 1 ? 'L' : 'B', r: false, s, a: item.a ? item.a[i] : ''}))};
 }
 function previewSVG(item){
   const clef = CLEFS.treble8, top = 0;
   let o = '', x = 0.5;
   o += clefUse(clef, x, top);
   x += gw(clef.g) + 0.9;
+  if (item.bflat) { o += use('fl', x - 0.25, top + 4 - sigPos(clef, 8) * 0.5); x += 1.35; }
   item.s.forEach((s, i) => {
     const d = i === item.s.length - 1 ? 'L' : 'B';
     const pos = s - clef.bottom;
     o += ledgers(pos, x, 1.3, top, 8);
+    if (item.a && item.a[i]) { o += use(ACC[item.a[i]].g, x, top + 4 - pos * 0.5); x += gw(ACC[item.a[i]].g) + 0.3; }
     o += noteGlyph(d, pos, d === 'L' && pos <= -3, x, top);
     x += 2.2;
   });
@@ -1983,10 +2006,17 @@ function wire(){
     titleBefore = snapshot();
   });
   $('#size').addEventListener('input', e => { ui.size = Number(e.target.value); save(); render(); });
+  $('#spacing').addEventListener('input', e => { ui.spacing = Number(e.target.value) / 100; save(); render(); });
+  document.querySelectorAll('#linesBtns button').forEach(b => b.addEventListener('click', () => {
+    const n = Number(b.dataset.lines);
+    if (n === doc.lines) return;
+    mutate(() => { doc.lines = n; if (n === 4 && doc.clef === 'c5') doc.clef = 'c4'; });
+    syncLines();
+  }));
   $('#play').addEventListener('click', togglePlay);
   document.querySelectorAll('.pop').forEach(p => {
     p.querySelector('.popbtn').addEventListener('click', e => { e.stopPropagation(); const was = p.classList.contains('open'); closePops(); if (!was) p.classList.add('open'); });
-    p.querySelector('.popbody').addEventListener('click', e => { if (e.target.closest('button')) setTimeout(() => { closePops(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }, 0); });
+    p.querySelector('.popbody').addEventListener('click', e => { if (e.target.closest('button') && !e.target.closest('[data-keep]')) setTimeout(() => { closePops(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }, 0); });
   });
   document.addEventListener('click', () => closePops());
   $('#toggleSet').addEventListener('click', () => { ui.setOpen = !ui.setOpen; applySettingsOpen(); save(); });
