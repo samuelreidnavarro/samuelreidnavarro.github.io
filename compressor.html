@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magic black and white PDF compressor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+Double+Pica:ital@0;1&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap">
+  <link rel="stylesheet" href="style.css?v=16">
+</head>
+<body>
+  <header class="banner">
+    <a href="index.html"><p class="site-name">Samuel Reid Navarro</p></a>
+  </header>
+  <nav class="nav" aria-label="Main">
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="music.html">Timelines</a></li>
+      <li><a href="mensurator.html">Mensurator</a></li>
+      <li><a href="canon.html">Canon Canonum</a></li>
+      <li><a href="cantus-firmus.html">Cantus firmus</a></li>
+      <li class="has-menu"><a href="compressor.html" aria-current="page">Tools</a>
+        <ul class="menu">
+          <li><a href="compressor.html">Magic black and white PDF compressor</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+  <main class="tool">
+    <h1 class="page-title">Magic black and white PDF compressor</h1>
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept="application/pdf,.pdf">
+      <span class="drop-main">Drop a PDF here</span>
+      <span class="drop-file" id="fname">or click to choose one</span>
+    </label>
+    <div class="opts">
+      <label>Resolution
+        <select id="dpi">
+          <option value="200">200 dpi</option>
+          <option value="300" selected>300 dpi</option>
+          <option value="400">400 dpi</option>
+        </select>
+      </label>
+      <label>Threshold
+        <input type="range" id="thr" min="20" max="90" step="1" value="60">
+        <output id="thrv">60</output>
+      </label>
+    </div>
+    <div class="result" id="result" hidden>
+      <div class="status" id="status"></div>
+      <div class="bar"><span id="bar"></span></div>
+      <div class="sizes" id="sizes"></div>
+      <a class="dl fs" id="dl" hidden>Download</a>
+      <canvas class="preview" id="preview"></canvas>
+    </div>
+  </main>
+  <script type="module" src="compressor/app.js?v=1"></script>
+</body>
+</html>
