@@ -340,6 +340,7 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
   <section class="tools" aria-label="Notation tools">
     <div class="bar">
       <div class="podg" id="editPod">
+        <button class="ib" id="editBtn" aria-pressed="false" aria-label="Edit: place notes on the staff" title="Edit: turn on to place and change notes on the staff"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17.3 14.8 6l3.2 3.2L6.7 20.5 3 21Zm13.7-12.6 1.4-1.4a1.5 1.5 0 0 1 2.1 0l1.1 1.1a1.5 1.5 0 0 1 0 2.1l-1.4 1.4Z"/></svg></button>
         <button class="ib" id="undo" aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5V13.2c4.6-.4 7.4.6 9.6 4.3-.5-5.2-3.6-8.6-9.6-9.2Z"/></svg></button>
         <button class="ib" id="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5v-3.8c-4.6-.4-7.4.6-9.6 4.3.5-5.2 3.6-8.6 9.6-9.2Z"/></svg></button>
         <button class="ib" id="del" aria-label="Delete selected note" title="Delete the selected note (Delete)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 4h7l.8 1.5H20V7.5H4V5.5h3.7ZM6 9h12l-.9 11H6.9Z"/></svg></button>
@@ -455,7 +456,7 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
 
   <details class="help">
     <summary>How to enter and edit</summary>
-    <p>Pick a note value, then left-click on the staff where the note should go: between two notes inserts it there, after the last note adds it at the end. A left-click on a rest puts a note in its place. Right-click a note to turn it into a rest of the same value; right-click a rest to remove it. Left-click a note to select it (Play and the space bar then start from it); drag it up or down to change its pitch. Click the clef to change it, or the faint B flat beside it to add one.</p>
+    <p>Press the Edit button to place and change notes; with it off, a tap or click on the score only selects. Pick a note value, then left-click on the staff where the note should go: between two notes inserts it there, after the last note adds it at the end. A left-click on a rest puts a note in its place. Right-click a note to turn it into a rest of the same value; right-click a rest to remove it. Left-click a note to select it (Play and the space bar then start from it); drag it up or down to change its pitch. Click the clef to change it, or the faint B flat beside it to add one.</p>
     <p>With a note selected, the value, rest and accidental buttons change that note. With nothing selected, they apply to the next note you enter. On a touch screen, tap a note to select it. Tap an empty place on the staff to put a note down there; the Undo, Redo and Delete buttons are at the top. Press and hold a note to turn it into a rest, or to remove a rest. Scrolling the page with a finger on the score does nothing to it.</p>
     <table>
       <tr><td><kbd>A</kbd> to <kbd>G</kbd></td><td>Add that note, in the octave closest to the previous note</td></tr>
@@ -594,7 +595,7 @@ const defaultDoc = () => ({
 let doc = defaultDoc();
 const ui = {
   sel: null, caret: 0, inDur: 'B', inRest: false, hover: null, playing: -1,
-  size: window.innerWidth < 640 ? 11 : 16, spacing: 1,
+  size: window.innerWidth < 640 ? 11 : 16, spacing: 1, edit: !(window.matchMedia && matchMedia('(hover: none)').matches),
   beat: 'hand', tempus: 'C', unit: 'S', tempo: 60, ref: 440, vol: 70, reg: 'custom', bright: 50, room: 40, atk: 180, rel: 150, chiff: 7, ens: 0.3, wind: 10, scoop: 5, draw: [100, 71, 55, 48, 37, 22, 12, 8, 0, 0, 0, 0], audition: true, loop: false, metro: false, setOpen: false
 };
 let lay = null;          /* last computed layout, used for hit testing */
@@ -883,7 +884,7 @@ function drawItem(it, top, exp){
 /* Where the preview of the next note sits while hovering a gap */
 function ghostInfo(){
   const h = ui.hover;
-  if (!h || (h.type !== 'gap' && h.type !== 'repl') || drag) return null;
+  if (!ui.edit || !h || (h.type !== 'gap' && h.type !== 'repl') || drag) return null;
   const line = lay.lines[h.li], items = line.items, rep = h.type === 'repl';
   const d = rep ? doc.notes[h.i].d : ui.inDur, asRest = rep ? false : ui.inRest;
   const w = asRest ? (d === 'Mx' ? 1.6 : 1.1) : (d === 'Mx' ? 2.5 : (d === 'L' || d === 'B') ? 1.3 : 1.28);
@@ -1077,6 +1078,10 @@ function transposeTone(dir){
 function shiftOctave(dir){
   mutate(() => { doc.notes.forEach(x => { if (!x.r) x.s = clampStep(x.s + 7 * dir); }); });
 }
+function syncEdit(){
+  const b = $('#editBtn'); if (b) b.setAttribute('aria-pressed', ui.edit ? 'true' : 'false');
+  scoreEl.style.cursor = '';
+}
 function syncLines(){
   document.querySelectorAll('#linesBtns button').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.lines) === doc.lines ? 'true' : 'false'));
 }
@@ -1085,6 +1090,7 @@ function syncSettings(){
   $('#size').value = ui.size;
   $('#spacing').value = Math.round(ui.spacing * 100);
   syncLines();
+  syncEdit();
   $('#tempo').value = ui.tempo;
   syncUnit();
   syncBeat();
@@ -1267,7 +1273,7 @@ function touchDown(e){
   scoreEl.focus({preventScroll: true});
   const t = touchPress = {h, x: e.clientX, y: e.clientY, id: e.pointerId, held: false};
   t.timer = setTimeout(() => {
-    if (touchPress !== t || t.h.type !== 'item') return;
+    if (touchPress !== t || t.h.type !== 'item' || !ui.edit) return;
     t.held = true;
     const i = t.h.i;
     mutate(() => {
@@ -1291,6 +1297,7 @@ function touchUp(cancelled){
   if (h.type === 'sig') { mutate(() => { doc.bflat = !doc.bflat; }); return; }
   if (h.type === 'item') { ui.hover = null; selectItem(h.i); return; }
   ui.hover = null;
+  if (!ui.edit) return;
   if (h.type === 'repl') {
     mutate(() => { const o = doc.notes[h.i]; doc.notes[h.i] = {d: o.d, r: false, s: clampStep(CLEFS[doc.clef].bottom + h.pos), a: ''}; ui.sel = null; ui.caret = h.i + 1; });
     audition(doc.notes[h.i]);
@@ -1311,6 +1318,7 @@ scoreEl.addEventListener('pointerdown', e => {
   if (h.type === 'mens') { if (e.button === 0) setTempus(ui.tempus === 'O' ? 'C' : 'O'); return; }
   if (h.type === 'sig') { if (e.button === 0) mutate(() => { doc.bflat = !doc.bflat; }); return; }
   if (isMouse && e.button === 2) {
+    if (!ui.edit) return;
     if (h.type === 'item') mutate(() => { const n = doc.notes[h.i]; n.r = true; n.a = ''; n.p = false; ui.sel = null; ui.caret = h.i + 1; ui.hover = null; });
     else if (h.type === 'repl') mutate(() => { doc.notes.splice(h.i, 1); ui.sel = null; ui.caret = h.i; ui.hover = null; });
     return;
@@ -1318,6 +1326,7 @@ scoreEl.addEventListener('pointerdown', e => {
   if (!isMouse && e.button === 2) { if (h.type === 'item') selectItem(h.i); return; }
   if (h.type === 'item') {
     if (isMouse && e.shiftKey) { selectItem(h.i); return; }
+    if (!ui.edit) { selectItem(h.i); return; }
     const n = doc.notes[h.i];
     drag = {i: h.i, y0: p.y, s0: n.s, rest: n.r, before: snapshot(), moved: false, held: false, sel: isMouse};
     /* press and hold: select (the touch-screen way to select) */
@@ -1325,7 +1334,7 @@ scoreEl.addEventListener('pointerdown', e => {
     try { scoreEl.setPointerCapture(e.pointerId); } catch (err) {}
     return;
   }
-  if (e.button !== 0) return;
+  if (e.button !== 0 || !ui.edit) return;
   if (h.type === 'repl') {
     mutate(() => { const o = doc.notes[h.i]; doc.notes[h.i] = {d: o.d, r: false, s: clampStep(CLEFS[doc.clef].bottom + h.pos), a: ''}; ui.sel = null; ui.caret = h.i + 1; ui.hover = null; });
     audition(doc.notes[h.i]);
@@ -1353,7 +1362,7 @@ scoreEl.addEventListener('pointermove', e => {
   }
   if (e.pointerType === 'touch') return;
   const h = hit(p.x, p.y);
-  scoreEl.style.cursor = (h.type === 'gap' || h.type === 'repl') ? 'crosshair' : 'pointer';
+  scoreEl.style.cursor = (h.type === 'gap' || h.type === 'repl') ? (ui.edit ? 'crosshair' : 'default') : 'pointer';
   if (!sameHover(h, ui.hover)) { ui.hover = h; render(); }
 });
 function endPress(cancelled){
@@ -1769,7 +1778,7 @@ const HAND_SVG = (() => {
   const sleeve = 'M-40 92 C-10 88 20 87 44 88 L44 150 C20 150 -10 150 -40 148Z';
   const hand = 'M58 96 C80 90 108 88 124 92 C146 96 172 98 194 101 C202 102 204 108 197 110 C202 111 205 116 198 118 C201 120 200 125 192 125 C194 127 190 132 182 131 C160 130 140 130 120 132 C100 134 82 136 60 132Z';
   return `<defs><clipPath id="clipSleeve"><path d="${sleeve}"/></clipPath><clipPath id="clipHand"><path d="${hand}"/></clipPath></defs>
-<g fill="none" stroke="${INK}" stroke-linecap="round" stroke-linejoin="round">
+<g fill="none" stroke="${INK}" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 236) scale(1 -1)">
 <path d="${sleeve}" fill="${PAPER}" stroke-width="2.4"/>
 <g clip-path="url(#clipSleeve)" stroke-width="1.3">${hatch(22, i => `<path d="M${-60 + i * 6} 152 L${-30 + i * 6} 86"/>`)}</g>
 <path d="M-40 118 C-10 116 18 116 44 117" stroke-width="1.4"/>
@@ -2238,6 +2247,7 @@ function wire(){
   $('#stepDown').addEventListener('click', () => stepPitch(-1));
   $('#del').addEventListener('click', deleteTarget);
   $('#undo').addEventListener('click', undo);
+  $('#editBtn').addEventListener('click', () => { ui.edit = !ui.edit; ui.hover = null; cancelTouch(); syncEdit(); render(); });
   $('#redo').addEventListener('click', redo);
   $('#dbl').addEventListener('click', () => scaleAll(-1));
   $('#hlv').addEventListener('click', () => scaleAll(1));
