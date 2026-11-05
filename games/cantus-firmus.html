@@ -355,7 +355,8 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
 .isfs #fsBtn .fs-out{display:inline}
 #fsBtn[hidden]{display:none}
 .staffset #darkBtn{grid-column:1/-1;justify-content:flex-start;margin-top:2px}
-.staffset .ctl{color:var(--muted);font-size:16px}
+.staffset .ctl,#linesLabel{color:var(--muted);font-size:16px}
+#linesLabel{padding-left:10px}
 .tcol #reg{width:100%}
 .tcol select{grid-column:2/-1;width:100%;max-width:none}
 .tcol .hz{grid-column:2/-1;display:flex;align-items:center;gap:6px;color:var(--muted)}
@@ -549,9 +550,10 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
         <div class="pop" id="popLook">
           <button class="tb popbtn" aria-haspopup="true">Appearance<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
           <div class="popbody"><div class="staffset">
-            <label class="ctl" for="size">Size</label><input type="range" id="size" min="8" max="26" step="1">
+            <label class="ctl" for="size">Size</label><input type="range" id="size" min="5" max="26" step="1">
             <span class="ctl" id="linesLabel">Lines</span><div class="btns" id="linesBtns" role="group" aria-labelledby="linesLabel"><button class="tb" data-lines="5" data-keep aria-pressed="true">5</button><button class="tb" data-lines="4" data-keep aria-pressed="false">4</button></div>
-            <label class="ctl" for="spacing">Spacing</label><input type="range" id="spacing" min="50" max="250" step="5">
+            <label class="ctl" for="spacing">Horizontal spacing</label><input type="range" id="spacing" min="10" max="250" step="5">
+            <label class="ctl" for="vspacing">Vertical spacing</label><input type="range" id="vspacing" min="20" max="200" step="5">
             <button class="tb" id="darkBtn" data-keep aria-pressed="false">Dark mode</button>
           </div></div>
         </div>
@@ -720,7 +722,7 @@ const defaultDoc = () => ({
 let doc = defaultDoc();
 const ui = {
   sel: null, caret: 0, inDur: 'B', inRest: false, hover: null, playing: -1,
-  size: window.innerWidth < 640 ? 11 : 16, spacing: 1, edit: !(window.matchMedia && matchMedia('(hover: none)').matches),
+  size: window.innerWidth < 640 ? 11 : 16, spacing: 1, vspacing: 1, edit: !(window.matchMedia && matchMedia('(hover: none)').matches),
   beatHand: true, beatPend: false, beatTick: false, tempus: 'C', unit: 'S', tempo: 60, ref: 440, vol: 70, reg: 'custom', bright: 50, room: 40, atk: 120, rel: 150, chiff: 7, ens: 0.3, wind: 10, scoop: 5, draw: [100, 71, 55, 48, 37, 22, 12, 8, 0, 0, 0, 0], audition: true, loop: false, metro: false, setOpen: false, micFlex: true, micPhones: false, micNotate: true, dark: false, micLag: 0
 };
 let lay = null;          /* last computed layout, used for hit testing */
@@ -766,7 +768,7 @@ function sanitizeDoc(d){
 function save(){
   try {
     localStorage.setItem(STORE, JSON.stringify({doc, prefs: {
-      inDur: ui.inDur, size: ui.size, spacing: ui.spacing, unit: ui.unit, tempo: ui.tempo, ref: ui.ref,
+      inDur: ui.inDur, size: ui.size, spacing: ui.spacing, vspacing: ui.vspacing, unit: ui.unit, tempo: ui.tempo, ref: ui.ref,
       vol: ui.vol, reg: ui.reg, bright: ui.bright, room: ui.room, atk: ui.atk, rel: ui.rel, chiff: ui.chiff, ens: ui.ens, wind: ui.wind, scoop: ui.scoop, draw: ui.draw, audition: ui.audition, loop: ui.loop, micFlex: ui.micFlex, micPhones: ui.micPhones, micNotate: ui.micNotate, dark: ui.dark, micLag: ui.micLag, beatHand: ui.beatHand, beatPend: ui.beatPend, beatTick: ui.beatTick, tempus: ui.tempus
     }}));
   } catch (e) { /* storage unavailable: work continues, just not kept */ }
@@ -808,8 +810,9 @@ function loadAll(){
   if (stored && stored.prefs) {
     const p = stored.prefs;
     if (DUR[p.inDur]) ui.inDur = p.inDur;
-    if (p.size >= 8 && p.size <= 26) ui.size = p.size;
-    if (p.spacing >= 0.5 && p.spacing <= 2.5) ui.spacing = p.spacing;
+    if (p.size >= 5 && p.size <= 26) ui.size = p.size;
+    if (p.spacing >= 0.1 && p.spacing <= 2.5) ui.spacing = p.spacing;
+    if (p.vspacing >= 0.2 && p.vspacing <= 2) ui.vspacing = p.vspacing;
     if (DUR[p.unit]) ui.unit = p.unit;
     else if (({4:'B', 2:'S', 1:'M'})[p.unit]) ui.unit = ({4:'B', 2:'S', 1:'M'})[p.unit];
     if (p.tempo >= 10 && p.tempo <= 300) ui.tempo = p.tempo === 67 ? 60 : p.tempo;   /* 67 was the old default */
@@ -950,10 +953,12 @@ function layout(plain){
   /* vertical room per line, so ledger notes and stems never collide */
   const cy = (8 - clef.pos) * 0.5;
   let y = 0.4;
+  /* vertical spacing: the room above and below each staff (never less than its ledger lines and stems need) */
+  const V = ui.vspacing, M = 4.4 * V, P = 0.3 + 0.6 * Math.min(1, V);
   L.lines = rows.map(row => {
     let minY = Math.min(0, cy + cg.b[1]), maxY = Math.max(4, cy + cg.b[3]);
     for (const it of row) { const e = extent(it); minY = Math.min(minY, e[0]); maxY = Math.max(maxY, e[1]); }
-    const above = Math.max(4.4, -minY + 0.9), below = Math.max(4.4, maxY - 4 + 0.9);
+    const above = Math.max(M, -minY + P), below = Math.max(M, maxY - 4 + P);
     const line = {items: row, bandTop: y, staffTop: y + above};
     if (tk) {
       /* the red staff above or under it, far enough away for the ledger lines and stems of both */
@@ -965,16 +970,16 @@ function layout(plain){
       }
       if (take.above) {
         /* sung above the cantus firmus (or around it): the red staff on top */
-        const gapR = Math.max(1.6, rMax - 4 + 0.6), gapC = Math.max(2.4, -minY + 0.6);
-        line.takeTop = y + Math.max(4.4, -rMin + 0.9);
+        const gapR = Math.max(1.6 * V, rMax - 4 + P), gapC = Math.max(2.4 * V, -minY + P);
+        line.takeTop = y + Math.max(M, -rMin + P);
         line.staffTop = line.takeTop + 4 + gapR + gapC;
         line.tkLo = -Infinity; line.tkHi = line.staffTop - gapC * 0.6;
         y = line.staffTop + 4 + below;
       } else {
-        const gapA = Math.max(2.4, maxY - 4 + 0.6), gapB = Math.max(1.6, -rMin + 0.6);
+        const gapA = Math.max(2.4 * V, maxY - 4 + P), gapB = Math.max(1.6 * V, -rMin + P);
         line.tkLo = line.staffTop + 4 + gapA * 0.6; line.tkHi = Infinity;
         line.takeTop = line.staffTop + 4 + gapA + gapB;
-        y = line.takeTop + 4 + Math.max(4.4, rMax - 4 + 0.9);
+        y = line.takeTop + 4 + Math.max(M, rMax - 4 + P);
       }
     } else y = line.staffTop + 4 + below;
     line.bandBot = y;
@@ -1310,7 +1315,7 @@ function syncLines(){
 function syncSettings(){
   $('#title').value = doc.title;
   $('#size').value = ui.size;
-  $('#spacing').value = Math.round(ui.spacing * 100);
+  $('#spacing').value = Math.round(ui.spacing * 100); $('#vspacing').value = Math.round(ui.vspacing * 100);
   syncLines();
   syncEdit();
   $('#tempo').value = ui.tempo;
@@ -3034,6 +3039,7 @@ function wire(){
   });
   $('#size').addEventListener('input', e => { ui.size = Number(e.target.value); save(); render(); });
   $('#spacing').addEventListener('input', e => { ui.spacing = Number(e.target.value) / 100; save(); render(); });
+  $('#vspacing').addEventListener('input', e => { ui.vspacing = Number(e.target.value) / 100; save(); render(); });
   document.querySelectorAll('#linesBtns button').forEach(b => b.addEventListener('click', () => {
     const n = Number(b.dataset.lines);
     if (n === doc.lines) return;
