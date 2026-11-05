@@ -21,7 +21,7 @@
   --accent:#8E2A1E; --accent-ink:#F7F2E6;
   --leaf:#F3E8CC; --leaf-ink:#2A2218; --leaf-muted:#7A6A4E; --rule:#8E2A1E;
   --sel:#8E2A1E; --hov:#B8624A; --play:#8E2A1E; --del:#8E2A1E;
-  --paper:none;
+  --paper:none; --pen:#8E2A1E;
   color-scheme: light;
 }
 *{box-sizing:border-box}
@@ -119,11 +119,10 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px;margin:0}
 .advt[hidden]{display:none}
 .advt .seg{display:flex}.advt .seg button{flex:1;justify-content:center}
 .advt select{min-height:40px}
+.advt .ivrow{display:flex;gap:6px}.advt .ivrow select{flex:1 1 auto;min-width:0}.advt .ivrow select[hidden]{display:none}
 .advt .check{display:flex;align-items:center;gap:8px;white-space:nowrap}
 .popbody .col .advt #advGo{justify-content:center;background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-#popStaff .popbody{left:-6px}
-.staffrow{position:relative;margin-top:12px}
-@media (max-width:700px){#popXform{position:static}#popXform .popbody{left:0;right:0;width:auto}.advt .check{white-space:normal}#popStaff{position:static}#popStaff .popbody{left:0;right:0;width:auto}.staffset{grid-template-columns:auto 1fr}.staffset input[type=range]{width:100%}}
+@media (max-width:700px){#popXform{position:static}#popXform .popbody{left:0;right:0;width:auto}.advt .check{white-space:normal}#popLook{position:static}#popLook .popbody{left:0;right:0;width:auto}.staffset{grid-template-columns:auto 1fr}.staffset input[type=range]{width:100%}}
 .staffset{display:grid;grid-template-columns:auto 150px;gap:8px 12px;align-items:center;padding:4px 8px}
 .staffset input[type=range]{width:150px}
 .staffset .btns{display:flex;gap:2px}
@@ -167,8 +166,11 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 #score .selbg{fill:var(--sel);opacity:.1}
 #score .ghost{opacity:.62}
 #score .mic{opacity:.5;pointer-events:none}
-#score .mic .micdot,#score .mic use{fill:var(--accent)}
-#score .mic .ledger{stroke:var(--accent)}
+#score .take use,#score .take .punct,#score .take .prest{fill:var(--pen)}
+#score .take .ledger{stroke:var(--pen)}
+#score .take .tie{fill:none;stroke:var(--pen);stroke-width:.12;stroke-linecap:round}
+#score .mic .micdot,#score .mic use{fill:var(--pen)}
+#score .mic .ledger{stroke:var(--pen)}
 #mic svg{width:17px;height:17px;margin:0 4px -3px -2px;fill:currentColor}
 .split{display:inline-flex;align-items:center}
 #singOpts{padding:0 7px;min-width:0}
@@ -340,6 +342,59 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
   #libPod .library{position:absolute;left:0;right:0;width:auto;max-height:60vh;top:50px;margin-top:0}
   #editPod{order:-1}
 }
+/* ================= Below the score: playback on the left; sound, appearance and full screen on the right ================= */
+.transport{gap:10px 12px}
+.tp-main,.tp-stack{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
+.tp-tools{display:flex;align-items:center;gap:10px;margin-left:auto;flex-wrap:nowrap}
+.tp-tools .popbody{left:auto;right:-6px}
+.podg label.vol{padding:0 8px 0 9px;gap:7px}
+.vol svg{width:20px;height:20px;fill:currentColor;flex:none}
+.vol input[type=range]{width:72px}
+#fsBtn svg{width:20px;height:20px}
+#fsBtn .fs-out,.isfs #fsBtn .fs-in{display:none}
+.isfs #fsBtn .fs-out{display:inline}
+#fsBtn[hidden]{display:none}
+.staffset #darkBtn{grid-column:1/-1;justify-content:flex-start;margin-top:2px}
+.staffset .ctl{color:var(--muted);font-size:16px}
+.tcol #reg{width:100%}
+.tcol select{grid-column:2/-1;width:100%;max-width:none}
+.tcol .hz{grid-column:2/-1;display:flex;align-items:center;gap:6px;color:var(--muted)}
+.tcol .tg:not(:first-child){margin-top:8px}
+.transport button:not(.ib):not(#play){padding:0 10px}
+.transport #singOpts{padding:0 7px}
+@media (max-width:700px){
+  .transport .podg{flex-wrap:nowrap}
+  .tp-main{flex-wrap:nowrap;width:100%;gap:10px}
+  #play{width:54px;height:54px;flex:none}
+  .tp-stack{flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
+  .tp-tools{margin-left:0;width:100%;justify-content:space-between;position:relative}
+  .transport button:not(.ib):not(#play){padding:0 9px;font-size:16px}
+  .transport #singOpts{padding:0 5px}
+  .tempo-row .eq{padding:0}
+  .podg .stepper input{width:2.6em;font-size:18px}
+  #podSound{flex:1 1 auto;min-width:0}
+  .podg label.vol{flex:1 1 auto;min-width:0}
+  .vol input[type=range]{flex:1 1 auto;width:auto;min-width:50px}
+}
+@media (max-width:389px){
+  #play{width:48px;height:48px}
+  .tp-main{gap:8px}
+  .transport button:not(.ib):not(#play){padding:0 7px}
+  .transport #singOpts{padding:0 4px}
+}
+@media (max-width:350px){ .tp-main{flex-wrap:wrap} }
+.isfs.embedded,.isfs.embedded body{overflow:auto;height:auto}
+.isfs.embedded{overflow-y:auto;height:100%}
+
+/* ================= Dark mode: the room goes dark, the parchment stays as it is ================= */
+html.dark{--ground:#15110D;--surface:#211B15;--text:#ECE2D0;--muted:#A5957B;--line:#3A3027;--accent:#A53627;--accent-ink:#FBF4E8;color-scheme:dark}
+html.dark .podg{background:rgba(255,238,210,.075)}
+html.dark button:hover:not(:disabled),html.dark .podg select:hover{background:rgba(255,238,210,.12)}
+html.dark button[aria-pressed="true"]:hover:not(:disabled){background:#86281C}
+html.dark #play:hover:not(:disabled){background:var(--text);color:var(--ground)}
+html.dark :focus-visible{outline-color:#D9826F}
+html.dark .leaf{box-shadow:0 1px 1px rgba(0,0,0,.6),0 24px 50px -18px rgba(0,0,0,.95),inset 0 0 70px rgba(150,108,40,.13),inset 0 0 0 1px rgba(120,90,40,.16)}
+html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10px rgba(0,0,0,.85)}
 </style>
 </head>
 <body>
@@ -381,7 +436,7 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
             <button class="tb" id="advBtn" data-keep aria-expanded="false" aria-controls="advT">Advanced transpose<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
             <div id="advT" class="advt" hidden>
               <div class="seg" role="group" aria-label="Direction"><button class="tb" data-dir="1" data-keep aria-pressed="true">Up</button><button class="tb" data-dir="-1" data-keep aria-pressed="false">Down</button></div>
-              <select id="advIv" aria-label="Interval"></select>
+              <div class="ivrow"><select id="advQ" aria-label="Quality of the interval"></select><select id="advN" aria-label="Interval"></select></div>
               <label class="check" title="On: every interval stays exactly the same, so D minor becomes G minor, with sharps and flats on the notes. Off: every note moves the same number of steps along the scale, so D dorian becomes E phrygian"><input type="checkbox" id="advExact" checked> Respect intervallic structure</label>
               <button class="tb" id="advGo">Transpose</button>
             </div>
@@ -416,13 +471,16 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
   <p id="status" class="sr"></p>
 
   <section class="transport" aria-label="Playback and sound">
+    <div class="tp-main">
     <button id="play" aria-label="Play"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1 13 7 2 13Z"/></svg><span>Play</span></button>
-    <div class="podg">
+    <div class="tp-stack">
+    <div class="podg" id="podModes">
     <button id="loop" aria-pressed="false" title="Repeat until stopped; adds a repeat sign at the end">Loop</button>
     <div class="pop" id="popSing"><span class="split">
       <button id="mic" aria-pressed="false" title="Sing along: the microphone shows the note you sing as a faint red dot on the staff"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.6a3.4 3.4 0 0 0 3.4-3.4V5.4a3.4 3.4 0 0 0-6.8 0v5.8a3.4 3.4 0 0 0 3.4 3.4Zm6-3.5a6 6 0 0 1-12 0H4.3a7.7 7.7 0 0 0 6.8 7.6V22h1.8v-3.3a7.7 7.7 0 0 0 6.8-7.6Z"/></svg><span>Sing</span></button><button class="tb popbtn" id="singOpts" aria-haspopup="true" aria-label="Sing options" title="Sing options"><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button></span>
       <div class="popbody"><div class="btns col" role="group" aria-label="Sing options">
         <button class="tb" id="micFlex" data-keep aria-pressed="true" title="On: the dot follows your exact pitch, a little above or below its note when you are sharp or flat. Off: it sits on the nearest note, like a written second voice">Flexible pitch</button>
+        <button class="tb" id="micNotate" data-keep aria-pressed="true" title="While the cantus firmus plays, what you sing is written out in red on a staff of its own, in semiminimae">Notate what I sing</button>
         <button class="tb" id="micPhones" data-keep aria-pressed="false" title="On: no filtering, so unisons and octaves with the organ show too. Off: the organ is filtered out of what the microphone hears, for singing along through speakers">Headphones</button>
       </div></div>
     </div>
@@ -449,20 +507,32 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
       <button id="tap" title="Tap the beat twice or more: the tempo follows your taps">Tap</button>
       <button id="heart" class="ib" aria-label="Semibrevis at the pulse: 60 per minute" title="Semibrevis = 60 per minute, a resting pulse (Gaffurius takes the semibrevis as one heartbeat)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.2s-7.6-4.7-9.7-9.4C.8 8.4 2.9 4.8 6.5 4.8c2.2 0 3.7 1.3 5.5 3.3 1.8-2 3.3-3.3 5.5-3.3 3.6 0 5.7 3.6 4.2 7-2.1 4.7-9.7 9.4-9.7 9.4Z"/></svg></button>
     </div>
-    <label class="ctl">Volume <input type="range" id="vol" min="0" max="100" step="1" style="width:84px"></label>
-    <div class="grow podg">
-    <label class="ctl">a′ =
-      <input type="number" id="ref" min="100" max="1000" step="any" inputmode="decimal" aria-label="Pitch of a′ in Hz"> Hz
-    </label>
-    <label class="ctl">Sound
-      <select id="reg"><option value="gedackt">Gedackt 8′ (stopped flute)</option><option value="principal">Principal 8′</option><option value="plenum">Principal chorus (8′ 4′ 2′)</option><option value="flute">Open flute 8′</option><option value="regal">Regal (soft reed)</option><option value="sine">Sine</option><option value="custom">Your own (drawbars)</option></select>
-    </label>
-    <button id="toggleSet" aria-expanded="false" aria-controls="tpSide" title="Show or hide all the sound settings">Sound settings<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+    </div>
+    </div>
+    <div class="tp-tools">
+      <div class="podg" id="podSound">
+        <label class="ctl vol" title="Volume"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.2h3.9L12.6 5v14l-5.2-4.2H3.5Zm11.6-1.1a5.5 5.5 0 0 1 0 7.8l-1.2-1.2a3.8 3.8 0 0 0 0-5.4Zm2.7-2.7a9.3 9.3 0 0 1 0 13.2l-1.2-1.2a7.6 7.6 0 0 0 0-10.8Z"/></svg><span class="sr">Volume</span><input type="range" id="vol" min="0" max="100" step="1"></label>
+        <button id="toggleSet" aria-expanded="false" aria-controls="tpSide" title="Show or hide all the sound settings">Sound<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+      </div>
+      <div class="podg" id="podLook">
+        <div class="pop" id="popLook">
+          <button class="tb popbtn" aria-haspopup="true">Appearance<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+          <div class="popbody"><div class="staffset">
+            <label class="ctl" for="size">Size</label><input type="range" id="size" min="8" max="26" step="1">
+            <span class="ctl" id="linesLabel">Lines</span><div class="btns" id="linesBtns" role="group" aria-labelledby="linesLabel"><button class="tb" data-lines="5" data-keep aria-pressed="true">5</button><button class="tb" data-lines="4" data-keep aria-pressed="false">4</button></div>
+            <label class="ctl" for="spacing">Spacing</label><input type="range" id="spacing" min="50" max="250" step="5">
+            <button class="tb" id="darkBtn" data-keep aria-pressed="false">Dark mode</button>
+          </div></div>
+        </div>
+        <button class="ib" id="fsBtn" aria-label="Full screen" title="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="fs-in" d="M4 4h6v2.2H6.2V10H4Zm10 0h6v6h-2.2V6.2H14ZM4 14h2.2v3.8H10V20H4Zm13.8 0H20v6h-6v-2.2h3.8Z"/><path class="fs-out" d="M7.8 4H10v6H4V7.8h3.8ZM14 4h2.2v3.8H20V10h-6ZM4 14h6v6H7.8v-3.8H4Zm10 0h6v2.2h-3.8V20H14Z"/></svg></button>
+      </div>
     </div>
   </section>
 
   <section class="tp-side" id="tpSide" aria-label="Sound settings" hidden>
     <div class="tcol">
+      <label for="reg">Sound</label><select id="reg"><option value="gedackt">Gedackt 8′ (stopped flute)</option><option value="principal">Principal 8′</option><option value="plenum">Principal chorus (8′ 4′ 2′)</option><option value="flute">Open flute 8′</option><option value="regal">Regal (soft reed)</option><option value="sine">Sine</option><option value="custom">Your own (drawbars)</option></select>
+      <label for="ref">a′ =</label><span class="hz"><input type="number" id="ref" min="100" max="1000" step="any" inputmode="decimal" aria-label="Pitch of a′ in Hz"> Hz</span>
       <div class="tg">Tone</div>
       <label for="bright">Brightness</label><input type="range" id="bright" min="0" max="100" step="1"><output id="bo"></output>
       <label for="room">Room</label><input type="range" id="room" min="0" max="100" step="1"><output id="ro"></output>
@@ -471,16 +541,6 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
     </div>
     <div class="tune" id="tune"></div>
   </section>
-
-  <div class="staffrow"><div class="podg">
-<div class="pop" id="popStaff">
-        <button class="tb popbtn" aria-haspopup="true">Staff<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-        <div class="popbody"><div class="staffset">
-          <label class="ctl" for="size">Size</label><input type="range" id="size" min="8" max="26" step="1">
-          <span class="ctl" id="linesLabel">Lines</span><div class="btns" id="linesBtns" role="group" aria-labelledby="linesLabel"><button class="tb" data-lines="5" data-keep aria-pressed="true">5</button><button class="tb" data-lines="4" data-keep aria-pressed="false">4</button></div>
-          <label class="ctl" for="spacing">Spacing</label><input type="range" id="spacing" min="50" max="250" step="5">
-        </div></div>
-      </div></div></div>
 
   <details class="help">
     <summary>How to enter and edit</summary>
@@ -500,7 +560,7 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
       <tr><td><kbd>Ctrl/⌘</kbd> <kbd>Z</kbd></td><td>Undo; add <kbd>Shift</kbd> to redo</td></tr>
     </table>
     <p>In tempus perfectum (click the C on the staff to turn it into O) the notes are read as the theorists teach: a brevis lasts three semibreves, a single semibreve next to a brevis makes it imperfect, and of two semibreves between breves the second is doubled. A dot after a brevis keeps it perfect; a dot between two semibreves separates the perfections; a dot after a semibreve followed by a minima adds half its value. In tempus imperfectum every dot adds half the value.</p>
-    <p>Sing turns on the microphone. The note you sing shows as a faint red dot on the staff: next to the note being played, or before the final bar when nothing plays. Hover over Sing, or tap its arrow, for two switches. Flexible pitch: on, the dot follows your exact pitch and sits a little above or below its line or space when you are sharp or flat; off, it keeps to the nearest note, like a written second voice. Headphones: turn it on when you wear them, so unisons and octaves with the organ show too. With it off, the organ is filtered out of what the microphone hears, and a note sung in unison with the organ or an octave above it does not show.</p>
+    <p>Sing turns on the microphone. The note you sing shows as a faint red dot on the staff: next to the note being played, or before the final bar when nothing plays. Hover over Sing, or tap its arrow, for three switches. Flexible pitch: on, the dot follows your exact pitch and sits a little above or below its line or space when you are sharp or flat; off, it keeps to the nearest note, like a written second voice. Headphones: turn it on when you wear them, so unisons and octaves with the organ show too. With it off, the organ is filtered out of what the microphone hears, and a note sung in unison with the organ or an octave above it does not show. Notate what I sing: while the cantus firmus plays, what you sing is written out in red on a staff of its own under each line, each semiminima getting the note you sang for most of it. It stays until you play again or change the cantus firmus. This one is an experiment: with headphones on it gets the most right.</p>
     <p>Your work is kept in this browser automatically. Copy link gives you an address that opens this exact cantus firmus anywhere, for instance to send to a student.</p>
   </details>
 
@@ -512,6 +572,7 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
 (function(){
 'use strict';
 try { if (window.self !== window.top) document.documentElement.classList.add('embedded'); } catch (e) { document.documentElement.classList.add('embedded'); }
+try { if ((JSON.parse(localStorage.getItem('cantus-firmus:v1') || 'null') || {}).prefs.dark) document.documentElement.classList.add('dark'); } catch (e) {}
 
 /* ------------------------------------------------------------------ */
 /* Glyph outlines in staff-space units, y pointing down.               */
@@ -625,7 +686,7 @@ let doc = defaultDoc();
 const ui = {
   sel: null, caret: 0, inDur: 'B', inRest: false, hover: null, playing: -1,
   size: window.innerWidth < 640 ? 11 : 16, spacing: 1, edit: !(window.matchMedia && matchMedia('(hover: none)').matches),
-  beat: 'hand', tempus: 'C', unit: 'S', tempo: 60, ref: 440, vol: 70, reg: 'custom', bright: 50, room: 40, atk: 180, rel: 150, chiff: 7, ens: 0.3, wind: 10, scoop: 5, draw: [100, 71, 55, 48, 37, 22, 12, 8, 0, 0, 0, 0], audition: true, loop: false, metro: false, setOpen: false, micFlex: true, micPhones: false
+  beat: 'hand', tempus: 'C', unit: 'S', tempo: 60, ref: 440, vol: 70, reg: 'custom', bright: 50, room: 40, atk: 180, rel: 150, chiff: 7, ens: 0.3, wind: 10, scoop: 5, draw: [100, 71, 55, 48, 37, 22, 12, 8, 0, 0, 0, 0], audition: true, loop: false, metro: false, setOpen: false, micFlex: true, micPhones: false, micNotate: true, dark: false
 };
 let lay = null;          /* last computed layout, used for hit testing */
 let drag = null;
@@ -671,7 +732,7 @@ function save(){
   try {
     localStorage.setItem(STORE, JSON.stringify({doc, prefs: {
       inDur: ui.inDur, size: ui.size, spacing: ui.spacing, unit: ui.unit, tempo: ui.tempo, ref: ui.ref,
-      vol: ui.vol, reg: ui.reg, bright: ui.bright, room: ui.room, atk: ui.atk, rel: ui.rel, chiff: ui.chiff, ens: ui.ens, wind: ui.wind, scoop: ui.scoop, draw: ui.draw, audition: ui.audition, loop: ui.loop, micFlex: ui.micFlex, micPhones: ui.micPhones, beat: ui.beat, tempus: ui.tempus
+      vol: ui.vol, reg: ui.reg, bright: ui.bright, room: ui.room, atk: ui.atk, rel: ui.rel, chiff: ui.chiff, ens: ui.ens, wind: ui.wind, scoop: ui.scoop, draw: ui.draw, audition: ui.audition, loop: ui.loop, micFlex: ui.micFlex, micPhones: ui.micPhones, micNotate: ui.micNotate, dark: ui.dark, beat: ui.beat, tempus: ui.tempus
     }}));
   } catch (e) { /* storage unavailable: work continues, just not kept */ }
 }
@@ -720,6 +781,8 @@ function loadAll(){
     if (p.ref >= 100 && p.ref <= 1000) ui.ref = p.ref;
     if (typeof p.micFlex === 'boolean') ui.micFlex = p.micFlex;
     if (typeof p.micPhones === 'boolean') ui.micPhones = p.micPhones;
+    if (typeof p.micNotate === 'boolean') ui.micNotate = p.micNotate;
+    ui.dark = p.dark === true;
     if (p.vol >= 0 && p.vol <= 100) ui.vol = p.vol;
     if (REGISTERS[p.reg]) ui.reg = p.reg;
     if (p.bright >= 0 && p.bright <= 100) ui.bright = p.bright;
@@ -761,6 +824,7 @@ function mutate(fn){
   stopPlayback();
   const before = snapshot();
   fn();
+  if (snapshot() !== before) takeClear();
   if (snapshot() !== before) pushUndo(before);
   save(); render();
 }
@@ -772,8 +836,8 @@ function restore(json){
   ui.caret = Math.min(ui.caret, doc.notes.length);
   syncSettings();
 }
-function undo(){ if (!undoStack.length) return; stopPlayback(); redoStack.push(snapshot()); restore(undoStack.pop()); save(); render(); }
-function redo(){ if (!redoStack.length) return; stopPlayback(); undoStack.push(snapshot()); restore(redoStack.pop()); save(); render(); }
+function undo(){ if (!undoStack.length) return; stopPlayback(); takeClear(); redoStack.push(snapshot()); restore(undoStack.pop()); save(); render(); }
+function redo(){ if (!redoStack.length) return; stopPlayback(); takeClear(); undoStack.push(snapshot()); restore(redoStack.pop()); save(); render(); }
 
 /* ------------------------------------------------------------------ */
 /* Layout (all units are staff spaces)                                 */
@@ -804,7 +868,7 @@ function extent(it){
   let a = it.flip ? [y - g[3], y - g[1]] : [y + g[1], y + g[3]];
   return [Math.min(a[0], y - 0.8), Math.max(a[1], y + 0.8)];
 }
-function layout(){
+function layout(plain){
   const S = ui.size;
   const Wpx = Math.max(260, scoreEl.clientWidth);
   const W = Wpx / S;
@@ -820,11 +884,16 @@ function layout(){
   L.limit = L.staffR - 2.6;                     /* leaves room for a custos */
 
   const items = doc.notes.map((n, i) => measure(n, i, clef));
+  /* the singing, written out: each of its notes belongs to the note of the cantus firmus it starts under,
+     and that note makes room for them */
+  const tk = !plain && takeShown() && items.length ? takeLayout(items) : null;
+  L.tk = tk;
   const rows = [[]];
   let cx = L.noteStart;
   for (const it of items) {
     let row = rows[rows.length - 1];
-    if (row.length && cx + it.lead + it.w > L.limit) { row = []; rows.push(row); cx = L.noteStart; }
+    /* a new line when the note, or the singing written under it, would run past the end */
+    if (row.length && (cx + it.lead + it.w > L.limit || (it.tkReach && cx + it.lead + it.tkReach > L.staffR - 0.6))) { row = []; rows.push(row); cx = L.noteStart; }
     it.x0 = cx; it.hx = cx + it.lead; it.x1 = it.hx + it.w;
     cx = it.x1 + it.gap;
     row.push(it);
@@ -833,7 +902,11 @@ function layout(){
   for (let r = 0; r < rows.length - 1; r++) {
     const row = rows[r];
     if (row.length < 2) continue;
-    const per = (L.limit - row[row.length - 1].x1) / (row.length - 1);
+    const last = row[row.length - 1];
+    let room = L.limit - last.x1;
+    if (last.tkReach) room = Math.min(room, L.staffR - 0.6 - (last.hx + last.tkReach));
+    if (room <= 0) continue;
+    const per = room / (row.length - 1);
     row.forEach((it, k) => { const d = per * k; it.x0 += d; it.hx += d; it.x1 += d; });
   }
   /* vertical room per line, so ledger notes and stems never collide */
@@ -844,13 +917,27 @@ function layout(){
     for (const it of row) { const e = extent(it); minY = Math.min(minY, e[0]); maxY = Math.max(maxY, e[1]); }
     const above = Math.max(4.4, -minY + 0.9), below = Math.max(4.4, maxY - 4 + 0.9);
     const line = {items: row, bandTop: y, staffTop: y + above};
-    y = line.staffTop + 4 + below;
+    if (tk) {
+      /* the red staff under it, far enough down for the ledger lines and stems of both */
+      let rMin = 0, rMax = 4;
+      for (const it of row) for (const q of tk.by[it.i]) {
+        if (q.m === null) continue;
+        const yy = 4 - q.pos * 0.5, st = DUR[q.d].stem ? 3.6 : 0.7;
+        rMin = Math.min(rMin, yy - (q.flip ? 0.7 : st)); rMax = Math.max(rMax, yy + (q.flip ? st : 0.7));
+      }
+      const gapA = Math.max(2.4, maxY - 4 + 0.6), gapB = Math.max(1.6, -rMin + 0.6);
+      line.takeY0 = line.staffTop + 4 + gapA * 0.6;
+      line.takeTop = line.staffTop + 4 + gapA + gapB;
+      y = line.takeTop + 4 + Math.max(4.4, rMax - 4 + 0.9);
+    } else y = line.staffTop + 4 + below;
     line.bandBot = y;
     return line;
   });
+  if (tk) takePlace(L);
   L.H = y + 0.3;
   const last = L.lines[L.lines.length - 1].items;
   L.finalX = last.length ? last[last.length - 1].x1 + 1.4 : null;
+  if (L.takeEnd !== undefined && L.finalX !== null) L.finalX = Math.max(L.finalX, Math.min(L.takeEnd, L.staffR - 1.2));
   return L;
 }
 
@@ -973,6 +1060,7 @@ function drawScore(L, exp){
       }
     }
     const bx = exp ? L.finalX : (L.barX ?? L.finalX);
+    if (!exp && line.takeTop !== undefined) o += drawTake(L, line, isLast ? bx : null);
     if (isLast && bx !== null) {
       const d1 = 1.5, d2 = t0 ? 3.5 : 2.5, bh = 4 - t0;
       if (ui.loop && !exp) o += `<circle class="dot" cx="${f(bx - 0.5)}" cy="${f(top + d1)}" r="0.2"/><circle class="dot" cx="${f(bx - 0.5)}" cy="${f(top + d2)}" r="0.2"/>`;
@@ -1117,18 +1205,25 @@ function transposeTone(dir){
    the staff steps of its name and the semitones of its quality, with a sharp, flat or natural on the notes
    that need one (D minor up a fourth is G minor). Without, every note moves the same number of steps along
    the scale and loses its own sharps and flats (D dorian up a second is E phrygian). */
-const IVS = [['minor second', 1, 1], ['major second', 1, 2], ['minor third', 2, 3], ['major third', 2, 4], ['perfect fourth', 3, 5],
-  ['augmented fourth', 3, 6], ['diminished fifth', 4, 6], ['perfect fifth', 4, 7], ['minor sixth', 5, 8], ['major sixth', 5, 9],
-  ['minor seventh', 6, 10], ['major seventh', 6, 11], ['octave', 7, 12]];
-const GENERIC = ['second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'octave'];
-const adv = {dir: 1, iv: 4, exact: true};
+/* the interval: its number (how many steps up the staff) and its quality (how many semitones, counted from the
+   major or perfect one of that number). A minor fifth, as some call it, is the diminished fifth. */
+const IV_NUM = ['unison', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'octave'];
+const IV_BASE = [0, 2, 4, 5, 7, 9, 11, 12];
+const IV_Q = {d: 'diminished', m: 'minor', M: 'major', P: 'perfect', A: 'augmented'};
+const ivPerfect = n => n === 0 || n === 3 || n === 4 || n === 7;
+const ivQualities = n => n === 0 ? ['A'] : ivPerfect(n) ? ['d', 'P', 'A'] : ['d', 'm', 'M', 'A'];
+const ivSemis = (n, q) => IV_BASE[n] + ({d: ivPerfect(n) ? -1 : -2, m: -1, M: 0, P: 0, A: 1})[q];
+const adv = {dir: 1, n: 3, q: 'P', exact: true};
 function fillAdvIntervals(){
-  const sel = $('#advIv');
-  const steps = IVS[adv.iv][1];
-  sel.innerHTML = adv.exact ? IVS.map((v, i) => `<option value="${i}">${v[0]}</option>`).join('')
-                            : GENERIC.map((g, i) => `<option value="${IVS.findIndex(v => v[1] === i + 1)}">${g}</option>`).join('');
-  if (!adv.exact) adv.iv = IVS.findIndex(v => v[1] === steps);
-  sel.value = String(adv.iv);
+  const N = $('#advN'), Q = $('#advQ');
+  if (!adv.exact && adv.n === 0) adv.n = 1;
+  N.innerHTML = IV_NUM.map((w, i) => i === 0 && !adv.exact ? '' : `<option value="${i}">${w}</option>`).join('');
+  N.value = String(adv.n);
+  const qs = ivQualities(adv.n);
+  if (!qs.includes(adv.q)) { const alt = ({M: 'P', m: 'P', P: 'M'})[adv.q]; adv.q = qs.includes(alt) ? alt : qs.includes('P') ? 'P' : qs.includes('M') ? 'M' : qs[0]; }
+  Q.innerHTML = qs.map(q => `<option value="${q}">${IV_Q[q]}</option>`).join('');
+  Q.value = adv.q;
+  Q.hidden = !adv.exact;
 }
 /* the sharp, flat or natural that makes the note at step x.s sound `target`; when that would take a double sharp
    or flat, the neighbouring letter is used instead (F double sharp is written G) */
@@ -1142,7 +1237,7 @@ function spellAs(x, target){
   }
 }
 function advTranspose(){
-  const [, steps, semis] = IVS[adv.iv], dir = adv.dir;
+  const steps = adv.n, semis = ivSemis(adv.n, adv.q), dir = adv.dir;
   const pn = doc.notes.filter(x => !x.r);
   if (!pn.length) return;
   if (pn.some(x => x.s + dir * steps < STEP_MIN + 1 || x.s + dir * steps > STEP_MAX - 1)) { toast('That would take the notes out of range.'); return; }
@@ -1176,7 +1271,8 @@ function syncSettings(){
   syncBeat();
   $('#ref').value = String(ui.ref);
   $('#vol').value = ui.vol;
-  setPressed($('#micFlex'), ui.micFlex); setPressed($('#micPhones'), ui.micPhones);
+  setPressed($('#micFlex'), ui.micFlex); setPressed($('#micPhones'), ui.micPhones); setPressed($('#micNotate'), ui.micNotate);
+  applyDark();
   $('#reg').value = ui.reg; $('#bright').value = ui.bright; $('#room').value = ui.room; syncOut();
   $('#audition').checked = ui.audition;
   setPressed($('#loop'), ui.loop);
@@ -1314,6 +1410,7 @@ function hit(x, y, fat){
   let li = lines.findIndex(l => y >= l.bandTop && y < l.bandBot);
   if (li < 0) li = y < lines[0].bandTop ? 0 : lines.length - 1;
   const line = lines[li];
+  if (line.takeY0 !== undefined && y > line.takeY0) return {type: 'none', li};
   if (x <= lay.sigEnd && y >= line.staffTop - 2.5 && y <= line.staffTop + 6.5) return {type: x <= lay.clefEnd ? 'clef' : 'sig', li};
   if (x > lay.sigEnd && x <= lay.mensEnd && y >= line.staffTop - 0.6 && y <= line.staffTop + 4.6) return {type: 'mens', li};
   const pos = Math.max(-8, Math.min(16, Math.round((line.staffTop + 4 - y) / 0.5)));
@@ -1378,7 +1475,7 @@ function touchUp(cancelled){
   if (h.type === 'sig') { mutate(() => { doc.bflat = !doc.bflat; }); return; }
   if (h.type === 'item') { ui.hover = null; selectItem(h.i); return; }
   ui.hover = null;
-  if (!ui.edit) return;
+  if (!ui.edit || h.type === 'none') return;
   if (h.type === 'repl') {
     mutate(() => { const o = doc.notes[h.i]; doc.notes[h.i] = {d: o.d, r: false, s: clampStep(CLEFS[doc.clef].bottom + h.pos), a: ''}; ui.sel = null; ui.caret = h.i + 1; });
     audition(doc.notes[h.i]);
@@ -1395,6 +1492,7 @@ scoreEl.addEventListener('pointerdown', e => {
   const p = toSp(e), h = hit(p.x, p.y, !isMouse);
   const wasOpen = !$('#clefMenu').hidden;
   closeClefMenu(false);
+  if (h.type === 'none') return;
   if (h.type === 'clef') { if (e.button === 0 && !wasOpen) openClefMenu(h.li); return; }
   if (h.type === 'mens') { if (e.button === 0) setTempus(ui.tempus === 'O' ? 'C' : 'O'); return; }
   if (h.type === 'sig') { if (e.button === 0) mutate(() => { doc.bflat = !doc.bflat; }); return; }
@@ -1443,7 +1541,7 @@ scoreEl.addEventListener('pointermove', e => {
   }
   if (e.pointerType === 'touch') return;
   const h = hit(p.x, p.y);
-  scoreEl.style.cursor = (h.type === 'gap' || h.type === 'repl') ? (ui.edit ? 'crosshair' : 'default') : 'pointer';
+  scoreEl.style.cursor = h.type === 'none' ? 'default' : (h.type === 'gap' || h.type === 'repl') ? (ui.edit ? 'crosshair' : 'default') : 'pointer';
   if (!sameHover(h, ui.hover)) { ui.hover = h; render(); }
 });
 function endPress(cancelled){
@@ -1782,6 +1880,7 @@ function startPlayback(from){
       audio.voices.push(metroClick(ctx, audio.master, origin + k * beat));
   }
   audio.timeline = {tl, end: t, origin, beat};
+  if (takeStart(offset / (spm / 2))) render();
   setPlayButton(true);
   audio.raf = requestAnimationFrame(tick);
 }
@@ -1823,6 +1922,7 @@ function stopPlayback(){
   if (!audio.timeline) return;
   cancelAnimationFrame(audio.raf);
   const now = audio.ctx.currentTime;
+  takeFinish();
   audio.voices.forEach(v => silence(v, now));
   audio.voices = [];
   audio.timeline = null;
@@ -1848,6 +1948,38 @@ function setPlayButton(on){
 /* ------------------------------------------------------------------ */
 /* Tempo and tactus                                                    */
 /* ------------------------------------------------------------------ */
+/* dark mode: the room around the parchment goes dark; the website page around the app follows */
+function applyDark(){
+  document.documentElement.classList.toggle('dark', ui.dark);
+  setPressed($('#darkBtn'), ui.dark);
+  try { if (window.parent !== window) parent.postMessage({cantusFirmusDark: ui.dark}, '*'); } catch (e) {}
+}
+/* full screen: the whole app fills the screen. Where a browser cannot (the iPhone), the app opens on a page of its own */
+function wireFullscreen(){
+  const d = document, root = d.documentElement, btn = $('#fsBtn');
+  const can = !!(d.fullscreenEnabled || d.webkitFullscreenEnabled);
+  const cur = () => d.fullscreenElement || d.webkitFullscreenElement || null;
+  const embedded = root.classList.contains('embedded');
+  if (!can && !embedded) { btn.hidden = true; return; }
+  const sync = () => {
+    const on = !!cur();
+    root.classList.toggle('isfs', on);
+    btn.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
+    btn.title = on ? 'Leave full screen' : 'Full screen';
+  };
+  d.addEventListener('fullscreenchange', sync); d.addEventListener('webkitfullscreenchange', sync);
+  btn.addEventListener('click', () => {
+    btn.blur();
+    if (cur()) { (d.exitFullscreen || d.webkitExitFullscreen).call(d); return; }
+    if (can) {
+      const go = root.requestFullscreen || root.webkitRequestFullscreen;
+      try { const r = go.call(root); if (r && r.catch) r.catch(() => toast('This browser would not go to full screen.')); } catch (e) { toast('This browser would not go to full screen.'); }
+      return;
+    }
+    try { window.top.location.href = location.href.split('?')[0].split('#')[0]; } catch (e) { window.open(location.href.split('?')[0], '_blank'); }
+  });
+  sync();
+}
 function closePops(){ document.querySelectorAll('.pop.open').forEach(p => p.classList.remove('open')); }
 function syncOut(){ $('#bo').textContent = ui.bright; $('#ro').textContent = ui.room; }
 function applySettingsOpen(){
@@ -1961,7 +2093,7 @@ async function micStart(){
   mic.preRaw = new Float32Array(mic.pre.fftSize);
   mic.raw = new Float32Array(mic.an.fftSize); mic.dec = new Float32Array(mic.an.fftSize >> 1);
   mic.yd = new Float32Array(mic.dec.length);
-  mic.on = true; mic.hist = []; mic.shown = null; mic.snap = null; mic.pend = null; mic.seen = 0; mic.peak = 0; mic.last = null;
+  mic.on = true; mic.hist = []; mic.shown = null; mic.snap = null; mic.pend = null; mic.seen = 0; mic.peak = 0; mic.last = null; mic.lowT = null; mic.onset = false;
   setPressed($('#mic'), true);
   toast('Sing: your pitch shows as a red dot on the staff.');
   render();
@@ -1976,6 +2108,7 @@ function micStop(){
   mic.stream = null; mic.nodes = []; mic.notch = [];
   setPressed($('#mic'), false);
   mic.drawn = '';
+  takeClear();
   render();
 }
 /* Pitch: YIN (de Cheveigné and Kawahara 2002), made to hold on to the fundamental.
@@ -2030,6 +2163,9 @@ function micPitch(raw, sr){
 function micTrack(m, q, rms, t){
   const dt = t - mic.lastT; mic.lastT = t;
   mic.peak = Math.max(rms, mic.peak * Math.pow(0.5, Math.max(0, dt) / 700));
+  /* a fresh attack, for the written-out singing: the voice dips under a quarter of its loudness for 30 ms or more, then comes back */
+  if (rms < 0.25 * mic.peak) { if (mic.lowT === null) mic.lowT = t; }
+  else if (rms > 0.5 * mic.peak) { if (mic.lowT !== null && t - mic.lowT >= 30) mic.onset = true; mic.lowT = null; }
   if (m !== null && rms < 0.15 * mic.peak) m = null;
   const H = mic.hist;
   H.push({t, m, q});
@@ -2084,6 +2220,7 @@ function micTick(){
   }
   micTrack(hz ? 69 + 12 * Math.log2(hz / ui.ref) : null, hz ? mic.q : 1, rms, performance.now());
   if (filt && mic.shown !== null && onOrgan(ui.ref * Math.pow(2, (mic.shown - 69) / 12), cur, prev, 80)) { mic.shown = null; mic.snap = null; mic.pend = null; }
+  takeRecord(now);
   drawMic();
   mic.raf = requestAnimationFrame(micTick);
 }
@@ -2091,18 +2228,25 @@ function micTick(){
 const SPELL = [[0, 0], [0, 1], [1, 0], [2, -1], [2, 0], [3, 0], [3, 1], [4, 0], [4, 1], [5, 0], [6, -1], [6, 0]];
 function micMarkup(){
   if (!mic.on || mic.shown === null || !lay || !lay.lines.length) return '';
-  let line = null, x = 0;
+  let line = null, x = 0, top = 0, clef = CLEFS[doc.clef];
   if (audio.timeline && ui.playing >= 0) {
     line = lay.lines.find(l => l.items.some(it => it.i === ui.playing));
-    if (line) x = line.items.find(it => it.i === ui.playing).x1 + 0.45;
+    if (line) {
+      const it = line.items.find(it => it.i === ui.playing);
+      top = line.staffTop; x = it.x1 + 0.45;
+      /* while the singing is written out, the dot is the pen: on the red staff, where the music has got to */
+      if (lay.tk && line.takeTop !== undefined && it.tkSpan !== undefined) {
+        const u = (audio.ctx.currentTime - takeLag(audio.ctx) - audio.timeline.origin) / (secondsPerMinim() / 2);
+        x = takeX(it, u) + 0.3; top = line.takeTop; clef = lay.tk.clef;
+      }
+    }
   }
   if (!line) {
-    line = lay.lines[lay.lines.length - 1];
+    line = lay.lines[lay.lines.length - 1]; top = line.staffTop;
     const bx = lay.barX ?? lay.finalX;
     x = lay.micX ?? (bx !== null ? bx + 1.9 : lay.noteStart + 0.5);
   }
-  const m = mic.snap, pc = ((m % 12) + 12) % 12, [L, alt] = SPELL[pc];
-  const s = 7 * (Math.floor(m / 12) - 1) + L, clef = CLEFS[doc.clef], pos = s - clef.bottom, top = line.staffTop;
+  const m = mic.snap, {s, L, alt} = spellMidi(m), pos = s - clef.bottom;
   const sig = (doc.bflat && L === 6) ? -1 : 0;
   const acc = alt === sig ? '' : alt < 0 ? 'fl' : alt > 0 ? 'sh' : 'na';
   const r = 0.5, aw = acc ? gw(acc) + 0.25 : 0;
@@ -2118,6 +2262,174 @@ function drawMic(){
   if (!g) return;
   const s = micMarkup();
   if (s !== mic.drawn) { g.innerHTML = s; mic.drawn = s; }
+}
+/* ------------------------------------------------------------------ */
+/* Writing out the singing (experimental)                              */
+/* While the cantus firmus plays with Sing on, each semiminima of the piece gets the note sung for most of it,  */
+/* or a rest; equal neighbours join into longer notes, and the result is written in red on a staff of its own */
+/* under each line, lined up with the cantus firmus.                                                           */
+/* ------------------------------------------------------------------ */
+const take = {on: false, frames: [], parts: [], sig: '', clef: null, from: 0, done: 0};
+const takeShown = () => take.on && mic.on && ui.micNotate;
+function spellMidi(m){ const [L, alt] = SPELL[((m % 12) + 12) % 12]; return {s: 7 * (Math.floor(m / 12) - 1) + L, L, alt}; }
+function takeClear(){ take.on = false; take.frames = []; take.parts = []; take.sig = ''; take.clef = null; }
+function takeStart(fromU){
+  const was = take.on;
+  takeClear();
+  if (!mic.on || !ui.micNotate) return was;
+  take.on = true; take.from = fromU; take.done = Math.floor(fromU + 1e-6);
+  return true;
+}
+/* seconds from the organ starting a note (on the audio clock) to the singer's matching note being read:
+   the way out to the speakers, the way in, half the analysis window and the tracker's 45 ms of agreement */
+const takeLag = ctx => (ctx.outputLatency || 0) + (ctx.baseLatency || 0) + 0.085;
+function takeRecord(now){
+  const tl = audio.timeline;
+  if (!takeShown() || !tl) { mic.onset = false; return; }
+  const u = (now - takeLag(audio.ctx) - tl.origin) / (secondsPerMinim() / 2);
+  if (u >= take.from) {
+    /* only a note being heard right now: the dot lingers a moment after the voice stops, the writing doesn't */
+    const live = mic.shown !== null && performance.now() - mic.seen < 100;
+    take.frames.push({u, m: live ? Math.round(mic.shown) : null, o: mic.onset});
+    const k = Math.floor(u);
+    if (k > take.done) { take.done = k; takeQuantize(k); }
+  }
+  mic.onset = false;
+}
+function takeFinish(){
+  if (!takeShown() || !take.frames.length) return;
+  takeQuantize(Math.floor(take.frames[take.frames.length - 1].u + 0.5), true);
+}
+/* the values a sung length (in semiminimae) is written with, longest first; in tempus perfectum the brevis holds three semibreves */
+function takeValues(rest){
+  const O = ui.tempus === 'O';
+  if (rest) return O ? [[24, 'L'], [12, 'B'], [4, 'S'], [2, 'M'], [1, 'Sm']] : [[16, 'L'], [8, 'B'], [4, 'S'], [2, 'M'], [1, 'Sm']];
+  return O ? [[24, 'L'], [12, 'B'], [6, 'S', 1], [4, 'S'], [3, 'M', 1], [2, 'M'], [1, 'Sm']]
+           : [[16, 'L'], [12, 'B', 1], [8, 'B'], [6, 'S', 1], [4, 'S'], [3, 'M', 1], [2, 'M'], [1, 'Sm']];
+}
+function takeQuantize(kEnd, last){
+  const k0 = Math.floor(take.from + 1e-6), n = kEnd - k0;
+  if (n <= 0) return;
+  const cells = Array.from({length: n}, () => ({tot: 0, c: new Map(), on: false}));
+  for (const fr of take.frames) {
+    const k = Math.floor(fr.u) - k0;
+    if (k >= 0 && k < n) { const c = cells[k]; c.tot++; if (fr.m !== null) c.c.set(fr.m, (c.c.get(fr.m) || 0) + 1); }
+    /* a fresh attack goes to the nearest semiminima: it splits a note held on one pitch into two */
+    if (fr.o) { const b = Math.round(fr.u) - k0; if (b > 0 && b < n) cells[b].on = true; }
+  }
+  const ev = [];
+  cells.forEach((c, k) => {
+    let m = null, best = 0;
+    c.c.forEach((v, p) => { if (v > best) { best = v; m = p; } });
+    if (!c.tot || best < 0.45 * c.tot) m = null;
+    const prev = ev[ev.length - 1];
+    if (prev && prev.m === m && !(m !== null && c.on)) prev.len++;
+    else ev.push({u: k0 + k, len: 1, m});
+  });
+  while (ev.length && ev[0].m === null) ev.shift();
+  while (ev.length && ev[ev.length - 1].m === null) ev.pop();
+  const parts = [];
+  for (const e of ev) {
+    let u = e.u, left = e.len, first = true;
+    for (const [len, d, dot] of takeValues(e.m === null))
+      while (left >= len) { parts.push({u, len, d, p: !!dot, m: e.m, tie: !first && e.m !== null}); u += len; left -= len; first = false; }
+  }
+  const sig = parts.map(q => [q.u, q.d, q.p ? 1 : 0, q.m, q.tie ? 1 : 0].join(':')).join(' ');
+  if (sig === take.sig && !last) return;
+  take.sig = sig; take.parts = parts;
+  /* the clef: the cantus firmus's own, unless the singing lies far from it; chosen once there are a few notes */
+  const st = parts.filter(q => q.m !== null).map(q => spellMidi(q.m).s);
+  if (!take.clef && (st.length >= 3 || (last && st.length))) {
+    const med = median(st), fit = k => Math.abs(med - (CLEFS[k].bottom + midPos()));
+    take.clef = fit(doc.clef) <= 4.5 ? doc.clef : ['treble', 'treble8', 'bass'].reduce((a, b) => fit(b) < fit(a) ? b : a);
+  }
+  render();
+}
+function takeLayout(items){
+  const vals = readValues(doc.notes, ui.tempus).v, cum = [0];
+  vals.forEach(v => cum.push(cum[cum.length - 1] + 2 * v));
+  const clef = CLEFS[take.clef || doc.clef];
+  const tk = {clef, cum, by: items.map(() => []), parts: []};
+  for (const q0 of take.parts) {
+    const q = {...q0};
+    if (q.m === null) { q.headW = 1.1; q.accW = 0; q.w = 1.55; }
+    else {
+      const sp = spellMidi(q.m), sig = doc.bflat && sp.L === 6 ? -1 : 0, D = DUR[q.d];
+      q.pos = sp.s - clef.bottom;
+      q.acc = sp.alt === sig ? '' : sp.alt < 0 ? 'fl' : sp.alt > 0 ? 'sh' : 'na';
+      q.accW = q.acc ? gw(q.acc) + 0.3 : 0;
+      q.headW = q.d === 'L' || q.d === 'B' ? 1.3 : 1.28;
+      q.flip = (D.stem && q.pos >= midPos() + 3) || (D.tail && q.pos <= -3);
+      q.w = q.accW + q.headW + (q.p ? 0.75 : 0) + 0.45;
+    }
+    let i = 0;
+    while (i < items.length - 1 && q.u >= cum[i + 1] - 1e-6) i++;
+    q.i = i; tk.by[i].push(q); tk.parts.push(q);
+  }
+  items.forEach((it, i) => {
+    if (!tk.by[i].length) return;
+    it.tkReach = tk.by[i].reduce((a, q) => a + q.w, 0);
+    if (it.tkReach + 0.2 > it.w + it.gap) it.gap = it.tkReach + 0.2 - it.w;
+  });
+  return tk;
+}
+/* where on its line a moment of the piece falls: inside the span of the cantus firmus note sounding then */
+function takeX(it, u){
+  const c = lay.tk.cum, a = c[it.i], b = c[it.i + 1];
+  return it.hx + Math.max(0, Math.min(1, (u - a) / Math.max(1e-6, b - a))) * it.tkSpan;
+}
+function takePlace(L){
+  const tk = L.tk;
+  let lastRight = null;
+  for (const line of L.lines) {
+    const its = line.items;
+    let prev = -Infinity;
+    line.take = [];
+    its.forEach((it, k) => {
+      const nx = its[k + 1];
+      it.tkSpan = Math.max(0.5, nx ? nx.hx - it.hx : Math.max(it.tkReach || 0, Math.min(it.x1 + it.gap, L.staffR - 1.2) - it.hx));
+      const a = tk.cum[it.i], b = tk.cum[it.i + 1];
+      for (const q of tk.by[it.i]) {
+        let x = it.hx + Math.max(0, (q.u - a) / Math.max(1e-6, b - a)) * it.tkSpan;
+        x = Math.min(Math.max(x, prev + 0.35 + q.accW), L.staffR - q.headW - 0.4);
+        q.x = x; prev = x + q.headW + (q.p ? 0.75 : 0);
+        line.take.push(q);
+      }
+    });
+    if (line === L.lines[L.lines.length - 1] && line.take.length) lastRight = prev;
+  }
+  if (lastRight !== null) L.takeEnd = lastRight + 1;
+}
+function drawTake(L, line, bx){
+  const tk = L.tk, top = line.takeTop, clef = tk.clef;
+  const t0 = doc.lines === 4 ? 1 : 0;
+  let o = '';
+  for (let k = t0; k < 5; k++) o += hline(L.staffL, L.staffR, top + k, 'staff', 0.12);
+  o += clefUse(clef, L.clefX, top);
+  if (doc.bflat) o += use('fl', L.sigX, top + 4 - sigPos(clef) * 0.5);
+  o += mensSign(L.mensX + 1.1, top + 2, false);
+  o += '<g class="take">';
+  let pq = null;
+  for (const q of line.take) {
+    if (q.m === null) { o += restGlyph(q.d, q.x + q.headW / 2, top); pq = null; continue; }
+    const y = top + 4 - q.pos * 0.5;
+    o += ledgers(q.pos, q.x, q.headW, top);
+    if (q.acc) o += use(q.acc, q.x - q.accW, y);
+    o += noteGlyph(q.d, q.pos, q.flip, q.x, top);
+    if (q.p) o += dotMark(q.x + q.headW + 0.32, q.pos, top);
+    /* a held note written as two values: a small tie shows it was one */
+    if (q.tie && pq && pq.m === q.m) {
+      const x1 = pq.x + pq.headW + (pq.p ? 0.85 : 0.1), x2 = q.x - 0.1, dy = q.flip ? -0.75 : 0.75, yy = y + dy;
+      o += `<path class="tie" d="M${f(x1)} ${f(yy)}Q${f((x1 + x2) / 2)} ${f(yy + dy * 0.9)} ${f(x2)} ${f(yy)}"/>`;
+    }
+    pq = q;
+  }
+  o += '</g>';
+  if (bx !== null) {
+    const bh = 4 - t0;
+    o += `<rect class="bar" x="${f(bx)}" y="${f(top + t0)}" width="0.16" height="${bh}"/><rect class="bar" x="${f(bx + 0.4)}" y="${f(top + t0)}" width="0.5" height="${bh}"/>`;
+  }
+  return o;
 }
 const CHEV = '<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg>';
 function buildTactus(){
@@ -2485,7 +2797,7 @@ function closeLibrary(focusBtn){
 /* Export                                                              */
 /* ------------------------------------------------------------------ */
 function exportSVG(){
-  const L = layout();
+  const L = layout(true);
   const th = doc.title ? 3.4 : 0.6;
   const m = 1.2;                                  /* page margin */
   const w = ((L.lines.length === 1 && L.finalX !== null) ? Math.min(L.W, L.finalX + 1.5) : L.W) + 2 * m;
@@ -2563,7 +2875,8 @@ function wire(){
     adv.dir = Number(b.dataset.dir);
     document.querySelectorAll('#advT [data-dir]').forEach(o => setPressed(o, o === b));
   }));
-  $('#advIv').addEventListener('change', e => { adv.iv = Number(e.target.value); });
+  $('#advN').addEventListener('change', e => { const was = adv.n; adv.n = Number(e.target.value); if (was === 0) adv.q = 'M'; fillAdvIntervals(); });
+  $('#advQ').addEventListener('change', e => { adv.q = e.target.value; });
   $('#advExact').addEventListener('change', e => { adv.exact = e.target.checked; fillAdvIntervals(); });
   $('#advGo').addEventListener('click', advTranspose);
   $('#clear').addEventListener('click', () => {
@@ -2590,13 +2903,16 @@ function wire(){
     p.querySelector('.popbtn').addEventListener('click', e => { e.stopPropagation(); const was = p.classList.contains('open'); closePops(); if (!was) p.classList.add('open'); });
     p.querySelector('.popbody').addEventListener('click', e => { if (e.target.closest('button') && !e.target.closest('[data-keep]')) setTimeout(() => { closePops(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }, 0); });
   });
-  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#popStaff .popbody, #advT, #advBtn')) return; closePops(); });
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#popLook .popbody, #advT, #advBtn')) return; closePops(); });
   $('#toggleSet').addEventListener('click', () => { ui.setOpen = !ui.setOpen; applySettingsOpen(); save(); });
   applySettingsOpen();
   $('#loop').addEventListener('click', () => { ui.loop = !ui.loop; setPressed($('#loop'), ui.loop); save(); render(); });
   $('#mic').addEventListener('click', e => { mic.on ? micStop() : micStart(); e.currentTarget.blur(); });
   $('#micFlex').addEventListener('click', () => { ui.micFlex = !ui.micFlex; setPressed($('#micFlex'), ui.micFlex); mic.snap = null; mic.pend = null; save(); });
   $('#micPhones').addEventListener('click', () => { ui.micPhones = !ui.micPhones; setPressed($('#micPhones'), ui.micPhones); save(); });
+  $('#micNotate').addEventListener('click', () => { ui.micNotate = !ui.micNotate; setPressed($('#micNotate'), ui.micNotate); if (!ui.micNotate) takeClear(); save(); render(); });
+  $('#darkBtn').addEventListener('click', () => { ui.dark = !ui.dark; applyDark(); save(); });
+  wireFullscreen();
   wireTempo();
   $('#ref').addEventListener('input', e => { const v = Number(e.target.value); if (e.target.value !== '' && v >= 100 && v <= 1000) { ui.ref = v; stopPlayback(); save(); } });
   $('#ref').addEventListener('change', e => { e.target.value = String(ui.ref); });
