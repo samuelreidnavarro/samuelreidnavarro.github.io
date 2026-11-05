@@ -261,3 +261,4 @@ main.tool { max-width: 44rem; justify-items: stretch; }
 .dl { display: inline-block; font-size: 1.15rem; text-decoration: none; padding: .45rem 1.3rem; }
 .dl[hidden] { display: none; }
 .preview { display: block; width: 100%; max-width: 30rem; border: 1px solid var(--line); background: #fff; image-rendering: auto; }
+.tool-desc { margin: -1rem auto 0; max-width: 34rem; text-align: center; color: var(--soft); text-wrap: balance; }
