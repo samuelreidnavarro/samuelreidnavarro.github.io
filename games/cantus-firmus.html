@@ -114,9 +114,16 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px;margin:0}
 .popbody .btns:not(.col){flex-wrap:nowrap}
 .popbody .col{flex-direction:column}
 .popbody .col .tb{justify-content:flex-start;text-align:left;white-space:nowrap}
+#advBtn .chev{transition:transform .15s}#advBtn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.advt{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:8px 6px 4px;margin-top:2px;border-top:1px solid var(--line)}
+.advt[hidden]{display:none}
+.advt .seg{display:flex}.advt .seg button{flex:1;justify-content:center}
+.advt select{min-height:40px}
+.advt .check{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.popbody .col .advt #advGo{justify-content:center;background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 #popStaff .popbody{left:-6px}
 .staffrow{position:relative;margin-top:12px}
-@media (max-width:700px){#popStaff{position:static}#popStaff .popbody{left:0;right:0;width:auto}.staffset{grid-template-columns:auto 1fr}.staffset input[type=range]{width:100%}}
+@media (max-width:700px){#popXform{position:static}#popXform .popbody{left:0;right:0;width:auto}.advt .check{white-space:normal}#popStaff{position:static}#popStaff .popbody{left:0;right:0;width:auto}.staffset{grid-template-columns:auto 1fr}.staffset input[type=range]{width:100%}}
 .staffset{display:grid;grid-template-columns:auto 150px;gap:8px 12px;align-items:center;padding:4px 8px}
 .staffset input[type=range]{width:150px}
 .staffset .btns{display:flex;gap:2px}
@@ -371,6 +378,13 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
             <button class="tb" id="tondn" title="Move the whole cantus firmus down to the previous key on C D E F G A B♭, adding sharps and flats to the notes where needed">Transpose tone down</button>
             <button class="tb" id="dbl" title="Doubles every note and rest: brevis becomes longa, and so on">Double all values</button>
             <button class="tb" id="hlv" title="Halves every note and rest: brevis becomes semibrevis, and so on">Halve all values</button>
+            <button class="tb" id="advBtn" data-keep aria-expanded="false" aria-controls="advT">Advanced transpose<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+            <div id="advT" class="advt" hidden>
+              <div class="seg" role="group" aria-label="Direction"><button class="tb" data-dir="1" data-keep aria-pressed="true">Up</button><button class="tb" data-dir="-1" data-keep aria-pressed="false">Down</button></div>
+              <select id="advIv" aria-label="Interval"></select>
+              <label class="check" title="On: every interval stays exactly the same, so D minor becomes G minor, with sharps and flats on the notes. Off: every note moves the same number of steps along the scale, so D dorian becomes E phrygian"><input type="checkbox" id="advExact" checked> Respect intervallic structure</label>
+              <button class="tb" id="advGo">Transpose</button>
+            </div>
           </div>
         </div>
       </div></div>
@@ -1068,6 +1082,7 @@ function syncTools(){
   $('#octup').disabled = !pn.length || pn.some(x => x.s + 7 > STEP_MAX);
   $('#tonup').disabled = tonePlan(1) === null;
   $('#tondn').disabled = tonePlan(-1) === null;
+  $('#advGo').disabled = !pn.length;
 }
 /* Diatonic transposition: the final moves to the next (or previous) of C D E F G A Bb, which is a tone or a
    semitone. Every note moves one step on the staff, and the sharps and flats needed to keep the intervals
@@ -1095,6 +1110,48 @@ function transposeTone(dir){
       const want = Math.max(-1, Math.min(1, target - nat));
       const sig = (doc.bflat && mod7(x.s) === 6) ? -1 : 0;
       x.a = want === sig ? '' : (want < 0 ? 'b' : want > 0 ? '#' : 'n');
+    });
+  });
+}
+/* Advanced transpose. With the intervallic structure respected, every note moves by exactly the interval:
+   the staff steps of its name and the semitones of its quality, with a sharp, flat or natural on the notes
+   that need one (D minor up a fourth is G minor). Without, every note moves the same number of steps along
+   the scale and loses its own sharps and flats (D dorian up a second is E phrygian). */
+const IVS = [['minor second', 1, 1], ['major second', 1, 2], ['minor third', 2, 3], ['major third', 2, 4], ['perfect fourth', 3, 5],
+  ['augmented fourth', 3, 6], ['diminished fifth', 4, 6], ['perfect fifth', 4, 7], ['minor sixth', 5, 8], ['major sixth', 5, 9],
+  ['minor seventh', 6, 10], ['major seventh', 6, 11], ['octave', 7, 12]];
+const GENERIC = ['second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'octave'];
+const adv = {dir: 1, iv: 4, exact: true};
+function fillAdvIntervals(){
+  const sel = $('#advIv');
+  const steps = IVS[adv.iv][1];
+  sel.innerHTML = adv.exact ? IVS.map((v, i) => `<option value="${i}">${v[0]}</option>`).join('')
+                            : GENERIC.map((g, i) => `<option value="${IVS.findIndex(v => v[1] === i + 1)}">${g}</option>`).join('');
+  if (!adv.exact) adv.iv = IVS.findIndex(v => v[1] === steps);
+  sel.value = String(adv.iv);
+}
+/* the sharp, flat or natural that makes the note at step x.s sound `target`; when that would take a double sharp
+   or flat, the neighbouring letter is used instead (F double sharp is written G) */
+function spellAs(x, target){
+  for (const ds of [0, 1, -1]) {
+    const s = x.s + ds, want = target - (12 * (Math.floor(s / 7) + 1) + SEMI[mod7(s)]);
+    if (Math.abs(want) > 1) continue;
+    const sig = (doc.bflat && mod7(s) === 6) ? -1 : 0;
+    x.s = s; x.a = want === sig ? '' : (want < 0 ? 'b' : want > 0 ? '#' : 'n');
+    return;
+  }
+}
+function advTranspose(){
+  const [, steps, semis] = IVS[adv.iv], dir = adv.dir;
+  const pn = doc.notes.filter(x => !x.r);
+  if (!pn.length) return;
+  if (pn.some(x => x.s + dir * steps < STEP_MIN + 1 || x.s + dir * steps > STEP_MAX - 1)) { toast('That would take the notes out of range.'); return; }
+  mutate(() => {
+    doc.notes.forEach(x => {
+      if (x.r) return;
+      const target = midiOf(x) + dir * semis;
+      x.s += dir * steps;
+      if (adv.exact) spellAs(x, target); else x.a = '';
     });
   });
 }
@@ -2500,6 +2557,15 @@ function wire(){
   $('#octup').addEventListener('click', () => shiftOctave(1));
   $('#tonup').addEventListener('click', () => transposeTone(1));
   $('#tondn').addEventListener('click', () => transposeTone(-1));
+  fillAdvIntervals();
+  $('#advBtn').addEventListener('click', () => { const t = $('#advT'); t.hidden = !t.hidden; $('#advBtn').setAttribute('aria-expanded', t.hidden ? 'false' : 'true'); });
+  document.querySelectorAll('#advT [data-dir]').forEach(b => b.addEventListener('click', () => {
+    adv.dir = Number(b.dataset.dir);
+    document.querySelectorAll('#advT [data-dir]').forEach(o => setPressed(o, o === b));
+  }));
+  $('#advIv').addEventListener('change', e => { adv.iv = Number(e.target.value); });
+  $('#advExact').addEventListener('change', e => { adv.exact = e.target.checked; fillAdvIntervals(); });
+  $('#advGo').addEventListener('click', advTranspose);
   $('#clear').addEventListener('click', () => {
     mutate(() => { doc.notes = []; ui.sel = null; ui.caret = 0; });
     toast('All notes cleared. Undo brings them back.');
@@ -2524,7 +2590,7 @@ function wire(){
     p.querySelector('.popbtn').addEventListener('click', e => { e.stopPropagation(); const was = p.classList.contains('open'); closePops(); if (!was) p.classList.add('open'); });
     p.querySelector('.popbody').addEventListener('click', e => { if (e.target.closest('button') && !e.target.closest('[data-keep]')) setTimeout(() => { closePops(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }, 0); });
   });
-  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#popStaff .popbody')) return; closePops(); });
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#popStaff .popbody, #advT, #advBtn')) return; closePops(); });
   $('#toggleSet').addEventListener('click', () => { ui.setOpen = !ui.setOpen; applySettingsOpen(); save(); });
   applySettingsOpen();
   $('#loop').addEventListener('click', () => { ui.loop = !ui.loop; setPressed($('#loop'), ui.loop); save(); render(); });
