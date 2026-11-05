@@ -1820,8 +1820,8 @@ function setHand(deg){
 /* echo cancellation.                                                  */
 /* ------------------------------------------------------------------ */
 const mic = {on: false, busy: false, stream: null, nodes: [], notch: [], an: null, raw: null, dec: null, yd: null,
-             raf: 0, est: [], shown: null, snap: null, seen: 0, drawn: '', pre: null, preRaw: null, bleed: 1, last: null};
-const NOTCH_N = 8, MIC_FMIN = 70, MIC_FMAX = 1100;
+             raf: 0, hist: [], shown: null, snap: null, seen: 0, drawn: '', pre: null, preRaw: null, pa: null, tilt: null, bleed: 1, last: null};
+const NOTCH_N = 8, MIC_FMIN = 70, MIC_FMAX = 1100, MIC_LEFT = 0.1;
 /* the strongest harmonics of an organ note, as frequencies to notch */
 function organPartials(freq){
   const amps = organAmps(), max = Math.max(...amps, 1e-9);
@@ -1859,7 +1859,8 @@ async function micStart(){
   mic.busy = true;
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: false, autoGainControl: false}});
+    /* the raw microphone: the browser's echo cancelling and noise suppression bend a sung tone; the organ is taken out here instead */
+    stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false}});
   } catch (e) {
     mic.busy = false;
     toast(e && e.name === 'NotAllowedError' ? 'The microphone is blocked. Allow it for this site to sing along.' : 'No microphone could be opened.');
@@ -1880,14 +1881,18 @@ async function micStart(){
   }
   mic.an = ctx.createAnalyser(); mic.an.fftSize = 2048; mic.an.smoothingTimeConstant = 0;
   node.connect(mic.an);
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 300; lp.Q.value = 0.6;   /* tilts the voice towards its fundamental */
+  mic.pa = ctx.createAnalyser(); mic.pa.fftSize = 2048; mic.pa.smoothingTimeConstant = 0;
+  node.connect(lp); lp.connect(mic.pa);
   const mute = ctx.createGain(); mute.gain.value = 0;      /* keeps the analyser running in every browser; nothing is heard */
   mic.an.connect(mute); mute.connect(ctx.destination);
-  mic.pre.connect(mute);
-  mic.nodes = [src, hp, mic.pre, ...mic.notch, mic.an, mute];
+  mic.pre.connect(mute); mic.pa.connect(mute);
+  mic.nodes = [src, hp, mic.pre, ...mic.notch, mic.an, lp, mic.pa, mute];
+  mic.tilt = new Float32Array(mic.pa.fftSize);
   mic.preRaw = new Float32Array(mic.pre.fftSize);
   mic.raw = new Float32Array(mic.an.fftSize); mic.dec = new Float32Array(mic.an.fftSize >> 1);
   mic.yd = new Float32Array(mic.dec.length);
-  mic.on = true; mic.est = []; mic.shown = null; mic.snap = null; mic.seen = 0; mic.bleed = 1; mic.last = null;
+  mic.on = true; mic.hist = []; mic.shown = null; mic.snap = null; mic.seen = 0; mic.bleed = 1; mic.last = null;
   setPressed($('#mic'), true);
   toast('Sing: your pitch shows as a red dot on the staff.');
   render();
@@ -1904,7 +1909,16 @@ function micStop(){
   mic.drawn = '';
   render();
 }
-/* YIN (de Cheveigné and Kawahara 2002) on a buffer at sample rate sr: the fundamental, or null */
+/* Pitch: YIN (de Cheveigné and Kawahara 2002), made to hold on to the fundamental.
+   The signal it reads has been tilted towards the bass (a low-pass at 300 Hz), so a voice rich in overtones
+   still shows its fundamental most. Of the dips in the YIN curve it takes the first one about as deep as the
+   deepest, then moves to twice (three, four times) that period when that one is clearly more periodic:
+   that is the fundamental showing through the overtones. */
+function localMin(d, t, lo, hi){
+  let b = t;
+  for (let k = Math.max(lo, Math.floor(t * 0.96)); k <= Math.min(hi, Math.ceil(t * 1.04)); k++) if (d[k] < d[b]) b = k;
+  return b;
+}
 function yin(x, sr){
   const N = x.length, maxT = Math.min(Math.floor(sr / MIC_FMIN), N >> 1), minT = Math.max(2, Math.floor(sr / MIC_FMAX)), W = N - maxT, d = mic.yd;
   for (let t = 1; t <= maxT; t++) {
@@ -1915,19 +1929,51 @@ function yin(x, sr){
   d[0] = 1;
   let run = 0;
   for (let t = 1; t <= maxT; t++) { run += d[t]; d[t] = run > 0 ? d[t] * t / run : 1; }
-  let tau = -1;
+  let g = minT;
+  for (let t = minT; t < maxT; t++) if (d[t] < d[g]) g = t;
+  if (d[g] > 0.3) return null;
+  const lim = Math.max(0.1, d[g] * 1.5 + 0.02);
+  let tau = g;
   for (let t = minT; t < maxT; t++) {
-    if (d[t] < 0.15) { while (t + 1 < maxT && d[t + 1] < d[t]) t++; tau = t; break; }
+    if (d[t] <= lim) { while (t + 1 < maxT && d[t + 1] < d[t]) t++; tau = t; break; }
   }
-  if (tau < 0) return null;
+  for (let m = 2; m <= 4; m++) {
+    const tm = m * tau;
+    if (tm >= maxT - 1) break;
+    const k = localMin(d, tm, minT, maxT - 2);
+    if (d[tau] > 0.03 && d[k] < 0.55 * d[tau]) { tau = k; m = 1; }
+  }
   const a = d[tau - 1], b = d[tau], c = d[tau + 1], den = a + c - 2 * b;
   const sh = den > 0 ? Math.max(-0.5, Math.min(0.5, (a - c) / (2 * den))) : 0;
   return sr / (tau + sh);
 }
 const rmsOf = x => { let e = 0; for (let i = 0; i < x.length; i++) e += x[i] * x[i]; return Math.sqrt(e / x.length); };
+const median = a => { const s = [...a].sort((p, q) => p - q); return s[s.length >> 1]; };
 function micPitch(raw, sr){
   for (let i = 0; i < mic.dec.length; i++) mic.dec[i] = 0.5 * (raw[2 * i] + raw[2 * i + 1]);
   return yin(mic.dec, sr / 2);
+}
+/* What the dot shows: a new note only once readings agree for 40 ms; a jump of an octave (or two) only once
+   they agree for 100 ms, so a moment of overtone confusion never makes the dot leap; small changes are followed smoothly. */
+function micTrack(m, t){
+  const H = mic.hist;
+  H.push({t, m});
+  while (H.length && t - H[0].t > 400) H.shift();
+  if (m !== null) {
+    if (mic.shown !== null && Math.abs(m - mic.shown) < 1.5) {
+      const near = H.filter(h => h.m !== null && t - h.t < 90 && Math.abs(h.m - mic.shown) < 1.5).map(h => h.m);
+      mic.shown += 0.35 * (median(near) - mic.shown); mic.seen = t;
+    } else {
+      const run = [];
+      for (let i = H.length - 1; i >= 0 && H[i].m !== null && Math.abs(H[i].m - m) < 0.8; i--) run.push(H[i]);
+      const span = run.length ? t - run[run.length - 1].t : 0, dd = mic.shown === null ? 0 : m - mic.shown;
+      const oct = Math.abs(dd) > 10 && Math.abs(dd - 12 * Math.round(dd / 12)) < 1;
+      if (run.length >= 3 && span >= (oct ? 95 : 40)) { mic.shown = median(run.map(h => h.m)); mic.seen = t; }
+    }
+  }
+  if (mic.shown !== null && t - mic.seen > 270) mic.shown = null;
+  if (mic.shown === null) mic.snap = null;
+  else if (mic.snap === null || Math.abs(mic.shown - mic.snap) > 0.62) mic.snap = Math.round(mic.shown);
 }
 const MIC_GATE = 0.005;
 function micTick(){
@@ -1946,27 +1992,19 @@ function micTick(){
       if (r && Math.abs(1200 * Math.log2(r / cur)) < 35) mic.bleed = Math.min(1, mic.bleed + 0.0025);
     }
   }
-  const filt = mic.bleed > 0.5;
+  const filt = mic.bleed > 0.5, q = ui.ens > 3 ? 30 : 60;
+  if (mic.notch.length && mic.notch[0].Q.value !== q) mic.notch.forEach(n => { n.Q.value = q; });
   setBank(0, filt && cur ? organPartials(cur) : [], now);
   setBank(1, filt && prev && prev !== cur ? organPartials(prev) : [], now);
   mic.an.getFloatTimeDomainData(mic.raw);
   const rms = rmsOf(mic.raw);
   let hz = null;
   /* with the organ filtered out, what is left must be a real part of the signal, not the organ's leftovers */
-  if (rms > MIC_GATE && (!filt || !(cur || prev) || rms > 0.1 * preRms)) hz = micPitch(mic.raw, ctx.sampleRate);
-  const t = performance.now();
-  if (hz) {
-    const m = 69 + 12 * Math.log2(hz / ui.ref);
-    mic.est.push(m); if (mic.est.length > 3) mic.est.shift();
-    const med = [...mic.est].sort((p, q) => p - q)[mic.est.length >> 1];
-    /* show only what two readings in a row agree on; follow small changes smoothly, jump on big ones */
-    if (mic.est.length >= 2 && Math.abs(mic.est[mic.est.length - 1] - mic.est[mic.est.length - 2]) < 0.8) {
-      mic.shown = mic.shown === null || Math.abs(med - mic.shown) > 1.2 ? med : mic.shown + 0.35 * (med - mic.shown);
-      if (mic.snap === null || Math.abs(mic.shown - mic.snap) > 0.62) mic.snap = Math.round(mic.shown);
-      mic.seen = t;
-    }
-  } else if (mic.est.length) mic.est.shift();
-  if (mic.shown !== null && t - mic.seen > 260) { mic.shown = null; mic.snap = null; }
+  if (rms > MIC_GATE && (!filt || !(cur || prev) || rms > MIC_LEFT * preRms)) {
+    mic.pa.getFloatTimeDomainData(mic.tilt);
+    hz = micPitch(mic.tilt, ctx.sampleRate);
+  }
+  micTrack(hz ? 69 + 12 * Math.log2(hz / ui.ref) : null, performance.now());
   drawMic();
   mic.raf = requestAnimationFrame(micTick);
 }
