@@ -159,6 +159,10 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 #score .it.play .ledger{stroke:var(--play)}
 #score .selbg{fill:var(--sel);opacity:.1}
 #score .ghost{opacity:.62}
+#score .mic{opacity:.5;pointer-events:none}
+#score .mic .micdot,#score .mic use{fill:var(--accent)}
+#score .mic .ledger{stroke:var(--accent)}
+#mic svg{width:17px;height:17px;margin:0 4px -3px -2px;fill:currentColor}
 #score .ghost use{fill:var(--sel)}
 #score .ghost .ledger{stroke:var(--sel)}
 #score .caret{fill:var(--sel);opacity:.75}
@@ -398,6 +402,7 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
     <button id="play" aria-label="Play"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1 13 7 2 13Z"/></svg><span>Play</span></button>
     <div class="podg">
     <button id="loop" aria-pressed="false" title="Repeat until stopped; adds a repeat sign at the end">Loop</button>
+    <button id="mic" aria-pressed="false" title="Sing along: the microphone shows the note you sing as a faint red dot on the staff"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.6a3.4 3.4 0 0 0 3.4-3.4V5.4a3.4 3.4 0 0 0-6.8 0v5.8a3.4 3.4 0 0 0 3.4 3.4Zm6-3.5a6 6 0 0 1-12 0H4.3a7.7 7.7 0 0 0 6.8 7.6V22h1.8v-3.3a7.7 7.7 0 0 0 6.8-7.6Z"/></svg><span>Sing</span></button>
     <div class="pop" id="popMetro">
       <button class="tb popbtn" id="metro" aria-haspopup="true" title="How the beat is shown or heard">Metronome<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
       <div class="popbody"><div class="btns col" id="beatList" role="group" aria-label="Beat">
@@ -472,6 +477,7 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
       <tr><td><kbd>Ctrl/⌘</kbd> <kbd>Z</kbd></td><td>Undo; add <kbd>Shift</kbd> to redo</td></tr>
     </table>
     <p>In tempus perfectum (click the C on the staff to turn it into O) the notes are read as the theorists teach: a brevis lasts three semibreves, a single semibreve next to a brevis makes it imperfect, and of two semibreves between breves the second is doubled. A dot after a brevis keeps it perfect; a dot between two semibreves separates the perfections; a dot after a semibreve followed by a minima adds half its value. In tempus imperfectum every dot adds half the value.</p>
+    <p>Sing turns on the microphone. The note you sing shows as a faint red dot on the staff: next to the note being played, or after the last note when nothing plays. When the dot sits a little above or below its line or space, you are a little sharp or flat. Headphones work best. Through speakers, the organ's own notes are filtered out of what the microphone hears, so a note sung in unison with the organ can disappear.</p>
     <p>Your work is kept in this browser automatically. Copy link gives you an address that opens this exact cantus firmus anywhere, for instance to send to a student.</p>
   </details>
 
@@ -958,9 +964,15 @@ function render(){
   const S = ui.size;
   const g = ghostInfo();
   if (g && g.atEnd && g.line === lay.lines[lay.lines.length - 1]) lay.barX = Math.max(lay.finalX ?? 0, g.x + g.w + 1.2);
+  /* while singing along, keep a place for the sung note between the last note and the final bar */
+  if (mic.on && lay.finalX !== null && !(g && g.atEnd)) {
+    const sx = lay.finalX - 0.5;
+    if (sx + 3.3 < lay.staffR - 0.6) { lay.micX = sx; lay.barX = Math.max(lay.barX ?? lay.finalX, sx + 3.3); }
+  }
   scoreEl.innerHTML =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(lay.W)} ${f(lay.H)}" width="${f(lay.W * S)}" height="${f(lay.H * S)}" aria-hidden="true">` +
-    drawScore(lay, false) + drawGhost(g) + drawCaret() + '</svg>';
+    drawScore(lay, false) + drawGhost(g) + drawCaret() + '<g id="micG" class="mic"></g></svg>';
+  mic.drawn = ''; if (mic.on) drawMic();
   syncTools();
   updateStatus();
 }
@@ -1583,6 +1595,7 @@ function testTone(){
   const now = ctx.currentTime;
   if (audio.aud) silence(audio.aud, now);
   audio.aud = Synth.voice(ctx, audio.bus, freqOf({s: 25, a: ''}), now + 0.01, now + 0.9);
+  audio.audInfo = {f: freqOf({s: 25, a: ''}), t1: now + 0.9};
 }
 function audition(n){
   if (!ui.audition || !n || n.r || audio.timeline) return;
@@ -1591,6 +1604,7 @@ function audition(n){
   const now = ctx.currentTime;
   if (audio.aud) silence(audio.aud, now);
   audio.aud = Synth.voice(ctx, audio.bus, freqOf(n), now + 0.01, now + 0.55);
+  audio.audInfo = {f: freqOf(n), t1: now + 0.55};
 }
 /* A woodblock-like tick for the metronome */
 function metroClick(ctx, dest, t){
@@ -1797,6 +1811,196 @@ function setHand(deg){
   if (a === handAngle) return;
   handAngle = a;
   handEl.setAttribute('transform', `rotate(${-a} 0 118)`);
+}
+/* ------------------------------------------------------------------ */
+/* Sing along: the pitch the microphone hears, as a faint dot on the   */
+/* staff. The organ's own notes are notched out of the microphone      */
+/* signal (every harmonic of the note sounding now and of the one      */
+/* before, still ringing in the room), on top of the browser's own     */
+/* echo cancellation.                                                  */
+/* ------------------------------------------------------------------ */
+const mic = {on: false, busy: false, stream: null, nodes: [], notch: [], an: null, raw: null, dec: null, yd: null,
+             raf: 0, est: [], shown: null, snap: null, seen: 0, drawn: '', pre: null, preRaw: null, bleed: 1, last: null};
+const NOTCH_N = 8, MIC_FMIN = 70, MIC_FMAX = 1100;
+/* the strongest harmonics of an organ note, as frequencies to notch */
+function organPartials(freq){
+  const amps = organAmps(), max = Math.max(...amps, 1e-9);
+  return amps.map((a, i) => ({f: freq * (i + 1), a: a / max}))
+    .filter(p => p.a > 0.02 && p.f < 6000).sort((p, q) => q.a - p.a).slice(0, NOTCH_N).map(p => p.f);
+}
+function setBank(b, freqs, now){
+  for (let k = 0; k < NOTCH_N; k++) {
+    const n = mic.notch[b * NOTCH_N + k], fq = freqs[k] || 20000;
+    if (Math.abs(n.frequency.value - fq) > 0.01) n.frequency.setValueAtTime(fq, now);
+  }
+}
+/* which organ notes the microphone may be hearing right now */
+function micBanks(now){
+  let cur = null, prev = null;
+  const tl = audio.timeline;
+  if (tl) {
+    for (const x of tl.tl) {
+      const n = doc.notes[x.i];
+      if (!n || n.r) continue;
+      if (now >= x.t0 - 0.02 && now < x.t1 + 0.05) cur = freqOf(n);
+      else if (x.t1 <= now && now - x.t1 < 2.5) prev = freqOf(n);
+    }
+  }
+  const a = audio.audInfo;
+  if (a && now < a.t1 + 2.5) { if (!cur && now < a.t1 + 0.05) cur = a.f; else if (!prev) prev = a.f; }
+  if (cur) mic.last = {f: cur, t: now};
+  else if (!prev && mic.last && now - mic.last.t < 2.5) prev = mic.last.f;
+  return [cur, prev];
+}
+async function micStart(){
+  if (mic.on || mic.busy) return;
+  const ctx = ensureAudio();
+  if (!ctx || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('This browser cannot use the microphone here.'); return; }
+  mic.busy = true;
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: false, autoGainControl: false}});
+  } catch (e) {
+    mic.busy = false;
+    toast(e && e.name === 'NotAllowedError' ? 'The microphone is blocked. Allow it for this site to sing along.' : 'No microphone could be opened.');
+    return;
+  }
+  mic.busy = false;
+  mic.stream = stream;
+  const src = ctx.createMediaStreamSource(stream);
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 55; hp.Q.value = 0.7;
+  src.connect(hp);
+  mic.pre = ctx.createAnalyser(); mic.pre.fftSize = 2048; mic.pre.smoothingTimeConstant = 0;
+  hp.connect(mic.pre);
+  let node = hp;
+  mic.notch = [];
+  for (let k = 0; k < 2 * NOTCH_N; k++) {
+    const n = ctx.createBiquadFilter(); n.type = 'notch'; n.frequency.value = 20000; n.Q.value = 30;
+    node.connect(n); node = n; mic.notch.push(n);
+  }
+  mic.an = ctx.createAnalyser(); mic.an.fftSize = 2048; mic.an.smoothingTimeConstant = 0;
+  node.connect(mic.an);
+  const mute = ctx.createGain(); mute.gain.value = 0;      /* keeps the analyser running in every browser; nothing is heard */
+  mic.an.connect(mute); mute.connect(ctx.destination);
+  mic.pre.connect(mute);
+  mic.nodes = [src, hp, mic.pre, ...mic.notch, mic.an, mute];
+  mic.preRaw = new Float32Array(mic.pre.fftSize);
+  mic.raw = new Float32Array(mic.an.fftSize); mic.dec = new Float32Array(mic.an.fftSize >> 1);
+  mic.yd = new Float32Array(mic.dec.length);
+  mic.on = true; mic.est = []; mic.shown = null; mic.snap = null; mic.seen = 0; mic.bleed = 1; mic.last = null;
+  setPressed($('#mic'), true);
+  toast('Sing: your pitch shows as a red dot on the staff.');
+  render();
+  mic.raf = requestAnimationFrame(micTick);
+}
+function micStop(){
+  if (!mic.on) return;
+  mic.on = false;
+  cancelAnimationFrame(mic.raf);
+  mic.nodes.forEach(n => { try { n.disconnect(); } catch (e) {} });
+  if (mic.stream) mic.stream.getTracks().forEach(t => t.stop());
+  mic.stream = null; mic.nodes = []; mic.notch = [];
+  setPressed($('#mic'), false);
+  mic.drawn = '';
+  render();
+}
+/* YIN (de Cheveigné and Kawahara 2002) on a buffer at sample rate sr: the fundamental, or null */
+function yin(x, sr){
+  const N = x.length, maxT = Math.min(Math.floor(sr / MIC_FMIN), N >> 1), minT = Math.max(2, Math.floor(sr / MIC_FMAX)), W = N - maxT, d = mic.yd;
+  for (let t = 1; t <= maxT; t++) {
+    let s = 0;
+    for (let i = 0; i < W; i++) { const v = x[i] - x[i + t]; s += v * v; }
+    d[t] = s;
+  }
+  d[0] = 1;
+  let run = 0;
+  for (let t = 1; t <= maxT; t++) { run += d[t]; d[t] = run > 0 ? d[t] * t / run : 1; }
+  let tau = -1;
+  for (let t = minT; t < maxT; t++) {
+    if (d[t] < 0.15) { while (t + 1 < maxT && d[t + 1] < d[t]) t++; tau = t; break; }
+  }
+  if (tau < 0) return null;
+  const a = d[tau - 1], b = d[tau], c = d[tau + 1], den = a + c - 2 * b;
+  const sh = den > 0 ? Math.max(-0.5, Math.min(0.5, (a - c) / (2 * den))) : 0;
+  return sr / (tau + sh);
+}
+const rmsOf = x => { let e = 0; for (let i = 0; i < x.length; i++) e += x[i] * x[i]; return Math.sqrt(e / x.length); };
+function micPitch(raw, sr){
+  for (let i = 0; i < mic.dec.length; i++) mic.dec[i] = 0.5 * (raw[2 * i] + raw[2 * i + 1]);
+  return yin(mic.dec, sr / 2);
+}
+const MIC_GATE = 0.005;
+function micTick(){
+  if (!mic.on) return;
+  const ctx = audio.ctx, now = ctx.currentTime;
+  const [cur, prev] = micBanks(now);
+  mic.pre.getFloatTimeDomainData(mic.preRaw);
+  const preRms = rmsOf(mic.preRaw);
+  /* Does the microphone hear the organ (speakers) or not (headphones)? While an organ note sounds:
+     silence in the microphone means headphones; hearing just the organ's pitch means speakers. */
+  const tl = audio.timeline, x = tl && tl.tl.find(e => now >= e.t0 && now < e.t1);
+  if (cur && x && now > x.t0 + 0.25) {
+    if (preRms < MIC_GATE * 0.8) mic.bleed = Math.max(0, mic.bleed - 0.05);
+    else {
+      const r = micPitch(mic.preRaw, ctx.sampleRate);
+      if (r && Math.abs(1200 * Math.log2(r / cur)) < 35) mic.bleed = Math.min(1, mic.bleed + 0.0025);
+    }
+  }
+  const filt = mic.bleed > 0.5;
+  setBank(0, filt && cur ? organPartials(cur) : [], now);
+  setBank(1, filt && prev && prev !== cur ? organPartials(prev) : [], now);
+  mic.an.getFloatTimeDomainData(mic.raw);
+  const rms = rmsOf(mic.raw);
+  let hz = null;
+  /* with the organ filtered out, what is left must be a real part of the signal, not the organ's leftovers */
+  if (rms > MIC_GATE && (!filt || !(cur || prev) || rms > 0.1 * preRms)) hz = micPitch(mic.raw, ctx.sampleRate);
+  const t = performance.now();
+  if (hz) {
+    const m = 69 + 12 * Math.log2(hz / ui.ref);
+    mic.est.push(m); if (mic.est.length > 3) mic.est.shift();
+    const med = [...mic.est].sort((p, q) => p - q)[mic.est.length >> 1];
+    /* show only what two readings in a row agree on; follow small changes smoothly, jump on big ones */
+    if (mic.est.length >= 2 && Math.abs(mic.est[mic.est.length - 1] - mic.est[mic.est.length - 2]) < 0.8) {
+      mic.shown = mic.shown === null || Math.abs(med - mic.shown) > 1.2 ? med : mic.shown + 0.35 * (med - mic.shown);
+      if (mic.snap === null || Math.abs(mic.shown - mic.snap) > 0.62) mic.snap = Math.round(mic.shown);
+      mic.seen = t;
+    }
+  } else if (mic.est.length) mic.est.shift();
+  if (mic.shown !== null && t - mic.seen > 260) { mic.shown = null; mic.snap = null; }
+  drawMic();
+  mic.raf = requestAnimationFrame(micTick);
+}
+/* the sung note, spelled the way early music spells it: C♯ E♭ F♯ G♯ B♭ */
+const SPELL = [[0, 0], [0, 1], [1, 0], [2, -1], [2, 0], [3, 0], [3, 1], [4, 0], [4, 1], [5, 0], [6, -1], [6, 0]];
+function micMarkup(){
+  if (!mic.on || mic.shown === null || !lay || !lay.lines.length) return '';
+  let line = null, x = 0;
+  if (audio.timeline && ui.playing >= 0) {
+    line = lay.lines.find(l => l.items.some(it => it.i === ui.playing));
+    if (line) x = line.items.find(it => it.i === ui.playing).x1 + 0.45;
+  }
+  if (!line) {
+    line = lay.lines[lay.lines.length - 1];
+    const bx = lay.barX ?? lay.finalX;
+    x = lay.micX ?? (bx !== null ? bx + 1.9 : lay.noteStart + 0.5);
+  }
+  const m = mic.snap, pc = ((m % 12) + 12) % 12, [L, alt] = SPELL[pc];
+  const s = 7 * (Math.floor(m / 12) - 1) + L, clef = CLEFS[doc.clef], pos = s - clef.bottom, top = line.staffTop;
+  const sig = (doc.bflat && L === 6) ? -1 : 0;
+  const acc = alt === sig ? '' : alt < 0 ? 'fl' : alt > 0 ? 'sh' : 'na';
+  const r = 0.5, aw = acc ? gw(acc) + 0.25 : 0;
+  x = Math.min(x, lay.staffR - aw - 2 * r - 0.3);
+  const cx = x + aw + r;
+  const cents = Math.max(-50, Math.min(50, (mic.shown - m) * 100));
+  const y = top + 4 - pos * 0.5, yd = y - cents / 100 * 0.5;
+  return ledgers(pos, cx - r, 2 * r, top) + (acc ? use(acc, x, y) : '') +
+    `<ellipse class="micdot" cx="${f(cx)}" cy="${f(yd)}" rx="${r + 0.04}" ry="${f(r * 0.86)}"/>`;
+}
+function drawMic(){
+  const g = document.getElementById('micG');
+  if (!g) return;
+  const s = micMarkup();
+  if (s !== mic.drawn) { g.innerHTML = s; mic.drawn = s; }
 }
 const CHEV = '<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg>';
 function buildTactus(){
@@ -2264,6 +2468,7 @@ function wire(){
   $('#toggleSet').addEventListener('click', () => { ui.setOpen = !ui.setOpen; applySettingsOpen(); save(); });
   applySettingsOpen();
   $('#loop').addEventListener('click', () => { ui.loop = !ui.loop; setPressed($('#loop'), ui.loop); save(); render(); });
+  $('#mic').addEventListener('click', () => { mic.on ? micStop() : micStart(); });
   wireTempo();
   $('#ref').addEventListener('input', e => { const v = Number(e.target.value); if (e.target.value !== '' && v >= 100 && v <= 1000) { ui.ref = v; stopPlayback(); save(); } });
   $('#ref').addEventListener('change', e => { e.target.value = String(ui.ref); });
