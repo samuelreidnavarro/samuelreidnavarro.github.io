@@ -173,6 +173,9 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 #score .mic .ledger{stroke:var(--pen)}
 #mic svg{width:17px;height:17px;margin:0 4px -3px -2px;fill:currentColor}
 .split{display:inline-flex;align-items:center}
+.latrow{display:flex;align-items:center;gap:6px;padding:6px 6px 2px 10px;margin-top:4px;border-top:1px solid var(--line);color:var(--muted);font-size:16px}
+.latrow input{width:4.2em;height:30px;min-height:30px;text-align:center}
+.latrow #micClap{margin-left:auto}
 #singOpts{padding:0 7px;min-width:0}
 #singOpts .chev{margin-left:0}
 #score .ghost use{fill:var(--sel)}
@@ -513,7 +516,11 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
         <button class="tb" id="micFlex" data-keep aria-pressed="true" title="On: the dot follows your exact pitch, a little above or below its note when you are sharp or flat. Off: it sits on the nearest note, like a written second voice">Flexible pitch</button>
         <button class="tb" id="micNotate" data-keep aria-pressed="true" title="While the cantus firmus plays, what you sing is written out in red on a staff of its own, in semiminimae">Notate</button>
         <button class="tb" id="micPhones" data-keep aria-pressed="false" title="On: no filtering, so unisons and octaves with the organ show too. Off: the organ is filtered out of what the microphone hears, for singing along through speakers">Headphones</button>
-      </div></div>
+      </div>
+        <div class="latrow" title="The time from the organ sounding to your voice reaching the microphone, so what you sing is written in the right place. Empty: worked out by itself">
+          <label for="micLat">Latency</label><input type="number" id="micLat" min="0" max="600" step="1" inputmode="numeric" placeholder="auto"><span>ms</span>
+          <button class="tb" id="micClap" data-keep title="Eight clicks: clap with each one, and the latency is measured">Clap test</button>
+        </div></div>
     </div>
     <div class="pop" id="popMetro">
       <button class="tb popbtn" id="metro" aria-haspopup="true" title="How the beat is shown or heard">Metronome<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
@@ -593,7 +600,7 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
       <tr><td><kbd>Ctrl/⌘</kbd> <kbd>Z</kbd></td><td>Undo; add <kbd>Shift</kbd> to redo</td></tr>
     </table>
     <p>In tempus perfectum (click the C on the staff to turn it into O) the notes are read as the theorists teach: a brevis lasts three semibreves, a single semibreve next to a brevis makes it imperfect, and of two semibreves between breves the second is doubled. A dot after a brevis keeps it perfect; a dot between two semibreves separates the perfections; a dot after a semibreve followed by a minima adds half its value. In tempus imperfectum every dot adds half the value.</p>
-    <p>Sing turns on the microphone. The note you sing shows as a faint red dot on the staff: next to the note being played, or before the final bar when nothing plays. Hover over Sing, or tap its arrow, for three switches. Flexible pitch: on, the dot follows your exact pitch and sits a little above or below its line or space when you are sharp or flat; off, it keeps to the nearest note, like a written second voice. Headphones: turn it on when you wear them, so unisons and octaves with the organ show too. With it off, the organ is filtered out of what the microphone hears, and a note sung in unison with the organ or an octave above it does not show. Notate: while the cantus firmus plays, what you sing is written out in red on a staff of its own, above the cantus firmus or below it when you sing below, each semiminima getting the note you sang for most of it. It stays until you play again or change the cantus firmus. This one is an experiment: with headphones on it gets the most right.</p>
+    <p>Sing turns on the microphone. The note you sing shows as a faint red dot on the staff: next to the note being played, or before the final bar when nothing plays. Hover over Sing, or tap its arrow, for three switches. Flexible pitch: on, the dot follows your exact pitch and sits a little above or below its line or space when you are sharp or flat; off, it keeps to the nearest note, like a written second voice. Headphones: turn it on when you wear them, so unisons and octaves with the organ show too. With it off, the organ is filtered out of what the microphone hears, and a note sung in unison with the organ or an octave above it does not show. Notate: while the cantus firmus plays, what you sing is written out in red on a staff of its own, above the cantus firmus or below it when you sing below, each semiminima getting the note you sang for most of it. It stays until you play again or change the cantus firmus. This one is an experiment: with headphones on it gets the most right. Latency, in the same menu, is the delay between the organ and your voice reaching the microphone: left empty, it is worked out from where your notes fall; Clap test measures it (clap with each of eight clicks); or type it in milliseconds.</p>
     <p>Your work is kept in this browser automatically. Copy link gives you an address that opens this exact cantus firmus anywhere, for instance to send to a student.</p>
   </details>
 
@@ -723,7 +730,7 @@ let doc = defaultDoc();
 const ui = {
   sel: null, caret: 0, inDur: 'B', inRest: false, hover: null, playing: -1,
   size: window.innerWidth < 640 ? 11 : 16, spacing: 1, vspacing: 1, edit: !(window.matchMedia && matchMedia('(hover: none)').matches),
-  beatHand: true, beatPend: false, beatTick: false, tempus: 'C', unit: 'S', tempo: 60, ref: 440, vol: 70, reg: 'custom', bright: 50, room: 40, atk: 120, rel: 150, chiff: 7, ens: 0.3, wind: 10, scoop: 5, draw: [100, 71, 55, 48, 37, 22, 12, 8, 0, 0, 0, 0], audition: true, loop: false, metro: false, setOpen: false, micFlex: true, micPhones: false, micNotate: true, dark: false, micLag: 0
+  beatHand: true, beatPend: false, beatTick: false, tempus: 'C', unit: 'S', tempo: 60, ref: 440, vol: 70, reg: 'custom', bright: 50, room: 40, atk: 120, rel: 150, chiff: 7, ens: 0.3, wind: 10, scoop: 5, draw: [100, 71, 55, 48, 37, 22, 12, 8, 0, 0, 0, 0], audition: true, loop: false, metro: false, setOpen: false, micFlex: true, micPhones: false, micNotate: true, dark: false, micLag: 0, micCal: null
 };
 let lay = null;          /* last computed layout, used for hit testing */
 let drag = null;
@@ -769,7 +776,7 @@ function save(){
   try {
     localStorage.setItem(STORE, JSON.stringify({doc, prefs: {
       inDur: ui.inDur, size: ui.size, spacing: ui.spacing, vspacing: ui.vspacing, unit: ui.unit, tempo: ui.tempo, ref: ui.ref,
-      vol: ui.vol, reg: ui.reg, bright: ui.bright, room: ui.room, atk: ui.atk, rel: ui.rel, chiff: ui.chiff, ens: ui.ens, wind: ui.wind, scoop: ui.scoop, draw: ui.draw, audition: ui.audition, loop: ui.loop, micFlex: ui.micFlex, micPhones: ui.micPhones, micNotate: ui.micNotate, dark: ui.dark, micLag: ui.micLag, beatHand: ui.beatHand, beatPend: ui.beatPend, beatTick: ui.beatTick, tempus: ui.tempus
+      vol: ui.vol, reg: ui.reg, bright: ui.bright, room: ui.room, atk: ui.atk, rel: ui.rel, chiff: ui.chiff, ens: ui.ens, wind: ui.wind, scoop: ui.scoop, draw: ui.draw, audition: ui.audition, loop: ui.loop, micFlex: ui.micFlex, micPhones: ui.micPhones, micNotate: ui.micNotate, dark: ui.dark, micLag: ui.micLag, micCal: ui.micCal, beatHand: ui.beatHand, beatPend: ui.beatPend, beatTick: ui.beatTick, tempus: ui.tempus
     }}));
   } catch (e) { /* storage unavailable: work continues, just not kept */ }
 }
@@ -822,6 +829,7 @@ function loadAll(){
     if (typeof p.micNotate === 'boolean') ui.micNotate = p.micNotate;
     ui.dark = p.dark === true;
     if (p.micLag > -0.15 && p.micLag < 0.5) ui.micLag = p.micLag;
+    if (p.micCal >= 0 && p.micCal <= 0.6) ui.micCal = p.micCal;
     if (p.vol >= 0 && p.vol <= 100) ui.vol = p.vol;
     if (REGISTERS[p.reg]) ui.reg = p.reg;
     if (p.bright >= 0 && p.bright <= 100) ui.bright = p.bright;
@@ -1323,6 +1331,7 @@ function syncSettings(){
   syncBeat();
   $('#ref').value = String(ui.ref);
   $('#vol').value = ui.vol;
+  $('#micLat').value = ui.micCal === null ? '' : Math.round(ui.micCal * 1000);
   setPressed($('#micFlex'), ui.micFlex); setPressed($('#micPhones'), ui.micPhones); setPressed($('#micNotate'), ui.micNotate);
   applyDark();
   $('#reg').value = ui.reg; $('#bright').value = ui.bright; $('#room').value = ui.room; syncOut();
@@ -1826,6 +1835,46 @@ function audition(n){
   audio.audInfo = {f: freqOf(n), t1: now + 0.55};
 }
 /* A woodblock-like tick for the metronome */
+/* Clap test: eight clicks; the loudest sound near each one is the clap (louder than the click coming back
+   through the speakers). The median distance, from the fourth click on, is the latency. */
+async function clapTest(){
+  if (!mic.on) await micStart();
+  if (!mic.on || mic.clap) return;
+  stopPlayback();
+  const ctx = audio.ctx, sr = ctx.sampleRate, n = 8, gap = 0.6, t0 = ctx.currentTime + 0.6;
+  const clicks = [];
+  for (let k = 0; k < n; k++) { metroClick(ctx, audio.master, t0 + k * gap); clicks.push(t0 + k * gap); }
+  const btn = $('#micClap'); btn.disabled = true; mic.clap = true;
+  toast('Clap with each click.');
+  const buf = new Float32Array(mic.pre.fftSize), peaks = [];
+  let last = ctx.currentTime;
+  await new Promise(done => {
+    const step = () => {
+      const now = ctx.currentTime;
+      mic.pre.getFloatTimeDomainData(buf);
+      const fresh = Math.min(buf.length, Math.ceil((now - last) * sr) + 128);
+      let a = 0, at = 0;
+      for (let i = buf.length - fresh; i < buf.length; i++) { const v = Math.abs(buf[i]); if (v > a) { a = v; at = i; } }
+      peaks.push({t: now - (buf.length - at) / sr, a});
+      last = now;
+      if (now < t0 + n * gap + 0.3) requestAnimationFrame(step); else done();
+    };
+    requestAnimationFrame(step);
+  });
+  btn.disabled = false; mic.clap = false;
+  const floor = median(peaks.map(q => q.a)) || 1e-4, offs = [];
+  clicks.forEach((tc, k) => {
+    if (k < 3) return;
+    let best = null;
+    for (const q of peaks) if (q.t > tc - 0.2 && q.t < tc + 0.45 && (!best || q.a > best.a)) best = q;
+    if (best && best.a > 4 * floor) offs.push(best.t - tc);
+  });
+  if (offs.length < 3) { toast('No claps were heard. Try again, a little louder.'); return; }
+  ui.micCal = Math.max(0, Math.min(0.6, median(offs)));
+  $('#micLat').value = Math.round(ui.micCal * 1000);
+  save();
+  toast(`Latency: ${Math.round(ui.micCal * 1000)} ms.`);
+}
 function metroClick(ctx, dest, t){
   const o = ctx.createOscillator(), g = ctx.createGain();
   o.type = 'triangle';
@@ -2310,7 +2359,7 @@ function micMarkup(){
       top = line.staffTop; x = it.x1 + 0.45;
       /* while the singing is written out, the dot is the pen: on the red staff, where the music has got to */
       if (lay.tk && line.takeTop !== undefined && it.tkSpan !== undefined) {
-        const u = (audio.ctx.currentTime - takeLag(audio.ctx) - ui.micLag - audio.timeline.origin) / (secondsPerMinim() / 2);
+        const u = (audio.ctx.currentTime - takeLag(audio.ctx) - (ui.micCal !== null ? 0 : ui.micLag) - audio.timeline.origin) / (secondsPerMinim() / 2);
         x = takeX(it, u) + 0.3; top = line.takeTop; clef = lay.tk.clef;
       }
     }
@@ -2357,6 +2406,8 @@ function takeStart(fromU){
 /* seconds from the organ starting a note (on the audio clock) to that moment reaching the analyser in the singer's
    voice: the way out to the speakers, the way back in through the microphone, and half the analysis window */
 function takeLag(ctx){
+  /* measured with the clap test, or typed in: that, from the organ's click to the sound reaching the analyser */
+  if (ui.micCal !== null) return ui.micCal + 1024 / ctx.sampleRate;
   let inLat = 0.02;
   try { const st = mic.stream && mic.stream.getAudioTracks()[0].getSettings(); if (st && st.latency >= 0 && st.latency < 0.3) inLat = st.latency; } catch (e) {}
   return (ctx.outputLatency || 0) + (ctx.baseLatency || 0) + inLat + 1024 / ctx.sampleRate;
@@ -2434,7 +2485,7 @@ function takeDelay(segs, c){
 }
 function takeQuantize(last){
   const c = secondsPerMinim() / 2, segs = takeSegments(take.frames, c);
-  const est = takeDelay(segs, c), d = est !== null ? est : ui.micLag / c;
+  const est = ui.micCal !== null ? null : takeDelay(segs, c), d = ui.micCal !== null ? 0 : est !== null ? est : ui.micLag / c;
   if (last && est !== null) { ui.micLag = Math.round((ui.micLag * 0.4 + est * c * 0.6) * 1000) / 1000; save(); }
   const k0 = Math.floor(take.from + 1e-6);
   /* each note from its nearest semiminima to the next note's (a gap of one semiminima or less is a breath, not a rest) */
@@ -3051,7 +3102,7 @@ function wire(){
     p.querySelector('.popbtn').addEventListener('click', e => { e.stopPropagation(); const was = p.classList.contains('open'); closePops(); if (!was) p.classList.add('open'); });
     p.querySelector('.popbody').addEventListener('click', e => { if (e.target.closest('button') && !e.target.closest('[data-keep]')) setTimeout(() => { closePops(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }, 0); });
   });
-  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#popLook .popbody, #advT, #advBtn')) return; closePops(); });
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#popLook .popbody, #popSing .popbody, #advT, #advBtn')) return; closePops(); });
   $('#toggleSet').addEventListener('click', () => { ui.setOpen = !ui.setOpen; applySettingsOpen(); save(); });
   applySettingsOpen();
   $('#loop').addEventListener('click', () => { ui.loop = !ui.loop; setPressed($('#loop'), ui.loop); save(); render(); });
@@ -3059,6 +3110,13 @@ function wire(){
   $('#micFlex').addEventListener('click', () => { ui.micFlex = !ui.micFlex; setPressed($('#micFlex'), ui.micFlex); mic.snap = null; mic.pend = null; save(); });
   $('#micPhones').addEventListener('click', () => { ui.micPhones = !ui.micPhones; setPressed($('#micPhones'), ui.micPhones); save(); });
   $('#micNotate').addEventListener('click', () => { ui.micNotate = !ui.micNotate; setPressed($('#micNotate'), ui.micNotate); if (!ui.micNotate) takeClear(); save(); render(); });
+  $('#micClap').addEventListener('click', clapTest);
+  $('#micLat').addEventListener('change', e => {
+    const v = e.target.value.trim();
+    ui.micCal = v === '' || !(Number(v) >= 0) ? null : Math.min(600, Number(v)) / 1000;
+    e.target.value = ui.micCal === null ? '' : Math.round(ui.micCal * 1000);
+    save();
+  });
   $('#darkBtn').addEventListener('click', () => { ui.dark = !ui.dark; applyDark(); save(); });
   wireFullscreen();
   wireTempo();
