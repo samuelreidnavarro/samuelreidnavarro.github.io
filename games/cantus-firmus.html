@@ -344,6 +344,7 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
   #libPod .libwrap{position:static}
   #libPod .library{position:absolute;left:0;right:0;width:auto;max-height:60vh;top:50px;margin-top:0}
   #editPod{order:-1}
+  #navPod{order:-1}
 }
 /* ================= Below the score: playback on the left; sound, appearance and full screen on the right ================= */
 .transport{gap:10px 12px}
@@ -448,6 +449,12 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
         <button class="ib" id="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5v-3.8c-4.6-.4-7.4.6-9.6 4.3.5-5.2 3.6-8.6 9.6-9.2Z"/></svg></button>
         <button class="ib" id="del" aria-label="Delete selected note" title="Delete the selected note (Delete)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 4h7l.8 1.5H20V7.5H4V5.5h3.7ZM6 9h12l-.9 11H6.9Z"/></svg></button>
       </div>
+      <div class="podg" id="navPod">
+        <button class="ib" id="selPrev" aria-label="Select the previous note" title="Select the previous note (Left arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12 17 6.2Z"/></svg></button>
+        <button class="ib" id="stepUp" aria-label="Move the selected note up a step" title="Move the selected note up a step (Up arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 15.4 12 8l7.4 7.4-1.6 1.6L12 11.2 6.2 17Z"/></svg></button>
+        <button class="ib" id="stepDown" aria-label="Move the selected note down a step" title="Move the selected note down a step (Down arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 8.6 12 16l7.4-7.4L17.8 7 12 12.8 6.2 7Z"/></svg></button>
+        <button class="ib" id="selNext" aria-label="Select the next note" title="Select the next note (Right arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button>
+      </div>
       <div class="podg">
       <div class="pop" id="popDur">
         <span class="sr" id="durLabel">Note value</span>
@@ -489,10 +496,6 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
       <button id="copyLink" title="Copy a link that opens this exact cantus firmus">Copy link</button>
       </div>
       </div>
-    </div>
-    <div hidden>
-      <button id="stepUp"></button><button id="stepDown"></button>
-
     </div>
   </section>
 
@@ -1216,6 +1219,7 @@ function syncTools(){
   $('#dotBtn').disabled = !t || t.r;
   $('#stepUp').disabled = $('#stepDown').disabled = !t || t.r;
   $('#del').disabled = !t;
+  $('#selPrev').disabled = $('#selNext').disabled = !doc.notes.length;
   $('#undo').disabled = !undoStack.length;
   $('#redo').disabled = !redoStack.length;
   const n = doc.notes;
@@ -3083,6 +3087,8 @@ function wire(){
   $('#restBtn').addEventListener('click', () => setRestMode(!(ui.sel !== null ? doc.notes[ui.sel].r : ui.inRest)));
   $('#stepUp').addEventListener('click', () => stepPitch(1));
   $('#stepDown').addEventListener('click', () => stepPitch(-1));
+  $('#selPrev').addEventListener('click', () => moveSel(-1));
+  $('#selNext').addEventListener('click', () => moveSel(1));
   $('#del').addEventListener('click', deleteTarget);
   $('#undo').addEventListener('click', undo);
   $('#editBtn').addEventListener('click', () => { ui.edit = !ui.edit; ui.hover = null; cancelTouch(); syncEdit(); render(); });
