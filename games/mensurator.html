@@ -273,7 +273,7 @@
         body.touch.portrait #fsBtn { top: calc(var(--cb) + 8px); right: 66px; bottom: auto; }
         /* On a phone the controls are four touch areas, each a quarter of the screen: ◀ ▶ on the left half, ● ▲ on the right */
         body.touch #pad { inset: 0; padding: 0; grid-template-columns: repeat(4, 1fr); align-items: stretch; }
-        body.touch #pad.show { display: grid; }
+        body.touch #pad.show { display: grid; pointer-events: auto; touch-action: none; }
         body.touch #pad .pad-cluster { display: contents; }
         body.touch #pad .pad-btn {
             pointer-events: none; width: auto; height: auto; margin: 0; border-radius: 0;
@@ -315,10 +315,11 @@
         body.touch.portrait #gameWrapper { flex-direction: column; justify-content: flex-start; height: 100%; }
         body.touch.portrait #canvasContainer { flex-shrink: 0; margin-top: max(10px, env(safe-area-inset-top)); }
         body.touch.portrait:not(.in-play) #fsBtn { right: 12px; }
-        body.touch.landscape:not(.in-play) #fsBtn { top: max(10px, env(safe-area-inset-top)); }
+        body.touch.landscape:not(.in-play) #fsBtn { right: max(10px, env(safe-area-inset-right)); }
         /* Phone on its side: buttons in the top-right corner, controls over the bottom corners */
-        body.touch.landscape #tPause { top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); }
-        body.touch.landscape #fsBtn { top: calc(max(10px, env(safe-area-inset-top)) + 52px); right: max(10px, env(safe-area-inset-right)); bottom: auto; }
+        /* (left of the clock, which now sits at the screen's right edge) */
+        body.touch.landscape #tPause { top: 8px; right: calc(max(10px, env(safe-area-inset-right)) + 92px); width: 40px; height: 40px; }
+        body.touch.landscape #fsBtn { top: 8px; right: calc(max(10px, env(safe-area-inset-right)) + 140px); bottom: auto; width: 40px; height: 40px; }
         #mobileNameInput:focus { border-color: var(--mark); }
         #mobileNameInputOverlay .row { display: flex; gap: 10px; }
     </style>
@@ -493,7 +494,9 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     // Logical game size is 800x400; the backing store is scaled for sharp rendering on high-density screens
-    const W = 800, H = 400;
+    // W is the width of the view: 800 on the title pages, wider in play on a phone held sideways so the game fills the screen.
+    // LW is the width the Gradus page is laid out for, whatever the view
+    let W = 800; const LW = 800, H = 400;
     let DPR = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = W * DPR; canvas.height = H * DPR;
     // Inside the site page the game has no box of its own: it fills the frame, on the page's own background
@@ -508,6 +511,27 @@
         DPR = s; canvas.width = W * DPR; canvas.height = H * DPR;
         menuArt = null; fx.setTheme(T);
     }
+    // The view fills a phone held sideways: during play the game is as wide as the screen allows (up to 2.5 : 1)
+    function viewWidthFor() {
+        if (['MENU', 'LEADERBOARD', 'INSTALL_PROMPT'].includes(gameState)) return 800;
+        if (!isTouchDevice || !screenLandscape()) return 800;
+        return Math.max(800, Math.min(1000, Math.round(H * window.innerWidth / window.innerHeight / 4) * 4));
+    }
+    function setView(w) {
+        if (w === W) return;
+        W = w; canvas.width = W * DPR; canvas.height = H * DPR;
+        menuArt = null; fx.setTheme(T);
+        sizeContainer();
+    }
+    // Sized from the window's real height (iPhone Safari's dvh inside a frame can be smaller than the frame)
+    function sizeContainer() {
+        const h = window.innerHeight;
+        document.documentElement.style.height = h + 'px'; document.body.style.height = h + 'px';
+        canvasContainer.style.aspectRatio = W + ' / ' + H;
+        canvasContainer.style.maxWidth = Math.floor((h - (framed ? 0 : 24)) * W / H) + 'px';
+        mobileLayoutKey = '';
+    }
+    window.addEventListener('resize', sizeContainer);
     let fitTimer = 0;
     window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitResolution, 200); });
     
@@ -1817,7 +1841,7 @@ let devInvincible = false;
         if (k > 0 && k % 6 === 0) { L.modeIdx = (L.modeIdx + 1) % modesData.length; L.labelNext = true; L.diff = Math.min(1, L.diff + 0.12); }
         L.diff = Math.min(1, L.diff + 0.015);
         const M = modeInfo(L.modeIdx), clef = M.clef;
-        const sys = { x0: 0, x1: W, clef, modeIdx: L.modeIdx, first: k === 0, label: k === 0 || L.labelNext, custos: null, final: false, oy, floor: k === 0 };
+        const sys = { x0: 0, x1: LW, clef, modeIdx: L.modeIdx, first: k === 0, label: k === 0 || L.labelNext, custos: null, final: false, oy, floor: k === 0 };
         L.labelNext = false; L.systems.push(sys); L.sys = sys; L.oy = oy; L.prevGroup = null;
         let x = k === 0 ? 150 : 76;
         if (k > 0 && R() < 0.25) { L.powerups.push({ kind: R() < 0.5 ? 'tempus' : 'dupla', x: x - 10, y: yP(4) + oy - 12.5, w: 25, h: 25, active: true }); x += 46; }
@@ -1845,7 +1869,7 @@ let devInvincible = false;
             i += size;
         }
         const widthOf = g => g.notes.reduce((w, nt, i) => w + (nt.obl || (i > 0 && g.notes[i - 1].obl) ? OBL : g.val === 'MX' ? 2 * OBL : HW), 0);
-        const room = (W - 50) - x - groups.reduce((w, g) => w + widthOf(g), 0);
+        const room = (LW - 50) - x - groups.reduce((w, g) => w + widthOf(g), 0);
         const gapBase = Math.max(16, Math.min(70 + 40 * L.diff, room / groups.length));
         groups.forEach((g, i) => {
             g.colored = i < groups.length - 1 && R() < 0.08 + 0.3 * L.diff;
@@ -2061,9 +2085,9 @@ let devInvincible = false;
             // the page climbs on its own after a moment; the ink rises behind
             L.gradusT += speedMult;
             if (L.gradusT > 120) endlessAutoScroll -= (1.1 + currentLevel * 0.25) * timeMod;
-            cameraY = Math.min(0, endlessAutoScroll, player.y - H * 0.6); cameraX = 0;
+            cameraY = Math.min(0, endlessAutoScroll, player.y - H * 0.6); cameraX = (LW - W) / 2;
             endlessDistance = Math.max(0, Math.floor(-player.y / 150));
-            if (player.x < -20) player.x = W; if (player.x > W) player.x = -20;
+            if (player.x < -20) player.x = LW; if (player.x > LW) player.x = -20;
         } else if (gameMode === 'ENDLESS') {
             const smod = 2.5 + currentLevel * 0.7 + endlessDistance / 500;
             endlessAutoScroll += smod * timeMod; cameraX = endlessAutoScroll; endlessDistance = Math.floor(cameraX / 150);
@@ -3062,6 +3086,7 @@ let devInvincible = false;
         return y + 28;
     }
     function draw() {
+        setView(viewWidthFor());
         ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
         ctx.clearRect(0, 0, W, H);
         ctx.textBaseline = 'alphabetic';
@@ -3325,6 +3350,7 @@ let devInvincible = false;
     try { savedTheme = localStorage.getItem('mensuratorTheme') || 'rubrica'; } catch (e) {}
     applyTheme(savedTheme);
     if (location.hash === '#install') { gameState = 'INSTALL_PROMPT'; history.replaceState(null, '', location.pathname); }
+    sizeContainer();
     fitResolution();
     syncFsLabels(); updateMobileControlLayout();
     requestAnimationFrame(loop);
