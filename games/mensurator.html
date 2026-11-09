@@ -146,7 +146,6 @@
         .pad-btn[data-k="jump"] { width: calc(var(--b) * 1.2); height: calc(var(--b) * 1.2); }
         .pad-btn[data-k="shoot"] { margin-bottom: calc(var(--b) * 0.75); }
         #pad:not(.kart) .pad-btn[data-k="down"] { display: none; }
-        @media (orientation: portrait) { #pad { --b: min(78px, calc((100vw - 80px) / 4.3)); padding-bottom: max(28px, env(safe-area-inset-bottom)); } }
         @media (max-height: 500px) and (orientation: landscape) {
             .menu-box { padding: 16px 20px; }
             .menu-box h2 { margin-bottom: 10px; }
@@ -253,6 +252,34 @@
             padding: 10px 14px; width: 220px; margin-bottom: 18px;
             color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 12px; outline: none;
         }
+        /* Full screen button: bottom-right corner of the game on a computer; beside the pause button on a phone */
+        #fsBtn {
+            position: absolute; right: 10px; bottom: 10px; z-index: 35;
+            width: 36px; height: 36px; padding: 0; border-radius: 50%;
+            display: none; justify-content: center; align-items: center;
+            background: rgba(255, 253, 248, 0.85); border: 1px solid var(--line); color: var(--ink);
+            box-shadow: 0 4px 14px rgba(59, 49, 37, 0.08); cursor: pointer; opacity: 0.6;
+            transition: opacity 0.15s;
+        }
+        #fsBtn:hover, #fsBtn:focus-visible { opacity: 1; border-color: var(--mark); }
+        #fsBtn svg { width: 18px; height: 18px; display: block; }
+        #fsBtn .exit { display: none; }
+        #fsBtn.is-fs .enter { display: none; }
+        #fsBtn.is-fs .exit { display: block; }
+        body.show-fs #fsBtn { display: flex; }
+        body.touch #fsBtn { position: fixed; width: 44px; height: 44px; opacity: 0.9; }
+        /* Phone held upright: the game on top, pause and full screen just under it, the controls filling the rest */
+        body.touch.portrait #tPause { top: calc(var(--cb) + 8px); right: 12px; }
+        body.touch.portrait #fsBtn { top: calc(var(--cb) + 8px); right: 66px; bottom: auto; }
+        body.touch.portrait #pad { top: calc(var(--cb) + 56px); padding-bottom: max(40px, calc(env(safe-area-inset-bottom) + 24px)); }
+        body.touch.portrait { justify-content: flex-start; }
+        body.touch.portrait #gameWrapper { flex-direction: column; justify-content: flex-start; height: 100%; }
+        body.touch.portrait #canvasContainer { flex-shrink: 0; margin-top: max(10px, env(safe-area-inset-top)); }
+        body.touch.portrait:not(.in-play) #fsBtn { right: 12px; }
+        body.touch.landscape:not(.in-play) #fsBtn { top: max(10px, env(safe-area-inset-top)); }
+        /* Phone on its side: buttons in the top-right corner, controls over the bottom corners */
+        body.touch.landscape #tPause { top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); }
+        body.touch.landscape #fsBtn { top: calc(max(10px, env(safe-area-inset-top)) + 52px); right: max(10px, env(safe-area-inset-right)); bottom: auto; }
         #mobileNameInput:focus { border-color: var(--mark); }
         #mobileNameInputOverlay .row { display: flex; gap: 10px; }
     </style>
@@ -263,6 +290,10 @@
     <div id="canvasContainer">
         <canvas id="gameCanvas" width="800" height="400"></canvas>
         <div id="tPause">II</div>
+        <button type="button" id="fsBtn" aria-label="Full screen" title="Full screen (F)">
+            <svg class="enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
+            <svg class="exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg>
+        </button>
     </div>
 </div>
 
@@ -355,31 +386,60 @@
 </div>
 <script>
     // --- FULL SCREEN ---
-    // iPhone Safari has no Fullscreen API: inside the site page, the button opens the game on its own page instead
+    // iPhone Safari has no Fullscreen API: inside the site page, the site page itself lets the game cover the whole window instead
     const fsApi = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
     const inFrame = (() => { try { return window.self !== window.top && !!window.top.location.href; } catch (e) { return false; } })();
     const standaloneApp = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true;
     const fsAvailable = !standaloneApp && (fsApi || inFrame);
-    function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
-    function fsLabel() { return isFullscreen() ? 'Exit full screen' : 'Full screen'; }
-    function toggleFullscreen() {
-        if (!fsApi) { if (inFrame) window.top.location.href = location.href.split(/[?#]/)[0] + '#install'; return; }
+    // Set by the site page: the frame covers the whole window (phone on its side, or the full screen button on iPhone)
+    let pageCover = false, pageCoverByUser = false;
+    let fsDeclined = false; // the player left full screen on purpose: don't put it back on its own
+    // Which way the phone is held: inside the site page, ask the page (the frame itself may be wider than tall either way)
+    function screenLandscape() {
+        try { if (inFrame && !realFullscreen()) return window.top.innerWidth > window.top.innerHeight; } catch (e) {}
+        return window.innerWidth > window.innerHeight;
+    }
+    function realFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+    function isFullscreen() { return realFullscreen() || pageCover; }
+    function fsShownAsOn() { return realFullscreen() || pageCoverByUser; }
+    function fsLabel() { return fsShownAsOn() ? 'Exit full screen' : 'Full screen'; }
+    function enterFullscreen(lockLandscape) {
         const elem = document.documentElement;
-        if (!isFullscreen()) {
-            const req = elem.requestFullscreen ? elem.requestFullscreen({ navigationUI: 'hide' }) : elem.webkitRequestFullscreen();
-            // Phones play best sideways; where the browser allows it, hold landscape while in full screen
-            Promise.resolve(req).then(() => { if (isTouchDevice && screen.orientation && screen.orientation.lock) return screen.orientation.lock('landscape'); }).catch(() => {});
-        } else {
+        const req = elem.requestFullscreen ? elem.requestFullscreen({ navigationUI: 'hide' }) : elem.webkitRequestFullscreen();
+        // Phones play best sideways; where the browser allows it, hold landscape while in full screen
+        Promise.resolve(req).then(() => { if (lockLandscape && isTouchDevice && screen.orientation && screen.orientation.lock) return screen.orientation.lock('landscape'); }).catch(() => {});
+    }
+    function toggleFullscreen() {
+        if (realFullscreen()) {
+            fsDeclined = true;
             if (document.exitFullscreen) document.exitFullscreen();
             else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-        }
+        } else if (fsApi) { fsDeclined = false; enterFullscreen(true); }
+        else if (inFrame) window.parent.postMessage({ mensurator: 'toggle-cover' }, '*');
     }
-    function syncFsLabels() { const b = document.getElementById('fsPauseBtn'); if (b) b.textContent = fsLabel(); }
-    document.addEventListener('fullscreenchange', () => { syncFsLabels(); pageBackground(); });
-    document.addEventListener('webkitfullscreenchange', () => { syncFsLabels(); pageBackground(); });
+    // A phone on its side goes full screen on the next tap, where the browser allows it (Android)
+    function autoFullscreen() {
+        if (fsApi && !standaloneApp && isTouchDevice && !fsDeclined && !realFullscreen() && screenLandscape()) enterFullscreen(false);
+    }
+    function syncFsLabels() {
+        const b = document.getElementById('fsPauseBtn'); if (b) b.textContent = fsLabel();
+        const on = fsShownAsOn();
+        fsBtn.classList.toggle('is-fs', on); fsBtn.setAttribute('aria-label', fsLabel()); fsBtn.title = fsLabel() + ' (F)';
+        // On iPhone, a phone on its side already fills the window and there is nothing more to offer
+        const shown = fsAvailable && !(pageCover && !pageCoverByUser && !fsApi);
+        document.body.classList.toggle('show-fs', shown);
+    }
+    function onFsChange() { syncFsLabels(); pageBackground(); mobileLayoutKey = ''; updateMobileControlLayout(); }
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
+    window.addEventListener('message', (e) => {
+        if (e.source !== window.parent || !e.data || e.data.mensurator !== 'cover') return;
+        pageCover = !!e.data.cover; pageCoverByUser = !!e.data.user;
+        onFsChange();
+    });
 
     // The date of the last change to the game, shown on the title page; set it with every update
-    const LAST_UPDATE = '2026-11-03';
+    const LAST_UPDATE = '2026-11-09';
     function lastUpdateText() { return new Date(LAST_UPDATE + 'T12:00:00').toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); }
     // Earlier builds, kept beside the game and opened from the developer panel
     const BUILDS = [
@@ -413,6 +473,9 @@
     const pad = document.getElementById('pad');
     const padBtns = [...pad.querySelectorAll('.pad-btn')];
     if (!fsAvailable) document.body.classList.add('no-fs');
+    const fsBtn = document.getElementById('fsBtn');
+    fsBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleFullscreen(); fsBtn.blur(); });
+    fsBtn.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
     const tPause = document.getElementById('tPause');
     const canvasContainer = document.getElementById('canvasContainer');
     const titleDevBtn = document.getElementById('titleDevBtn');
@@ -2147,8 +2210,13 @@ let devInvincible = false;
         if (pad.classList.contains('show') !== playLike) pad.classList.toggle('show', playLike);
         const pauseShown = isTouchDevice && gameState === 'PLAY';
         tPause.style.display = pauseShown ? 'flex' : 'none';
-        if (playLike) updateMobileControlLayout();
+        if (document.body.classList.contains('in-play') !== pauseShown) document.body.classList.toggle('in-play', pauseShown);
+        updateMobileControlLayout();
+        // On a phone inside the site page, a game in progress takes the whole window (the menu returns with the title page)
+        const inGame = isTouchDevice && !['MENU', 'LEADERBOARD', 'INSTALL_PROMPT'].includes(gameState);
+        if (framed && inGame !== lastInGame) { lastInGame = inGame; try { window.parent.postMessage({ mensurator: 'playing', on: inGame }, '*'); } catch (e) {} }
     }
+    let lastInGame = null;
 
     window.addEventListener('keydown', (e) => {
         // A keyboard on a tablet: hide the on-screen pad until the screen is touched again
@@ -2247,14 +2315,25 @@ let devInvincible = false;
     let mobileLayoutKey = '';
 
     function updateMobileControlLayout() {
-        if (!isTouchDevice) return;
+        const bc = document.body.classList;
+        bc.toggle('touch', isTouchDevice);
+        if (!isTouchDevice) { bc.remove('portrait', 'landscape'); return; }
         const rect = canvasContainer.getBoundingClientRect();
-        const landscape = window.innerWidth > window.innerHeight;
-        const key = `${window.innerWidth}x${window.innerHeight}:${Math.round(rect.bottom)}`;
+        const landscape = screenLandscape();
+        const key = `${window.innerWidth}x${window.innerHeight}:${Math.round(rect.bottom)}:${landscape}`;
         if (key === mobileLayoutKey) return;
         mobileLayoutKey = key;
-        tPause.style.right = '10px';
-        tPause.style.top = landscape ? '10px' : `${Math.round(rect.bottom) + 10}px`;
+        bc.toggle('landscape', landscape); bc.toggle('portrait', !landscape);
+        if (landscape) {
+            pad.style.removeProperty('--b');
+        } else {
+            // Upright, the controls get all the room under the game: buttons as big as fit
+            const cb = Math.round(rect.bottom);
+            document.body.style.setProperty('--cb', cb + 'px');
+            const room = window.innerHeight - cb - 56 - 40;
+            const b = Math.max(44, Math.min(88, room / 2.1, (window.innerWidth - 80) / 4.3));
+            pad.style.setProperty('--b', Math.floor(b) + 'px');
+        }
     }
 
     window.addEventListener('touchstart', () => {
@@ -2265,6 +2344,7 @@ let devInvincible = false;
         unlockAudio();
     }, { capture: true });
     window.addEventListener('resize', () => { mobileLayoutKey = ''; updateMobileControlLayout(); });
+    window.addEventListener('touchend', autoFullscreen, { passive: true });
     window.addEventListener('blur', releaseAllKeys);
     document.addEventListener('visibilitychange', () => { if (document.hidden) { releaseAllKeys(); if (gameState === 'PLAY') togglePause(); } });
     
@@ -2747,6 +2827,8 @@ let devInvincible = false;
         ctx.restore();
     }
     function drawFsButton() {
+        // The full screen button is now an HTML button in the corner of the game (#fsBtn)
+        FS_BTN.w = 0; return;
         if (!fsAvailable) { FS_BTN.w = 0; return; }
         const label = fsLabel(), b = FS_BTN;
         ctx.textAlign = 'center';
@@ -2983,7 +3065,7 @@ let devInvincible = false;
 
                     if (isTouchDevice) {
                         ctx.font = font(32, 800);
-                        ctx.fillText(window.innerWidth > window.innerHeight ? 'Controls in the corners' : 'Controls down below', W / 2, 124);
+                        ctx.fillText(screenLandscape() ? 'Controls in the corners' : 'Controls down below', W / 2, 124);
                         ctx.font = font(26, 700);
                         ctx.fillText('↓', W / 2, 156);
                         ctx.font = font(16, 500, true);
@@ -3169,6 +3251,7 @@ let devInvincible = false;
     applyTheme(savedTheme);
     if (location.hash === '#install') { gameState = 'INSTALL_PROMPT'; history.replaceState(null, '', location.pathname); }
     fitResolution();
+    syncFsLabels(); updateMobileControlLayout();
     requestAnimationFrame(loop);
 </script>
 </body>

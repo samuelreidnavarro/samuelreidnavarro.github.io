@@ -8,6 +8,19 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+Double+Pica:ital@0;1&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap">
   <link rel="stylesheet" href="style.css?v=17">
+  <style>
+    /* A phone held upright: the frame reaches the bottom of the screen, so the controls under the game are on screen */
+    @media (orientation: portrait) and (pointer: coarse) {
+      .game-page .game { height: var(--fit-h, 85vh); }
+    }
+    /* A phone on its side, or full screen on a phone without it (iPhone): the game covers the whole window */
+    .game-page .game.cover {
+      position: fixed; inset: 0; z-index: 1000;
+      width: 100%; height: 100%; max-width: none; aspect-ratio: auto;
+      background: var(--bg);
+    }
+    html.game-covered, html.game-covered body { overflow: hidden; }
+  </style>
 </head>
 <body>
   <header class="banner">
@@ -29,19 +42,40 @@
     </ul>
   </nav>
   <main class="wide game-page">
-    <iframe class="game" src="games/mensurator.html?v=12" title="Mensurator" allow="fullscreen; autoplay"></iframe>
+    <iframe class="game" src="games/mensurator.html?v=13" title="Mensurator" allow="fullscreen; autoplay"></iframe>
   </main>
   <script>
     // The game fills the window below the menu: as wide as fits, twice as wide as it is tall
     const frame = document.querySelector('.game');
-    // (on a short screen, such as a phone on its side, it takes the whole height and the page scrolls to it)
+    const touch = matchMedia('(pointer: coarse)').matches;
+    let userCover = false; // full screen asked for on a phone that has none (iPhone)
+    let playing = false;   // a game in progress on a phone
     function fit() {
-        const top = frame.getBoundingClientRect().top + window.scrollY, vh = window.innerHeight;
-        let h = vh - top - 16;
-        if (h < vh * 0.6) h = vh - 16;
-        frame.style.setProperty('--fit-h', Math.max(160, h) + 'px');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        // On a phone, a game in progress (and anything on its side) plays over the whole window
+        const cover = userCover || (touch && (vw > vh || playing));
+        frame.classList.toggle('cover', cover);
+        document.documentElement.classList.toggle('game-covered', cover);
+        if (!cover) {
+            const top = frame.getBoundingClientRect().top + window.scrollY;
+            let h = vh - top - 12;
+            if (touch) {
+                // Upright, on the title page: down to the bottom of the screen
+                h = Math.max(h, vw / 2 + 70);
+            } else if (h < vh * 0.6) h = vh - 16;
+            frame.style.setProperty('--fit-h', Math.max(160, h) + 'px');
+        }
+        try { frame.contentWindow.postMessage({ mensurator: 'cover', cover, user: userCover }, '*'); } catch (e) {}
     }
-    fit(); window.addEventListener('resize', fit); document.fonts && document.fonts.ready.then(fit);
+    window.addEventListener('message', (e) => {
+        if (e.source !== frame.contentWindow || !e.data) return;
+        if (e.data.mensurator === 'toggle-cover') userCover = !userCover;
+        else if (e.data.mensurator === 'playing') playing = !!e.data.on;
+        else return;
+        fit();
+    });
+    fit(); window.addEventListener('resize', fit); frame.addEventListener('load', fit);
+    document.fonts && document.fonts.ready.then(fit);
   </script>
 </body>
 </html>
