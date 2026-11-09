@@ -271,7 +271,19 @@
         /* Phone held upright: the game on top, pause and full screen just under it, the controls filling the rest */
         body.touch.portrait #tPause { top: calc(var(--cb) + 8px); right: 12px; }
         body.touch.portrait #fsBtn { top: calc(var(--cb) + 8px); right: 66px; bottom: auto; }
-        body.touch.portrait #pad { top: calc(var(--cb) + 56px); padding-bottom: max(40px, calc(env(safe-area-inset-bottom) + 24px)); }
+        /* On a phone the controls are four touch areas, each a quarter of the screen: ◀ ▶ on the left half, ● ▲ on the right */
+        body.touch #pad { inset: 0; padding: 0; grid-template-columns: repeat(4, 1fr); align-items: stretch; }
+        body.touch #pad.show { display: grid; }
+        body.touch #pad .pad-cluster { display: contents; }
+        body.touch #pad .pad-btn {
+            pointer-events: none; width: auto; height: auto; margin: 0; border-radius: 0;
+            background: transparent; border: 0; border-right: 1px dashed rgba(156, 107, 60, 0.22); box-shadow: none;
+            align-items: flex-end; padding-bottom: max(18px, calc(env(safe-area-inset-bottom) + 8px));
+            font-size: 24px; color: rgba(156, 107, 60, 0.6);
+        }
+        body.touch #pad .pad-btn[data-k="jump"] { border-right: 0; font-size: 30px; }
+        body.touch #pad .pad-btn[data-k="down"] { display: none; }
+        body.touch #pad .pad-btn.on { background: rgba(156, 107, 60, 0.12); color: var(--mark); }
         body.touch.portrait { justify-content: flex-start; }
         body.touch.portrait #gameWrapper { flex-direction: column; justify-content: flex-start; height: 100%; }
         body.touch.portrait #canvasContainer { flex-shrink: 0; margin-top: max(10px, env(safe-area-inset-top)); }
@@ -2449,30 +2461,15 @@ let devInvincible = false;
         if (e.target.closest && e.target.closest('#tPause')) return;
         e.preventDefault();
 
-        // A finger that lands on (or near) a button keeps its side of the pad until it lifts:
-        // the left thumb always steers with whichever of ◀ ▶ (▼) is nearest, the right thumb always jumps or shoots,
-        // so a thumb that drifts off the button while playing is never dropped
-        const rects = padBtns.filter(b => b.offsetParent !== null).map(b => { const r = b.getBoundingClientRect(); return { k: b.dataset.k, r, cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2 }; });
-        const nearest = (t, list, slop) => {
-            let best = null, bestD = Infinity;
-            for (const b of list) {
-                if (slop != null && (t.clientX < b.r.left - slop || t.clientX > b.r.right + slop || t.clientY < b.r.top - slop || t.clientY > b.r.bottom + slop)) continue;
-                const d = Math.hypot(t.clientX - b.cx, t.clientY - b.cy);
-                if (d < bestD) { bestD = d; best = b.k; }
-            }
-            return best;
-        };
+        // Four touch areas, each a quarter of the screen. A finger keeps the half it landed on until it lifts:
+        // the left thumb always steers (◀ first quarter, ▶ second), the right thumb always shoots (third) or jumps (fourth),
+        // so a thumb that drifts while playing is never dropped
+        const vw = window.innerWidth;
         const held = new Set();
         for (const t of e.touches) {
             let side = padFingers.get(t.identifier);
-            if (!side) {
-                const k = nearest(t, rects, 24);
-                side = k ? (PAD_DIR.includes(k) ? 'dir' : 'act') : null;
-                if (side) padFingers.set(t.identifier, side);
-            }
-            if (!side) continue;
-            const k = nearest(t, rects.filter(b => (side === 'dir') === PAD_DIR.includes(b.k)));
-            if (k) held.add(k);
+            if (!side) { side = t.clientX < vw / 2 ? 'dir' : 'act'; padFingers.set(t.identifier, side); }
+            held.add(side === 'dir' ? (t.clientX < vw / 4 ? 'left' : 'right') : (t.clientX < vw * 3 / 4 ? 'shoot' : 'jump'));
         }
         setPadKey('left', held.has('left'), pressLeft, releaseLeft, keys.left);
         setPadKey('right', held.has('right'), pressRight, releaseRight, keys.right);
@@ -3066,7 +3063,7 @@ let devInvincible = false;
 
                     if (isTouchDevice) {
                         ctx.font = font(32, 800);
-                        ctx.fillText(screenLandscape() ? 'Controls in the corners' : 'Controls down below', W / 2, 124);
+                        ctx.fillText('Touch the four quarters:  ◀  ▶  ●  ▲', W / 2, 124);
                         ctx.font = font(26, 700);
                         ctx.fillText('↓', W / 2, 156);
                         ctx.font = font(16, 500, true);
