@@ -20,6 +20,8 @@
       background: var(--bg);
     }
     html.game-covered, html.game-covered body { overflow: hidden; }
+    /* iPad: the touch rule above, for a screen that says it has a fine pointer */
+    .game-page .game.touch:not(.cover) { width: 100%; height: var(--fit-h, 85vh); aspect-ratio: auto; }
   </style>
 </head>
 <body>
@@ -42,12 +44,13 @@
     </ul>
   </nav>
   <main class="wide game-page">
-    <iframe class="game" src="games/mensurator.html?v=15" title="Mensurator" allow="fullscreen; autoplay"></iframe>
+    <iframe class="game" src="games/mensurator.html?v=16" title="Mensurator" allow="fullscreen; autoplay"></iframe>
   </main>
   <script>
     // The game fills the window below the menu: as wide as fits, twice as wide as it is tall
     const frame = document.querySelector('.game');
-    const touch = matchMedia('(pointer: coarse)').matches;
+    // A touch screen: told by the browser, or by the game once it is touched (iPad Safari can pass for a computer)
+    let touch = matchMedia('(pointer: coarse)').matches;
     let userCover = false; // full screen asked for on a phone that has none (iPhone)
     let playing = false;   // a game in progress on a phone
     function fit() {
@@ -55,6 +58,7 @@
         // On a phone, a game in progress (and anything on its side) plays over the whole window
         const cover = userCover || (touch && (vw > vh || playing));
         frame.classList.toggle('cover', cover);
+        frame.classList.toggle('touch', touch && vw <= vh);
         document.documentElement.classList.toggle('game-covered', cover);
         if (!cover) {
             const top = frame.getBoundingClientRect().top + window.scrollY;
@@ -70,7 +74,8 @@
     window.addEventListener('message', (e) => {
         if (e.source !== frame.contentWindow || !e.data) return;
         if (e.data.mensurator === 'toggle-cover') userCover = !userCover;
-        else if (e.data.mensurator === 'playing') playing = !!e.data.on;
+        else if (e.data.mensurator === 'playing') { playing = !!e.data.on; if (playing) touch = true; }
+        else if (e.data.mensurator === 'touch') touch = true;
         else return;
         fit();
     });

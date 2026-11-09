@@ -284,6 +284,33 @@
         body.touch #pad .pad-btn[data-k="jump"] { border-right: 0; font-size: 30px; }
         body.touch #pad .pad-btn[data-k="down"] { display: none; }
         body.touch #pad .pad-btn.on { background: rgba(156, 107, 60, 0.12); color: var(--mark); }
+        /* Upright: the four columns fill the screen under the game */
+        body.touch.portrait #pad { top: var(--cb); }
+        /* On its side: discreet. ◀ ▶ are faint rings in the first two quarters, the whole right half jumps,
+           and a small shoot button can be dragged anywhere */
+        body.touch.landscape #gameWrapper { align-items: flex-start; }
+        body.touch.landscape #pad { grid-template-columns: 1fr 1fr 2fr; }
+        body.touch.landscape #pad .pad-btn[data-k="shoot"] { display: none; }
+        body.touch.landscape #pad .pad-btn {
+            position: relative; border-right: 0; font-size: 18px; color: rgba(156, 107, 60, 0.4);
+            padding-bottom: calc(max(14px, env(safe-area-inset-bottom)) + 19px);
+        }
+        body.touch.landscape #pad .pad-btn[data-k="left"]::after, body.touch.landscape #pad .pad-btn[data-k="right"]::after {
+            content: ''; position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom));
+            width: 56px; height: 56px; transform: translateX(-50%);
+            border: 1.5px solid rgba(156, 107, 60, 0.3); border-radius: 50%;
+        }
+        body.touch.landscape #pad .pad-btn[data-k="jump"] { font-size: 22px; }
+        body.touch.landscape #pad .pad-btn.on { background: rgba(156, 107, 60, 0.06); }
+        #shootDrag {
+            position: fixed; z-index: 35; width: 58px; height: 58px; margin: -29px 0 0 -29px; border-radius: 50%;
+            display: none; justify-content: center; align-items: center;
+            border: 1.5px solid rgba(156, 107, 60, 0.4); background: rgba(255, 253, 248, 0.18);
+            color: rgba(156, 107, 60, 0.55); font-size: 20px; opacity: 0.8;
+            touch-action: none; user-select: none; -webkit-user-select: none;
+        }
+        #shootDrag.on { background: rgba(156, 107, 60, 0.35); color: var(--paper); }
+        body.touch.landscape #pad.show ~ #shootDrag { display: flex; }
         body.touch.portrait { justify-content: flex-start; }
         body.touch.portrait #gameWrapper { flex-direction: column; justify-content: flex-start; height: 100%; }
         body.touch.portrait #canvasContainer { flex-shrink: 0; margin-top: max(10px, env(safe-area-inset-top)); }
@@ -319,6 +346,8 @@
         <div class="pad-btn" data-k="jump">▲</div>
     </div>
 </div>
+
+<div id="shootDrag" aria-hidden="true">●</div>
 
 <button type="button" id="titleDevBtn" aria-label="Developer mode">DEV</button>
 
@@ -2215,6 +2244,7 @@ let devInvincible = false;
         keys.down = false;
         padBtns.forEach(b => b.classList.remove('on'));
         padFingers.clear();
+        if (typeof shootFinger !== "undefined" && shootFinger) { shootFinger = null; shootDrag.classList.remove("on"); }
     }
 
     // Show the on-screen pad while playing (and on the level card before it, so the layout doesn't jump)
@@ -2225,11 +2255,13 @@ let devInvincible = false;
         tPause.style.display = pauseShown ? 'flex' : 'none';
         if (document.body.classList.contains('in-play') !== pauseShown) document.body.classList.toggle('in-play', pauseShown);
         updateMobileControlLayout();
+        tellTouch();
         // On a phone inside the site page, a game in progress takes the whole window (the menu returns with the title page)
         const inGame = isTouchDevice && !['MENU', 'LEADERBOARD', 'INSTALL_PROMPT'].includes(gameState);
         if (framed && inGame !== lastInGame) { lastInGame = inGame; try { window.parent.postMessage({ mensurator: 'playing', on: inGame }, '*'); } catch (e) {} }
     }
-    let lastInGame = null;
+    let lastInGame = null, toldTouch = false;
+    function tellTouch() { if (framed && isTouchDevice && !toldTouch) { toldTouch = true; try { window.parent.postMessage({ mensurator: 'touch' }, '*'); } catch (e) {} } }
 
     window.addEventListener('keydown', (e) => {
         // A keyboard on a tablet: hide the on-screen pad until the screen is touched again
@@ -2464,13 +2496,16 @@ let devInvincible = false;
         // Four touch areas, each a quarter of the screen. A finger keeps the half it landed on until it lifts:
         // the left thumb always steers (◀ first quarter, ▶ second), the right thumb always shoots (third) or jumps (fourth),
         // so a thumb that drifts while playing is never dropped
-        const vw = window.innerWidth;
+        // On its side, the whole right half jumps and shooting is the small button that can be dragged (shootDrag)
+        const vw = window.innerWidth, side4 = !document.body.classList.contains('landscape');
         const held = new Set();
         for (const t of e.touches) {
+            if (shootFinger && t.identifier === shootFinger.id) continue;
             let side = padFingers.get(t.identifier);
             if (!side) { side = t.clientX < vw / 2 ? 'dir' : 'act'; padFingers.set(t.identifier, side); }
-            held.add(side === 'dir' ? (t.clientX < vw / 4 ? 'left' : 'right') : (t.clientX < vw * 3 / 4 ? 'shoot' : 'jump'));
+            held.add(side === 'dir' ? (t.clientX < vw / 4 ? 'left' : 'right') : (!side4 || t.clientX >= vw * 3 / 4 ? 'jump' : 'shoot'));
         }
+        if (shootFinger) held.add('shoot');
         setPadKey('left', held.has('left'), pressLeft, releaseLeft, keys.left);
         setPadKey('right', held.has('right'), pressRight, releaseRight, keys.right);
         setPadKey('jump', held.has('jump'), pressJump, releaseJump, keys.up);
@@ -2478,6 +2513,48 @@ let devInvincible = false;
     }
 
     const PAD_DIR = ['left', 'right'];
+
+    // The small shoot button on a phone held sideways: touching it shoots, sliding it moves it (kept for next time)
+    const shootDrag = document.getElementById('shootDrag');
+    var shootFinger = null; // { id, x, y, moved } (var: releaseAllKeys may look before this line runs)
+    function placeShootDrag() {
+        let pos = null;
+        try { pos = JSON.parse(localStorage.getItem('mensuratorShootPos')); } catch (e) {}
+        const fx = pos && pos.x >= 0 && pos.x <= 1 ? pos.x : 0.78, fy = pos && pos.y >= 0 && pos.y <= 1 ? pos.y : 0.55;
+        shootDrag.style.left = Math.round(fx * window.innerWidth) + 'px';
+        shootDrag.style.top = Math.round(fy * window.innerHeight) + 'px';
+    }
+    placeShootDrag();
+    window.addEventListener('resize', placeShootDrag);
+    shootDrag.addEventListener('touchstart', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (gameState !== 'PLAY' || shootFinger) return;
+        const t = e.changedTouches[0];
+        shootFinger = { id: t.identifier, x: t.clientX, y: t.clientY, moved: false };
+        shootDrag.classList.add('on');
+        if (!keys.space) pressShoot();
+    }, { passive: false });
+    shootDrag.addEventListener('touchmove', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (!shootFinger) return;
+        const t = [...e.changedTouches].find(t => t.identifier === shootFinger.id); if (!t) return;
+        if (!shootFinger.moved && Math.hypot(t.clientX - shootFinger.x, t.clientY - shootFinger.y) < 12) return;
+        shootFinger.moved = true;
+        shootDrag.style.left = Math.max(30, Math.min(window.innerWidth - 30, t.clientX)) + 'px';
+        shootDrag.style.top = Math.max(30, Math.min(window.innerHeight - 30, t.clientY)) + 'px';
+    }, { passive: false });
+    function endShootFinger(e) {
+        e.preventDefault(); e.stopPropagation();
+        if (!shootFinger || ![...e.changedTouches].some(t => t.identifier === shootFinger.id)) return;
+        if (shootFinger.moved) {
+            try { localStorage.setItem('mensuratorShootPos', JSON.stringify({ x: parseFloat(shootDrag.style.left) / window.innerWidth, y: parseFloat(shootDrag.style.top) / window.innerHeight })); } catch (err) {}
+        }
+        shootFinger = null;
+        shootDrag.classList.remove('on');
+        if (keys.space) releaseShoot();
+    }
+    shootDrag.addEventListener('touchend', endShootFinger, { passive: false });
+    shootDrag.addEventListener('touchcancel', endShootFinger, { passive: false });
     const padFingers = new Map(); // touch id -> 'dir' or 'act'
 
     function setPadKey(k, now, press, release, was) {
@@ -3063,7 +3140,7 @@ let devInvincible = false;
 
                     if (isTouchDevice) {
                         ctx.font = font(32, 800);
-                        ctx.fillText('Touch the four quarters:  ◀  ▶  ●  ▲', W / 2, 124);
+                        ctx.fillText((screenLandscape() ? '◀ ▶   ·   ▲ right half   ·   drag ●' : 'Touch below:  ◀  ▶  ●  ▲'), W / 2, 124);
                         ctx.font = font(26, 700);
                         ctx.fillText('↓', W / 2, 156);
                         ctx.font = font(16, 500, true);
