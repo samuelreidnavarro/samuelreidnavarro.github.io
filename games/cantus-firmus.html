@@ -200,7 +200,7 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 .permin{color:var(--muted);margin-right:6px}
 .unitpick{position:relative}
 .unitbtn{width:58px;grid-template-columns:1fr 12px;gap:0;padding:0 4px 0 2px}
-.unitbtn svg{width:34px;height:34px}
+.unitbtn svg{width:34px;height:34px;fill:currentColor}
 .unitbtn .chev{width:12px;height:12px;fill:currentColor}
 #unitList{left:0;bottom:calc(100% + 6px);min-width:190px}
 .menu{position:absolute;z-index:20;margin:0;padding:4px;list-style:none;color:var(--text);
@@ -860,6 +860,7 @@ function loadAll(){
     try { history.replaceState(null, '', location.href.split('#')[0]); } catch (e) {}
   } else if (stored && stored.doc) {
     doc = sanitizeDoc(stored.doc) || doc;
+    dropStaleTitle();
   }
   ui.caret = doc.notes.length;
 }
@@ -878,9 +879,21 @@ function mutate(fn){
   stopPlayback();
   const before = snapshot();
   fn();
+  dropStaleTitle();
   if (snapshot() !== before) takeClear();
   if (snapshot() !== before) pushUndo(before);
   save(); render();
+}
+/* A library piece's title stays only while its notes are untouched: the title field is hidden on the
+   site, so an old title would otherwise ride along into copied links and exports of a new melody. */
+function dropStaleTitle(){
+  if (!doc.title || typeof LIBRARY === 'undefined') return;
+  const key = ns => JSON.stringify(ns.map(n => [n.d, !!n.r, n.r ? 0 : n.s, n.r ? '' : (n.a || ''), !!n.p && !n.r]));
+  for (const g of LIBRARY) for (const it of g.items) {
+    if (it.title !== doc.title) continue;
+    if (key(itemNotes(it)) === key(doc.notes)) return;
+    doc.title = ''; const t = $('#title'); if (t) t.value = ''; return;
+  }
 }
 function restore(json){
   const s = JSON.parse(json);
