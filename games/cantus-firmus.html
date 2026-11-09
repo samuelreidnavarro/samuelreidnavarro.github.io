@@ -192,7 +192,7 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 .tactus{display:flex;flex-direction:column;gap:8px}
 .vignette{width:176px;height:142px;background:var(--leaf);border:1.5px solid var(--leaf-ink);outline:1px solid var(--leaf-ink);
   outline-offset:-5px;overflow:hidden;border-radius:1px}
-.handbox{position:absolute;right:0;top:4px;width:250px;height:202px;opacity:.3;pointer-events:none;z-index:0}
+.handbox{position:absolute;right:0;top:4px;width:calc(250px * var(--hand-sc,1));height:calc(202px * var(--hand-sc,1));opacity:var(--hand-op,.3);pointer-events:none;z-index:0}
 .handbox svg{display:block;width:100%;height:100%;transform:scaleX(-1)}
 #title,#score{position:relative;z-index:1}
 .tempo-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -333,7 +333,7 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
 .transport .popbody{top:auto;bottom:calc(100% - 2px)}
 .handbox{color:#2A2218}
 .handbox[hidden]{display:none}
-.pendbox.both{right:190px}
+.pendbox.both{right:calc(190px * var(--hand-sc,1))}
 #reg{width:178px}
 @media (max-width:700px){
   .podg{flex-wrap:wrap}
@@ -565,6 +565,8 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
             <span class="ctl" id="linesLabel">Lines</span><div class="btns" id="linesBtns" role="group" aria-labelledby="linesLabel"><button class="tb" data-lines="5" data-keep aria-pressed="true">5</button><button class="tb" data-lines="4" data-keep aria-pressed="false">4</button></div>
             <label class="ctl" for="spacing">Horizontal spacing</label><input type="range" id="spacing" min="10" max="250" step="5">
             <label class="ctl" for="vspacing">Vertical spacing</label><input type="range" id="vspacing" min="20" max="200" step="5">
+            <label class="ctl" for="handOp">Hand opacity</label><input type="range" id="handOp" min="5" max="100" step="5">
+            <label class="ctl" for="handSize">Hand size</label><input type="range" id="handSize" min="40" max="250" step="5">
             <button class="tb" id="darkBtn" data-keep aria-pressed="false">Dark mode</button>
           </div></div>
         </div>
@@ -733,7 +735,7 @@ const defaultDoc = () => ({
 let doc = defaultDoc();
 const ui = {
   sel: null, caret: 0, inDur: 'B', inRest: false, hover: null, playing: -1,
-  size: window.innerWidth < 640 ? 11 : 16, spacing: 1, vspacing: 1, edit: !(window.matchMedia && matchMedia('(hover: none)').matches),
+  size: window.innerWidth < 640 ? 11 : 16, spacing: 1, vspacing: 1, handOp: 0.3, handSize: 1, edit: !(window.matchMedia && matchMedia('(hover: none)').matches),
   beatHand: true, beatPend: false, beatTick: false, tempus: 'C', unit: 'S', tempo: 60, ref: 440, vol: 70, reg: 'custom', bright: 50, room: 40, atk: 120, rel: 150, chiff: 7, ens: 0.3, wind: 10, scoop: 5, draw: [100, 71, 55, 48, 37, 22, 12, 8, 0, 0, 0, 0], audition: true, loop: false, metro: false, setOpen: false, micFlex: true, micPhones: false, micNotate: true, micDia: false, dark: false, micLag: 0, micCal: null
 };
 let lay = null;          /* last computed layout, used for hit testing */
@@ -779,7 +781,7 @@ function sanitizeDoc(d){
 function save(){
   try {
     localStorage.setItem(STORE, JSON.stringify({doc, prefs: {
-      inDur: ui.inDur, size: ui.size, spacing: ui.spacing, vspacing: ui.vspacing, unit: ui.unit, tempo: ui.tempo, ref: ui.ref,
+      inDur: ui.inDur, size: ui.size, spacing: ui.spacing, vspacing: ui.vspacing, handOp: ui.handOp, handSize: ui.handSize, unit: ui.unit, tempo: ui.tempo, ref: ui.ref,
       vol: ui.vol, reg: ui.reg, bright: ui.bright, room: ui.room, atk: ui.atk, rel: ui.rel, chiff: ui.chiff, ens: ui.ens, wind: ui.wind, scoop: ui.scoop, draw: ui.draw, audition: ui.audition, loop: ui.loop, micFlex: ui.micFlex, micPhones: ui.micPhones, micNotate: ui.micNotate, micDia: ui.micDia, dark: ui.dark, micLag: ui.micLag, micCal: ui.micCal, beatHand: ui.beatHand, beatPend: ui.beatPend, beatTick: ui.beatTick, tempus: ui.tempus
     }}));
   } catch (e) { /* storage unavailable: work continues, just not kept */ }
@@ -824,6 +826,8 @@ function loadAll(){
     if (p.size >= 5 && p.size <= 26) ui.size = p.size;
     if (p.spacing >= 0.1 && p.spacing <= 2.5) ui.spacing = p.spacing;
     if (p.vspacing >= 0.2 && p.vspacing <= 2) ui.vspacing = p.vspacing;
+    if (p.handOp >= 0.05 && p.handOp <= 1) ui.handOp = p.handOp;
+    if (p.handSize >= 0.4 && p.handSize <= 2.5) ui.handSize = p.handSize;
     if (DUR[p.unit]) ui.unit = p.unit;
     else if (({4:'B', 2:'S', 1:'M'})[p.unit]) ui.unit = ({4:'B', 2:'S', 1:'M'})[p.unit];
     if (p.tempo >= 10 && p.tempo <= 300) ui.tempo = p.tempo === 67 ? 60 : p.tempo;   /* 67 was the old default */
@@ -1342,7 +1346,7 @@ function syncLines(){
 function syncSettings(){
   $('#title').value = doc.title;
   $('#size').value = ui.size;
-  $('#spacing').value = Math.round(ui.spacing * 100); $('#vspacing').value = Math.round(ui.vspacing * 100);
+  $('#spacing').value = Math.round(ui.spacing * 100); $('#vspacing').value = Math.round(ui.vspacing * 100); $('#handOp').value = Math.round(ui.handOp * 100); $('#handSize').value = Math.round(ui.handSize * 100); applyHandLook();
   syncLines();
   syncEdit();
   $('#tempo').value = ui.tempo;
@@ -3148,6 +3152,10 @@ async function copyLink(){
 /* Small things                                                        */
 /* ------------------------------------------------------------------ */
 let toastTimer = 0;
+function applyHandLook(){
+  const r = document.documentElement.style;
+  r.setProperty('--hand-op', String(ui.handOp)); r.setProperty('--hand-sc', String(ui.handSize));
+}
 function toast(msg){
   const el = $('#toast');
   el.textContent = msg; el.classList.add('on');
@@ -3198,6 +3206,8 @@ function wire(){
   $('#size').addEventListener('input', e => { ui.size = Number(e.target.value); save(); render(); });
   $('#spacing').addEventListener('input', e => { ui.spacing = Number(e.target.value) / 100; save(); render(); });
   $('#vspacing').addEventListener('input', e => { ui.vspacing = Number(e.target.value) / 100; save(); render(); });
+  $('#handOp').addEventListener('input', e => { ui.handOp = Number(e.target.value) / 100; applyHandLook(); save(); });
+  $('#handSize').addEventListener('input', e => { ui.handSize = Number(e.target.value) / 100; applyHandLook(); save(); });
   document.querySelectorAll('#linesBtns button').forEach(b => b.addEventListener('click', () => {
     const n = Number(b.dataset.lines);
     if (n === doc.lines) return;
