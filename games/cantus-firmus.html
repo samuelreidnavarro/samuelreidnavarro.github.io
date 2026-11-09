@@ -192,7 +192,7 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 .tactus{display:flex;flex-direction:column;gap:8px}
 .vignette{width:176px;height:142px;background:var(--leaf);border:1.5px solid var(--leaf-ink);outline:1px solid var(--leaf-ink);
   outline-offset:-5px;overflow:hidden;border-radius:1px}
-.handbox{position:absolute;right:0;top:4px;width:calc(250px * var(--hand-sc,1));height:calc(202px * var(--hand-sc,1));opacity:var(--hand-op,.3);pointer-events:none;z-index:0}
+.handbox{position:absolute;right:0;top:4px;width:calc(250px * var(--hand-sc,1));height:calc(202px * var(--hand-sc,1));opacity:var(--hand-op,.3);pointer-events:none;z-index:0;transition:top .35s ease}
 .handbox svg{display:block;width:100%;height:100%;transform:scaleX(-1)}
 #title,#score{position:relative;z-index:1}
 .tempo-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -1156,6 +1156,7 @@ function drawScore(L, exp){
 let defsMarkup = '';
 function render(){
   lay = layout();
+  handLine = -1; followHand(typeof ui.playing === 'number' ? ui.playing : -1);
   const S = ui.size;
   const g = ghostInfo();
   if (g && g.atEnd && g.line === lay.lines[lay.lines.length - 1]) lay.barX = Math.max(lay.finalX ?? 0, g.x + g.w + 1.2);
@@ -2041,6 +2042,18 @@ function setPlaying(i){
     }
   }
   ui.playing = i;
+  followHand(i);
+}
+/* The hand (and pendulum) stand beside the system that is sounding. */
+let handLine = -1;
+function followHand(i){
+  if (!lay || !lay.lines.length) return;
+  let li = 0;
+  if (i >= 0) { const k = lay.lines.findIndex(l => l.items.some(it => it.i === i)); if (k >= 0) li = k; }
+  if (li === handLine) return;
+  handLine = li;
+  const top = (4 + (lay.lines[li].staffTop - lay.lines[0].staffTop) * ui.size) + 'px';
+  $('#handBox').style.top = top; $('#pendBox').style.top = top;
 }
 function stopPlayback(){
   if (!audio.timeline) return;
