@@ -417,9 +417,10 @@
         } else if (fsApi) { fsDeclined = false; enterFullscreen(true); }
         else if (inFrame) window.parent.postMessage({ mensurator: 'toggle-cover' }, '*');
     }
-    // A phone on its side goes full screen on the next tap, where the browser allows it (Android)
+    // A phone on its side goes full screen on the next tap outside play (title, level card), where the browser allows it (Android);
+    // never in the middle of play, where the switch would drop the fingers on the controls
     function autoFullscreen() {
-        if (fsApi && !standaloneApp && isTouchDevice && !fsDeclined && !realFullscreen() && screenLandscape()) enterFullscreen(false);
+        if (fsApi && !standaloneApp && isTouchDevice && !fsDeclined && gameState !== 'PLAY' && !realFullscreen() && screenLandscape()) enterFullscreen(false);
     }
     function syncFsLabels() {
         const b = document.getElementById('fsPauseBtn'); if (b) b.textContent = fsLabel();
