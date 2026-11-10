@@ -421,6 +421,22 @@ html.dark .hzctl input[type=number]{background:rgba(255,238,210,.06)}
   #play{width:54px;height:54px}
 }
 
+/* Count-in: a field beside the metronome; the beats counted down large over the score */
+#podCount{height:calc(var(--h) + 6px);box-sizing:border-box}
+.podg label.cntin{gap:7px;padding:0 3px 0 9px;white-space:nowrap;color:var(--muted)}
+.cntin input[type=number]{width:2.3em;height:28px;min-height:28px;padding:0 2px;text-align:center;font-size:16px;background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:7px;-moz-appearance:textfield}
+.cntin input::-webkit-inner-spin-button,.cntin input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+html.dark .cntin input[type=number]{background:rgba(255,238,210,.06)}
+#countBox{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:3;font-size:clamp(90px,16vw,180px);line-height:1;color:var(--accent);font-variant-numeric:lining-nums}
+#countBox[hidden]{display:none}
+#countBox span{animation:cntpop .5s ease-out both}
+@keyframes cntpop{from{transform:scale(1.25);opacity:0}25%{opacity:.85}to{transform:scale(1);opacity:.55}}
+@media (prefers-reduced-motion: reduce){ #countBox span{animation:none;opacity:.6} }
+@media (max-width:700px){ #podCount{order:3} }
+@media (min-width:701px) and (max-width:999px){ .tp-main{flex-wrap:nowrap} .tp-stack{min-width:0} }
+@media (min-width:1000px) and (max-width:1439px){ .podg label.cntin{font-size:15px;gap:5px;padding:0 2px 0 7px} .cntin input[type=number]{width:2.1em}
+  .transport,.tp-main,.tp-stack{gap:8px} .vol input[type=range]{width:44px} }
+
 /* ================= Dark mode: the room goes dark, the parchment stays as it is ================= */
 html.dark{--ground:#15110D;--surface:#211B15;--text:#ECE2D0;--muted:#A5957B;--line:#3A3027;--accent:#A53627;--accent-ink:#FBF4E8;color-scheme:dark}
 html.dark .podg{background:rgba(255,238,210,.075)}
@@ -500,6 +516,7 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
   </section>
 
   <section class="leaf" aria-label="Score">
+    <div id="countBox" aria-live="off" hidden></div>
     <div class="handbox" id="handBox" title="The tactus: the hand drops on one beat and lifts on the next" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="handRot"></g></svg></div><div class="handbox pendbox" id="pendBox" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="pendG"><path d="M66 158 H130 L120 142 H76Z" fill="currentColor"/><g id="pendRot"><line x1="98" y1="150" x2="98" y2="-16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="84" y="14" width="28" height="34" rx="4" fill="currentColor"/></g></g></svg></div>
     <input id="title" type="text" maxlength="120" placeholder="Untitled cantus firmus" aria-label="Title" spellcheck="false">
     <div id="score" tabindex="0" role="application" aria-label="Staff. Click to add notes; use the keyboard shortcuts listed below." aria-describedby="status"></div>
@@ -535,6 +552,7 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
       </div></div>
     </div>
     </div>
+    <div class="podg" id="podCount"><label class="ctl cntin" title="Beats counted in, with clicks, before the music starts. Empty or 0: none"><span class="cntlbl">Count-in</span><input type="number" id="countIn" min="0" max="32" step="1" inputmode="numeric" placeholder="0" aria-label="Beats to count in"></label></div>
     <div class="tempo-row podg" role="group" aria-label="Tempo">
       <div class="unitpick">
         <button id="unitBtn" class="unitbtn" aria-haspopup="listbox" aria-expanded="false"></button>
@@ -736,7 +754,7 @@ let doc = defaultDoc();
 const ui = {
   sel: null, caret: 0, inDur: 'B', inRest: false, hover: null, playing: -1,
   size: window.innerWidth < 640 ? 11 : 16, spacing: 1, vspacing: 1, handOp: 0.3, handSize: 1, edit: !(window.matchMedia && matchMedia('(hover: none)').matches),
-  beatHand: true, beatPend: false, beatTick: false, tempus: 'C', unit: 'S', tempo: 60, ref: 440, vol: 70, reg: 'custom', bright: 50, room: 40, atk: 120, rel: 150, chiff: 7, ens: 0.3, wind: 10, scoop: 5, draw: [100, 71, 55, 48, 37, 22, 12, 8, 0, 0, 0, 0], audition: true, loop: false, metro: false, setOpen: false, micFlex: true, micPhones: false, micNotate: true, micDia: false, dark: false, micLag: 0, micCal: null
+  beatHand: true, beatPend: false, beatTick: false, tempus: 'C', unit: 'S', tempo: 60, ref: 440, vol: 70, reg: 'custom', bright: 50, room: 40, atk: 120, rel: 150, chiff: 7, ens: 0.3, wind: 10, scoop: 5, draw: [100, 71, 55, 48, 37, 22, 12, 8, 0, 0, 0, 0], audition: true, loop: false, metro: false, setOpen: false, micFlex: true, micPhones: false, micNotate: true, micDia: false, dark: false, micLag: 0, micCal: null, countIn: 0
 };
 let lay = null;          /* last computed layout, used for hit testing */
 let drag = null;
@@ -782,7 +800,7 @@ function save(){
   try {
     localStorage.setItem(STORE, JSON.stringify({doc, prefs: {
       inDur: ui.inDur, size: ui.size, spacing: ui.spacing, vspacing: ui.vspacing, handOp: ui.handOp, handSize: ui.handSize, unit: ui.unit, tempo: ui.tempo, ref: ui.ref,
-      vol: ui.vol, reg: ui.reg, bright: ui.bright, room: ui.room, atk: ui.atk, rel: ui.rel, chiff: ui.chiff, ens: ui.ens, wind: ui.wind, scoop: ui.scoop, draw: ui.draw, audition: ui.audition, loop: ui.loop, micFlex: ui.micFlex, micPhones: ui.micPhones, micNotate: ui.micNotate, micDia: ui.micDia, dark: ui.dark, micLag: ui.micLag, micCal: ui.micCal, beatHand: ui.beatHand, beatPend: ui.beatPend, beatTick: ui.beatTick, tempus: ui.tempus
+      vol: ui.vol, reg: ui.reg, bright: ui.bright, room: ui.room, atk: ui.atk, rel: ui.rel, chiff: ui.chiff, ens: ui.ens, wind: ui.wind, scoop: ui.scoop, draw: ui.draw, audition: ui.audition, loop: ui.loop, micFlex: ui.micFlex, micPhones: ui.micPhones, micNotate: ui.micNotate, micDia: ui.micDia, dark: ui.dark, micLag: ui.micLag, micCal: ui.micCal, beatHand: ui.beatHand, beatPend: ui.beatPend, beatTick: ui.beatTick, tempus: ui.tempus, countIn: ui.countIn
     }}));
   } catch (e) { /* storage unavailable: work continues, just not kept */ }
 }
@@ -853,6 +871,7 @@ function loadAll(){
     ui.audition = p.audition !== false;
     ui.loop = !!p.loop;
     ui.tempus = p.tempus === 'O' ? 'O' : 'C';
+    if (Number.isInteger(p.countIn) && p.countIn >= 0 && p.countIn <= 32) ui.countIn = p.countIn;
     if (typeof p.beatHand === 'boolean') { ui.beatHand = p.beatHand; ui.beatPend = !!p.beatPend; ui.beatTick = !!p.beatTick; }
     else { const b = ['hand', 'pendulum', 'tick'].includes(p.beat) ? p.beat : (p.metro ? 'tick' : 'hand');   /* the old one-of-three choice */
       ui.beatHand = b === 'hand'; ui.beatPend = b === 'pendulum'; ui.beatTick = b === 'tick'; }
@@ -1356,6 +1375,7 @@ function syncSettings(){
   $('#ref').value = String(ui.ref);
   $('#vol').value = ui.vol;
   $('#micLat').value = ui.micCal === null ? '' : Math.round(ui.micCal * 1000);
+  $('#countIn').value = ui.countIn ? String(ui.countIn) : '';
   setPressed($('#micFlex'), ui.micFlex); setPressed($('#micPhones'), ui.micPhones); setPressed($('#micNotate'), ui.micNotate); setPressed($('#micDia'), ui.micDia);
   applyDark();
   $('#reg').value = ui.reg; $('#bright').value = ui.bright; $('#room').value = ui.room; syncOut();
@@ -1980,8 +2000,9 @@ const beatSeconds = () => 60 / ui.tempo;
 const mv = k => DUR[k].m * (ui.tempus === 'O' && DUR[k].m >= 4 ? 1.5 : 1);
 const secondsPerMinim = () => beatSeconds() / mv(ui.unit);
 
-/* Plays from note `from`; beats and the hand stay aligned with the start of the piece. */
-function startPlayback(from){
+/* Plays from note `from`; beats and the hand stay aligned with the start of the piece.
+   `count`: beats clicked (and shown counting down) before the first note. */
+function startPlayback(from, count){
   if (!doc.notes.length) return;
   const ctx = ensureAudio();
   if (!ctx) { toast('This browser cannot play sound.'); return; }
@@ -1990,7 +2011,10 @@ function startPlayback(from){
   const spm = secondsPerMinim(), beat = beatSeconds(), vals = readValues(doc.notes, ui.tempus).v;
   let offset = 0;
   for (let i = 0; i < from; i++) offset += vals[i] * spm;
-  const t0 = ctx.currentTime + 0.12;
+  count = Math.max(0, Math.min(32, count | 0));
+  const c0 = ctx.currentTime + 0.12;
+  for (let k = 0; k < count; k++) audio.voices.push(metroClick(ctx, audio.master, c0 + k * beat));
+  const t0 = c0 + count * beat;
   const origin = t0 - offset;                 /* where the piece "began" */
   let t = t0;
   const tl = [];
@@ -2004,7 +2028,7 @@ function startPlayback(from){
     for (let k = Math.ceil(offset / beat - 1e-6); origin + k * beat < t - 0.02; k++)
       audio.voices.push(metroClick(ctx, audio.master, origin + k * beat));
   }
-  audio.timeline = {tl, end: t, origin, beat};
+  audio.timeline = {tl, end: t, origin, beat, count, c0};
   if (takeStart(offset / (spm / 2))) render();
   setPlayButton(true);
   audio.raf = requestAnimationFrame(tick);
@@ -2019,6 +2043,7 @@ function tick(){
   }
   const cur = tlObj.tl.find(x => now >= x.t0 && now < x.t1);
   setPlaying(cur ? cur.i : -1);
+  showCount(tlObj.count && now >= tlObj.c0 && now < tlObj.tl[0].t0 ? tlObj.count - Math.floor((now - tlObj.c0) / tlObj.beat + 1e-6) : 0);
   /* tactus: a quick drop on one beat, a quick lift on the next, held still in between */
   if (ui.beatPend) setPend(now < tlObj.origin ? 24 : 24 * Math.cos(Math.PI * (now - tlObj.origin) / tlObj.beat));
   if (now < tlObj.tl[0].t0) setHand(0);
@@ -2030,6 +2055,14 @@ function tick(){
     setHand(from + (to - from) * e);
   }
   audio.raf = requestAnimationFrame(tick);
+}
+let countShown = 0;
+function showCount(n){
+  if (n === countShown) return;
+  countShown = n;
+  const box = $('#countBox');
+  box.hidden = !n;
+  box.innerHTML = n ? `<span>${n}</span>` : '';
 }
 function setPlaying(i){
   if (i === ui.playing) return;
@@ -2064,6 +2097,7 @@ function stopPlayback(){
   audio.voices = [];
   audio.timeline = null;
   setPlaying(-1);
+  showCount(0);
   setPlayButton(false);
   setHand(0); setPend(0);
 }
@@ -2073,7 +2107,7 @@ function replayIfPlaying(){
   const at = ui.playing >= 0 ? ui.playing : 0;
   startPlayback(at);
 }
-function togglePlay(){ audio.timeline ? stopPlayback() : startPlayback(ui.sel !== null ? ui.sel : 0); }
+function togglePlay(){ audio.timeline ? stopPlayback() : startPlayback(ui.sel !== null ? ui.sel : 0, ui.countIn); }
 function setPlayButton(on){
   const fp = $('#fPlay');
   fp.setAttribute('aria-label', on ? 'Stop' : 'Play'); fp.title = on ? 'Stop' : 'Play';
@@ -3262,6 +3296,12 @@ function wire(){
     const v = e.target.value.trim();
     ui.micCal = v === '' || !(Number(v) >= 0) ? null : Math.min(600, Number(v)) / 1000;
     e.target.value = ui.micCal === null ? '' : Math.round(ui.micCal * 1000);
+    save();
+  });
+  $('#countIn').addEventListener('change', e => {
+    const v = Math.round(Number(e.target.value));
+    ui.countIn = e.target.value.trim() === '' || !(v > 0) ? 0 : Math.min(32, v);
+    e.target.value = ui.countIn ? String(ui.countIn) : '';
     save();
   });
   $('#darkBtn').addEventListener('click', () => { ui.dark = !ui.dark; applyDark(); save(); });
