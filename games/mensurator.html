@@ -292,7 +292,7 @@
         /* On its side: discreet. ◀ ▶ are faint rings in the first two quarters, the whole right half jumps,
            and a small shoot button can be dragged anywhere */
         body.touch.landscape #gameWrapper { align-items: flex-start; }
-        body.touch.landscape #pad { grid-template-columns: 1fr 1fr 2fr; }
+        body.touch.landscape #pad { grid-template-columns: 1fr 1fr 3fr; }
         body.touch.landscape #pad .pad-btn[data-k="shoot"] { display: none; }
         body.touch.landscape #pad .pad-btn {
             position: relative; border-right: 0; font-size: 18px; color: rgba(156, 107, 60, 0.4);
@@ -342,12 +342,12 @@
 
 <div id="pad" aria-hidden="true">
     <div class="pad-cluster pad-dir">
-        <div class="pad-btn" data-k="left">◀</div>
-        <div class="pad-btn" data-k="right">▶</div>
+        <div class="pad-btn" data-k="left">◀&#xFE0E;</div>
+        <div class="pad-btn" data-k="right">▶&#xFE0E;</div>
     </div>
     <div class="pad-cluster">
         <div class="pad-btn" data-k="shoot">●</div>
-        <div class="pad-btn" data-k="jump">▲</div>
+        <div class="pad-btn" data-k="jump">▲&#xFE0E;</div>
     </div>
 </div>
 
@@ -2530,8 +2530,10 @@ let devInvincible = false;
         for (const t of e.touches) {
             if (shootFinger && t.identifier === shootFinger.id) continue;
             let side = padFingers.get(t.identifier);
-            if (!side) { side = t.clientX < vw / 2 ? 'dir' : 'act'; padFingers.set(t.identifier, side); }
-            held.add(side === 'dir' ? (t.clientX < vw / 4 ? 'left' : 'right') : (!side4 || t.clientX >= vw * 3 / 4 ? 'jump' : 'shoot'));
+            // upright: four quarters; sideways: ◀ ▶ are the first two fifths and the rest jumps
+            const dirEnd = side4 ? vw / 2 : vw * 2 / 5;
+            if (!side) { side = t.clientX < dirEnd ? 'dir' : 'act'; padFingers.set(t.identifier, side); }
+            held.add(side === 'dir' ? (t.clientX < dirEnd / 2 ? 'left' : 'right') : (!side4 || t.clientX >= vw * 3 / 4 ? 'jump' : 'shoot'));
         }
         if (shootFinger) held.add('shoot');
         setPadKey('left', held.has('left'), pressLeft, releaseLeft, keys.left);
@@ -3172,7 +3174,7 @@ let devInvincible = false;
 
                     if (isTouchDevice) {
                         ctx.font = font(32, 800);
-                        ctx.fillText((screenLandscape() ? '◀ ▶   ·   ▲ right half   ·   drag ●' : 'Touch below:  ◀  ▶  ●  ▲'), W / 2, 124);
+                        ctx.fillText((screenLandscape() ? '◀\uFE0E ▶\uFE0E   ·   ▲\uFE0E right side   ·   drag ●' : 'Touch below:  ◀\uFE0E  ▶\uFE0E  ●  ▲\uFE0E'), W / 2, 124);
                         ctx.font = font(26, 700);
                         ctx.fillText('↓', W / 2, 156);
                         ctx.font = font(16, 500, true);
