@@ -29,7 +29,10 @@
             color-scheme: light;
         }
         * { box-sizing: border-box; }
+        /* iPhone Safari loses touches that start on position: fixed elements inside a frame (the page around the game):
+           the touch layers are absolute inside the body instead, which is exactly the window's size */
         body {
+            position: relative;
             margin: 0;
             padding: 0;
             background: var(--bg);
@@ -123,7 +126,7 @@
         /* On-screen controls, shown only on touch devices */
         #pad {
             --b: min(66px, 17vh, calc((100vw - 80px) / 4.3));
-            position: fixed; left: 0; right: 0; bottom: 0; z-index: 34;
+            position: absolute; left: 0; right: 0; bottom: 0; z-index: 34;
             display: none; justify-content: space-between; align-items: flex-end;
             padding: 0 max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
             pointer-events: none;
@@ -303,7 +306,7 @@
         body.touch.landscape #pad .pad-btn[data-k="jump"] { font-size: 22px; }
         body.touch.landscape #pad .pad-btn.on { background: rgba(156, 107, 60, 0.06); }
         #shootDrag {
-            position: fixed; z-index: 35; width: 58px; height: 58px; margin: -29px 0 0 -29px; border-radius: 50%;
+            position: absolute; z-index: 35; width: 58px; height: 58px; margin: -29px 0 0 -29px; border-radius: 50%;
             display: none; justify-content: center; align-items: center;
             border: 1.5px solid rgba(156, 107, 60, 0.4); background: rgba(255, 253, 248, 0.18);
             color: rgba(156, 107, 60, 0.55); font-size: 20px; opacity: 0.8;
@@ -457,7 +460,8 @@
             if (document.exitFullscreen) document.exitFullscreen();
             else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
         } else if (fsApi) { fsDeclined = false; enterFullscreen(true); }
-        else if (inFrame) window.parent.postMessage({ mensurator: 'toggle-cover' }, '*');
+        // iPhone: the game on its own page, outside the site's frame (sturdiest for touches)
+        else if (inFrame) window.top.location.href = location.href.split(/[?#]/)[0];
     }
     // A phone on its side goes full screen on the next tap outside play (title, level card), where the browser allows it (Android);
     // never in the middle of play, where the switch would drop the fingers on the controls
@@ -2588,10 +2592,13 @@ let devInvincible = false;
         if (b.classList.contains('on') !== now) b.classList.toggle('on', now);
     }
 
-    window.addEventListener('touchstart', handleTouchZones, {passive: false});
-    window.addEventListener('touchmove', handleTouchZones, {passive: false});
-    window.addEventListener('touchend', handleTouchZones, {passive: false});
-    window.addEventListener('touchcancel', handleTouchZones, {passive: false});
+    // Listeners on the touch layer itself too, so Safari knows these areas take touches (handled once per event)
+    function padTouch(e) { if (e._mensDone) return; e._mensDone = true; handleTouchZones(e); }
+    for (const t of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) pad.addEventListener(t, padTouch, { passive: false });
+    window.addEventListener('touchstart', padTouch, {passive: false});
+    window.addEventListener('touchmove', padTouch, {passive: false});
+    window.addEventListener('touchend', padTouch, {passive: false});
+    window.addEventListener('touchcancel', padTouch, {passive: false});
     
     // Taps that move the game on: only a finger put down after the moment (not one still held from play) counts
     let tapArmed = false;
