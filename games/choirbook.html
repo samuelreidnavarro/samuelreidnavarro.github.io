@@ -534,6 +534,26 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 .voices tfoot td{padding-top:8px;text-align:left}
 .voices tfoot button{height:32px;min-height:32px;padding:0 10px;font-size:15px}
 #popVoices .popbody{max-width:calc(100vw - 28px);overflow-x:auto}
+.voices .drag{display:inline-block;cursor:grab;color:var(--muted);padding:2px 6px;touch-action:none;user-select:none;-webkit-user-select:none;font-size:18px;line-height:1}
+.voices .drag:active{cursor:grabbing}
+.voices tr.dragging{opacity:.45}
+.voices tr.dropbefore td{box-shadow:inset 0 2px 0 var(--accent)}
+.voices tr.dropafter td{box-shadow:inset 0 -2px 0 var(--accent)}
+.voices .vexp{width:30px;padding:0;color:var(--muted)}
+.voices .vexp svg{width:17px;height:17px;fill:currentColor}
+.voices .vexp:hover{color:var(--text)}
+#popExport .popbody{left:auto;right:-6px}
+/* the clef on the staff opens a menu of clefs */
+#pages .clefhit{cursor:pointer}
+#pages .clefhit:hover use{fill:var(--hov)}
+#clefPick{position:absolute;z-index:25;min-width:220px}
+#clefPick[hidden]{display:none}
+#clefPick li{padding:6px 12px}
+/* writing with the mouse: the note that a click would write */
+#pages .ghost{opacity:.55;pointer-events:none}
+#pages .ghost use{fill:var(--accent)}
+#pages .ghost .ledger{stroke:var(--accent)}
+body.editing #pages .stafhit{cursor:crosshair}
 .pagemeta{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;margin-top:6px;padding-top:8px;border-top:1px solid var(--line)}
 .pagemeta input{font:inherit;font-size:16px;min-height:32px;height:32px;padding:0 8px;border:1px solid var(--line);border-radius:6px;background:var(--ground);color:var(--text)}
 .library .mine{display:flex;gap:6px;align-items:center}
@@ -542,6 +562,13 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 .voices th{font-weight:400;font-style:italic;color:var(--muted);font-size:14.5px;padding:0 8px 6px;text-align:center}
 .voices td{padding:5px 8px;text-align:center;font-size:17px}
 .voices td:first-child{text-align:left;white-space:nowrap;padding-left:4px}
+#popVoices .popbody{max-width:calc(100vw - 24px);overflow-x:auto}
+@media (max-width:560px){
+  .voices th{padding:0 3px 6px;font-size:13px}
+  .voices td{padding:4px 3px}
+  .voices input.vname{width:6.5em}
+  .voices .drag{padding:2px 2px}
+}
 .staffset .btns .tb{min-width:0;padding:0 11px}
 #popLook .staffset,#popPage .staffset{grid-template-columns:auto minmax(150px,auto)}
 .staffset .lab{color:var(--muted);font-size:16px}
@@ -606,7 +633,14 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
         <div class="podg">
           <button id="newBtn" title="A new, empty score to write polyphony in">New score</button>
           <button id="openBtn">Open file</button>
-          <button id="printBtn">Print</button>
+          <div class="pop" id="popExport">
+            <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Export<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+            <div class="popbody"><div class="btns col" id="exportList">
+              <button class="tb" id="printBtn">Print</button>
+              <button class="tb" id="saveBtn" title="Save this piece, with your changes, as a .krn file">Download .krn</button>
+              <button class="tb" id="keepBtn" title="Keep a copy of this piece, with your changes, in My scores">Save to My scores</button>
+            </div></div>
+          </div>
         </div>
       </div>
       <input type="file" id="fileIn" accept=".krn,.kern,.txt" hidden>
@@ -638,10 +672,6 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
         </div></div>
       </div></div>
       <span class="selinfo" id="selInfo"></span>
-      <div class="grow"><div class="podg">
-        <button id="revertBtn" title="Throw away your changes to this piece">Revert</button>
-        <button id="saveBtn" title="Save this piece, with your changes, as a .krn file">Download .krn</button>
-      </div></div>
     </div>
   </section>
 
@@ -650,6 +680,7 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
     <section class="viewer" id="viewer" aria-label="Music"><div id="pages"></div></section>
     <button class="pagenav prev" id="pgPrev" aria-label="Previous page" title="Previous page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12 17 6.2Z"/></svg></button>
     <div id="countBox" aria-live="off" hidden></div>
+    <ul id="clefPick" class="menu" role="menu" aria-label="Clef" hidden></ul>
     <button class="pagenav next" id="pgNext" aria-label="Next page" title="Next page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button>
     <div class="handbox" id="handBox" title="The tactus: the hand drops on one beat and lifts on the next" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="handRot"></g></svg></div><div class="handbox pendbox" id="pendBox" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="pendG"><path d="M66 158 H130 L120 142 H76Z" fill="currentColor"/><g id="pendRot"><line x1="98" y1="150" x2="98" y2="-16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="84" y="14" width="28" height="34" rx="4" fill="currentColor"/></g></g></svg></div>
   </div>
@@ -702,8 +733,9 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
           <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
           <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
           <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
-          <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0" max="0.85" step="0.01">
+          <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0" max="1.2" step="0.01">
           <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0" max="2" step="0.02">
+          <label class="ctl" for="ss">Space between systems</label><input type="range" id="ss" min="0" max="3" step="0.05">
           <span class="lab">Syllable dashes</span><div class="btns" id="dashSeg" role="group" aria-label="Syllable dashes"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <label class="ctl" for="handOp">Hand opacity</label><input type="range" id="handOp" min="0.05" max="1" step="0.05">
@@ -1190,7 +1222,11 @@ const st = {
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
 /* the spacing sliders now cover only their tight end */
-st.hs = Math.max(0, Math.min(0.85, Number(st.hs) || 0)); st.vs = Math.max(0, Math.min(2, Number(st.vs) || 0));
+/* every piece opens with the same look: staff size and spacing */
+const LOOK = {size: 1.75, hs: 0.45, vs: 0.6, ss: 0.8};
+function resetLook(){ Object.assign(st, LOOK); save(); for (const k of ['size', 'hs', 'vs', 'ss']) { const el = document.getElementById(k); if (el) el.value = st[k]; } }
+for (const [k, v] of Object.entries(LOOK)) if (typeof st[k] !== 'number' || !isFinite(st[k])) st[k] = v;
+st.hs = Math.max(0, Math.min(1.2, st.hs)); st.vs = Math.max(0, Math.min(2, st.vs)); st.ss = Math.max(0, Math.min(3, st.ss));
 if (st.bars === 'mstrich') st.bars = 'full';
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} if (window.Organ) Organ.saveShared(); };
 /* playback, metronome and sound: shared/organ.js, the same engine as the Cantus firmus app's */
@@ -1286,6 +1322,7 @@ function mensW(sign){
 /* ------------------------------------------------------------------ */
 /* Horizontal layout                                                   */
 /* ------------------------------------------------------------------ */
+/* horizontal spacing: at 0 the notes stand as close as they can without touching; the slider adds room by duration */
 const spring = d => 0.05 + 0.25 * Math.min(1, st.hs) + (0.8 + 2.3 * Math.pow(Math.max(d, 0.05), 0.6)) * st.hs;
 
 /* columns for a set of voices over [a, b) */
@@ -1300,21 +1337,21 @@ function columns(vlist, a, b, withLyrics){
   let prev = null;
   const barOn = st.bars === 'full' || st.bars === 'tick';
   /* the lowest quarter of the spacing slider lets notes and syllables crowd, even overlap */
-  const tight = Math.min(1, st.hs / 0.6), squeeze = 0.3 + 0.7 * tight;
+  const m1 = Math.min(1, st.hs);
   for (const c of cols) {
     let left = 0, right = 0.3;
     for (const s of c.items.values()) { left = Math.max(left, s.left); right = Math.max(right, s.right); }
     c.left = left; c.right = right;
     const needBar = c.bar && (barOn || c.bar === 'double');
-    let x = prev ? prev.x + (prev.right + left) * squeeze + 0.08 * tight + 0.47 * Math.min(1, st.hs) + (needBar ? 0.5 * tight + 0.4 * Math.min(1, st.hs) : 0) : left;
+    let x = prev ? prev.x + prev.right + left + 0.28 + 0.27 * m1 + (needBar ? 0.5 + 0.4 * m1 : 0) : left;
     for (const [v, s] of c.items) {
       if (lastX.has(v)) x = Math.max(x, lastX.get(v) + spring(lastD.get(v)) + (needBar ? 0.5 : 0));
-      if (withLyrics(v) && s.text && lastSyl.has(v)) x = Math.max(x, lastSyl.get(v) + (s.tw / 2 - s.hw / 2) * squeeze + 0.25 * tight + 0.3 * Math.min(1, st.hs));
+      if (withLyrics(v) && s.text && lastSyl.has(v)) x = Math.max(x, lastSyl.get(v) + s.tw / 2 - s.hw / 2 + 0.3 + 0.25 * m1);
     }
     c.x = x;
     for (const [v, s] of c.items) {
       lastX.set(v, x); lastD.set(v, s.d);
-      if (withLyrics(v) && s.text) lastSyl.set(v, x + (s.hw / 2 + s.tw / 2 + (s.hy ? 0.9 : 0)) * squeeze);
+      if (withLyrics(v) && s.text) lastSyl.set(v, x + s.hw / 2 + s.tw / 2 + (s.hy ? 0.9 : 0));
     }
     prev = c;
   }
@@ -1480,7 +1517,10 @@ function staffLine(o){
   /* clef, key */
   const t0 = o.t0;
   const clef = v.clef;
-  s += clefSvg(clef, x0 + 0.5, top);
+  /* where the mouse writes notes; on the last line it reaches on to the margin, for adding at the end */
+  const hx1 = o.tail ? Math.max(x1, o.tail) : x1;
+  s += `<rect class="stafhit" data-v="${v.idx}" data-top="${f(top)}" data-end="${f(x1)}" data-k0="${o.k0 ?? ''}" data-k1="${o.k1 ?? ''}" x="${f(x0)}" y="${f(top - 2.6)}" width="${f(hx1 - x0)}" height="9.2" fill="transparent"/>`;
+  s += `<g class="clefhit" data-v="${v.idx}"><rect x="${f(x0 + 0.2)}" y="${f(top - 1.5)}" width="${f(clefW(clef) + 0.6)}" height="7" fill="transparent"/>${clefSvg(clef, x0 + 0.5, top)}</g>`;
   let x = x0 + 0.5 + clefW(clef) + 0.5;
   for (const k of keySig(v, t0, clef)) { s += use(k.g, x, top + 4 - k.pos * 0.5); x += gw(k.g) + 0.15; }
   /* notes */
@@ -1593,7 +1633,7 @@ function buildLines(vlist, a, b, W, opts = {}){
     const xs = [];
     for (let i = L.from; i < L.to; i++) xs[i] = startX + (cols[i].x - cols[L.from].x) * k;
     const endX = last ? (allEnd ? xs[L.to - 1] + lastCol.right + 1.2 : Math.max(xs[L.to - 1] + lastCol.right + 2.4, opts.ragged ? 0 : W)) : W;
-    return {cols, from: L.from, to: L.to, xs, x0: ind, x1: last && !opts.fullLast ? Math.min(W, endX + (allEnd ? 0.9 : 0)) : W, last, endsPiece: last && allEnd, t0: cols[L.from].t, tEnd: L.to < cols.length ? cols[L.to].t : b};
+    return {cols, from: L.from, to: L.to, xs, x0: ind, x1: last && !opts.fullLast ? Math.min(W, endX + (allEnd ? 0.9 : 0)) : W, last, W, endsPiece: last && allEnd, t0: cols[L.from].t, tEnd: L.to < cols.length ? cols[L.to].t : b};
   });
 }
 /* vertical room a voice needs in a line */
@@ -1642,8 +1682,10 @@ function drawSystem(vlist, line, y, opts = {}){
   if (secRoom) s += sectionLabels(line, tops[0] - rooms[0].above - 0.4, line.x1);
   vlist.forEach((v, k) => {
     const sh = vis(v.idx);
-    s += staffLine({v, cols: line.cols, from: line.from, to: line.to, xs: line.xs, top: tops[k], x0: line.x0, x1: line.x1,
-      last: line.endsPiece, t0: line.t0, showNotes: sh.notes, showLyr: sh.lyr, lyrY: tops[k] + rooms[k].lyrY, lineEnd: line.x1,
+    let k0 = null, k1 = null;
+    for (let ci = line.from; ci < line.to; ci++) { const q = line.cols[ci].items.get(v); if (q) { const kk = +q.id.split('-')[1]; if (k0 === null) k0 = kk; k1 = kk; } }
+    s += staffLine({v, k0, k1, cols: line.cols, from: line.from, to: line.to, xs: line.xs, top: tops[k], x0: line.x0, x1: line.x1,
+      last: line.endsPiece, tail: line.last ? line.W : null, t0: line.t0, showNotes: sh.notes, showLyr: sh.lyr, lyrY: tops[k] + rooms[k].lyrY, lineEnd: line.x1,
       next: nextSym(v, line.tEnd)});
     if (opts.names && opts.names[k]) s += `<text x="${f(line.x0 - 0.8)}" y="${f(tops[k] + 2.6)}" font-size="1.8" text-anchor="end" font-style="italic">${esc(opts.names[k])}</text>`;
   });
@@ -1708,7 +1750,7 @@ function layoutScore(G){
 function paginate(G, lines, vlist, optsFor, sub){
   const pages = [];
   let body = '', y = G.M, first = true;
-  const sysGap = 2.2 * st.vs + Math.min(1, st.vs);
+  const sysGap = 2.2 * st.ss + Math.min(1, st.ss);
   const newPage = () => { pages.push(body); body = ''; y = G.M; };
   if (first) { const tb = titleBlock(G, G.M, G.W - G.M, y, sub); body += tb.svg; y += tb.h; }
   lines.forEach((line, li) => {
@@ -1765,7 +1807,7 @@ function layoutChoir(G){
   };
   const sysPitch = v => {
     const lyr = vis(v.idx).lyr && v.syms.some(s => s.text);
-    return 4 + 0.6 + 1.8 * Math.min(1, st.vs) + (lyr ? 2.4 + 0.6 * Math.min(1, st.vs) : 0) + 1.6 * st.vs;
+    return 4 + 0.6 + 1.8 * Math.min(1, st.vs) + (lyr ? 2.4 + 0.6 * Math.min(1, st.vs) : 0) + 1.6 * st.ss;
   };
   /* region heights per side; the first opening carries the title */
   const tb = titleBlock(G, G.M, G.W - G.M, G.M, null);
@@ -2032,10 +2074,11 @@ async function loadPiece(file){
   stopPlay();
   let saved = null; try { saved = localStorage.getItem('choirbook:edit:' + file); } catch (e) {}
   piece = null;
-  if (saved) { try { piece = parseKern(saved); piece.text = saved; } catch (e) { piece = null; } }
+  if (saved && file.startsWith('mine:')) { try { piece = parseKern(saved); piece.text = saved; } catch (e) { piece = null; } }
   if (!piece) piece = parseKern(text);
   pieceKey = file;
-  if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; }
+  if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; }
+  resetLook();
   st.piece = file; save();
   st.verse = 0;
   showSource(file);
@@ -2047,6 +2090,8 @@ function loadText(name, text){
     stopPlay();
     piece = parseKern(text);
     pieceKey = 'file:' + name;
+    if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; }
+    resetLook();
     syncUI(); render();
   } catch (e) { pagesEl.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
@@ -2157,7 +2202,7 @@ function syncUI(){
   const segs = {'#viewList': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed'};
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
   $('#viewName').textContent = VIEW_NAMES[st.view] || 'Score';
-  for (const k of ['size', 'hs', 'vs']) $('#' + k).value = st[k];
+  for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).value = st[k];
   Organ.sync();
   $('#handOp').value = st.handOp; $('#handSize').value = st.handSize;
   if ($('#audition')) $('#audition').checked = !!st.audition;
@@ -2174,13 +2219,13 @@ function syncUI(){
     const row = (v) => {
       const s = vis(v.idx);
       const cb = (k, label) => `<td><input type="checkbox" data-i="${v.idx}" data-k="${k}" aria-label="${esc(v.name)}: ${label}"${s[k] ? ' checked' : ''}${k !== 'on' && !s.on ? ' disabled' : ''}></td>`;
-      const clefSel = `<select class="vclef" data-i="${v.idx}" aria-label="${esc(v.name)}: clef">${VCLEFS.map(([k, n]) => `<option value="${k}"${(s.clef || '') === k ? ' selected' : ''}>${n}</option>`).join('')}</select>`;
-      return `<tr><td><input class="vname" data-i="${v.idx}" value="${esc(v.name)}" aria-label="Name of the voice" title="Click to rename"></td>${cb('on', 'shown')}${cb('notes', 'notes')}${cb('lyr', 'lyrics')}<td>${clefSel}</td>` +
-        `<td><button class="vbtn" data-op="cf" data-i="${v.idx}" title="Open ${esc(v.name)} in the Cantus firmus app">Cantus firmus</button></td>` +
+      return `<tr data-i="${v.idx}"><td><span class="drag" data-i="${v.idx}" title="Drag to change the order" aria-hidden="true">⠿</span></td>` +
+        `<td><input class="vname" data-i="${v.idx}" value="${esc(v.name)}" aria-label="Name of the voice" title="Click to rename"></td>${cb('on', 'shown')}${cb('notes', 'notes')}${cb('lyr', 'lyrics')}` +
+        `<td><button class="vbtn vexp" data-op="cf" data-i="${v.idx}" title="Open in Cantus firmus" aria-label="Open ${esc(v.name)} in Cantus firmus"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3.5h6.5V10h-2V6.9l-6.8 6.8-1.4-1.4 6.8-6.8H14ZM4.5 6.5h7v2h-5v9h9v-5h2v7h-13Z"/></svg></button></td>` +
         `<td><button class="vbtn vdel" data-op="del" data-i="${v.idx}" aria-label="Remove ${esc(v.name)}" title="Remove this voice">×</button></td></tr>`;
     };
-    $('#voiceTable').innerHTML = `<thead><tr><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th><th>Clef</th><th></th><th></th></tr></thead><tbody>` + piece.voices.map((v, i) => { v.idx = i; return row(v); }).join('') +
-      `</tbody><tfoot><tr><td colspan="7"><button data-op="above">+ Voice above</button> <button data-op="below">+ Voice below</button></td></tr></tfoot>`;
+    $('#voiceTable').innerHTML = `<thead><tr><th></th><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th><th></th><th></th></tr></thead><tbody>` + piece.voices.map((v, i) => { v.idx = i; return row(v); }).join('') +
+      `</tbody><tfoot><tr><td colspan="7"><button data-op="add">+ New voice</button></td></tr></tfoot>`;
     if (document.activeElement !== $('#metaTitle')) $('#metaTitle').value = (piece.meta.OTL || piece.title || '').replace(/\s*\.\.\.\s*/g, ' … ');
     if (document.activeElement !== $('#metaComp')) $('#metaComp').value = piece.meta.COM || piece.meta.COA || '';
   }
@@ -2191,7 +2236,7 @@ segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSe
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
 let rq = 0;
 const later = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); };
-for (const k of ['size', 'hs', 'vs']) $('#' + k).addEventListener('input', e => { st[k] = +e.target.value; save(); later(); });
+for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).addEventListener('input', e => { st[k] = +e.target.value; save(); later(); });
 /* ---------------- Voices: name, clef, add, remove, open in Cantus firmus ---------------- */
 const VCLEFS = [['', 'As written'], ['treble', 'G clef'], ['treble8', 'G clef, octave lower'], ['f3', 'F clef on 3'], ['bass', 'F clef on 4']];
 const CLEF_KERN = {treble: 'G2', treble8: 'Gv2', bass: 'F4', f3: 'F3', c1: 'C1', c2: 'C2', c3: 'C3', c4: 'C4', c5: 'C5'};
@@ -2224,6 +2269,18 @@ const VOICE_OPS = {
     if (c) commit(() => { const v = piece.voices[i]; if (v.clefs.length && eq(v.clefs[0].t, 0)) v.clefs[0].c = CLEF_KERN[c]; else v.clefs.unshift({t: 0, c: CLEF_KERN[c], ei: 0}); });
     else render();
   },
+  /* a voice moved from place `from` to just before place `to` (0 .. number of voices) */
+  move(from, to){
+    const n = piece.voices.length;
+    if (from === to || from + 1 === to || from < 0 || from >= n) return;
+    const order = [...Array(n).keys()];
+    const [x] = order.splice(from, 1); order.splice(to > from ? to - 1 : to, 0, x);
+    const all = st.vis[pieceKey] || {}, nv = {};
+    order.forEach((old, i) => { if (all[old]) nv[i] = all[old]; });
+    st.vis[pieceKey] = nv; save();
+    ed.sel = null;
+    commit(() => { piece.voices = order.map(i => piece.voices[i]); });
+  },
   add(where){
     const n = piece.voices.length;
     const ref = where === 'above' ? piece.voices[0] : piece.voices[n - 1];
@@ -2233,7 +2290,7 @@ const VOICE_OPS = {
     if (where === 'above') shiftVis(0, 1);
     vis(where === 'above' ? 0 : n).clef = clef; save();
     commit(() => { if (where === 'above') piece.voices.unshift(v); else piece.voices.push(v); });
-    toast(`A voice was added ${where === 'above' ? 'above' : 'below'}. Edit, click one of its rests, then type the letters A to G: the notes take the rests’ place.`);
+    toast('A new voice at the top. Drag it by ⠿ to put it in its place; Edit, then click its staff to write.');
   },
   remove(i){
     if (piece.voices.length < 2) { toast('A score keeps at least one voice.'); return; }
@@ -2250,12 +2307,41 @@ $('#voiceTable').addEventListener('click', e => {
   const i = +b.dataset.i;
   if (b.dataset.op === 'cf') openInCantusFirmus(i);
   else if (b.dataset.op === 'del') VOICE_OPS.remove(i);
-  else VOICE_OPS.add(b.dataset.op);
+  else VOICE_OPS.add('above');
 });
 $('#voiceTable').addEventListener('change', e => {
   if (e.target.classList.contains('vname')) { VOICE_OPS.rename(+e.target.dataset.i, e.target.value); return; }
   if (e.target.classList.contains('vclef')) { VOICE_OPS.clef(+e.target.dataset.i, e.target.value); return; }
 });
+{
+  let drag = null;
+  const rowAt = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('#voiceTable tbody tr') : null; };
+  const clearMarks = () => document.querySelectorAll('#voiceTable tr.dropbefore, #voiceTable tr.dropafter').forEach(r => r.classList.remove('dropbefore', 'dropafter'));
+  $('#voiceTable').addEventListener('pointerdown', e => {
+    const h = e.target.closest('.drag'); if (!h) return;
+    e.preventDefault();
+    const tr = h.closest('tr');
+    drag = {from: +h.dataset.i, to: null, tr, id: e.pointerId};
+    tr.classList.add('dragging');
+    try { h.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  $('#voiceTable').addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    clearMarks();
+    const tr = rowAt(e.clientX, e.clientY); if (!tr) { drag.to = null; return; }
+    const r = tr.getBoundingClientRect(), i = +tr.dataset.i, after = e.clientY > r.top + r.height / 2;
+    tr.classList.add(after ? 'dropafter' : 'dropbefore');
+    drag.to = after ? i + 1 : i;
+  });
+  const end = e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const d = drag; drag = null;
+    clearMarks(); d.tr.classList.remove('dragging');
+    if (e.type === 'pointerup' && d.to !== null) VOICE_OPS.move(d.from, d.to);
+  };
+  $('#voiceTable').addEventListener('pointerup', end);
+  $('#voiceTable').addEventListener('pointercancel', end);
+}
 $('#voiceTable').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('vname')) e.target.blur(); e.stopPropagation(); });
 /* title and composer */
 $('#metaTitle').addEventListener('change', e => { const t = e.target.value.trim(); if (!piece || !t) return; commit(() => { for (const k of Object.keys(piece.meta)) if (k.startsWith('OTL') || k === 'OPR') delete piece.meta[k]; piece.meta.OTL = t; }); });
@@ -2276,7 +2362,7 @@ async function newScore(){
   save(); render();
   refreshMine();
   ed.on = true; ed.sel = {vi: 0, ei: 0}; syncEdit(); showSel();
-  toast('A new score. Select a rest and type the letters A to G: the notes take the rest’s place. Voices adds, names and removes voices.');
+  toast('A new score. Click on a staff to write a note where you point, or type the letters A to G. Notes written over rests take their place. Voices adds, names and orders the voices.');
 }
 $('#newBtn').addEventListener('click', () => { newScore().catch(err => toast(err.message)); });
 
@@ -2536,7 +2622,8 @@ function applyText(text){
   const keep = piece;
   try { piece = parseKern(text); } catch (e) { piece = keep; return; }
   piece.text = text;
-  try { localStorage.setItem(EKEY(pieceKey), text); } catch (e) {}
+  if (pieceKey && pieceKey.startsWith('mine:')) { try { localStorage.setItem(EKEY(pieceKey), text); } catch (e) {} }
+  else if (!ed.warned) { ed.warned = true; toast('Changes to this piece are not kept once you leave it. Export, Save to My scores keeps a copy.'); }
   if (pieceKey && pieceKey.startsWith('mine:')) { const all = mineAll(); if (all[pieceKey]) { all[pieceKey].title = piece.title; all[pieceKey].at = Date.now(); mineSave(all); } }
   if (sel) { const v = piece.voices[sel.vi]; if (!v || sel.ei >= v.events.length) ed.sel = v && v.events.length ? {vi: sel.vi, ei: v.events.length - 1} : null; }
   syncEdit(); syncUI(); render();
@@ -2549,6 +2636,30 @@ function curVoice(){ return ed.sel ? piece.voices[ed.sel.vi] : null; }
 function srcOf(){ const s = selSym(); return s ? s.src : ed.sel ? [ed.sel.ei] : []; }
 /* written value of the selection under its sign, for the value buttons */
 function propAt(v, t){ return mensInfo(metAt(v, t)).p; }
+/* a note (or rest) of the chosen value written into voice vi before event `at`; written into rests, it takes their time */
+function insertEvent(vi, at, step, isRest){
+  const v = piece.voices[vi]; if (!v) return;
+  const val = VALS.find(x => x[0] === ed.val)[1];
+  const t = at < v.events.length ? v.events[at].t : v.end;
+  commit(() => {
+    const e = {d: rt(val / propAt(v, t)), rest: !!isRest, step, alt: null, ed: false, syl: [], t};
+    if (!e.rest) e.alt = implied(v, step, t);
+    v.events.splice(at, 0, e);
+    for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > at || (m.ei === at && at > 0)) m.ei++;
+    if (!e.rest) {
+      let need = e.d, k = at + 1;
+      while (need > EPS && v.events[k] && v.events[k].rest) {
+        const r = v.events[k];
+        if (r.d <= need + EPS) {
+          need = rt(need - r.d); v.events.splice(k, 1);
+          for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > k) m.ei--;
+        } else { r.d = rt(r.d - need); r.kd = r.d; need = 0; }
+      }
+    }
+  });
+  ed.sel = {vi, ei: at}; render(); syncEdit();
+  if (!isRest && st.audition) { const s = selSym(); if (s) Organ.audition(midiOf(s)); }
+}
 const OPS = {
   step(dir){
     const v = curVoice(); if (!v) return;
@@ -2611,26 +2722,41 @@ const OPS = {
     if (ref === null) ref = CLEFS[v.clef || 'c3'].bottom + 4;
     const idx = LETTERS.indexOf(letter);
     let step = Math.round((ref - idx) / 7) * 7 + idx;
-    const val = VALS.find(x => x[0] === ed.val)[1];
-    const t = at < v.events.length ? v.events[at].t : v.end;
+    insertEvent(ed.sel.vi, at, step, letter === 'r');
+  },
+  /* move the selection a minim later (+1) or earlier (-1): the rests around it give and take the time */
+  shift(dir){
+    const v = curVoice(); if (!v || !ed.sel) return;
+    const src = srcOf(); if (!src.length) return;
+    const a = src[0], b = src[src.length - 1];
+    const m = rt(0.5 / propAt(v, v.events[a].t));
+    const before = v.events[a - 1], after = v.events[b + 1];
+    const give = dir > 0 ? after : before;
+    /* the neighbour gives up a minim: a rest of any length, or a note longer than a minim */
+    if (!give || give.d < m - EPS || (!give.rest && give.d < m + m / 2 - EPS)) {
+      toast(!give ? (dir > 0 ? 'Nothing comes after it to make room.' : 'Nothing comes before it to make room.') : (dir > 0 ? 'The next note is too short to make room.' : 'The note before is too short to make room.'));
+      return;
+    }
+    let first = a;
     commit(() => {
-      const e = {d: rt(val / propAt(v, t)), rest: letter === 'r', step, alt: null, ed: false, syl: [], t};
-      if (!e.rest) e.alt = implied(v, step, t);
-      v.events.splice(at, 0, e);
-      for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > at || (m.ei === at && at > 0)) m.ei++;
-      /* a note written into rests uses up their time, so what follows stays in place */
-      if (!e.rest) {
-        let need = e.d, k = at + 1;
-        while (need > EPS && v.events[k] && v.events[k].rest) {
-          const r = v.events[k];
-          if (r.d <= need + EPS) {
-            need = rt(need - r.d); v.events.splice(k, 1);
-            for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > k) m.ei--;
-          } else { r.d = rt(r.d - need); r.kd = r.d; need = 0; }
-        }
+      const fix = (at, by) => { for (const arr of [v.mets, v.keys, v.clefs]) for (const mk of arr) if (mk.ei > at) mk.ei += by; };
+      const shrink = (i) => { const r = v.events[i]; if (r.d <= m + EPS) { v.events.splice(i, 1); fix(i, -1); return true; } r.d = rt(r.d - m); r.kd = r.d; return false; };
+      /* a sign standing at `place` stays with the new rest when it comes before the note, and with the next note when it comes after */
+      const grow = (i, place, keepSign) => {
+        const r = v.events[i];
+        if (r && r.rest) { r.d = rt(r.d + m); r.kd = r.d; return false; }
+        v.events.splice(place, 0, {d: m, kd: m, rest: true, t: 0, syl: []}); fix(keepSign ? place : place - 1, 1); return true;
+      };
+      if (dir > 0) {
+        shrink(b + 1);
+        if (grow(a - 1, a, true)) first = a + 1;
+      } else {
+        if (shrink(a - 1)) first = a - 1;
+        const nb = b - (first < a ? 1 : 0);
+        grow(nb + 1, nb + 1, false);
       }
     });
-    ed.sel = {vi: ed.sel.vi, ei: at}; render(); syncEdit();
+    ed.sel = {vi: ed.sel.vi, ei: first}; showSel(); syncEdit();
   },
   move(dir){
     if (!ed.sel) return;
@@ -2682,6 +2808,96 @@ pagesEl.addEventListener('click', e => {
   ed.sel = {vi: +m[1], ei: s.src[0]};
   showSel();
 });
+/* the clef menu, from a click on a clef in the score */
+const clefPick = $('#clefPick');
+clefPick.innerHTML = [['treble', 'G clef'], ['treble8', 'G clef, octave lower'], ['f3', 'F clef on the third line'], ['bass', 'F clef on the fourth line'], ['', 'As the piece has it']]
+  .map(([k, n]) => `<li role="menuitem" data-c="${k}">${n}</li>`).join('');
+function openClefPick(vi, e){
+  const wr = $('.viewwrap').getBoundingClientRect();
+  clefPick.dataset.v = vi; clefPick.hidden = false;
+  clefPick.style.left = Math.max(4, Math.min(wr.width - 240, e.clientX - wr.left)) + 'px';
+  clefPick.style.top = (e.clientY - wr.top + 10) + 'px';
+  const cur = vis(vi).clef || '';
+  clefPick.querySelectorAll('li').forEach(li => li.setAttribute('aria-selected', String(li.dataset.c === cur)));
+}
+clefPick.addEventListener('click', e => {
+  const li = e.target.closest('li'); if (!li) return;
+  clefPick.hidden = true;
+  VOICE_OPS.clef(+clefPick.dataset.v, li.dataset.c);
+});
+document.addEventListener('pointerdown', e => { if (!clefPick.hidden && !e.target.closest('#clefPick') && !e.target.closest('.clefhit')) clefPick.hidden = true; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') clefPick.hidden = true; });
+/* where a click on a staff would write: the pitch under the pointer, and the place among the voice's notes */
+function staffTarget(rect, e){
+  const ctm = rect.getScreenCTM(); if (!ctm) return null;
+  const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+  const vi = +rect.dataset.v, top = +rect.dataset.top, v = piece.voices[vi];
+  if (!v) return null;
+  const pos = Math.max(-8, Math.min(16, Math.round((top + 4 - p.y) * 2)));
+  const step = CLEFS[v.clef].bottom + pos;
+  let mode = 'end', k = null;
+  if (rect.dataset.k0 !== '') {
+    const k0 = +rect.dataset.k0, k1 = +rect.dataset.k1, g = rect.parentNode;
+    mode = 'before'; k = k0;
+    for (let q = k0; q <= k1; q++) {
+      const s = v.syms[q]; if (!s || !s.src || !s.src.length) continue;
+      const el = g.querySelector('g.n' + vi + '-' + q); if (!el) continue;
+      const bb = el.getBBox();
+      if (s.rest && p.x >= bb.x - 0.5 && p.x <= bb.x + Math.max(bb.width, 0.5) + 0.8) { mode = 'on'; k = q; break; }
+      if (bb.x + bb.width / 2 <= p.x) { mode = 'after'; k = q; }
+    }
+  }
+  return {vi, v, top, pos, step, mode, k, x: p.x, end: +rect.dataset.end, g: rect.parentNode};
+}
+/* the writing area under the pointer: the staff itself, or, while editing, a rest on it (a note written there takes the rest's place) */
+function stafFor(el){
+  if (!el || !el.closest || !piece) return null;
+  const r = el.closest('rect.stafhit'); if (r) return r;
+  if (!ed.on) return null;
+  const g = el.closest('g[class^="n"]'); if (!g) return null;
+  const m = /^n(\d+)-(\d+)/.exec(g.getAttribute('class') || ''); if (!m) return null;
+  const vi = +m[1], k = +m[2], v = piece.voices[vi], sy = v && v.syms[k];
+  if (!sy || !sy.rest) return null;
+  for (const r2 of g.parentNode.querySelectorAll('rect.stafhit[data-v="' + vi + '"]'))
+    if (r2.dataset.k0 !== '' && +r2.dataset.k0 <= k && k <= +r2.dataset.k1) return r2;
+  return null;
+}
+function eventIndexFor(tg){
+  const s = tg.k !== null ? tg.v.syms[tg.k] : null;
+  if (tg.mode === 'on') return {at: s.src[0], onRest: true};
+  if (tg.mode === 'after') return {at: s.src[s.src.length - 1] + 1, onRest: false};
+  if (tg.mode === 'before') return {at: s.src[0], onRest: false};
+  return {at: tg.v.events.length, onRest: false};
+}
+let ghostEl = null;
+function clearGhost(){ if (ghostEl) { ghostEl.remove(); ghostEl = null; } }
+pagesEl.addEventListener('pointermove', e => {
+  if (!ed.on || e.pointerType !== 'mouse' || !piece) { clearGhost(); return; }
+  const rect = stafFor(e.target);
+  if (!rect) { clearGhost(); return; }
+  const tg = staffTarget(rect, e); if (!tg) { clearGhost(); return; }
+  const g = ed.val, w = gw(g), x = tg.x - w / 2, y = tg.top + 4 - tg.pos * 0.5;
+  const flip = (STEMMED[g] && tg.pos >= 7) || (TAILED[g] && tg.pos <= -1);
+  let html = ledgers(tg.pos, x, w, tg.top) + (flip ? useT(g, x, y, 1, -1) : use(g, x, y));
+  /* past the end of the music: a faint piece of staff for the note to stand on */
+  if (tg.x > tg.end) for (let q = 0; q < 5; q++) html += `<line class="ledger" x1="${f(tg.end)}" x2="${f(x + w + 1)}" y1="${f(tg.top + q)}" y2="${f(tg.top + q)}" stroke-width="0.1" opacity="0.5"/>`;
+  if (!ghostEl || ghostEl.parentNode !== tg.g) { clearGhost(); ghostEl = document.createElementNS('http://www.w3.org/2000/svg', 'g'); ghostEl.setAttribute('class', 'ghost'); tg.g.appendChild(ghostEl); }
+  ghostEl.innerHTML = html;
+});
+pagesEl.addEventListener('pointerleave', clearGhost);
+
+pagesEl.addEventListener('click', e => {
+  const ch = e.target.closest && e.target.closest('.clefhit');
+  if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e); return; }
+  const rect = ed.on ? stafFor(e.target) : null;
+  if (rect) {
+    e.stopImmediatePropagation();
+    const tg = staffTarget(rect, e); if (!tg) return;
+    const {at} = eventIndexFor(tg);
+    clearGhost();
+    insertEvent(tg.vi, at, tg.step, false);
+  }
+}, true);
 function syncEdit(){
   $('#editBtn').setAttribute('aria-pressed', String(ed.on));
   $('#editBar').hidden = !ed.on;
@@ -2694,8 +2910,6 @@ function syncEdit(){
   document.querySelectorAll('#accBtns button').forEach(b => b.setAttribute('aria-pressed', String(!!s && !s.rest && s.alt !== null && s.alt !== undefined && s.alt === +b.dataset.a && (s.acc || s.edAcc) !== null)));
   $('#dotBtn').setAttribute('aria-pressed', String(!!s && !!s.dot));
   $('#restBtn').setAttribute('aria-pressed', String(!!s && s.rest));
-  const edited = (() => { try { return !!localStorage.getItem(EKEY(pieceKey)); } catch (e) { return false; } })();
-  $('#revertBtn').disabled = !edited;
   $('#selInfo').textContent = s ? piece.voices[ed.sel.vi].name : '';
 }
 function glyphIcon(k, pad = 0.2){
@@ -2716,22 +2930,27 @@ $('#dotBtn').addEventListener('click', () => OPS.dot());
 $('#restBtn').addEventListener('click', () => OPS.rest());
 $('#xformList').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { OPS.xform(b.dataset.x); closePops(); } });
 $('#saveBtn').addEventListener('click', () => {
+  closePops();
   const text = piece.text || writeKern(piece);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], {type: 'text/plain'}));
   a.download = (pieceKey.replace(/^file:/, '').replace(/\.(krn|kern|txt)$/i, '') || 'choirbook') + '.krn';
   document.body.appendChild(a); a.click(); a.remove();
 });
-$('#revertBtn').addEventListener('click', () => {
-  try { localStorage.removeItem(EKEY(pieceKey)); } catch (e) {}
-  ed.undo = []; ed.redo = [];
-  if (pieceKey.startsWith('file:')) { syncEdit(); return; }
-  loadPiece(pieceKey);
+$('#keepBtn').addEventListener('click', () => {
+  if (!piece) return;
+  closePops();
+  if (pieceKey.startsWith('mine:')) { toast('This score is already kept in My scores.'); return; }
+  const text = piece.text || writeKern(piece), undo = ed.undo.slice(), redo = ed.redo.slice();
+  const id = mineAdd(piece.title, text);
+  try { localStorage.setItem(EKEY(id), text); } catch (e) {}
+  loadPiece(id).then(() => { ed.undo = undo; ed.redo = redo; syncEdit(); refreshMine(); toast('Saved to My scores. Changes to this copy are kept.'); });
 });
 document.addEventListener('keydown', e => {
   if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+  if (mod && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && ed.on && ed.sel) { e.preventDefault(); OPS.shift(e.key === 'ArrowRight' ? 1 : -1); return; }
   if (mod) return;
   if (e.key === 'ArrowLeft' && ed.sel) { e.preventDefault(); OPS.move(-1); return; }
   if (e.key === 'ArrowRight' && ed.sel) { e.preventDefault(); OPS.move(1); return; }
