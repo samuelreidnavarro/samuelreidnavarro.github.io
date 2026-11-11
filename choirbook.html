@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Choir book | Samuel Reid Navarro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+Double+Pica:ital@0;1&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap">
+  <link rel="stylesheet" href="style.css?v=17">
+</head>
+<body>
+  <header class="banner">
+    <a href="index.html"><p class="site-name">Samuel Reid Navarro</p></a>
+  </header>
+  <nav class="nav" aria-label="Main">
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="music.html">Timelines</a></li>
+      <li><a href="mensurator.html">Mensurator</a></li>
+      <li><a href="canon.html">Canon Canonum</a></li>
+      <li><a href="cantus-firmus.html">Cantus firmus</a></li>
+      <li><a href="choirbook.html" aria-current="page">Choir book</a></li>
+      <li class="has-menu"><a href="compressor.html">Tools</a>
+        <ul class="menu">
+          <li><a href="compressor.html">Magic black and white PDF compressor</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+  <main class="edge">
+    <div class="embed edge">
+      <iframe class="game" id="cb" src="games/choirbook.html?v=1" title="Choir book" scrolling="no" allow="autoplay; fullscreen" allowfullscreen></iframe>
+    </div>
+    <script>
+      window.addEventListener("message", function (e) {
+        var f = document.getElementById("cb");
+        if (e.source !== f.contentWindow || !e.data) return;
+        if (e.data.choirbookHeight) f.style.height = e.data.choirbookHeight + "px";
+      });
+    </script>
+  </main>
+</body>
+</html>
