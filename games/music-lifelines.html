@@ -242,6 +242,21 @@ button{font:inherit;color:inherit}
 .pcard .info .x{right:2px}
 .pcard .info.two .cols{grid-template-columns:1fr}
 .itin{list-style:none;margin:8px 0 0;padding:0;font-size:13.5px}
+.mp-hits{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 6px}
+.mp-hits button{appearance:none;border:1px solid var(--rule);background:var(--surface);border-radius:999px;padding:2px 10px 2px 8px;font-size:13px;cursor:pointer;color:var(--ink);display:inline-flex;align-items:center;gap:5px}
+.mp-hits button:hover{background:var(--wash)}
+.mp-hits button.on{border-color:var(--ink);font-weight:700;box-shadow:inset 0 0 0 1px var(--ink)}
+.mp-hits .sw{width:8px;height:8px;border-radius:2px;display:inline-block}
+.mp-hits .nomap{color:var(--faint);font-size:12px}
+.life{position:relative;height:22px;margin:8px 0 2px;border-radius:4px;background:var(--wash);cursor:pointer;overflow:hidden}
+.life .seg{position:absolute;top:0;bottom:0;background:var(--rc);opacity:.32;border-right:1px solid var(--surface)}
+.life .seg.alt{opacity:.5}
+.life .seg.unk{background:repeating-linear-gradient(45deg,var(--rule) 0 3px,transparent 3px 6px);opacity:1}
+.life .seg.now{opacity:1}
+.life .cur{position:absolute;top:-1px;bottom:-1px;width:3px;margin-left:-1.5px;background:var(--ink);border-radius:2px;pointer-events:none}
+.life-ax{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.life-ax b{color:var(--ink);font-weight:700}
+.mp-note{font-size:13px;color:var(--muted);margin:8px 0 0}
 .itin li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;padding:2px 0;color:var(--muted)}
 .itin li.now{color:var(--ink);font-weight:700}
 .itin .y{font-variant-numeric:tabular-nums}
@@ -7593,7 +7608,7 @@ const FONT_UI = `"Alegreya Sans", "Gill Sans", "Segoe UI", system-ui, sans-serif
 const FONT_SC = `"Alegreya Sans SC", "Alegreya Sans", system-ui, sans-serif`;
 function readColors(){
   const cs = getComputedStyle(document.documentElement);
-  for (const k of ["bg","surface","ink","muted","faint","rule","wash","grid","grid-strong","sea","land","coast","border"])
+  for (const k of ["bg","surface","ink","muted","faint","rule","wash","grid","grid-strong","sea","land","coast","border","gold"])
     colors[k] = cs.getPropertyValue("--" + k).trim();
   for (const r in ROLES) colors[r] = cs.getPropertyValue(ROLES[r].color).trim() || colors.ink;
 }
@@ -7860,6 +7875,7 @@ function applySearch(){
   return changed && hits.length > 0;
 }
 function showHits(){
+  if (mode === "map"){ clearTimeout(mapHitTimer); mapHitTimer = setTimeout(showMapHits, 350); return; }
   if (mode !== "timeline" || !hits.length) return;
   const a = Math.min(...hits.map(p => p.g.start)), b = Math.max(...hits.map(p => p.g.end));
   const pad = Math.max(25, (250 - (b - a)) / 2);   // keep about 250 years of context around a single match
@@ -7885,6 +7901,7 @@ function applyFilters(){
   pack(); place(); requestDraw();
   requestAnimationFrame(() => PEOPLE.forEach(p => p.el.classList.remove("fresh")));
   saveSoon();
+  if (!state.q){ if (searchSel && mapSel === searchSel) mapSel = null; searchSel = null; }
   if (mode === "map"){ if (mapSel && !mapSel.visible) mapSel = null; mapRequest(); renderPanel(); }
   if (jump) showHits();
 }
@@ -8143,6 +8160,152 @@ const PAUSE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v1
 
 /* ---------- what to draw ---------- */
 // single-year entries: one per visible person who is alive (or just died)
+/* ---------- search on the map: pick the best match, bring them into view, show them in the panel ---------- */
+let searchSel = null, pulseT = -1e9, mapHitTimer = 0, panAnim = 0;
+function hitScore(p, q){
+  const n = norm(p.name), l = norm(p.label);
+  let s = p.imp;
+  if (n === q || l === q) s += 100;
+  else if ((n + " " + l).split(/[\s\-(),.]+/).some(w => w.startsWith(q))) s += 20;
+  if (p.it && p.it.length) s += 10;
+  return s;
+}
+function rankedHits(){ const q = norm(state.q); return hits.slice().sort((a, b) => hitScore(b, q) - hitScore(a, q) || a.g.start - b.g.start); }
+function showMapHits(){
+  if (mode !== "map" || !mapReady || !hits.length) return;
+  focusPerson(rankedHits()[0], true);
+}
+// set the year so the person is alive, glide the map to them, select them and open the panel
+function focusPerson(p, fromSearch){
+  initMapData();
+  mapSel = p; mapCity = null;
+  if (fromSearch) searchSel = p;
+  if (p.it && p.it.length){
+    const s = Math.ceil(p.g.start), e = Math.floor(p.g.end);
+    if (!ymode.range){
+      if (ymode.a < s || ymode.a > e) setYears(Math.min(e, s + Math.max(0, Math.min(35, Math.round((e - s) / 2)))), 0);
+    } else if (ymode.b < s || ymode.a > e){
+      const w = ymode.b - ymode.a, a = Math.round((s + e) / 2 - w / 2); setYears(a, a + w);
+    }
+    centerOn(p, true);
+  }
+  pulseT = performance.now();
+  mapRequest(); renderPanel(); openPanelSmall();
+}
+function centerOn(p, always){
+  const e = currentEntries().find(x => x.p === p); if (!e) return;
+  const sx = SX(e.x), sy = SY(e.y);
+  const m = always ? .3 : .08;
+  if (!always && sx > MW*m && sy > MH*m && sx < MW*(1-m) && sy < MH*(1-m)) return;
+  if (always && sx > MW*m && sy > MH*m && sx < MW*(1-m) && sy < MH*(1-m)) return;   // already comfortably in view
+  const dx = MW/2 - sx, dy = MH/2 - sy, tx0 = mv.tx, ty0 = mv.ty;
+  cancelAnimationFrame(panAnim);
+  if (REDUCED){ mv.tx += dx; mv.ty += dy; mapRequest(); return; }
+  const t0 = performance.now(), D = 450;
+  const step = now => {
+    let f = Math.min(1, (now - t0) / D); f = 1 - Math.pow(1 - f, 3);
+    mv.tx = tx0 + dx * f; mv.ty = ty0 + dy * f; mapRequest();
+    if (f < 1) panAnim = requestAnimationFrame(step);
+  };
+  panAnim = requestAnimationFrame(step);
+}
+function rrect(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+// drawn on top of everything: route of the selected person, glow + rings on found people, a name tag on the selected one
+function drawFocus(entries){
+  const searching = !!state.q && hits.length > 0;
+  const focus = entries.filter(e => e.p === mapSel || (searching && e.p.hit));
+  if (!focus.length && !mapSel) return;
+  const now = performance.now(), pt = (now - pulseT) / 1600;
+  // route through all the selected person's places
+  if (mapSel && mapSel.it && mapSel.it.length > 1 && !ymode.range){
+    const it = mapSel.it, col = roleCol(mapSel);
+    ctx2(ctx => {
+      ctx.setLineDash([5, 4]); ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.globalAlpha = .55;
+      ctx.beginPath(); it.forEach((s, i) => i ? ctx.lineTo(SX(s.x), SY(s.yb)) : ctx.moveTo(SX(s.x), SY(s.yb))); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+      for (const s of it){ ctx.beginPath(); ctx.arc(SX(s.x), SY(s.yb), 3.2, 0, Math.PI*2); ctx.fillStyle = colors.land; ctx.fill(); ctx.lineWidth = 1.6; ctx.strokeStyle = col; ctx.stroke(); }
+    });
+  }
+  const order = focus.slice().sort((a, b) => (a.p === mapSel) - (b.p === mapSel));
+  const tags = [];
+  for (const e of order){
+    const p = e.p, x = SX(e.x), y = SY(e.y), col = roleCol(p), big = p === mapSel;
+    ctx2(ctx => {
+      // soft glow
+      const R = big ? 26 : 16, g = ctx.createRadialGradient(x, y, 2, x, y, R);
+      g.addColorStop(0, colors.gold || col); g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = big ? .55 : .4; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+      // rings
+      ctx.beginPath(); ctx.arc(x, y, big ? 11 : 8, 0, Math.PI*2);
+      ctx.lineWidth = big ? 5.5 : 4.5; ctx.strokeStyle = colors.land; ctx.stroke();
+      ctx.lineWidth = big ? 3 : 2.2; ctx.strokeStyle = col; ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y, big ? 5 : 4, 0, Math.PI*2); ctx.fillStyle = col; ctx.fill();
+      // pulse after a search lands
+      if (big && pt >= 0 && pt < 1 && !REDUCED){
+        for (const off of [0, .3]){
+          const t = pt - off; if (t < 0 || t > .7) continue;
+          const u = t / .7;
+          ctx.beginPath(); ctx.arc(x, y, 12 + u * 46, 0, Math.PI*2);
+          ctx.globalAlpha = 1 - u; ctx.lineWidth = 3; ctx.strokeStyle = col; ctx.stroke(); ctx.globalAlpha = 1;
+        }
+      }
+    });
+    if (big || focus.length <= 12) tags.push({ e, x, y, big });
+  }
+  // name tags: place the selected one first so it always gets its spot, then others where they fit; draw the selected one last
+  const placed = [], drawList = [];
+  tags.sort((a, b) => b.big - a.big);
+  for (const t of tags){
+    if (ymode.range && placed.some(o => o.p === t.e.p)) continue;
+    const p = t.e.p, col = roleCol(p);
+    const name = t.big ? p.name.replace(/\s*\(.*\)$/, "") : p.label;
+    const where = t.e.moving ? `${t.e.from.name} → ${t.e.to.name}` : (t.e.stop ? t.e.stop.name : "");
+    const f1 = t.big ? `700 15px ${FONT_UI}` : `700 12.5px ${FONT_UI}`, f2 = `400 12px ${FONT_UI}`;
+    mctx.font = f1; const w1 = mctx.measureText(name).width;
+    mctx.font = f2; const w2 = t.big && where ? mctx.measureText(where).width : 0;
+    const pad = t.big ? 8 : 6, bw = Math.max(w1, w2) + pad*2, bh = t.big ? (where ? 40 : 24) : 20;
+    let bx = t.x - bw/2, by = t.y - (t.big ? 18 : 14) - bh, below = false;
+    if (by < 4){ by = t.y + (t.big ? 18 : 14); below = true; }
+    bx = clamp(bx, 4, MW - bw - 4); by = clamp(by, 4, MH - bh - 4);
+    if (!t.big && placed.some(o => bx < o.x1 + 6 && bx + bw > o.x0 - 6 && by < o.y1 + 6 && by + bh > o.y0 - 6 || Math.hypot(o.dx - t.x, o.dy - t.y) < 26)) continue;
+    placed.push({ p, x0:bx, y0:by, x1:bx + bw, y1:by + bh, dx:t.x, dy:t.y });
+    drawList.unshift(() => ctx2(ctx => {
+      ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = t.big ? 10 : 5; ctx.shadowOffsetY = 2;
+      rrect(ctx, bx, by, bw, bh, 6); ctx.fillStyle = colors.surface || colors.land; ctx.fill();
+      ctx.shadowColor = "transparent";
+      ctx.lineWidth = t.big ? 2 : 1.4; ctx.strokeStyle = col; ctx.stroke();
+      // little stem towards the dot
+      const sx = clamp(t.x, bx + 8, bx + bw - 8);
+      ctx.beginPath();
+      if (below){ ctx.moveTo(sx - 5, by + 1); ctx.lineTo(t.x, t.y + (t.big ? 12 : 9)); ctx.lineTo(sx + 5, by + 1); }
+      else { ctx.moveTo(sx - 5, by + bh - 1); ctx.lineTo(t.x, t.y - (t.big ? 12 : 9)); ctx.lineTo(sx + 5, by + bh - 1); }
+      ctx.fillStyle = colors.surface || colors.land; ctx.fill(); ctx.stroke();
+      ctx.fillRect(Math.min(sx - 5, t.x) - 1, below ? by + 1 : by + bh - 3, 12, 2.5);
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.font = f1; ctx.fillStyle = col; ctx.fillText(name, bx + pad, by + (t.big ? 13 : 10));
+      if (t.big && where){ ctx.font = f2; ctx.fillStyle = colors.muted; ctx.fillText(where, bx + pad, by + 29); }
+    }));
+    mapHits.push({ x0:bx, y0:by, x1:bx + bw, y1:by + bh, p });
+  }
+  drawList.forEach(fn => fn());
+  if (pt >= 0 && pt < 1 && !REDUCED) mapRequest();
+}
+function ctx2(fn){ mctx.save(); fn(mctx); mctx.restore(); }
+function lifeStrip(p){
+  const s = p.g.start, e = p.g.end, span = Math.max(1, e - s), pc = y => ((y - s) / span * 100).toFixed(2) + "%";
+  const Y = ymode.range ? null : ymode.a;
+  let segs = "";
+  if (p.it[0].y > s + .5) segs += `<div class="seg unk" style="left:0;width:${pc(p.it[0].y)}" title="${YS(Math.floor(s))}–${YS(p.it[0].y)}: whereabouts unknown"></div>`;
+  p.it.forEach((st, i) => {
+    const a = Math.max(st.y, s), b = i + 1 < p.it.length ? p.it[i+1].y : e;
+    if (b <= a) return;
+    const now = Y != null && Y >= a && Y < b + (i + 1 === p.it.length ? 1 : 0);
+    segs += `<div class="seg${i % 2 ? " alt" : ""}${now ? " now" : ""}" style="left:${pc(a)};width:calc(${pc(b)} - ${pc(a)})" title="${esc(st.name)} ${YS(Math.floor(a))}–${YS(Math.floor(b))}"></div>`;
+  });
+  const cur = Y != null && Y >= s && Y <= e ? `<div class="cur" style="left:${pc(Y)}"></div>` : "";
+  return `<div class="mp-sec">Life</div><div class="life" style="--rc:var(${ROLES[p.roles[0]].color})" data-life="1" title="Click to go to that year">${segs}${cur}</div>
+    <div class="life-ax"><span>${YS(Math.floor(s))}</span>${Y != null && cur ? `<b>${YS(Math.floor(Y))}</b>` : ""}<span>${p.d && p.d.alive ? "now" : YS(Math.floor(e))}</span></div>`;
+}
 function currentEntries(){
   const out = [];
   if (!ymode.range){
@@ -8253,14 +8416,16 @@ function mapDraw(){
   // moving people
   for (const e of movers){
     const x0 = SX(e.from.x), y0 = SY(e.from.yb), x1 = SX(e.to.x), y1 = SY(e.to.yb), x = SX(e.x), y = SY(e.y);
-    ctx.setLineDash([4, 4]); ctx.strokeStyle = roleCol(e.p); ctx.lineWidth = 1.4; ctx.globalAlpha = .7;
-    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    const dimM = state.q && hits.length && !e.p.hit && e.p !== mapSel ? .3 : 1;
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = roleCol(e.p); ctx.lineWidth = 1.4; ctx.globalAlpha = .7 * dimM;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = dimM;
     ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI*2); ctx.fillStyle = roleCol(e.p); ctx.fill();
     ctx.lineWidth = 1.5; ctx.strokeStyle = colors.land; ctx.stroke();
     ctx.font = FNAME; ctx.textBaseline = "middle"; ctx.textAlign = "left";
     const t = shortName(e.p) + " → " + e.to.name;
     haloText(ctx, t, x + 8, y, colors.ink);
     const w = ctx.measureText(t).width;
+    ctx.globalAlpha = 1;
     mapHits.push({ x0:x - 6, y0:y - 9, x1:x + 10 + w, y1:y + 9, p:e.p });
     boxes.push({ x0:x - 6, y0:y - 8, x1:x + 10 + w, y1:y + 8 });
   }
@@ -8272,19 +8437,22 @@ function mapDraw(){
     boxes.push({ x0:c.x - r, y0:c.y - r, x1:c.x + r, y1:c.y + r });
   }
   const maxNames = mv.k < 1 ? 2 : mv.k < 1.6 ? 3 : mv.k < 3 ? 5 : mv.k < 7 ? 8 : 14;
+  const dimming = !!state.q && hits.length > 0;
   for (const c of cl){
     if (c.x < -50 || c.y < -50 || c.x > MW + 50 || c.y > MH + 50) continue;
     const n = c.list.length, r = 3.2 + Math.sqrt(n) * 1.7;
+    const dimC = dimming && !c.list.some(e => e.p.hit || e.p === mapSel) ? .3 : 1;
+    ctx.globalAlpha = dimC;
     // dot: single person in role colour, several in ink
     ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI*2);
     ctx.fillStyle = n === 1 ? roleCol(c.list[0].p) : colors.ink;
-    ctx.globalAlpha = c.list.every(e => e.dead >= 0) ? .45 : 1; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.globalAlpha = dimC * (c.list.every(e => e.dead >= 0) ? .45 : 1); ctx.fill(); ctx.globalAlpha = dimC;
     ctx.lineWidth = 1.5; ctx.strokeStyle = colors.land; ctx.stroke();
-    if (mapCity === c.key || c.list.some(e => e.p.hit)){ ctx.beginPath(); ctx.arc(c.x, c.y, r + 4, 0, Math.PI*2); ctx.strokeStyle = colors.ink; ctx.lineWidth = 1.5; ctx.stroke(); }
+    if (mapCity === c.key){ ctx.beginPath(); ctx.arc(c.x, c.y, r + 4, 0, Math.PI*2); ctx.strokeStyle = colors.ink; ctx.lineWidth = 1.5; ctx.stroke(); }
     // births: expanding rings
     for (const e of c.list) if (e.born >= 0 && !ymode.range){
       ctx.beginPath(); ctx.arc(c.x, c.y, r + 4 + e.born * 14, 0, Math.PI*2);
-      ctx.strokeStyle = roleCol(e.p); ctx.globalAlpha = 1 - e.born; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = roleCol(e.p); ctx.globalAlpha = dimC * (1 - e.born); ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = dimC;
     }
     mapHits.push({ x0:c.x - r - 4, y0:c.y - r - 4, x1:c.x + r + 4, y1:c.y + r + 4, city:c });
     // label block
@@ -8313,6 +8481,7 @@ function mapDraw(){
         ctx.font = `700 10.5px ${FONT_UI}`; ctx.fillStyle = colors.land; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText(String(n), c.x, c.y + .5);
       }
+      ctx.globalAlpha = 1;
       continue;
     }
     boxes.push(pos);
@@ -8330,7 +8499,9 @@ function mapDraw(){
       ctx.fillStyle = roleCol(p); ctx.fillRect(pos.x0 - 2, y - 4, 3, 8);
       mapHits.push({ x0:pos.x0 - 3, y0:y - lh/2, x1:pos.x0 + 6 + tw, y1:y + lh/2, p });
     });
+    ctx.globalAlpha = 1;
   }
+  drawFocus(entries);
   drawScrub();
 }
 
@@ -8495,6 +8666,12 @@ function renderPanel(){
   $("mpTitle").textContent = ymode.range ? `${YS(a)}–${YS(b)}` : YS(a);
   $("mpSub").textContent = `${people.size} ${people.size === 1 ? "person" : "people"} on the map`;
   let html = "";
+  if (state.q && hits.length && (hits.length > 1 || !mapSel)){
+    const rh = rankedHits(), top = rh.slice(0, 16);
+    html += `<div class="mp-sec">${hits.length} ${hits.length === 1 ? "match" : "matches"} for “${esc(state.q)}”</div><div class="mp-hits">` +
+      top.map(p => `<button type="button" data-id="${p.id}" data-focus="1" class="${p === mapSel ? "on" : ""}"><span class="sw" style="background:${roleCol(p)}"></span>${esc(p.label)} <span class="nomap">${esc(shortSpan(p))}</span></button>`).join("") +
+      (rh.length > top.length ? `<span class="mp-note">+ ${rh.length - top.length} more, type more of the name</span>` : "") + `</div>`;
+  }
   if (mapSel){
     const p = mapSel;
     html += `<button class="mp-back" type="button" data-back="1">← Back to events</button>`;
@@ -8535,21 +8712,29 @@ function renderPanel(){
     host.appendChild(info);
     const Y = ymode.range ? null : ymode.a;
     let cur = -1; if (Y != null) p.it.forEach((s, i) => { if (s.y <= Y) cur = i; });
-    const itin = `<div class="mp-sec">Where</div><ul class="itin">` + p.it.map((s, i) =>
+    const itin = (p.it.length ? lifeStrip(p) : `<p class="mp-note">No places recorded for ${esc(p.label)}, so they don't appear on the map.</p>`) +
+      `<div class="mp-sec">Where</div><ul class="itin">` + p.it.map((s, i) =>
       `<li class="${i === cur ? "now" : ""}"><button type="button" class="y" data-year="${s.y}" aria-label="Go to ${YS(s.y)}">${YS(s.y)}</button><span>${esc(s.name)}${s.q ? " (?)" : ""}${i === 0 && p.bornAt === s ? " (born)" : ""}${i === p.it.length - 1 && p.diedAt === s ? " (died)" : ""}</span></li>`).join("") + `</ul>
       <button class="btn tl-link" type="button" data-tl="${p.id}">Show on the timeline</button>`;
     host.insertAdjacentHTML("afterend", itin);
   }
 }
 mpBody.addEventListener("click", e => {
+  const lf = e.target.closest("[data-life]");
+  if (lf && mapSel){
+    const p = mapSel, r = lf.getBoundingClientRect(), f = clamp((e.clientX - r.left) / r.width, 0, 1);
+    if (ymode.range) setRangeFlag(false);
+    setYears(Math.round(clamp(p.g.start + f * (p.g.end - p.g.start), Math.ceil(p.g.start), Math.floor(p.g.end))), 0);
+    renderPanel(); centerOn(p, false); return;
+  }
   const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.focus){ focusPerson(byId[b.dataset.id], true); return; }
   if (b.dataset.back){ mapSel = null; mapCity = null; mapRequest(); renderPanel(); return; }
   if (b.dataset.year){
     const p = mapSel;
     if (ymode.range) setRangeFlag(false);
     setYears(+b.dataset.year, 0); renderPanel();
-    const e2 = p && currentEntries().find(x => x.p === p);
-    if (e2){ const sx = SX(e2.x), sy = SY(e2.y); if (sx < 40 || sy < 40 || sx > MW - 40 || sy > MH - 40){ mv.tx += MW/2 - sx; mv.ty += MH/2 - sy; mapRequest(); } }
+    if (p) centerOn(p, false);
     return;
   }
   if (b.dataset.tl){ const p = byId[b.dataset.tl]; pinP = p; setMode("timeline"); applyFilters(); fitTo(p.g.start - 15, p.g.end + 15, true); setTimeout(() => { if (p.visible) select(p); }, 480); return; }
@@ -8592,6 +8777,7 @@ function setMode(m){
       mapResize();
       if (first) fitEurope();
       mapRequest(); renderPanel();
+      if (state.q && hits.length && !mapSel) showMapHits();
     });
     if (innerWidth <= 860) $("mappanel").classList.add("closed");
   } else {
