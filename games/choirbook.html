@@ -470,6 +470,12 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
 .embedded .wrap{padding-top:4px}
 [hidden]{display:none !important}
 .viewer{position:relative;padding:18px 0 34px}
+/* pages below each other: an invisible frame, as wide as a page and as tall as the window, that scrolls through
+   the pages when the pointer is on the music; beside it, the website scrolls (to the controls below) */
+@media (min-width:701px){
+  .viewer.frame{height:var(--vh,calc(100vh - 220px));min-height:360px;overflow-y:auto;overflow-x:hidden;margin:0 auto;padding:14px 0 26px;scrollbar-width:none}
+  .viewer.frame::-webkit-scrollbar{display:none}
+}
 /* pages side by side: the row scrolls sideways, the page itself still scrolls up and down */
 .viewer.horiz{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;padding:22px 64px 34px}
 .viewer.horiz #pages{flex-direction:row;align-items:flex-start;width:max-content;gap:34px}
@@ -544,7 +550,7 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
   html,body{background:#fff !important;overflow:visible !important;height:auto !important}
   .wrap{padding:0 !important}
   header.top,.tools,.transport,.pnum,.msg,.handbox,.pendbox,#countBox,.pagenav{display:none !important}
-  .viewer{height:auto !important;overflow:visible !important;padding:0 !important;background:none !important;box-shadow:none !important}
+  .viewer{height:auto !important;width:auto !important;overflow:visible !important;padding:0 !important;background:none !important;box-shadow:none !important}
   #pages{display:block !important;gap:0;width:auto !important}
   .opening{display:block}
   .page{background:#fff !important;box-shadow:none !important;border-radius:0 !important;break-after:page;page-break-after:always;margin:0}
@@ -628,40 +634,49 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
   <div class="viewwrap">
     <section class="viewer" id="viewer" aria-label="Music"><div id="pages"></div></section>
     <button class="pagenav prev" id="pgPrev" aria-label="Previous page" title="Previous page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12 17 6.2Z"/></svg></button>
+    <div id="countBox" aria-live="off" hidden></div>
     <button class="pagenav next" id="pgNext" aria-label="Next page" title="Next page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button>
     <div class="handbox" id="handBox" title="The tactus: the hand drops on one beat and lifts on the next" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="handRot"></g></svg></div><div class="handbox pendbox" id="pendBox" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="pendG"><path d="M66 158 H130 L120 142 H76Z" fill="currentColor"/><g id="pendRot"><line x1="98" y1="150" x2="98" y2="-16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="84" y="14" width="28" height="34" rx="4" fill="currentColor"/></g></g></svg></div>
   </div>
 
   <p class="srcnote" id="srcNote"></p>
-  <section class="transport" aria-label="Playback">
+  <section class="transport" aria-label="Playback and sound">
     <div class="tp-main">
-      <button id="play" aria-label="Play" title="Play (space bar)"><svg viewBox="0 0 14 14" aria-hidden="true"><path id="playIcon" d="M2 1 13 7 2 13Z"/></svg><span>Play</span></button>
-      <div class="tp-stack">
-        <div class="podg">
-          <button id="loop" aria-pressed="false" title="Start again from the beginning at the end">Loop</button>
-          <div class="pop" id="popMetro">
-            <button class="tb popbtn" id="metro" aria-haspopup="true" title="How the beat is shown or heard">Metronome<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-            <div class="popbody"><div class="btns col" id="beatList" role="group" aria-label="Beat">
-              <button class="tb" data-beat="hand" aria-pressed="false">Hand (tactus)</button>
-              <button class="tb" data-beat="pendulum" aria-pressed="false">Pendulum metronome</button>
-              <button class="tb" data-beat="tick" aria-pressed="false">Audible tick</button>
-            </div></div>
-          </div>
-        </div>
-        <div class="tempo-row podg" role="group" aria-label="Tempo">
-          <svg class="unitglyph" id="unitGlyph" aria-hidden="true"></svg>
-          <span class="eq" aria-hidden="true">=</span>
-          <div class="stepper">
-            <button id="tempoDown" aria-label="Slower" title="Slower">−</button>
-            <input type="number" id="tempo" min="20" max="240" step="1" inputmode="numeric" aria-label="Semibreves per minute">
-            <button id="tempoUp" aria-label="Faster" title="Faster">+</button>
-          </div>
-        </div>
+    <button id="play" aria-label="Play" title="Play (space bar)"><svg viewBox="0 0 14 14" aria-hidden="true"><path id="playIcon" d="M2 1 13 7 2 13Z"/></svg><span>Play</span></button>
+    <div class="tp-stack">
+    <div class="podg" id="podModes">
+    <button id="loop" aria-pressed="false" title="Repeat until stopped; adds a repeat sign at the end">Loop</button>
+    <div class="pop" id="popMetro">
+      <button class="tb popbtn" id="metro" aria-haspopup="true" title="How the beat is shown or heard">Metronome<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+      <div class="popbody"><div class="btns col" id="beatList" role="group" aria-label="Beat">
+        <button class="tb" data-beat="hand" data-keep aria-pressed="true">Hand (tactus)</button>
+        <button class="tb" data-beat="pendulum" data-keep aria-pressed="false">Pendulum metronome</button>
+        <button class="tb" data-beat="tick" data-keep aria-pressed="false">Audible tick</button>
+      </div></div>
+    </div>
+    </div>
+    <div class="podg" id="podCount"><label class="ctl cntin" title="Beats counted in, with clicks, before the music starts. Empty or 0: none"><span class="cntlbl">Count-in</span><input type="number" id="countIn" min="0" max="32" step="1" inputmode="numeric" placeholder="0" aria-label="Beats to count in"></label></div>
+    <div class="tempo-row podg" role="group" aria-label="Tempo">
+      <div class="unitpick">
+        <button id="unitBtn" class="unitbtn" aria-haspopup="listbox" aria-expanded="false"></button>
+        <ul id="unitList" class="menu" role="listbox" aria-label="Note value that gets the beat" tabindex="-1" hidden></ul>
       </div>
+      <span class="eq" aria-hidden="true">=</span>
+      <div class="stepper">
+        <button id="tempoDown" aria-label="Slower" title="Slower">−</button>
+        <input type="number" id="tempo" min="10" max="300" step="1" inputmode="numeric" aria-label="Beats per minute">
+        <button id="tempoUp" aria-label="Faster" title="Faster">+</button>
+      </div>
+      <button id="tap" title="Tap the beat twice or more: the tempo follows your taps">Tap</button>
+      <button id="heart" class="ib" aria-label="Semibrevis at the pulse: 60 per minute" title="Semibrevis = 60 per minute, a resting pulse (Gaffurius takes the semibrevis as one heartbeat)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.2s-7.6-4.7-9.7-9.4C.8 8.4 2.9 4.8 6.5 4.8c2.2 0 3.7 1.3 5.5 3.3 1.8-2 3.3-3.3 5.5-3.3 3.6 0 5.7 3.6 4.2 7-2.1 4.7-9.7 9.4-9.7 9.4Z"/></svg></button>
+    </div>
+    </div>
     </div>
     <div class="tp-tools">
-      <div class="podg">
+      <div class="podg" id="podSound">
         <label class="ctl vol" title="Volume"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.2h3.9L12.6 5v14l-5.2-4.2H3.5Zm11.6-1.1a5.5 5.5 0 0 1 0 7.8l-1.2-1.2a3.8 3.8 0 0 0 0-5.4Zm2.7-2.7a9.3 9.3 0 0 1 0 13.2l-1.2-1.2a7.6 7.6 0 0 0 0-10.8Z"/></svg><span class="sr">Volume</span><input type="range" id="vol" min="0" max="100" step="1"></label>
+        <label class="ctl hzctl" title="The pitch of a′ in Hz">a′<span class="eqs"> =</span><input type="number" id="ref" min="100" max="1000" step="any" inputmode="decimal" aria-label="Pitch of a′ in Hz">Hz</label>
+        <button id="toggleSet" aria-expanded="false" aria-controls="tpSide" title="Show or hide all the sound settings">Sound<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
       </div>
       <div class="podg"><div class="pop" id="popLook">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Appearance<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
@@ -683,7 +698,22 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
       </div></div>
     </div>
   </section>
+
+  <section class="tp-side" id="tpSide" aria-label="Sound settings" hidden>
+    <div class="tcol">
+      <label for="reg">Sound</label><select id="reg"><option value="gedackt">Gedackt 8′ (stopped flute)</option><option value="principal">Principal 8′</option><option value="plenum">Principal chorus (8′ 4′ 2′)</option><option value="flute">Open flute 8′</option><option value="regal">Regal (soft reed)</option><option value="sine">Sine</option><option value="custom">Your own (drawbars)</option></select>
+      <div class="tg">Tone</div>
+      <label for="bright">Brightness</label><input type="range" id="bright" min="0" max="100" step="1"><output id="bo"></output>
+      <label for="room">Room</label><input type="range" id="room" min="0" max="100" step="1"><output id="ro"></output>
+      <label class="check"><input type="checkbox" id="audition"> Hear notes while editing</label>
+      <button id="copySound" title="Copies the current sound settings as text, to send to whoever is tuning the sound">Copy sound settings</button>
+    </div>
+    <div class="tune" id="tune"></div>
+  </section>
+
+  <div id="toast" role="status" aria-live="polite"></div>
 </main>
+<script src="shared/organ.js?v=1"></script>
 <script>
 (function(){
 'use strict';
@@ -1145,7 +1175,21 @@ const st = {
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
 if (st.bars === 'mstrich') st.bars = 'full';
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} if (window.Organ) Organ.saveShared(); };
+/* playback, metronome and sound: shared/organ.js, the same engine as the Cantus firmus app's */
+const UNIT_NAMES = {Mx: 'Maxima', L: 'Longa', B: 'Brevis', S: 'Semibrevis', M: 'Minima', Sm: 'Semiminima', F: 'Fusa'};
+let play = false;
+Organ.init(st, {
+  save: () => save(), replay: () => restartPlay(), toast: m => toast(m), playing: on => { play = on; setPlayIcon(on); },
+  units: ['Mx', 'L', 'B', 'S', 'M', 'Sm', 'F'], unitIcon: k => glyphIcon(k, 0.25), unitName: k => UNIT_NAMES[k]
+});
+if (st.audition === undefined) st.audition = true;
+let toastTimer = 0;
+function toast(msg){
+  const t = document.getElementById('toast'); if (!t) return;
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
+}
 
 let piece = null;           /* parsed piece */
 let handTop = -1;           /* where the hand stands beside the music, px */
@@ -1778,7 +1822,7 @@ function render(){
   document.getElementById('pagerule').textContent = `@page{size:${st.paper} ${st.orient};margin:0}`;
   let html = '';
   const horiz = st.flow === 'horizontal';
-  const avail = (viewerEl.clientWidth || window.innerWidth) - (horiz ? (window.innerWidth <= 700 ? 60 : 140) : 40);
+  const avail = ($('.viewwrap').clientWidth || window.innerWidth) - (horiz ? (window.innerWidth <= 700 ? 60 : 140) : 40);
   const pxmm = 96 / 25.4;
   /* side by side, a page (or an opening) fits the height of the window */
   const availH = Math.max(320, (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) || 700) - 60);
@@ -1799,6 +1843,11 @@ function render(){
     if (!pages.length) html = '<p class="msg">No voices are shown.</p>';
   }
   pagesEl.innerHTML = html;
+  /* the frame is as wide as one page (one opening in the choir book) */
+  const framed = !horiz && window.innerWidth > 700;
+  viewerEl.classList.toggle('frame', framed);
+  const widest = Math.max(0, ...[...pagesEl.children].map(c => c.offsetWidth || 0));
+  viewerEl.style.width = framed && widest ? (widest + 24) + 'px' : '';
   if (typeof showSel === 'function' && ed.sel) showSel();
   applyMark();
   if (!play) { handTop = -1; $('#handBox').style.top = ''; $('#pendBox').style.top = ''; }
@@ -1844,7 +1893,17 @@ function bringIntoView(el, force){
     try { const fr = window.frameElement.getBoundingClientRect(), H = window.top.innerHeight; top = -fr.top; bottom = H - fr.top; }
     catch (e) { top = 0; bottom = window.innerHeight; }
   }
-  const vr = viewerEl.getBoundingClientRect();
+  let vr = viewerEl.getBoundingClientRect();
+  if (viewerEl.classList.contains('frame') && (r.top < vr.top + 20 || r.bottom > vr.bottom - 20)) {
+    viewerEl.scrollTo({top: viewerEl.scrollTop + r.top - vr.top - vr.height / 3, behavior: force ? 'auto' : 'smooth'});
+    if (r.top >= Math.max(top, vr.top) - 2 && vr.bottom <= bottom + 2) return true;
+    vr = viewerEl.getBoundingClientRect();
+    if (vr.top >= top - 2 && vr.bottom <= bottom + 2) return true;
+    const y = vr.top - top - 10;
+    if (EMBED) { try { window.top.scrollBy({top: y, behavior: 'smooth'}); return true; } catch (e) {} }
+    window.scrollBy({top: y, behavior: 'smooth'});
+    return true;
+  }
   const offX = st.flow === 'horizontal' && (r.left < vr.left + 50 || r.right > vr.right - 50);
   const offY = r.top < top + 20 || r.bottom > bottom - 20;
   if (!force && !offX && !offY) return false;
@@ -2056,9 +2115,9 @@ function syncUI(){
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
   $('#viewName').textContent = VIEW_NAMES[st.view] || 'Score';
   for (const k of ['size', 'hs', 'vs']) $('#' + k).value = st[k];
-  $('#tempo').value = st.tempo;
-  $('#vol').value = st.vol;
-  $('#loop').setAttribute('aria-pressed', String(!!st.loop));
+  Organ.sync();
+  $('#handOp').value = st.handOp; $('#handSize').value = st.handSize;
+  if ($('#audition')) $('#audition').checked = !!st.audition;
   document.documentElement.style.setProperty('--staff', (STAFF_COLORS.find(c => c[0] === st.staff) || STAFF_COLORS[0])[1]);
   applyPaper();
   const horiz = st.flow === 'horizontal';
@@ -2130,15 +2189,6 @@ $('#printBtn').addEventListener('click', () => {
   if (EMBED && !pieceKey.startsWith('file:')) { window.open('choirbook.html?print=1', '_blank'); return; }
   window.print();
 });
-/* tempo, loop, volume */
-const setTempo = v => { st.tempo = Math.max(20, Math.min(240, Math.round(v) || 90)); save(); syncUI(); restartPlay(); };
-$('#tempo').addEventListener('change', e => setTempo(+e.target.value));
-$('#tempoDown').addEventListener('click', () => setTempo(st.tempo - 4));
-$('#tempoUp').addEventListener('click', () => setTempo(st.tempo + 4));
-$('#loop').addEventListener('click', () => { st.loop = !st.loop; save(); syncUI(); });
-$('#vol').addEventListener('input', e => { st.vol = +e.target.value; save(); if (play) play.master.gain.setTargetAtTime(volGain(), actx.currentTime, 0.03); });
-{ const g = GLY.S, b = g.b; $('#unitGlyph').setAttribute('viewBox', `${b[0] - 0.1} ${b[1] - 0.1} ${b[2] - b[0] + 0.2} ${b[3] - b[1] + 0.2}`); $('#unitGlyph').innerHTML = `<path d="${g.d}"/>`; }
-
 /* ------------------------------------------------------------------ */
 /* Writing **kern back out (for edits, and to download)                */
 /* ------------------------------------------------------------------ */
@@ -2476,55 +2526,10 @@ document.addEventListener('keydown', e => {
 });
 syncEdit();
 
-/* tactus hand and pendulum (from the Cantus firmus app) */
-const HAND_SVG = `<g transform="translate(0 3)"><path d="M-44 88 C-14 85 18 84 44 86 L44 142 C18 144 -14 144 -44 142Z" fill="#F2E6C6"/><defs><clipPath id="cfSleeve"><path d="M-44 88 C-14 85 18 84 44 86 L44 142 C18 144 -14 144 -44 142Z"/></clipPath></defs><g clip-path="url(#cfSleeve)"><path d="M-30 86 L-29.4 88.8 L-28.8 91.5 L-28.3 94.2 L-28 97 L-27.7 99.8 L-27.4 102.6 L-27.2 105.5 L-27 108.3 L-26.7 111.3 L-26.4 114.2 L-26 117.2 L-25.4 120.2 L-24.7 123.2 L-23.8 126.2 L-22.6 129.2 L-21 132 L-21 132 L-21.7 128.8 L-22.5 125.8 L-23.1 122.8 L-23.6 119.9 L-24 116.9 L-24.3 114 L-24.5 111.1 L-24.8 108.2 L-25 105.3 L-25.3 102.4 L-25.7 99.5 L-26.1 96.7 L-26.7 93.9 L-27.5 91.2 L-28.5 88.5 L-30 86ZM-26.8 89.8 L-26.5 91.3 L-26.3 92.8 L-26 94.3 L-25.8 95.9 L-25.6 97.4 L-25.4 98.9 L-25.3 100.5 L-25.1 102 L-25 103.5 L-24.9 105.1 L-24.8 106.6 L-24.6 108.2 L-24.5 109.7 L-24.4 111.2 L-24.2 112.8 L-24 114.3 L-23.8 115.9 L-23.6 117.5 L-23.3 119 L-22.9 120.5 L-22.6 122.1 L-22.1 123.6 L-21.6 125.2 L-21.5 125.1 L-21.7 123.5 L-22 122 L-22.3 120.4 L-22.5 118.9 L-22.7 117.3 L-22.9 115.8 L-23 114.2 L-23.2 112.7 L-23.3 111.2 L-23.4 109.6 L-23.5 108.1 L-23.7 106.5 L-23.8 105 L-23.9 103.4 L-24.1 101.9 L-24.3 100.3 L-24.5 98.8 L-24.7 97.3 L-25 95.7 L-25.3 94.2 L-25.7 92.7 L-26.1 91.2 L-26.7 89.8ZM-24.4 92.5 L-24.3 94 L-24.1 95.6 L-23.9 97.1 L-23.7 98.7 L-23.5 100.3 L-23.4 101.8 L-23.3 103.4 L-23.1 104.9 L-23 106.5 L-22.9 108 L-22.8 109.5 L-22.6 111.1 L-22.5 112.6 L-22.3 114.2 L-22.1 115.7 L-21.9 117.2 L-21.6 118.7 L-21.3 120.2 L-20.9 121.7 L-20.4 123.2 L-20.3 123.2 L-20.6 121.7 L-20.8 120.2 L-21 118.6 L-21.2 117.1 L-21.4 115.6 L-21.5 114.1 L-21.7 112.5 L-21.8 111 L-21.9 109.5 L-22.1 107.9 L-22.2 106.4 L-22.3 104.8 L-22.5 103.3 L-22.6 101.7 L-22.8 100.2 L-23 98.6 L-23.3 97.1 L-23.6 95.5 L-23.9 94 L-24.4 92.5ZM-22.7 93.8 L-22.6 95.3 L-22.4 96.9 L-22.2 98.5 L-22 100.1 L-21.9 101.7 L-21.8 103.2 L-21.6 104.8 L-21.5 106.3 L-21.4 107.9 L-21.3 109.4 L-21.1 111 L-21 112.5 L-20.8 114 L-20.6 115.5 L-20.4 117 L-20.1 118.5 L-19.8 120 L-19.4 121.5 L-19.3 121.5 L-19.5 119.9 L-19.7 118.4 L-19.9 116.9 L-20.1 115.4 L-20.3 113.9 L-20.4 112.4 L-20.5 110.9 L-20.7 109.4 L-20.8 107.8 L-20.9 106.3 L-21.1 104.7 L-21.2 103.2 L-21.4 101.6 L-21.6 100 L-21.8 98.5 L-22 96.9 L-22.3 95.3 L-22.7 93.8ZM-6 86 L-5.5 88.8 L-4.8 91.5 L-4.3 94.2 L-4 97 L-3.7 99.8 L-3.4 102.6 L-3.2 105.5 L-3 108.3 L-2.7 111.3 L-2.4 114.2 L-2 117.2 L-1.4 120.2 L-0.7 123.2 L0.2 126.2 L1.4 129.2 L3 132 L3 132 L2.3 128.8 L1.5 125.8 L0.9 122.8 L0.4 119.9 L0 116.9 L-0.3 114 L-0.5 111.1 L-0.8 108.2 L-1 105.3 L-1.3 102.4 L-1.7 99.5 L-2.1 96.7 L-2.7 93.9 L-3.5 91.2 L-4.5 88.5 L-6 86ZM-2.8 89.8 L-2.5 91.3 L-2.3 92.8 L-2 94.3 L-1.8 95.9 L-1.6 97.4 L-1.4 98.9 L-1.3 100.5 L-1.1 102 L-1 103.5 L-0.9 105.1 L-0.8 106.6 L-0.6 108.2 L-0.5 109.7 L-0.3 111.2 L-0.2 112.8 L0 114.3 L0.2 115.9 L0.5 117.5 L0.7 119 L1.1 120.5 L1.4 122.1 L1.9 123.6 L2.5 125.2 L2.5 125.1 L2.3 123.5 L2 122 L1.7 120.4 L1.5 118.9 L1.3 117.3 L1.1 115.8 L1 114.2 L0.8 112.7 L0.7 111.2 L0.6 109.6 L0.5 108.1 L0.3 106.5 L0.2 105 L0.1 103.4 L-0.1 101.9 L-0.3 100.3 L-0.5 98.8 L-0.7 97.3 L-1 95.7 L-1.3 94.2 L-1.7 92.7 L-2.1 91.2 L-2.7 89.8ZM-0.4 92.5 L-0.3 94 L-0.1 95.6 L0.1 97.1 L0.3 98.7 L0.5 100.3 L0.6 101.8 L0.7 103.4 L0.8 104.9 L1 106.5 L1.1 108 L1.2 109.5 L1.4 111.1 L1.5 112.6 L1.7 114.2 L1.9 115.7 L2.1 117.2 L2.4 118.7 L2.7 120.2 L3.1 121.7 L3.6 123.2 L3.7 123.2 L3.4 121.7 L3.2 120.2 L3 118.6 L2.8 117.1 L2.6 115.6 L2.5 114.1 L2.3 112.5 L2.2 111 L2.1 109.5 L1.9 107.9 L1.8 106.4 L1.7 104.8 L1.5 103.3 L1.4 101.7 L1.2 100.2 L1 98.6 L0.7 97.1 L0.4 95.5 L0.1 94 L-0.4 92.5ZM1.3 93.8 L1.4 95.3 L1.6 96.9 L1.8 98.5 L2 100.1 L2.1 101.7 L2.2 103.2 L2.4 104.8 L2.5 106.3 L2.6 107.9 L2.7 109.4 L2.9 111 L3 112.5 L3.2 114 L3.4 115.5 L3.6 117 L3.9 118.5 L4.2 120 L4.6 121.5 L4.7 121.5 L4.5 119.9 L4.3 118.4 L4.1 116.9 L3.9 115.4 L3.7 113.9 L3.6 112.4 L3.5 110.9 L3.3 109.4 L3.2 107.8 L3.1 106.3 L3 104.7 L2.8 103.2 L2.6 101.6 L2.5 100 L2.2 98.5 L2 96.9 L1.7 95.3 L1.3 93.8ZM20 86 L20.6 88.8 L21.2 91.5 L21.7 94.2 L22 97 L22.3 99.8 L22.6 102.6 L22.8 105.5 L23 108.3 L23.3 111.3 L23.6 114.2 L24 117.2 L24.6 120.2 L25.3 123.2 L26.2 126.2 L27.4 129.2 L29 132 L29 132 L28.3 128.8 L27.5 125.8 L26.9 122.8 L26.4 119.9 L26 116.9 L25.7 114 L25.5 111.1 L25.2 108.2 L25 105.3 L24.7 102.4 L24.3 99.5 L23.9 96.7 L23.3 93.9 L22.5 91.2 L21.5 88.5 L20 86ZM23.2 89.8 L23.5 91.3 L23.7 92.8 L24 94.3 L24.2 95.9 L24.4 97.4 L24.6 98.9 L24.7 100.5 L24.9 102 L25 103.5 L25.1 105.1 L25.2 106.6 L25.4 108.2 L25.5 109.7 L25.6 111.2 L25.8 112.8 L26 114.3 L26.2 115.9 L26.4 117.5 L26.7 119 L27.1 120.5 L27.4 122.1 L27.9 123.6 L28.4 125.2 L28.5 125.1 L28.3 123.5 L28 122 L27.7 120.4 L27.5 118.9 L27.3 117.3 L27.1 115.8 L27 114.2 L26.8 112.7 L26.7 111.2 L26.6 109.6 L26.5 108.1 L26.3 106.5 L26.2 105 L26.1 103.4 L25.9 101.9 L25.7 100.3 L25.5 98.8 L25.3 97.3 L25 95.7 L24.7 94.2 L24.3 92.7 L23.9 91.2 L23.3 89.8ZM25.6 92.5 L25.7 94 L25.9 95.6 L26.1 97.1 L26.3 98.7 L26.5 100.3 L26.6 101.8 L26.7 103.4 L26.9 104.9 L27 106.5 L27.1 108 L27.2 109.5 L27.4 111.1 L27.5 112.6 L27.7 114.2 L27.9 115.7 L28.1 117.2 L28.4 118.7 L28.7 120.2 L29.1 121.7 L29.6 123.2 L29.7 123.2 L29.4 121.7 L29.2 120.2 L29 118.6 L28.8 117.1 L28.6 115.6 L28.5 114.1 L28.3 112.5 L28.2 111 L28.1 109.5 L27.9 107.9 L27.8 106.4 L27.7 104.8 L27.5 103.3 L27.4 101.7 L27.2 100.2 L27 98.6 L26.7 97.1 L26.4 95.5 L26.1 94 L25.6 92.5ZM27.3 93.8 L27.4 95.3 L27.6 96.9 L27.8 98.5 L28 100.1 L28.1 101.7 L28.2 103.2 L28.4 104.8 L28.5 106.3 L28.6 107.9 L28.7 109.4 L28.9 111 L29 112.5 L29.2 114 L29.4 115.5 L29.6 117 L29.9 118.5 L30.2 120 L30.6 121.5 L30.7 121.5 L30.5 119.9 L30.3 118.4 L30.1 116.9 L29.9 115.4 L29.7 113.9 L29.6 112.4 L29.5 110.9 L29.3 109.4 L29.2 107.8 L29.1 106.3 L28.9 104.7 L28.8 103.2 L28.6 101.6 L28.4 100 L28.2 98.5 L28 96.9 L27.7 95.3 L27.3 93.8ZM-46 141.4 L-41.2 142.2 L-36.4 142.6 L-31.6 143 L-26.9 143.3 L-22.1 143.5 L-17.3 143.7 L-12.6 143.9 L-7.9 144 L-3.2 144 L1.5 144.1 L6.1 144 L10.8 143.9 L15.3 143.8 L19.9 143.6 L24.4 143.4 L28.8 143.1 L33.2 142.7 L37.5 142.3 L41.8 141.8 L46 141 L46 141 L41.7 141 L37.4 141.3 L33.1 141.6 L28.7 141.8 L24.3 142 L19.8 142.2 L15.3 142.3 L10.7 142.4 L6.1 142.5 L1.5 142.6 L-3.2 142.6 L-7.8 142.5 L-12.6 142.4 L-17.3 142.3 L-22 142.2 L-26.8 142 L-31.6 141.8 L-36.4 141.6 L-41.2 141.4 L-46 141.4ZM-46 139 L-41.2 139.7 L-36.4 140.1 L-31.6 140.5 L-26.9 140.8 L-22.1 141 L-17.3 141.2 L-12.6 141.4 L-7.9 141.5 L-3.2 141.5 L1.5 141.6 L6.1 141.5 L10.8 141.4 L15.3 141.3 L19.9 141.1 L24.3 140.9 L28.8 140.6 L33.2 140.2 L37.5 139.8 L41.8 139.4 L46 138.6 L46 138.6 L41.7 138.7 L37.5 139 L33.1 139.3 L28.7 139.5 L24.3 139.7 L19.8 139.9 L15.3 140 L10.7 140.2 L6.1 140.2 L1.5 140.2 L-3.2 140.2 L-7.8 140.2 L-12.6 140.1 L-17.3 140 L-22 139.9 L-26.8 139.7 L-31.6 139.5 L-36.4 139.3 L-41.2 139 L-46 139ZM-46 136.4 L-41.2 137.1 L-36.4 137.5 L-31.6 137.8 L-26.9 138.1 L-22.1 138.3 L-17.3 138.5 L-12.6 138.7 L-7.9 138.8 L-3.2 138.8 L1.5 138.8 L6.1 138.8 L10.8 138.7 L15.3 138.6 L19.9 138.4 L24.3 138.2 L28.8 137.9 L33.2 137.6 L37.5 137.2 L41.8 136.7 L46 136 L46 136 L41.7 136.1 L37.5 136.4 L33.1 136.7 L28.7 137 L24.3 137.2 L19.8 137.4 L15.3 137.5 L10.7 137.7 L6.1 137.7 L1.5 137.8 L-3.2 137.8 L-7.8 137.7 L-12.6 137.6 L-17.3 137.5 L-22 137.4 L-26.8 137.2 L-31.6 137 L-36.4 136.7 L-41.2 136.5 L-46 136.4ZM-46 133.6 L-41.2 134.2 L-36.4 134.6 L-31.6 134.9 L-26.9 135.2 L-22.1 135.4 L-17.3 135.6 L-12.6 135.8 L-7.9 135.9 L-3.2 135.9 L1.5 135.9 L6.1 135.9 L10.8 135.8 L15.3 135.7 L19.9 135.5 L24.3 135.3 L28.8 135 L33.2 134.7 L37.5 134.3 L41.8 133.9 L46 133.2 L46 133.2 L41.8 133.4 L37.5 133.7 L33.1 134 L28.7 134.3 L24.3 134.5 L19.8 134.7 L15.3 134.8 L10.7 134.9 L6.1 135 L1.5 135.1 L-3.2 135.1 L-7.8 135 L-12.6 134.9 L-17.3 134.8 L-22.1 134.7 L-26.8 134.5 L-31.6 134.2 L-36.4 134 L-41.2 133.7 L-46 133.6ZM-46 130.6 L-41.2 131.2 L-36.4 131.5 L-31.6 131.9 L-26.9 132.1 L-22.1 132.4 L-17.3 132.6 L-12.6 132.7 L-7.9 132.8 L-3.2 132.8 L1.5 132.8 L6.1 132.8 L10.7 132.7 L15.3 132.6 L19.8 132.4 L24.3 132.2 L28.8 131.9 L33.2 131.6 L37.5 131.2 L41.8 130.8 L46 130.2 L46 130.2 L41.8 130.4 L37.5 130.8 L33.1 131.1 L28.7 131.3 L24.3 131.6 L19.8 131.8 L15.3 131.9 L10.7 132 L6.1 132.1 L1.5 132.2 L-3.2 132.2 L-7.8 132.1 L-12.6 132 L-17.3 131.9 L-22.1 131.8 L-26.8 131.6 L-31.6 131.3 L-36.4 131.1 L-41.2 130.8 L-46 130.6ZM-46 127.4 L-41.2 127.9 L-36.4 128.3 L-31.6 128.6 L-26.8 128.8 L-22.1 129.1 L-17.3 129.3 L-12.6 129.4 L-7.9 129.5 L-3.2 129.5 L1.5 129.6 L6.1 129.5 L10.7 129.4 L15.3 129.3 L19.8 129.1 L24.3 128.9 L28.8 128.7 L33.2 128.3 L37.5 128 L41.8 127.6 L46 127 L46 127 L41.8 127.3 L37.5 127.7 L33.1 128 L28.7 128.2 L24.3 128.5 L19.8 128.7 L15.3 128.8 L10.7 128.9 L6.1 129 L1.5 129.1 L-3.2 129.1 L-7.8 129 L-12.6 128.9 L-17.3 128.8 L-22.1 128.6 L-26.8 128.4 L-31.6 128.2 L-36.4 127.9 L-41.2 127.6 L-46 127.4Z" fill="#1F1A14"/></g><path d="M-44 88 C-14 85 18 84 44 86 L44 142 C18 144 -14 144 -44 142Z" fill="none" stroke="#1F1A14" stroke-width="2.4" stroke-linejoin="round"/><defs><clipPath id="cfHand"><path d="M58 97 C74 94 92 91.5 108 91 C118 90.8 126 91.5 132 93 C150 95 170 96.5 188 98.5 C196 99.4 201 101 201 104.5 C201 107.5 198 109 194 109.2 C200 109.5 207 110.5 207 114 C207 117.5 202 118.6 196 118.4 C200 119.2 201 122.5 197 123.6 C193 124.6 188 124.2 184 123.8 C188 124.8 188 128 183 128.6 C176 129.2 168 128.6 160 128.2 C146 127.6 134 128.6 122 130.6 C104 133.6 82 133.6 58 131 Z"/></clipPath></defs><path d="M58 97 C74 94 92 91.5 108 91 C118 90.8 126 91.5 132 93 C150 95 170 96.5 188 98.5 C196 99.4 201 101 201 104.5 C201 107.5 198 109 194 109.2 C200 109.5 207 110.5 207 114 C207 117.5 202 118.6 196 118.4 C200 119.2 201 122.5 197 123.6 C193 124.6 188 124.2 184 123.8 C188 124.8 188 128 183 128.6 C176 129.2 168 128.6 160 128.2 C146 127.6 134 128.6 122 130.6 C104 133.6 82 133.6 58 131 Z" fill="#F2E6C6"/><g clip-path="url(#cfHand)"><path d="M185.2 125.8 L185.2 126 L185.3 126.1 L185.3 126.2 L185.3 126.2 L185.3 126.3 L185.2 126.3 L185.8 126.2 L185.8 126.2 L185.2 126 L185.2 126 L185.2 126 L185.2 126 L185.1 126.1 L185 126.1 L184.9 126.2 L184.8 126.2 L184.6 126.3 L184.4 126.4 L184.2 126.5 L183.9 126.5 L183.5 126.6 L183.2 126.7 L182.8 126.7 L182.2 126.8 L181.5 126.8 L180.8 126.8 L180.1 126.9 L179.4 126.9 L178.6 126.9 L177.9 126.9 L177.2 126.9 L176.5 126.9 L175.7 126.9 L175 126.9 L174.2 126.9 L173.5 126.8 L172.7 126.8 L171.9 126.8 L171.2 126.8 L170.4 126.7 L169.6 126.7 L168.8 126.7 L168.1 126.6 L167.3 126.6 L166.5 126.5 L165.7 126.5 L164.9 126.4 L164.1 126.4 L163.3 126.3 L162.5 126.3 L161.7 126.3 L160.9 126.2 L160.1 126.2 L158.7 126.1 L157.3 126.1 L155.9 126 L154.5 126 L153.2 126 L151.8 126 L150.5 126 L149.2 126 L147.8 126.1 L146.5 126.1 L145.2 126.2 L143.9 126.2 L142.7 126.3 L141.4 126.3 L140.1 126.4 L138.8 126.5 L137.6 126.6 L136.3 126.7 L135.1 126.9 L133.9 127 L132.6 127.1 L131.4 127.3 L130.2 127.4 L129 127.6 L127.8 127.8 L126.5 127.9 L125.3 128.1 L124.1 128.3 L122.9 128.5 L121.7 128.7 L119.9 129 L118.1 129.3 L116.2 129.5 L114.4 129.8 L112.5 130 L110.6 130.2 L108.6 130.4 L106.7 130.5 L104.7 130.7 L102.7 130.8 L100.6 130.9 L98.5 131 L96.5 131.1 L94.4 131.1 L92.2 131.2 L90.1 131.2 L87.9 131.2 L85.8 131.2 L83.5 131.1 L81.3 131.1 L79.1 131 L76.8 130.9 L74.5 130.8 L72.2 130.7 L69.9 130.7 L69.9 130.7 L72.2 130.9 L74.5 131.1 L76.8 131.3 L79.1 131.4 L81.3 131.6 L83.5 131.7 L85.7 131.7 L87.9 131.8 L90.1 131.8 L92.2 131.8 L94.4 131.8 L96.5 131.8 L98.6 131.8 L100.6 131.7 L102.7 131.6 L104.7 131.5 L106.7 131.4 L108.7 131.3 L110.7 131.1 L112.6 130.9 L114.5 130.7 L116.4 130.5 L118.2 130.3 L120 130 L121.9 129.7 L123.1 129.5 L124.3 129.3 L125.5 129.2 L126.7 129 L127.9 128.8 L129.1 128.7 L130.3 128.5 L131.5 128.4 L132.8 128.3 L134 128.1 L135.2 128 L136.5 127.9 L137.7 127.8 L138.9 127.7 L140.2 127.6 L141.5 127.5 L142.7 127.5 L144 127.4 L145.3 127.4 L146.6 127.3 L147.9 127.3 L149.2 127.3 L150.5 127.2 L151.8 127.2 L153.2 127.2 L154.5 127.3 L155.9 127.3 L157.2 127.3 L158.6 127.4 L160 127.4 L160.8 127.5 L161.6 127.5 L162.4 127.5 L163.2 127.6 L164 127.6 L164.8 127.7 L165.6 127.7 L166.4 127.8 L167.2 127.8 L168 127.8 L168.8 127.9 L169.6 127.9 L170.3 127.9 L171.1 127.9 L171.9 128 L172.7 128 L173.4 128 L174.2 128 L175 128 L175.7 128 L176.5 128 L177.2 128 L177.9 128 L178.7 128 L179.4 127.9 L180.1 127.9 L180.8 127.9 L181.5 127.8 L182.2 127.8 L182.9 127.7 L183.3 127.6 L183.7 127.5 L184.1 127.4 L184.4 127.3 L184.7 127.2 L185 127.1 L185.2 127 L185.4 126.8 L185.5 126.7 L185.6 126.6 L185.7 126.5 L185.8 126.4 L185.8 126.3 L185.8 126.3 L185.2 126.2 L185.2 126.2 L185.7 126.1 L185.7 126.1 L185.7 126 L185.6 126 L185.5 125.9 L185.4 125.9 L185.2 125.8ZM184.1 126.2 L184.2 126.2 L184.2 126 L184.3 125.8 L184.4 125.7 L184.5 125.6 L184.5 125.5 L184.6 125.5 L184.3 125.1 L184.2 125.1 L184.2 125.1 L184.1 125.2 L183.9 125.2 L183.8 125.2 L183.5 125.3 L183.3 125.3 L183 125.4 L182.7 125.4 L182.1 125.5 L181.4 125.5 L180.7 125.5 L180 125.6 L179.3 125.6 L178.6 125.6 L177.9 125.6 L177.2 125.6 L176.4 125.6 L175.7 125.6 L175 125.6 L174.2 125.5 L173.5 125.5 L172.7 125.5 L172 125.5 L171.2 125.5 L170.4 125.4 L169.7 125.4 L168.9 125.3 L168.1 125.3 L167.3 125.3 L166.6 125.2 L165.8 125.2 L165 125.1 L164.2 125.1 L163.4 125 L162.6 125 L161.8 125 L161 124.9 L160.1 124.9 L158.7 124.8 L157.3 124.8 L155.9 124.7 L154.6 124.7 L153.2 124.7 L151.8 124.7 L150.5 124.7 L149.1 124.7 L147.8 124.8 L146.5 124.8 L145.2 124.8 L143.9 124.9 L142.6 125 L141.3 125 L140 125.1 L138.8 125.2 L137.5 125.3 L136.2 125.4 L135 125.6 L133.7 125.7 L132.5 125.8 L131.3 126 L130 126.1 L128.8 126.3 L127.6 126.5 L126.3 126.6 L125.1 126.8 L123.9 127 L122.7 127.2 L121.5 127.4 L119.7 127.7 L117.9 128 L116.1 128.2 L114.2 128.5 L112.3 128.7 L110.4 128.9 L108.5 129.1 L106.6 129.2 L104.6 129.4 L102.6 129.5 L100.6 129.6 L98.5 129.7 L96.4 129.8 L94.3 129.8 L92.2 129.9 L90.1 129.9 L88 129.9 L85.8 129.9 L83.6 129.9 L81.3 129.9 L81.3 129.9 L83.6 130.1 L85.8 130.2 L87.9 130.2 L90.1 130.3 L92.2 130.3 L94.4 130.3 L96.5 130.3 L98.5 130.3 L100.6 130.2 L102.6 130.1 L104.6 130 L106.6 129.9 L108.6 129.8 L110.5 129.6 L112.4 129.4 L114.3 129.2 L116.2 129 L118 128.8 L119.8 128.5 L121.6 128.2 L122.8 128.1 L124 127.9 L125.2 127.7 L126.5 127.5 L127.7 127.4 L128.9 127.2 L130.1 127.1 L131.4 126.9 L132.6 126.8 L133.8 126.7 L135.1 126.5 L136.3 126.4 L137.6 126.3 L138.8 126.2 L140.1 126.1 L141.4 126.1 L142.6 126 L143.9 125.9 L145.2 125.9 L146.5 125.8 L147.8 125.8 L149.2 125.8 L150.5 125.8 L151.8 125.8 L153.2 125.8 L154.5 125.8 L155.9 125.8 L157.3 125.8 L158.7 125.9 L160.1 125.9 L160.9 126 L161.7 126 L162.5 126.1 L163.3 126.1 L164.1 126.1 L164.9 126.2 L165.7 126.2 L166.5 126.3 L167.3 126.3 L168.1 126.3 L168.8 126.4 L169.6 126.4 L170.4 126.4 L171.2 126.5 L171.9 126.5 L172.7 126.5 L173.5 126.5 L174.2 126.5 L175 126.5 L175.7 126.5 L176.4 126.5 L177.2 126.5 L177.9 126.5 L178.6 126.5 L179.3 126.4 L180.1 126.4 L180.8 126.4 L181.4 126.3 L182.1 126.3 L182.8 126.2 L183.1 126.1 L183.4 126.1 L183.7 126 L184 125.9 L184.2 125.8 L184.3 125.7 L184.5 125.7 L184.5 125.6 L184.5 125.6 L184.2 125.2 L184.2 125.2 L184.1 125.4 L184 125.5 L184 125.8 L184 126 L184 126.2 L184.1 126.2ZM183.4 124.4 L183.5 124.5 L183.6 124.4 L183.7 124.4 L183.8 124.4 L183.6 124.1 L183.5 124.1 L183.4 124.1 L183.2 124.2 L183 124.2 L182.8 124.2 L182.5 124.2 L182 124.3 L181.3 124.3 L180.6 124.3 L180 124.4 L179.3 124.4 L178.6 124.4 L177.9 124.4 L177.2 124.4 L176.4 124.4 L175.7 124.4 L175 124.4 L174.3 124.3 L173.5 124.3 L172.8 124.3 L172 124.3 L171.3 124.2 L170.5 124.2 L169.7 124.2 L169 124.1 L168.2 124.1 L167.4 124 L166.6 124 L165.8 124 L165 123.9 L164.2 123.9 L163.4 123.8 L162.6 123.8 L161.8 123.8 L161 123.7 L160.2 123.7 L158.8 123.6 L157.3 123.6 L155.9 123.5 L154.6 123.5 L153.2 123.5 L151.8 123.5 L150.5 123.5 L149.1 123.5 L147.8 123.5 L146.4 123.6 L145.1 123.6 L143.8 123.7 L142.5 123.8 L141.2 123.8 L139.9 123.9 L138.7 124 L137.4 124.1 L136.1 124.2 L134.9 124.3 L133.6 124.5 L132.4 124.6 L131.1 124.8 L129.9 124.9 L128.6 125.1 L127.4 125.3 L126.2 125.4 L125 125.6 L123.7 125.8 L122.5 126 L121.3 126.2 L119.5 126.5 L117.7 126.8 L115.9 127.1 L114.1 127.3 L112.2 127.5 L110.3 127.7 L108.4 127.9 L106.5 128.1 L104.5 128.2 L102.5 128.3 L100.5 128.4 L98.5 128.5 L96.4 128.6 L94.3 128.7 L92.2 128.8 L92.2 128.8 L94.3 128.9 L96.4 128.9 L98.5 128.8 L100.5 128.8 L102.5 128.7 L104.5 128.6 L106.5 128.5 L108.5 128.4 L110.4 128.2 L112.3 128 L114.2 127.8 L116 127.6 L117.8 127.4 L119.6 127.2 L121.4 126.9 L122.6 126.7 L123.8 126.5 L125 126.3 L126.3 126.2 L127.5 126 L128.7 125.8 L130 125.7 L131.2 125.5 L132.4 125.4 L133.7 125.3 L134.9 125.2 L136.2 125 L137.5 124.9 L138.7 124.8 L140 124.8 L141.3 124.7 L142.6 124.6 L143.9 124.5 L145.2 124.5 L146.5 124.5 L147.8 124.4 L149.1 124.4 L150.5 124.4 L151.8 124.4 L153.2 124.4 L154.6 124.4 L155.9 124.4 L157.3 124.5 L158.7 124.5 L160.2 124.5 L161 124.6 L161.8 124.6 L162.6 124.7 L163.4 124.7 L164.2 124.8 L165 124.8 L165.8 124.8 L166.6 124.9 L167.4 124.9 L168.1 124.9 L168.9 125 L169.7 125 L170.5 125 L171.2 125.1 L172 125.1 L172.8 125.1 L173.5 125.1 L174.2 125.1 L175 125.1 L175.7 125.1 L176.4 125.1 L177.2 125.1 L177.9 125.1 L178.6 125.1 L179.3 125 L180 125 L180.7 125 L181.3 124.9 L182 124.9 L182.6 124.8 L182.9 124.8 L183.1 124.7 L183.3 124.6 L183.5 124.5 L183.7 124.5 L183.7 124.4 L183.6 124.1 L183.6 124.2 L183.5 124.2 L183.4 124.4 L183.5 124.4ZM183.3 123.1 L183.1 123.1 L183 123.1 L182.8 123.1 L182.6 123.2 L182.4 123.2 L181.9 123.2 L181.2 123.2 L180.6 123.2 L179.9 123.3 L179.2 123.3 L178.6 123.3 L177.9 123.3 L177.2 123.3 L176.4 123.3 L175.7 123.3 L175 123.3 L174.3 123.2 L173.6 123.2 L172.8 123.2 L172.1 123.2 L171.3 123.1 L170.5 123.1 L169.8 123.1 L169 123 L168.2 123 L167.4 123 L166.7 122.9 L165.9 122.9 L165.1 122.8 L164.3 122.8 L163.5 122.7 L162.7 122.7 L161.9 122.6 L161.1 122.6 L160.2 122.5 L158.8 122.5 L157.4 122.5 L156 122.4 L154.6 122.4 L153.2 122.4 L151.8 122.4 L150.4 122.4 L149.1 122.4 L147.8 122.4 L146.4 122.5 L145.1 122.5 L143.8 122.6 L142.5 122.6 L141.2 122.7 L139.9 122.8 L138.6 122.9 L137.3 123 L136 123.1 L134.8 123.2 L133.5 123.4 L132.2 123.5 L131 123.7 L129.7 123.8 L128.5 124 L127.2 124.2 L126 124.3 L124.8 124.5 L123.5 124.7 L122.3 124.9 L121.1 125.1 L119.3 125.4 L117.6 125.7 L115.8 126 L114 126.2 L112.1 126.4 L110.2 126.6 L108.3 126.8 L106.4 127 L104.5 127.1 L102.4 127.3 L102.5 127.3 L104.5 127.3 L106.4 127.2 L108.3 127.1 L110.3 126.9 L112.1 126.7 L114 126.5 L115.8 126.3 L117.6 126.1 L119.4 125.9 L121.2 125.6 L122.4 125.4 L123.6 125.2 L124.9 125 L126.1 124.9 L127.3 124.7 L128.6 124.5 L129.8 124.4 L131.1 124.2 L132.3 124.1 L133.6 124 L134.8 123.9 L136.1 123.8 L137.3 123.7 L138.6 123.5 L139.9 123.5 L141.2 123.4 L142.5 123.3 L143.8 123.3 L145.1 123.2 L146.4 123.2 L147.8 123.1 L149.1 123.1 L150.5 123.1 L151.8 123.1 L153.2 123.1 L154.6 123.1 L156 123.1 L157.4 123.2 L158.8 123.2 L160.2 123.3 L161.1 123.3 L161.9 123.3 L162.7 123.4 L163.5 123.4 L164.3 123.5 L165.1 123.5 L165.8 123.5 L166.6 123.6 L167.4 123.6 L168.2 123.7 L169 123.7 L169.8 123.7 L170.5 123.7 L171.3 123.8 L172 123.8 L172.8 123.8 L173.5 123.8 L174.3 123.8 L175 123.8 L175.7 123.8 L176.4 123.8 L177.2 123.8 L177.9 123.8 L178.6 123.8 L179.3 123.7 L179.9 123.7 L180.6 123.7 L181.3 123.6 L181.9 123.5 L182.5 123.5 L182.7 123.4 L182.9 123.4 L183 123.3 L183.1 123.3 L183.3 123.1ZM135 110.7 L134.2 110.7 L133.4 110.8 L132.6 110.8 L131.8 110.9 L130.9 111 L130.1 111 L129.2 111.1 L128.3 111.1 L127.4 111.2 L126.5 111.2 L125.6 111.2 L124.7 111.3 L123.7 111.3 L122.8 111.4 L121.8 111.4 L120.9 111.4 L119.9 111.5 L119 111.5 L118 111.6 L117 111.6 L116 111.7 L115 111.8 L114 111.8 L113.1 111.9 L112.1 112 L111.1 112 L110.1 112.2 L109 112.3 L107.9 112.4 L106.9 112.6 L105.8 112.7 L104.8 112.9 L103.8 113.1 L102.8 113.3 L101.8 113.6 L100.8 113.8 L99.8 114.1 L98.9 114.3 L97.9 114.6 L97 114.9 L96.1 115.3 L95.2 115.6 L94.3 115.9 L93.4 116.3 L92.5 116.7 L91.6 117 L90.8 117.4 L89.9 117.8 L89.1 118.3 L88.2 118.7 L87.4 119.2 L86.6 119.6 L85.8 120.1 L85 120.7 L85.1 120.7 L86 120.3 L86.8 120 L87.6 119.6 L88.5 119.2 L89.3 118.8 L90.2 118.4 L91 118.1 L91.9 117.7 L92.8 117.4 L93.7 117 L94.5 116.7 L95.5 116.4 L96.4 116.1 L97.3 115.8 L98.2 115.6 L99.1 115.3 L100.1 115 L101 114.8 L102 114.6 L103 114.4 L104 114.2 L105 114 L106 113.8 L107 113.7 L108.1 113.5 L109.1 113.4 L110.2 113.2 L111.2 113.2 L112.2 113.1 L113.1 113 L114.1 112.9 L115.1 112.8 L116.1 112.8 L117.1 112.7 L118 112.6 L119 112.5 L120 112.5 L121 112.4 L121.9 112.4 L122.8 112.3 L123.8 112.2 L124.7 112.2 L125.7 112.1 L126.6 112 L127.5 111.9 L128.4 111.8 L129.2 111.8 L130.1 111.7 L131 111.5 L131.8 111.4 L132.7 111.3 L133.5 111.1 L134.3 111 L135 110.7ZM132.8 112.3 L131.9 112.3 L131.1 112.4 L130.2 112.4 L129.3 112.5 L128.4 112.5 L127.5 112.6 L126.6 112.6 L125.7 112.6 L124.8 112.7 L123.8 112.7 L122.9 112.8 L121.9 112.8 L121 112.8 L120 112.9 L119 112.9 L118.1 113 L117.1 113 L116.1 113.1 L115.1 113.1 L114.2 113.2 L113.2 113.3 L112.2 113.3 L111.2 113.4 L110.2 113.5 L109.2 113.7 L108.1 113.8 L107.1 113.9 L106.1 114.1 L105 114.3 L104.1 114.5 L103.1 114.7 L102.1 114.9 L101.1 115.2 L100.2 115.4 L99.2 115.7 L98.3 116 L97.4 116.3 L96.5 116.6 L95.6 116.9 L94.7 117.2 L93.9 117.6 L93 117.9 L92.2 118.3 L91.3 118.7 L90.5 119.1 L89.7 119.5 L88.9 120 L88.1 120.4 L87.3 120.9 L87.3 121 L88.2 120.6 L89 120.2 L89.8 119.9 L90.7 119.5 L91.5 119.2 L92.4 118.8 L93.2 118.5 L94.1 118.2 L95 117.9 L95.8 117.6 L96.8 117.3 L97.7 117 L98.6 116.7 L99.5 116.5 L100.4 116.2 L101.3 116 L102.3 115.8 L103.3 115.6 L104.2 115.4 L105.2 115.2 L106.2 115 L107.2 114.8 L108.2 114.7 L109.3 114.6 L110.3 114.4 L111.3 114.3 L112.3 114.3 L113.2 114.2 L114.2 114.1 L115.2 114 L116.2 114 L117.2 113.9 L118.1 113.8 L119.1 113.8 L120 113.7 L121 113.6 L122 113.6 L122.9 113.5 L123.9 113.4 L124.8 113.4 L125.7 113.3 L126.7 113.2 L127.6 113.1 L128.5 113 L129.3 112.9 L130.2 112.8 L131.1 112.7 L131.9 112.6 L132.8 112.4ZM130.3 113.8 L129.4 113.8 L128.5 113.8 L127.6 113.9 L126.7 113.9 L125.8 113.9 L124.8 114 L123.9 114 L123 114 L122 114.1 L121 114.1 L120.1 114.2 L119.1 114.2 L118.2 114.3 L117.2 114.3 L116.2 114.4 L115.2 114.4 L114.2 114.5 L113.3 114.6 L112.3 114.6 L111.3 114.7 L110.4 114.8 L109.3 114.9 L108.3 115.1 L107.3 115.2 L106.3 115.4 L105.3 115.6 L104.3 115.8 L103.3 116 L102.4 116.2 L101.5 116.4 L100.5 116.7 L99.6 116.9 L98.7 117.2 L97.8 117.5 L96.9 117.8 L96 118.1 L95.2 118.5 L94.3 118.8 L93.5 119.2 L92.7 119.5 L91.8 119.9 L91 120.3 L90.2 120.8 L90.2 120.8 L91.1 120.5 L92 120.2 L92.8 119.8 L93.6 119.5 L94.5 119.2 L95.3 118.9 L96.2 118.6 L97.1 118.3 L98 118 L98.9 117.8 L99.8 117.5 L100.7 117.3 L101.6 117.1 L102.5 116.8 L103.5 116.7 L104.5 116.5 L105.4 116.3 L106.4 116.1 L107.4 115.9 L108.4 115.8 L109.4 115.7 L110.4 115.5 L111.4 115.5 L112.3 115.4 L113.3 115.3 L114.3 115.2 L115.3 115.1 L116.2 115.1 L117.2 115 L118.2 114.9 L119.2 114.9 L120.1 114.8 L121.1 114.7 L122 114.7 L123 114.6 L123.9 114.5 L124.9 114.5 L125.8 114.4 L126.7 114.3 L127.6 114.2 L128.5 114.1 L129.4 114 L130.3 113.8ZM150.6 107.1 L152.6 107.5 L154.5 107.7 L156.4 107.9 L158.4 108.1 L160.4 108.3 L162.4 108.5 L164.4 108.7 L166.4 108.8 L168.4 109 L170.5 109.1 L172.5 109.3 L174.6 109.4 L176.7 109.6 L178.8 109.7 L180.9 109.8 L183.1 109.9 L185.2 110 L187.4 109.9 L187.4 109.9 L185.2 109.5 L183.1 109.3 L181 109.1 L178.9 108.9 L176.8 108.7 L174.7 108.5 L172.6 108.3 L170.6 108.2 L168.5 108 L166.5 107.8 L164.4 107.7 L162.4 107.6 L160.4 107.4 L158.5 107.3 L156.5 107.2 L154.5 107.1 L152.6 107 L150.7 107.1ZM152.5 108.4 L154.4 108.7 L156.4 108.9 L158.3 109.1 L160.3 109.3 L162.3 109.5 L164.3 109.7 L166.3 109.8 L168.3 110 L170.4 110.2 L172.5 110.3 L174.5 110.4 L176.6 110.6 L178.7 110.7 L180.8 110.8 L183 110.9 L185.1 110.9 L185.1 110.8 L183 110.5 L180.9 110.3 L178.8 110.1 L176.7 109.9 L174.6 109.7 L172.5 109.5 L170.5 109.3 L168.4 109.2 L166.4 109 L164.4 108.9 L162.3 108.8 L160.4 108.6 L158.4 108.5 L156.4 108.4 L154.4 108.3 L152.5 108.3ZM160.7 116.2 L162.4 116.6 L164.1 116.8 L165.8 117 L167.4 117.2 L169.1 117.5 L170.8 117.7 L172.5 117.8 L174.2 118 L175.9 118.2 L177.6 118.4 L179.3 118.5 L181 118.7 L182.7 118.8 L184.4 118.9 L186 119 L187.7 119.1 L189.4 119.2 L191 119.2 L191 119.1 L189.4 118.8 L187.8 118.6 L186.1 118.3 L184.4 118.1 L182.8 117.9 L181.1 117.7 L179.4 117.6 L177.7 117.4 L176 117.2 L174.3 117 L172.6 116.9 L170.9 116.7 L169.2 116.6 L167.5 116.5 L165.8 116.3 L164.1 116.2 L162.4 116.1 L160.7 116.2ZM162.3 117.5 L164 117.8 L165.7 118 L167.3 118.2 L169 118.5 L170.7 118.7 L172.4 118.8 L174.1 119 L175.8 119.2 L177.5 119.4 L179.2 119.5 L180.9 119.7 L182.6 119.8 L184.3 119.9 L185.9 120 L187.6 120.1 L189.3 120.1 L189.3 120.1 L187.7 119.8 L186 119.5 L184.3 119.3 L182.7 119.1 L181 118.9 L179.3 118.7 L177.6 118.6 L175.9 118.4 L174.2 118.2 L172.5 118.1 L170.8 117.9 L169.1 117.8 L167.4 117.6 L165.7 117.5 L164 117.4 L162.3 117.4ZM164.8 122.7 L165.8 123 L166.7 123.2 L167.7 123.4 L168.6 123.6 L169.6 123.8 L170.5 123.9 L171.5 124 L172.4 124.2 L173.4 124.3 L174.3 124.4 L175.2 124.5 L176.1 124.6 L177 124.7 L177.9 124.7 L178.8 124.8 L179.7 124.8 L180.5 124.8 L181.4 124.8 L181.4 124.7 L180.6 124.4 L179.7 124.3 L178.9 124.1 L178 124 L177.1 123.8 L176.2 123.7 L175.3 123.5 L174.4 123.4 L173.5 123.3 L172.6 123.2 L171.6 123.1 L170.7 123 L169.7 122.9 L168.7 122.8 L167.8 122.7 L166.8 122.7 L165.8 122.6 L164.8 122.7ZM165.6 123.9 L166.6 124.2 L167.6 124.4 L168.5 124.6 L169.5 124.8 L170.4 124.9 L171.4 125 L172.3 125.2 L173.2 125.3 L174.2 125.4 L175.1 125.5 L176 125.6 L176.9 125.7 L177.8 125.7 L178.7 125.8 L179.6 125.8 L180.4 125.8 L180.4 125.7 L179.6 125.5 L178.7 125.3 L177.9 125.1 L177 125 L176.1 124.8 L175.2 124.7 L174.3 124.6 L173.3 124.5 L172.4 124.4 L171.5 124.3 L170.5 124.2 L169.6 124.1 L168.6 124 L167.6 123.9 L166.6 123.9 L165.6 123.9Z" fill="#1F1A14"/></g><path d="M58 97 C74 94 92 91.5 108 91 C118 90.8 126 91.5 132 93 C150 95 170 96.5 188 98.5 C196 99.4 201 101 201 104.5 C201 107.5 198 109 194 109.2 C200 109.5 207 110.5 207 114 C207 117.5 202 118.6 196 118.4 C200 119.2 201 122.5 197 123.6 C193 124.6 188 124.2 184 123.8 C188 124.8 188 128 183 128.6 C176 129.2 168 128.6 160 128.2 C146 127.6 134 128.6 122 130.6 C104 133.6 82 133.6 58 131 Z" fill="none" stroke="#1F1A14" stroke-width="2.3" stroke-linejoin="round"/><path d="M133.9 105.6 L137.3 105.8 L140.8 106.1 L144.3 106.3 L147.8 106.5 L151.4 106.8 L155 107 L158.7 107.3 L162.4 107.5 L166.2 107.8 L170 108.1 L173.9 108.3 L177.8 108.6 L181.8 108.8 L185.8 109.1 L189.9 109.4 L194 109.7 L194 108.8 L189.9 108.4 L185.9 108.1 L181.9 107.8 L177.9 107.4 L174 107.1 L170.1 106.8 L166.3 106.4 L162.6 106.1 L158.8 105.8 L155.2 105.5 L151.5 105.1 L147.9 104.8 L144.4 104.5 L140.9 104.2 L137.5 103.9 L134.1 103.6ZM145.9 114.6 L148.9 114.8 L152 115.1 L155.1 115.3 L158.2 115.6 L161.4 115.9 L164.6 116.2 L167.7 116.4 L170.9 116.7 L174.1 117 L177.3 117.3 L180.5 117.6 L183.6 117.8 L186.8 118.1 L189.9 118.4 L192.9 118.6 L196 118.8 L196 118 L193 117.7 L190 117.3 L186.9 117 L183.7 116.7 L180.6 116.3 L177.4 116 L174.3 115.6 L171.1 115.3 L167.9 114.9 L164.7 114.6 L161.5 114.2 L158.4 113.9 L155.3 113.5 L152.2 113.2 L149.1 112.9 L146.1 112.6ZM155.9 121.4 L157.8 121.6 L159.6 121.8 L161.5 122 L163.4 122.2 L165.2 122.4 L167 122.6 L168.9 122.8 L170.7 123 L172.4 123.2 L174.2 123.3 L175.9 123.5 L177.6 123.7 L179.2 123.8 L180.8 124 L182.4 124.1 L183.9 124.2 L184.1 123.3 L182.5 123.2 L181 123 L179.4 122.7 L177.7 122.5 L176.1 122.3 L174.3 122 L172.6 121.8 L170.8 121.5 L169.1 121.3 L167.2 121 L165.4 120.7 L163.6 120.5 L161.7 120.2 L159.9 119.9 L158 119.7 L156.1 119.4Z" fill="#1F1A14"/><path d="M70 106 C84 100.5 102 98 118 99 C127 99.6 133 100.8 137.5 102.8 C141 104.4 140.6 108 137 109 C130 110.6 120 110.4 110 111.4 C99 112.6 90 116 82 121" fill="#F2E6C6" stroke="#1F1A14" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M128 100.4 C132 100.9 135.6 102 137.2 103.6 C134.6 104.2 131.4 104 128.6 103.6ZM186 98.6 C191 99.2 195.6 100.2 198.4 102 C195 102.6 190.6 102.2 186.4 101.8Z" fill="none" stroke="#1F1A14" stroke-width="1.1"/><path d="M158 96.4 L158 96.8 L158 97.2 L158.1 97.5 L158.1 97.9 L158.2 98.2 L158.2 98.5 L158.2 98.8 L158.2 99.1 L158.2 99.4 L158.2 99.7 L158.2 100 L158.2 100.4 L158.2 100.7 L158.2 101 L158.2 101.4 L158.2 101.8 L158.2 101.8 L158.5 101.5 L158.8 101.2 L158.9 100.9 L159.1 100.5 L159.2 100.2 L159.3 99.8 L159.3 99.5 L159.3 99.1 L159.3 98.7 L159.2 98.3 L159.1 98 L159 97.6 L158.8 97.3 L158.6 97 L158.4 96.7 L158 96.4ZM161.2 96.8 L161.2 97.1 L161.2 97.4 L161.3 97.7 L161.3 98 L161.3 98.2 L161.3 98.5 L161.4 98.8 L161.4 99 L161.4 99.3 L161.4 99.5 L161.4 99.8 L161.4 100 L161.4 100.3 L161.3 100.6 L161.3 100.9 L161.4 101.2 L161.4 101.2 L161.7 101 L161.8 100.7 L162 100.5 L162.1 100.2 L162.2 99.9 L162.2 99.6 L162.3 99.3 L162.3 99 L162.2 98.7 L162.2 98.4 L162.1 98.1 L162 97.8 L161.9 97.5 L161.7 97.2 L161.5 97 L161.2 96.8ZM181 98.3 L181 98.6 L181 98.9 L181 99.2 L181.1 99.4 L181.1 99.7 L181.1 99.9 L181.1 100.1 L181.1 100.4 L181.1 100.6 L181.1 100.8 L181.1 101.1 L181.1 101.3 L181.1 101.6 L181.1 101.8 L181.1 102.1 L181.2 102.4 L181.2 102.4 L181.5 102.2 L181.7 102 L181.8 101.7 L181.9 101.5 L182 101.2 L182.1 100.9 L182.1 100.6 L182.1 100.3 L182.1 100 L182 99.8 L182 99.5 L181.8 99.2 L181.7 98.9 L181.5 98.7 L181.3 98.5 L181 98.3ZM126.4 92.6 L126.6 93 L126.9 93.3 L127.1 93.7 L127.3 94 L127.4 94.3 L127.6 94.6 L127.7 94.9 L127.8 95.2 L127.8 95.5 L127.9 95.8 L127.9 96.1 L128 96.4 L128 96.7 L128 97 L128 97.4 L128 97.8 L128 97.8 L128.3 97.5 L128.5 97.2 L128.7 96.8 L128.8 96.5 L128.8 96.1 L128.8 95.7 L128.8 95.3 L128.7 94.9 L128.6 94.5 L128.4 94.2 L128.2 93.8 L127.9 93.5 L127.6 93.2 L127.3 93 L126.9 92.7 L126.4 92.6ZM104 103.4 L104 103.7 L104 104 L104.1 104.3 L104.1 104.6 L104.1 104.8 L104.1 105.1 L104.2 105.3 L104.2 105.6 L104.2 105.8 L104.1 106.1 L104.1 106.4 L104.1 106.6 L104.1 106.9 L104 107.2 L104 107.5 L104 107.8 L104 107.8 L104.3 107.6 L104.5 107.4 L104.7 107.1 L104.8 106.8 L104.9 106.5 L105 106.2 L105 105.9 L105 105.6 L105 105.3 L105 105 L104.9 104.7 L104.8 104.4 L104.7 104.1 L104.5 103.8 L104.3 103.6 L104 103.4Z" fill="#1F1A14"/><path d="M44 82 q-5.5 5.3 0 10.7 q-5.5 5.3 0 10.7 q-5.5 5.3 0 10.7 q-5.5 5.3 0 10.7 q-5.5 5.3 0 10.7 q-5.5 5.3 0 10.7 L60 146 q5.5 -5.3 0 -10.7 q5.5 -5.3 0 -10.7 q5.5 -5.3 0 -10.7 q5.5 -5.3 0 -10.7 q5.5 -5.3 0 -10.7 q5.5 -5.3 0 -10.7 Z" fill="#F2E6C6" stroke="#1F1A14" stroke-width="2.4" stroke-linejoin="round"/><path d="M48.5 85.2 L55.5 88.2 M48.5 95.9 L55.5 98.9 M48.5 106.5 L55.5 109.5 M48.5 117.2 L55.5 120.2 M48.5 127.9 L55.5 130.9 M48.5 138.5 L55.5 141.5 " stroke="#1F1A14" stroke-width="1.3" stroke-linecap="round"/></g>`;
-let handEl = null, handAngle = -1, pendEl = null, pendAngle = 99;
-function setHand(deg){
-  if (!handEl) return;
-  const a = Math.round(deg * 10) / 10;
-  if (a === handAngle) return;
-  handAngle = a;
-  handEl.setAttribute('transform', `rotate(${-a * 0.51} -170 118)`);
-}
-function setPend(deg){
-  if (!pendEl) pendEl = document.getElementById('pendRot');
-  if (!pendEl) return;
-  const a = Math.round(deg * 10) / 10;
-  if (a === pendAngle) return;
-  pendAngle = a;
-  pendEl.setAttribute('transform', `rotate(${a} 98 150)`);
-}
-function syncBeat(){
-  const on = {hand: st.beatHand, pendulum: st.beatPend, tick: st.beatTick};
-  document.querySelectorAll('#beatList button').forEach(b => b.setAttribute('aria-pressed', String(!!on[b.dataset.beat])));
-  $('#handBox').hidden = !st.beatHand; $('#pendBox').hidden = !st.beatPend;
-  $('#pendBox').classList.toggle('both', st.beatHand && st.beatPend);
-  const r = document.documentElement.style;
-  r.setProperty('--hand-op', String(st.handOp)); r.setProperty('--hand-sc', String(st.handSize));
-  $('#handOp').value = st.handOp; $('#handSize').value = st.handSize;
-}
-handEl = $('#handRot'); handEl.innerHTML = HAND_SVG; setHand(0); setPend(0);
-$('#beatList').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  const k = b.dataset.beat;
-  if (k === 'hand') st.beatHand = !st.beatHand; else if (k === 'pendulum') st.beatPend = !st.beatPend; else st.beatTick = !st.beatTick;
-  save(); syncBeat(); if (k === 'tick') restartPlay();
-});
-$('#handOp').addEventListener('input', e => { st.handOp = +e.target.value; save(); syncBeat(); });
-$('#handSize').addEventListener('input', e => { st.handSize = +e.target.value; save(); syncBeat(); });
-syncBeat();
-function metroClick(t, dest){
-  const o = actx.createOscillator(), g = actx.createGain();
-  o.type = 'triangle';
-  o.frequency.setValueAtTime(1500, t);
-  o.frequency.exponentialRampToValueAtTime(820, t + 0.035);
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.linearRampToValueAtTime(0.55, t + 0.002);
-  g.gain.exponentialRampToValueAtTime(0.0005, t + 0.07);
-  o.connect(g); g.connect(dest);
-  o.start(t); o.stop(t + 0.08);
-  return o;
-}
+/* the hand's look (the hand itself, the pendulum and the beat menu are the shared engine's) */
+$('#handOp').addEventListener('input', e => { st.handOp = +e.target.value; save(); Organ.syncBeat(); });
+$('#handSize').addEventListener('input', e => { st.handSize = +e.target.value; save(); Organ.syncBeat(); });
+if ($('#audition')) $('#audition').addEventListener('change', e => { st.audition = e.target.checked; save(); });
 
 /* the music box fills the window (or the visitor's window, when embedded), with the controls above and below it */
 function sizeViewer(){
@@ -2535,113 +2540,79 @@ function sizeViewer(){
 }
 
 /* ------------------------------------------------------------------ */
-/* Playback: a small organ, every shown voice                          */
+/* Playback: the shared organ (shared/organ.js), every shown voice      */
 /* ------------------------------------------------------------------ */
 const SEMI = [0, 2, 4, 5, 7, 9, 11];
-let actx = null, wave = null, play = null;
-const volGain = () => 0.9 * Math.pow((st.vol ?? 70) / 100, 2) / Math.sqrt(Math.max(1, visibleVoices().length));
 function midiOf(s){
   const oct = Math.floor(s.step / 7), idx = ((s.step % 7) + 7) % 7;
   return 12 * (oct + 1) + SEMI[idx] + (s.alt || 0);
 }
 function setPlayIcon(on){
-  $('#playIcon').setAttribute('d', on ? 'M2 1.5h3.6v11H2Zm6.4 0H12v11H8.4Z' : 'M2 1 13 7 2 13Z');
+  $('#playIcon').setAttribute('d', on ? 'M2 2h10v10H2Z' : 'M2 1 13 7 2 13Z');
   $('#play').setAttribute('aria-label', on ? 'Stop' : 'Play'); $('#play').title = on ? 'Stop (space bar)' : 'Play (space bar)';
 }
-function stopPlay(){
-  if (!play) return;
-  play.nodes.forEach(n => { try { n.stop(); } catch (e) {} });
-  play.master.gain.setTargetAtTime(0, actx.currentTime, 0.03);
-  cancelAnimationFrame(play.raf);
-  document.querySelectorAll('svg g.on').forEach(g => g.classList.remove('on'));
-  play = null; setPlayIcon(false); setHand(0); setPend(0);
+function stopPlay(){ Organ.stop(); }
+/* the beat's note value in minims, as the piece's first sign reads it (O: a perfect brevis; O. or C.: a perfect semibrevis) */
+function unitMinims(){
+  const top = visibleVoices()[0] || piece.voices[0];
+  const mi = mensInfo(metAt(top, 0)), tab = valueTable(mi.T, mi.P);
+  const e = tab.find(x => x[0] === st.unit) || tab[3];
+  return e[1] * 2 / mi.p;
 }
-/* where the music stands while it plays, in semibreves */
-const playPos = () => play ? Math.max(0, (actx.currentTime - play.t0) / play.spb) : 0;
-function restartPlay(){ if (!play) return; const at = playPos(); stopPlay(); startPlay(at); }
+/* where the music stands, in semibreves */
+const playPos = () => (Organ.position() || 0) / 2;
+function restartPlay(){ if (!play) return; startPlay(playPos()); }
 function startPlay(from){
   if (!piece) return;
   /* Play starts at the selected note (or the beginning) */
   if (typeof from !== 'number') { const s = selSym(); from = s ? s.t : 0; }
   from = Math.max(0, Math.min(from, piece.end));
-  actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-  if (actx.state === 'suspended') actx.resume();
-  if (!wave) {
-    const n = 9, re = new Float32Array(n), im = new Float32Array(n);
-    [0, 1, 0.55, 0.32, 0.22, 0.12, 0.08, 0.05, 0.03].forEach((a, i) => { im[i] = a; });
-    wave = actx.createPeriodicWave(re, im);
-  }
   const voices = visibleVoices();
-  const spb = 60 / Math.max(20, st.tempo || 90);       /* seconds per semibreve */
-  const master = actx.createGain(); master.gain.value = volGain();
-  master.connect(actx.destination);
-  const start = actx.currentTime + 0.12, t0 = start - from * spb, nodes = [], events = [];
+  if (!voices.length) return;
+  const events = [];
   voices.forEach(v => {
-    const pan = actx.createStereoPanner ? actx.createStereoPanner() : null;
-    const out = pan || master;
-    if (pan) { pan.pan.value = voices.length > 1 ? -0.5 + v.idx / (piece.voices.length - 1 || 1) : 0; pan.connect(master); }
     for (let k = 0; k < v.syms.length; k++) {
       const s = v.syms[k];
       if (s.rest) continue;
-      /* tied pieces sound as one note */
-      let d = s.d, j = k;
-      while (v.syms[j].tieNext && v.syms[j + 1] && !v.syms[j + 1].rest && v.syms[j + 1].step === s.step) { j++; d += v.syms[j].d; }
-      const a0 = t0 + s.t * spb, b = t0 + (s.t + d) * spb;
-      if (b <= start + 0.02) { k = j; continue; }
-      const a = Math.max(a0, start);
-      const o = actx.createOscillator(), g = actx.createGain();
-      o.setPeriodicWave(wave);
-      o.frequency.value = 440 * Math.pow(2, (midiOf(s) - 69) / 12);
-      g.gain.setValueAtTime(0, a);
-      g.gain.linearRampToValueAtTime(0.32, a + 0.03);
-      g.gain.setValueAtTime(0.32, Math.max(a + 0.03, b - 0.06));
-      g.gain.linearRampToValueAtTime(0, b);
-      o.connect(g); g.connect(out);
-      o.start(a); o.stop(b + 0.05);
-      nodes.push(o);
-      for (let q = k; q <= j; q++) events.push({a: t0 + v.syms[q].t * spb, b: t0 + v.syms[q].end * spb, id: v.syms[q].id});
+      /* tied pieces sound as one note: struck once (where the playing starts, if it starts inside), held to the end */
+      let j = k;
+      while (v.syms[j].tieNext && v.syms[j + 1] && !v.syms[j + 1].rest && v.syms[j + 1].step === s.step) j++;
+      const chainEnd = v.syms[j].t + v.syms[j].d;
+      let struck = false;
+      for (let q = k; q <= j; q++) {
+        const p = v.syms[q], strike = !struck && p.t + p.d > from + EPS;
+        events.push({id: p.id, t: p.t * 2, d: p.d * 2, midi: midiOf(p), silent: !strike, hold: strike ? (chainEnd - p.t) * 2 : undefined});
+        if (strike) struck = true;
+      }
       k = j;
     }
   });
-  const end = t0 + piece.end * spb;
-  if (st.beatTick) for (let k = Math.ceil(from - EPS); t0 + k * spb < end - 0.02; k++) nodes.push(metroClick(t0 + k * spb, actx.destination));
-  /* how many semibreves the hand counts per breve: three under a perfect sign */
-  const top = voices[0];
-  play = {nodes, master, raf: 0, t0, spb, top, from};
-  setPlayIcon(true);
+  const top = voices[0], u = unitMinims();
   let lastScroll = 0;
-  const tick = () => {
-    if (!play) return;
-    const now = actx.currentTime;
-    if (now > end + 0.2) { stopPlay(); if (st.loop) startPlay(0); return; }
-    /* tactus: a quick drop on one beat, a quick lift on the next, held still in between (as in Cantus firmus) */
-    {
-      const el = Math.max(0, now - t0), bi = Math.floor(el / spb), tt = el - bi * spb;
-      if (st.beatPend) setPend(now < start ? 24 : 24 * Math.cos(Math.PI * el / spb));
-      const sign = metAt(top, bi), N = mensInfo(sign).T === 3 ? 3 : 2;
-      let seg = 0; for (const m of top.mets) if (m.t <= bi + EPS) seg = m.t;
-      const ph = ((bi - Math.round(seg)) % N + N) % N;
-      const a1 = ph === 0 && bi > 0 ? 45 : 0, a2 = ph === N - 1 ? 45 : 0;
-      const pr = Math.min(1, tt / Math.min(0.09, spb * 0.3)), e = 1 - Math.pow(1 - pr, 3);
-      setHand(now < start ? 0 : a1 + (a2 - a1) * e);
+  const on = new Set();
+  Organ.play({
+    events, from: from * 2, count: st.countIn, unit: u, level: 1 / Math.sqrt(Math.max(1, voices.length)),
+    /* how many beats to the hand's pattern: three under a perfect sign */
+    group: bi => { const T = mensInfo(metAt(top, bi * u / 2)).T; return T === 3 ? 3 : 2; },
+    groupStart: bi => { let seg = 0; for (const m of top.mets) if (m.t <= bi * u / 2 + EPS) seg = m.t; return Math.round(seg * 2 / u); },
+    onLoop: () => startPlay(0),
+    onFrame: ids => {
+      const now = new Set(ids);
+      for (const id of [...on]) if (!now.has(id)) { on.delete(id); document.querySelectorAll('svg g.' + id).forEach(g => g.classList.remove('on')); }
+      let first = null;
+      for (const id of now) { const gs = document.querySelectorAll('svg g.' + id); if (!on.has(id)) { on.add(id); gs.forEach(g => g.classList.add('on')); } first = first || gs[0]; }
+      if (first) followHand(first);
+      if (first && performance.now() - lastScroll > 900 && bringIntoView(first)) lastScroll = performance.now();
     }
-    const on = new Set();
-    for (const e of events) if (e.a <= now && e.b > now) on.add(e.id);
-    document.querySelectorAll('svg g.on').forEach(g => { if (!on.has(g.classList[0])) g.classList.remove('on'); });
-    let first = null;
-    on.forEach(id => document.querySelectorAll('svg g.' + id).forEach(g => { g.classList.add('on'); first = first || g; }));
-    if (first) followHand(first);
-    if (first && performance.now() - lastScroll > 900 && bringIntoView(first)) lastScroll = performance.now();
-    play.raf = requestAnimationFrame(tick);
-  };
-  play.raf = requestAnimationFrame(tick);
+  });
 }
 $('#play').addEventListener('click', () => { if (play) stopPlay(); else startPlay(); });
 /* the hand (and pendulum) stand beside the music that is sounding */
 function followHand(el){
   const wr = $('.viewwrap').getBoundingClientRect(), r = el.getBoundingClientRect();
   const hb = $('#handBox').getBoundingClientRect().height || 200;
-  const y = Math.max(10, Math.round(r.top - wr.top + r.height / 2 - hb * 0.45));
+  let y = Math.max(10, Math.round(r.top - wr.top + r.height / 2 - hb * 0.45));
+  if (viewerEl.classList.contains('frame')) y = Math.min(y, Math.max(10, viewerEl.offsetHeight - hb - 10));
   if (Math.abs(y - handTop) < 24) return;
   handTop = y;
   $('#handBox').style.top = y + 'px'; $('#pendBox').style.top = y + 'px';
@@ -2661,6 +2632,8 @@ function postHeight(){
 let rw = 0, lastW = window.innerWidth;
 window.addEventListener('resize', () => { if (window.innerWidth === lastW) return; lastW = window.innerWidth; clearTimeout(rw); rw = setTimeout(() => { sizeViewer(); render(); }, 150); });
 if (EMBED) try { window.top.addEventListener('resize', () => { clearTimeout(rw); rw = setTimeout(() => { sizeViewer(); postHeight(); }, 150); }); } catch (e) {}
+
+Organ.wire();
 
 /* start */
 (async () => {
