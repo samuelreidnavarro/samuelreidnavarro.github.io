@@ -262,3 +262,29 @@ main.tool { max-width: 44rem; justify-items: stretch; }
 .dl[hidden] { display: none; }
 .preview { display: block; width: 100%; max-width: 30rem; border: 1px solid var(--line); background: #fff; image-rendering: auto; }
 .tool-desc { margin: -1rem auto 0; max-width: 34rem; text-align: center; color: var(--soft); text-wrap: balance; }
+
+/* Contact: short intro, message form, email image */
+main.contact-page { max-width: 36rem; justify-items: stretch; gap: 1.6rem; }
+.contact-intro { margin: 0; text-align: center; font-size: 1.25rem; line-height: 1.7; text-wrap: pretty; }
+.contact-form { display: grid; gap: 1.1rem; padding: 1.75rem; background: #fffdf8; border: 1px solid var(--line); border-radius: 6px; }
+.contact-form label { display: grid; gap: .3rem; font-size: 1.05rem; color: var(--soft); }
+.contact-form input, .contact-form textarea {
+  font: inherit; font-size: 1.1rem; color: var(--text); width: 100%;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: .5rem .7rem;
+}
+.contact-form textarea { resize: vertical; min-height: 9rem; line-height: 1.5; }
+.contact-form input:focus, .contact-form textarea:focus { outline: none; border-color: var(--mark); box-shadow: 0 0 0 2px rgba(156, 107, 60, .18); }
+.contact-form .honey { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.send {
+  justify-self: center; font: inherit; font-size: 1.15rem; color: var(--text);
+  background: var(--band); border: 1px solid var(--line); border-radius: 4px; padding: .45rem 2.2rem; cursor: pointer;
+}
+.send:hover { border-color: var(--mark); }
+.send:disabled { opacity: .6; cursor: default; }
+.send:focus-visible { outline: 2px solid var(--mark); outline-offset: 3px; }
+.form-status { margin: 0; min-height: 1.6em; text-align: center; font-size: 1.05rem; color: var(--soft); }
+.form-status:empty { display: none; }
+.form-status.ok { color: #4f6b3a; }
+.form-status.err { color: #a2412f; }
+.contact-page .email { justify-self: center; }
+@media (max-width: 480px) { .contact-form { padding: 1.2rem; } }

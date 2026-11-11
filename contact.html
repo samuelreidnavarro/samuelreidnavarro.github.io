@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact | Samuel Reid Navarro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+Double+Pica:ital@0;1&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap">
+  <link rel="stylesheet" href="style.css?v=18">
+</head>
+<body>
+  <header class="banner">
+    <a href="index.html"><p class="site-name">Samuel Reid Navarro</p></a>
+  </header>
+  <nav class="nav" aria-label="Main">
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="music.html">Timelines</a></li>
+      <li><a href="mensurator.html">Mensurator</a></li>
+      <li><a href="canon.html">Canon Canonum</a></li>
+      <li><a href="cantus-firmus.html">Cantus firmus</a></li>
+      <li><a href="choirbook.html">Choir book</a></li>
+      <li><a href="redix-progressio.html">ReDiX Progressio</a></li>
+      <li class="has-menu"><a href="compressor.html">Tools</a>
+        <ul class="menu">
+          <li><a href="compressor.html">Magic black and white PDF compressor</a></li>
+        </ul>
+      </li>
+      <li><a href="contact.html" aria-current="page">Contact</a></li>
+    </ul>
+  </nav>
+  <main class="contact-page">
+    <h1 class="page-title">Contact</h1>
+    <p class="contact-intro">Do you have feedback on one of the tools here, a question, or would you simply like to get in touch? Send me a message below, or write to me directly.</p>
+    <form class="contact-form" id="contact" novalidate>
+      <label>Name <input name="name" type="text" autocomplete="name" required maxlength="100"></label>
+      <label>Email <input name="email" type="email" autocomplete="email" required maxlength="200"></label>
+      <label>Message <textarea name="message" rows="7" required maxlength="5000"></textarea></label>
+      <input class="honey" name="_honey" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button class="send" type="submit">Send</button>
+      <p class="form-status" role="status" aria-live="polite"></p>
+    </form>
+    <img class="email" src="email.png" alt="Email address" width="621" height="112">
+  </main>
+  <script>
+  (function () {
+    // Messages are delivered by FormSubmit; the address is assembled here so it never sits in the page as text
+    var to = ["samreidn", "gmail.com"].join("@");
+    var form = document.getElementById("contact");
+    var status = form.querySelector(".form-status");
+    var btn = form.querySelector(".send");
+    function say(text, kind) { status.className = "form-status" + (kind ? " " + kind : ""); status.textContent = text; }
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (form.elements._honey.value) return;
+      if (!form.checkValidity()) { say("Please fill in your name, a valid email address and a message.", "err"); form.reportValidity(); return; }
+      var name = form.elements.name.value.trim(), email = form.elements.email.value.trim();
+      btn.disabled = true; say("Sending…");
+      fetch("https://formsubmit.co/ajax/" + to, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({
+          name: name, email: email, message: form.elements.message.value.trim(),
+          _replyto: email, _subject: "Website message from " + name, _template: "box", _captcha: "false"
+        })
+      }).then(function (r) { return r.json().then(function (d) { if (!r.ok || String(d.success) !== "true") throw new Error(d.message || r.status); }); })
+        .then(function () { form.reset(); say("Thank you, your message has been sent.", "ok"); })
+        .catch(function () { say("Sorry, the message could not be sent. Please write to the address below.", "err"); })
+        .finally(function () { btn.disabled = false; });
+    });
+  })();
+  </script>
+</body>
+</html>
