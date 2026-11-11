@@ -22,6 +22,7 @@
       <li><a href="canon.html">Canon Canonum</a></li>
       <li><a href="cantus-firmus.html">Cantus firmus</a></li>
       <li><a href="choirbook.html" aria-current="page">Choir book</a></li>
+      <li><a href="redix.html">ReDiX</a></li>
       <li class="has-menu"><a href="compressor.html">Tools</a>
         <ul class="menu">
           <li><a href="compressor.html">Magic black and white PDF compressor</a></li>
@@ -31,14 +32,20 @@
   </nav>
   <main class="edge">
     <div class="embed edge">
-      <iframe class="game" id="cb" src="games/choirbook.html?v=3" title="Choir book" scrolling="no" allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <iframe class="game" id="cb" title="Choir book" scrolling="no" allow="autoplay; fullscreen" allowfullscreen></iframe>
     </div>
     <script>
-      window.addEventListener("message", function (e) {
+      /* pass ?piece=...&bar=... on to the app, and show the open piece in the address */
+      (function () {
         var f = document.getElementById("cb");
-        if (e.source !== f.contentWindow || !e.data) return;
-        if (e.data.choirbookHeight) f.style.height = e.data.choirbookHeight + "px";
-      });
+        var q = location.search ? location.search.slice(1) + "&" : "";
+        f.src = "games/choirbook.html?" + q + "v=4";
+        window.addEventListener("message", function (e) {
+          if (e.source !== f.contentWindow || !e.data) return;
+          if (e.data.choirbookHeight) f.style.height = e.data.choirbookHeight + "px";
+          if (e.data.choirbookQuery) try { history.replaceState(null, "", "choirbook.html" + e.data.choirbookQuery); } catch (err) {}
+        });
+      })();
     </script>
   </main>
 </body>

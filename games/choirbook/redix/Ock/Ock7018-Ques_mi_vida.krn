@@ -1,0 +1,714 @@
+!!!COM: Ockeghem, Johannes
+!!!CDT: ~1425-1497/02/06
+!!!OTL: Qu'es mi vida
+!!!AGN: Song; Chanson
+!!!SCT: Ock3018
+!!!SCA: Ock3018
+!!!voices: 4
+**kern	**text	**kern	**text	**kern	**text	**kern	**text
+*staff4	*staff4	*staff3	*staff3	*staff2	*staff2	*staff1	*staff1
+*Ivox	*	*Ivox	*	*Ivox	*	*Ivox	*
+*I"Contrabassus	*	*I"Tenor	*	*I"Contra	*	*I"Discantus	*
+*I'C	*	*I'T	*	*I'C	*	*I'D	*
+*>[A,B]	*>[A,B]	*>[A,B]	*>[A,B]	*>[A,B]	*>[A,B]	*>[A,B]	*>[A,B]
+*>A	*>A	*>A	*>A	*>A	*>A	*>A	*>A
+*clefF4	*	*clefF4	*	*clefGv2	*	*clefG2	*
+*k[]	*	*k[]	*	*k[]	*	*k[]	*
+*M3/1	*	*M3/1	*	*M3/1	*	*M3/1	*
+*met(O)	*	*met(O)	*	*met(O)	*	*met(O)	*
+=1-	=1-	=1-	=1-	=1-	=1-	=1-	=1-
+!!LO:TX:Z=8:t=D and T by Cornago
+!!LO:TX:Z=36:t=Form&colon; canción (abba)
+1r	.	0.r	.	1r	.	0.r	.
+1r	.	.	.	1r	.	.	.
+!!!ONB: Questions start with inverted question mark
+1DD	Qu'es	.	.	1D	Qu'es	.	.
+=2	=2	=2	=2	=2	=2	=2	=2
+2GG	mi	1r	.	1.D	mi	0.r	.
+2FF	.	.	.	.	.	.	.
+2GG	vi-	1r	.	.	.	.	.
+2AA	.	.	.	2C	.	.	.
+[1DD	-da,	1D	Qu'es	2.D	vi-	.	.
+.	.	.	.	4C	.	.	.
+=3	=3	=3	=3	=3	=3	=3	=3
+1DD]	.	2.F	mi	2.AA	.	0.r	.
+.	.	4G	.	4BB	.	.	.
+2r	.	2A	vi-	2C	.	.	.
+2DD	vi-	4G	.	1D	.	.	.
+.	.	4F	.	.	.	.	.
+1AA	.	1E	.	.	.	.	.
+.	.	.	.	2C	.	.	.
+=4	=4	=4	=4	=4	=4	=4	=4
+0.DD	-da,	0D	-da,	0F	-da,	1r	.
+.	.	.	.	.	.	1r	.
+.	.	1F	Qu'es	1A	Qu'es	1a	Qu'es
+=5	=5	=5	=5	=5	=5	=5	=5
+1r	.	1.F	mi	1.c	mi	1.a	mi
+1r	.	.	.	.	.	.	.
+.	.	2E	.	2G	.	2g	.
+1D	vi-	2.F	vi-	2A	vi-	2f	vi-
+.	.	.	.	2B	.	4e	.
+.	.	4E	.	.	.	4d	.
+=6	=6	=6	=6	=6	=6	=6	=6
+2r	.	1C	-da,	1A	-da,	2e	.
+2AA	-da,	.	.	.	.	4d	-da,
+.	.	.	.	.	.	4e	.
+1D	pre-	2D	pre-	1A	pre-	2f	pre-
+.	.	2F	.	.	.	1d	-gun-
+1AA	-gun-	1E	-gun-	1A	-gun-	.	.
+.	.	.	.	.	.	2c#i	.
+=7	=7	=7	=7	=7	=7	=7	=7
+2FF	-tays?	0.D	-tays?	2A	-tays?	1d	-tays?
+2GG	.	.	.	1G	.	.	.
+2.BB-	.	.	.	.	.	1r	.
+.	.	.	.	2A	.	.	.
+4C	.	.	.	.	.	.	.
+1D	Non	.	.	1B	Non	1f	Non
+=8	=8	=8	=8	=8	=8	=8	=8
+1.C	vos	1G	Non	1.c	vos	1e	vos
+.	.	1.G	vos	.	.	0g	la
+2BB	.	.	.	2d	la	.	.
+1GG	la	.	.	[1B	quie-	.	.
+.	.	2G	la	.	.	.	.
+=9	=9	=9	=9	=9	=9	=9	=9
+2r	.	1.G	quie-	2B]	.	1.e	quie-
+1C	quie-	.	.	1c	.	.	.
+1C	-ro	2G	-ro	2G	.	2e	-ro
+.	.	1G	ne-	1c	-ro,	1e	ne-
+2C	ne-	.	.	.	.	.	.
+=10	=10	=10	=10	=10	=10	=10	=10
+0FF	-gar:	[0.F	-gar:	2r	.	0.A	-gar:
+.	.	.	.	1C	quie-	.	.
+.	.	.	.	2C	-ro	.	.
+2.FF	Bien	.	.	1C	ne-	.	.
+4GG	.	.	.	.	.	.	.
+=11	=11	=11	=11	=11	=11	=11	=11
+2AA	a-	0.F]	.	2C	-gar:	1r	.
+1BB-i	-mar,	.	.	1D	.	.	.
+.	.	.	.	.	.	1r	.
+2GG	.	.	.	2BB-	.	.	.
+1FF	.	.	.	2.F	Bien	2a	Bien
+.	.	.	.	.	.	2a	a-
+.	.	.	.	4E	.	.	.
+=12	=12	=12	=12	=12	=12	=12	=12
+1FF	.	1r	.	1C	a-	1a	-mar
+0C	.	1r	.	0E	-mar	0g	.
+.	.	1G	Bien	.	.	.	.
+=13	=13	=13	=13	=13	=13	=13	=13
+1r	.	2.A	a-	1D	.	2.f	.
+.	.	4B	.	.	.	4d	.
+2.C	a-	1c	-mar	2.G	.	2.e	.
+4BB	.	.	.	4C	.	4f	.
+2GG	-mar,	2B	.	2E	.	2g	.
+2FF	.	2c	.	[2F	.	[2a	.
+=14	=14	=14	=14	=14	=14	=14	=14
+2r	.	1d	.	1F]	.	4a]	.
+.	.	.	.	.	.	4g	.
+2DD	a-	.	.	.	.	4f	.
+.	.	.	.	.	.	4e	.
+1GG	-mar	1B	.	2.G	.	1d	.
+.	.	.	.	4E	.	.	.
+1AA	.	[1A	.	1E	.	1c	.
+=15	=15	=15	=15	=15	=15	=15	=15
+1D	e	1A]	.	1F	e	2r	.
+.	.	.	.	.	.	2f	e
+1C	la-	1c	e	1.G	la-	2e	la-
+.	.	.	.	.	.	1g	-men-
+2E	-men-	2B	la-	.	.	.	.
+[2F	-tar,	2A	.	2F	-men-	[2a	-tar
+=16	=16	=16	=16	=16	=16	=16	=16
+2F]	.	1d	.	1D	-tar,	2a]	.
+2BB-i	.	.	.	.	.	2b-	.
+1F	.	2c	.	2r	.	4a	.
+.	.	.	.	.	.	4g	.
+.	.	2A	.	2F	e	2.f	.
+2C	.	1G	-men-	2G	la-	.	.
+.	.	.	.	.	.	4e	.
+2r	.	.	.	2B-i	-men-	4e	.
+.	.	.	.	.	.	4d	.
+=17	=17	=17	=17	=17	=17	=17	=17
+0FF	la-	0F	-tar	0A	-tar	1.f	.
+.	.	.	.	.	.	2e	.
+1GG	-men-	1B-	.	2r	.	1d	.
+.	.	.	.	2G	Es	.	.
+=18	=18	=18	=18	=18	=18	=18	=18
+2.AA	-tar	0.A	.	1E	.	1c	.
+4BB	.	.	.	.	.	.	.
+2C	.	.	.	2E	la	1r	.
+1D	.	.	.	1F	vi-	.	.
+.	.	.	.	.	.	1f	Es
+2AA	Es	.	.	2C	.	.	.
+=19	=19	=19	=19	=19	=19	=19	=19
+1BB-	la	1r	.	1D	.	1g	la
+1AA	vi-	1r	.	1E	.	1.a	vi-
+2FF	.	2A	Es	2F	.	.	.
+2GG	.	2B	la	2D	.	2g	.
+=20	=20	=20	=20	=20	=20	=20	=20
+2AA	.	1.c	vi-	1C	.	2.e	.
+1C	.	.	.	.	.	.	.
+.	.	.	.	.	.	4f	.
+.	.	.	.	2E	.	1.g	.
+2GG	.	2B	.	1D	.	.	.
+2BB-i	.	2G	.	.	.	.	.
+2AA	.	[2A	.	[2A	.	[2f	.
+=21	=21	=21	=21	=21	=21	=21	=21
+2D	.	4A]	.	4A]	.	4f]	.
+.	.	4F	.	4B	.	4d	.
+1C	.	1G	.	1c	.	2.e	.
+.	.	.	.	.	.	4d	.
+2BB-i	.	2D	.	2G	.	1d	.
+1AA	-da	1E	.	1A	.	.	.
+.	.	.	.	.	.	2c#i	.
+=22	=22	=22	=22	=22	=22	=22	=22
+2r	.	2D	-da	2F	-da	1d	-da
+1BB-i	que	2F	.	1D	.	.	.
+.	.	2G	.	.	.	2r	.
+2AA	me	2A	que	2C	que	2f	que
+2GG	dais,	2B	me	2E	.	2g	me
+2FF	.	[2c	dais.	2F	.	[2a	dais.
+=23	=23	=23	=23	=23	=23	=23	=23
+1C	.	2c]	.	1E	me	4a]	.
+.	.	.	.	.	.	4g	.
+.	.	2.A	.	.	.	1cc	.
+2r	.	.	.	2F	dais.	.	.
+.	.	4F	.	.	.	.	.
+2GG	me	2G	.	1.D	.	2b	.
+2D	dais.	2.F	.	.	.	2.a	.
+2BB-i	.	.	.	.	.	.	.
+.	.	4G	.	.	.	4g	.
+=24	=24	=24	=24	=24	=24	=24	=24
+2AA	.	2A	.	2C	.	2f	.
+1C	.	1G	.	1E	.	4e	.
+.	.	.	.	.	.	2g	.
+.	.	.	.	.	.	4f	.
+2FF	.	2F	.	2AA	.	2d	.
+2GG	.	1E	.	2BB	.	2e	.
+2AA	.	.	.	2C	.	4c#i	.
+.	.	.	.	.	.	4B	.
+=25	=25	=25	=25	=25	=25	=25	=25
+0.DDl	.	0.Dl	.	0.AAl	.	0.dl	.
+!!LO:LB:i:g=z
+=||	=||	=||	=||	=||	=||	=||	=||
+!!!RDF**kern: l = long note in original notation
+!!!RDF**kern: i = editorial accidental
+!!!RDF**kern: V = start of tuplet marker
+!!!RDF**kern: Z = end of tuplet marker
+!!!RDF**kern: N = signum congruentiae
+!!!ENC: Jesse Rodin 17 April 2018
+!!!END: 2018/04/17/
+!!!EED: Jesse Rodin
+!!!EEV: 2018/07/23/
+!!!ONB: Translated from MusicXML and edited on 2018/07/23/ by Craig Sapp
+!!!COM: Ockeghem, Johannes
+!!!CDT: ~1425-1497/02/06
+!!!OTL: Qu'es mi vida
+!!!AGN: Song; Chanson
+!!!SCT: Ock3018
+!!!SCA: Ock3018
+!!!voices: 4
+*thru	*thru	*thru	*thru	*thru	*thru	*thru	*thru
+*staff4	*staff4	*staff3	*staff3	*staff2	*staff2	*staff1	*staff1
+*Ivox	*	*Ivox	*	*Ivox	*	*Ivox	*
+*I"Contrabassus	*	*I"Tenor	*	*I"Contra	*	*I"Discantus	*
+*I'C	*	*I'T	*	*I'C	*	*I'D	*
+*>B	*>B	*>B	*>B	*>B	*>B	*>B	*>B
+*clefF4	*	*clefF4	*	*clefGv2	*	*clefG2	*
+*k[]	*	*k[]	*	*k[]	*	*k[]	*
+*M3/1	*	*M3/1	*	*M3/1	*	*M3/1	*
+*met(O)	*	*met(O)	*	*met(O)	*	*met(O)	*
+1r	.	0.r	.	1r	.	0.r	.
+1r	.	.	.	1r	.	.	.
+1D	Quien	.	.	1F	Quien	.	.
+=26	=26	=26	=26	=26	=26	=26	=26
+1C	vos	1r	.	2G	vos	0.r	.
+.	.	.	.	1E	.	.	.
+1AA	.	1r	.	.	.	.	.
+.	.	.	.	2.A	.	.	.
+1BB	pu-	1d	Quien	.	.	.	.
+.	.	.	.	4F#i	.	.	.
+.	.	.	.	2G#i	.	.	.
+=27	=27	=27	=27	=27	=27	=27	=27
+0AA	-die-	1c	vos	1A	.	1r	.
+.	.	1A	pu-	2E	pu-	1r	.
+.	.	.	.	2F	.	.	.
+1GG	.	1B	-die-	1G	-die-	1d	Quien
+=28	=28	=28	=28	=28	=28	=28	=28
+1AA	-ra	0A	.	1E	.	1c	vos
+1r	.	.	.	1F	.	1A	.
+1r	.	1G	.	1E	.	1B	pu-
+=29	=29	=29	=29	=29	=29	=29	=29
+0AA	ser-	1.c	.	0.E	-ra	0A	-die-
+.	.	2A	.	.	.	.	.
+1EE	.	1B	-ra	.	.	1G	-ra
+=30	=30	=30	=30	=30	=30	=30	=30
+1AA	-vir	1A	ser-	1E	ser-	1c	ser-
+2BB	.	2d	-vir	2D	-vir,	2B	-vir
+1C	.	2c	.	1E	.	1A	.
+.	.	1A	.	.	.	.	.
+2FF	.	.	.	2F	.	2c	.
+=31	=31	=31	=31	=31	=31	=31	=31
+1BB-	.	1F	.	1D	.	2d	.
+.	.	.	.	.	.	1f	.
+2AA	.	2A	.	1C	.	.	.
+2.C	.	1G	.	.	.	2e	.
+.	.	.	.	2E	.	1g	.
+4BB-	.	.	.	.	.	.	.
+2GG	.	2B-i	.	2D	.	.	.
+=32	=32	=32	=32	=32	=32	=32	=32
+2AA	.	2A	.	1C	.	2f	.
+2C	.	2G	.	.	.	2.e	.
+1D	.	2F	.	2r	.	.	.
+.	.	.	.	.	.	4d	.
+.	.	2D	.	2F	ser-	1d	.
+1AA	.	1E	.	1A	.	.	.
+.	.	.	.	.	.	2c#i	.
+=33	=33	=33	=33	=33	=33	=33	=33
+0DD	.	0.D	.	0A	-vir	0.d	.
+[1D	Tam-	.	.	2A	Tam-	.	.
+.	.	.	.	[2B-i	.	.	.
+=34	=34	=34	=34	=34	=34	=34	=34
+1D]	.	1d	Tam-	2B-]	.	1r	.
+.	.	.	.	2A	.	.	.
+2BB-	-bien	0d	-bien	1B-i	-bien	1r	.
+2C	.	.	.	.	.	.	.
+1D	.	.	.	[1A	.	1f	Tam-
+=35	=35	=35	=35	=35	=35	=35	=35
+1AA	co-	1c	co-	1A]	.	1e	-bien
+0EE	-mo	1B	.	2r	.	2g	co-
+.	.	.	.	1G	co-	2g	-mo
+.	.	1B	-mo	.	.	2g	yo he
+.	.	.	.	2E	-mo	2g	ser-
+=36	=36	=36	=36	=36	=36	=36	=36
+1FF	yo he	1A	yo he	1C	yo he	2.a	-vi-
+.	.	.	.	.	.	4g	.
+1DD	.	1r	.	1D	.	2f	.
+.	.	.	.	.	.	2d	.
+2r	.	1c#i	ser-	1AA	.	1e	.
+2AA	ser-	.	.	.	.	.	.
+=37	=37	=37	=37	=37	=37	=37	=37
+0DD	-vi-	0d	-vi-	2r	.	1d	-do,
+.	.	.	.	2A	ser-	.	.
+.	.	.	.	1A	-vi-	2r	.
+.	.	.	.	.	.	2f	ser-
+2EE	.	2B	.	2G	.	2g	-vi-
+[2FF	.	2A	.	[2F	.	[2a	.
+=38	=38	=38	=38	=38	=38	=38	=38
+4FF]	.	1c	.	4F]	.	4a]	.
+4GG	.	.	.	4D	.	4b	.
+2AA	.	.	.	2C	.	2cc	.
+1GG	-do,	2G	.	2E	.	2b	.
+.	.	2B	.	2G	.	1g	.
+2r	.	1A	.	1D	.	.	.
+2DD	ser-	.	.	.	.	2f#i	.
+=39	=39	=39	=39	=39	=39	=39	=39
+1GG	-vi-	1G	.	1D	-do,	1.g	.
+1FF	.	0c	.	1F	ser-	.	.
+.	.	.	.	.	.	2a	.
+2EE	.	.	.	2G	-vi-	2g	.
+[2FF	.	.	.	2F	.	[2cc	.
+=40	=40	=40	=40	=40	=40	=40	=40
+2FF]	.	2A	.	2A	.	4cc]	.
+.	.	.	.	.	.	4a	.
+2GG	.	2G	.	2D	.	2b	.
+2FF	.	2A	.	2r	.	2cc	.
+2AA	.	2c	.	1E	.	1a	.
+1EE	.	1B	.	.	.	.	.
+.	.	.	.	2E	.	2g#i	.
+=41	=41	=41	=41	=41	=41	=41	=41
+1FF	.	1A	.	1C	.	1.a	.
+0DD	.	1.d	.	1D	.	.	.
+.	.	.	.	.	.	2g	.
+.	.	.	.	[1AA	.	2f	.
+.	.	2c	.	.	.	4e	.
+.	.	.	.	.	.	4d	.
+=42	=42	=42	=42	=42	=42	=42	=42
+1.FF	-do,	1.A	-do,	2AA]	.	1c	-do,
+.	.	.	.	1C	.	.	.
+.	.	.	.	.	.	2f	ser-
+2EE	ser-	2G	ser-	2E	.	2g	.
+2FF	-vi-	2F	-vi-	2AA	.	2a	-vi-
+2GG	.	4E	.	2r	.	4g	.
+.	.	4D	.	.	.	4f	.
+=43	=43	=43	=43	=43	=43	=43	=43
+2AAN	-do?	2CN	-do?	1AN	-do?	2eN	-do?
+1DD	.	1D	.	.	.	2.f	.
+.	.	.	.	2AA	.	.	.
+.	.	.	.	.	.	4e	.
+2DD	.	2F	.	2D	.	4d	.
+.	.	.	.	.	.	8cL	.
+.	.	.	.	.	.	8dJ	.
+1AA	.	1E	.	2C	.	2e	.
+.	.	.	.	2AA	.	4c#i	.
+.	.	.	.	.	.	4B	.
+=44	=44	=44	=44	=44	=44	=44	=44
+0.DDl	.	0.Dl	.	1BB-i	.	0.dl	.
+.	.	.	.	0AAl	.	.	.
+!!LO:LB:g=z
+=||	=||	=||	=||	=||	=||	=||	=||
+!!!RDF**kern: l = long note in original notation
+!!!RDF**kern: i = editorial accidental
+!!!RDF**kern: V = start of tuplet marker
+!!!RDF**kern: Z = end of tuplet marker
+!!!RDF**kern: N = signum congruentiae
+!!!ENC: Jesse Rodin 17 April 2018
+!!!END: 2018/04/17/
+!!!EED: Jesse Rodin
+!!!EEV: 2018/07/23/
+!!!ONB: Translated from MusicXML and edited on 2018/07/23/ by Craig Sapp
+!!!COM: Ockeghem, Johannes
+!!!CDT: ~1425-1497/02/06
+!!!OTL: Qu'es mi vida
+!!!AGN: Song; Chanson
+!!!SCT: Ock3018
+!!!SCA: Ock3018
+!!!voices: 4
+*thru	*thru	*thru	*thru	*thru	*thru	*thru	*thru
+*staff4	*staff4	*staff3	*staff3	*staff2	*staff2	*staff1	*staff1
+*Ivox	*	*Ivox	*	*Ivox	*	*Ivox	*
+*I"Contrabassus	*	*I"Tenor	*	*I"Contra	*	*I"Discantus	*
+*I'C	*	*I'T	*	*I'C	*	*I'D	*
+*>B	*>B	*>B	*>B	*>B	*>B	*>B	*>B
+*clefF4	*	*clefF4	*	*clefGv2	*	*clefG2	*
+*k[]	*	*k[]	*	*k[]	*	*k[]	*
+*M3/1	*	*M3/1	*	*M3/1	*	*M3/1	*
+*met(O)	*	*met(O)	*	*met(O)	*	*met(O)	*
+1r	.	0.r	.	1r	.	0.r	.
+1r	.	.	.	1r	.	.	.
+1D	Mi	.	.	1F	Mi	.	.
+=45	=45	=45	=45	=45	=45	=45	=45
+1C	tra-	1r	.	2G	tra-	0.r	.
+.	.	.	.	1E	.	.	.
+1AA	.	1r	.	.	.	.	.
+.	.	.	.	2.A	.	.	.
+1BB	-ba-	1d	Mi	.	.	.	.
+.	.	.	.	4F#i	.	.	.
+.	.	.	.	2G#i	.	.	.
+=46	=46	=46	=46	=46	=46	=46	=46
+0AA	-ja-	1c	tra-	1A	.	1r	.
+.	.	1A	-ba-	2E	-ba-	1r	.
+.	.	.	.	2F	.	.	.
+1GG	.	1B	-ja-	1G	-ja-	1d	Mi
+=47	=47	=47	=47	=47	=47	=47	=47
+1AA	-do	0A	.	1E	.	1c	tra-
+1r	.	.	.	1F	.	1A	.
+1r	.	1G	.	1E	.	1B	-ba-
+=48	=48	=48	=48	=48	=48	=48	=48
+0AA	be-	1.c	.	0.E	-do	0A	-ja-
+.	.	2A	.	.	.	.	.
+1EE	.	1B	-do	.	.	1G	-do
+=49	=49	=49	=49	=49	=49	=49	=49
+1AA	-vir	1A	be-	1E	be-	1c	be-
+2BB	.	2d	-vir	2D	-vir,	2B	-vir
+1C	.	2c	.	1E	.	1A	.
+.	.	1A	.	.	.	.	.
+2FF	.	.	.	2F	.	2c	.
+=50	=50	=50	=50	=50	=50	=50	=50
+1BB-	.	1F	.	1D	.	2d	.
+.	.	.	.	.	.	1f	.
+2AA	.	2A	.	1C	.	.	.
+2.C	.	1G	.	.	.	2e	.
+.	.	.	.	2E	.	1g	.
+4BB-	.	.	.	.	.	.	.
+2GG	.	2B-i	.	2D	.	.	.
+=51	=51	=51	=51	=51	=51	=51	=51
+2AA	.	2A	.	1C	.	2f	.
+2C	.	2G	.	.	.	2.e	.
+1D	.	2F	.	2r	.	.	.
+.	.	.	.	.	.	4d	.
+.	.	2D	.	2F	be-	1d	.
+1AA	.	1E	.	1A	.	.	.
+.	.	.	.	.	.	2c#i	.
+=52	=52	=52	=52	=52	=52	=52	=52
+0DD	.	0.D	.	0A	-vir	0.d	.
+[1D	Quien	.	.	2A	Quien	.	.
+.	.	.	.	[2B-i	.	.	.
+=53	=53	=53	=53	=53	=53	=53	=53
+1D]	.	1d	Quien	2B-]	.	1r	.
+.	.	.	.	2A	pu-	.	.
+2BB-	pu-	0d	pu-	1B-i	-die-	1r	.
+2C	.	.	.	.	.	.	.
+1D	.	.	.	[1A	-ra	1f	Quien
+=54	=54	=54	=54	=54	=54	=54	=54
+1AA	.	1c	-die-	1A]	.	1e	pu-
+0EE	-ra a-	1B	.	2r	.	2g	-die-
+.	.	.	.	1G	a-	2g	-ra a-
+.	.	1B	-ra a-	.	.	2g	-ver
+.	.	.	.	2E	.	2g	so-
+=55	=55	=55	=55	=55	=55	=55	=55
+1FF	-ver	1A	-ver	1C	-ver	2.a	-fri-
+.	.	.	.	.	.	4g	.
+1DD	.	1r	.	1D	.	2f	.
+.	.	.	.	.	.	2d	.
+2r	.	1c#i	so-	1AA	.	1e	.
+2AA	so-	.	.	.	.	.	.
+=56	=56	=56	=56	=56	=56	=56	=56
+0DD	-fri-	0d	-fri-	2r	.	1d	-do,
+.	.	.	.	2A	so-	.	.
+.	.	.	.	1A	-fri-	2r	.
+.	.	.	.	.	.	2f	so-
+2EE	.	2B	.	2G	.	2g	-fri-
+[2FF	.	2A	.	[2F	.	[2a	.
+=57	=57	=57	=57	=57	=57	=57	=57
+4FF]	.	1c	.	4F]	.	4a]	.
+4GG	.	.	.	4D	.	4b	.
+2AA	.	.	.	2C	.	2cc	.
+1GG	-do,	2G	.	2E	.	2b	.
+.	.	2B	.	2G	.	1g	.
+2r	.	1A	.	1D	.	.	.
+2DD	so-	.	.	.	.	2f#i	.
+=58	=58	=58	=58	=58	=58	=58	=58
+1GG	-fri-	1G	do,	1D	-do,	1.g	-do,
+1FF	.	0c	so-	1F	so-	.	.
+.	.	.	.	.	.	2a	so-
+2EE	.	.	.	2G	-fri-	2g	-fri-
+[2FF	.	.	.	2F	.	[2cc	.
+=59	=59	=59	=59	=59	=59	=59	=59
+2FF]	.	2A	-fri-	2A	.	4cc]	.
+.	.	.	.	.	.	4a	.
+2GG	.	2G	.	2D	.	2b	.
+2FF	.	2A	.	2r	.	2cc	.
+2AA	.	2c	.	1E	.	1a	.
+1EE	.	1B	.	.	.	.	.
+.	.	.	.	2E	.	2g#i	.
+=60	=60	=60	=60	=60	=60	=60	=60
+1FF	.	1A	.	1C	.	1.a	.
+0DD	.	1.d	.	1D	.	.	.
+.	.	.	.	.	.	2g	.
+.	.	.	.	[1AA	.	2f	.
+.	.	2c	.	.	.	4e	.
+.	.	.	.	.	.	4d	.
+=61	=61	=61	=61	=61	=61	=61	=61
+1.FF	-do,	1.A	-do,	2AA]	.	1c	-do,
+.	.	.	.	1C	.	.	.
+.	.	.	.	.	.	2f	so-
+2EE	so-	2G	so-	2E	.	2g	.
+2FF	-fri-	2F	-fri-	2AA	-do,	2a	-fri-
+2GG	.	4E	.	2r	.	4g	.
+.	.	4D	.	.	.	4f	.
+=62	=62	=62	=62	=62	=62	=62	=62
+2AAN	.	2CN	.	1AN	so-	2eN	.
+1DD	.	1D	.	.	.	2.f	.
+.	.	.	.	2AA	-fri-	.	.
+.	.	.	.	.	.	4e	.
+2DD	.	2F	.	2D	.	4d	.
+.	.	.	.	.	.	8cL	.
+.	.	.	.	.	.	8dJ	.
+1AA	.	1E	.	2C	.	2e	.
+.	.	.	.	2AA	.	4c#i	.
+.	.	.	.	.	.	4B	.
+=63	=63	=63	=63	=63	=63	=63	=63
+0.DDl	-do?	0.Dl	-do?	1BB-i	.	0.dl	-do?
+.	.	.	.	0AAl	-do?	.	.
+!!LO:LB:g=z
+=||	=||	=||	=||	=||	=||	=||	=||
+!!!RDF**kern: l = long note in original notation
+!!!RDF**kern: i = editorial accidental
+!!!RDF**kern: V = start of tuplet marker
+!!!RDF**kern: Z = end of tuplet marker
+!!!RDF**kern: N = signum congruentiae
+!!!ENC: Jesse Rodin 17 April 2018
+!!!END: 2018/04/17/
+!!!EED: Jesse Rodin
+!!!EEV: 2018/07/23/
+!!!ONB: Translated from MusicXML and edited on 2018/07/23/ by Craig Sapp
+!!!COM: Ockeghem, Johannes
+!!!CDT: ~1425-1497/02/06
+!!!OTL: Qu'es mi vida
+!!!AGN: Song; Chanson
+!!!SCT: Ock3018
+!!!SCA: Ock3018
+!!!voices: 4
+*thru	*thru	*thru	*thru	*thru	*thru	*thru	*thru
+*staff4	*staff4	*staff3	*staff3	*staff2	*staff2	*staff1	*staff1
+*Ivox	*	*Ivox	*	*Ivox	*	*Ivox	*
+*I"Contrabassus	*	*I"Tenor	*	*I"Contra	*	*I"Discantus	*
+*I'C	*	*I'T	*	*I'C	*	*I'D	*
+*>A	*>A	*>A	*>A	*>A	*>A	*>A	*>A
+*clefF4	*	*clefF4	*	*clefGv2	*	*clefG2	*
+*k[]	*	*k[]	*	*k[]	*	*k[]	*
+*M3/1	*	*M3/1	*	*M3/1	*	*M3/1	*
+*met(O)	*	*met(O)	*	*met(O)	*	*met(O)	*
+=64-	=64-	=64-	=64-	=64-	=64-	=64-	=64-
+!!LO:TX:Z=8:t=D and T by Cornago
+!!LO:TX:Z=36:t=Form&colon; canción (abba)
+1r	.	0.r	.	1r	.	0.r	.
+1r	.	.	.	1r	.	.	.
+!!!ONB: Questions start with inverted question mark
+1DD	Pa-	.	.	1D	Pa-	.	.
+=65	=65	=65	=65	=65	=65	=65	=65
+2GG	-ra	1r	.	1.D	-ra	0.r	.
+2FF	.	.	.	.	.	.	.
+2GG	.	1r	.	.	.	.	.
+2AA	.	.	.	2C	.	.	.
+[1DD	que	1D	Pa-	2.D	que	.	.
+.	.	.	.	4C	.	.	.
+=66	=66	=66	=66	=66	=66	=66	=66
+1DD]	.	2.F	-ra	2.AA	.	0.r	.
+.	.	4G	.	4BB	.	.	.
+2r	.	2A	que	2C	.	.	.
+2DD	Pa-	4G	.	1D	.	.	.
+.	.	4F	.	.	.	.	.
+1AA	-ra	1E	.	.	.	.	.
+.	.	.	.	2C	.	.	.
+=67	=67	=67	=67	=67	=67	=67	=67
+0.DD	que,	0D	.	0F	.	1r	.
+.	.	.	.	.	.	1r	.
+.	.	1F	Pa-	1A	Pa-	1a	Pa-
+=68	=68	=68	=68	=68	=68	=68	=68
+1r	.	1.F	-ra	1.c	-ra	1.a	-ra
+1r	.	.	.	.	.	.	.
+.	.	2E	.	2G	.	2g	.
+1D	que	2.F	que	2A	que	2f	que
+.	.	.	.	2B	.	4e	.
+.	.	4E	.	.	.	4d	.
+=69	=69	=69	=69	=69	=69	=69	=69
+2r	.	1C	me	1A	me	2e	.
+2AA	me	.	.	.	.	4d	me
+.	.	.	.	.	.	4e	.
+1D	pre-	2D	pre-	1A	pre-	2f	pre-
+.	.	2F	.	.	.	1d	-gun-
+1AA	-gun-	1E	-gun-	1A	-gun-	.	.
+.	.	.	.	.	.	2c#i	.
+=70	=70	=70	=70	=70	=70	=70	=70
+2FF	-tays	0.D	-tays	2A	-tays	1d	-tays
+2GG	.	.	.	1G	.	.	.
+2.BB-	.	.	.	.	.	1r	.
+.	.	.	.	2A	.	.	.
+4C	.	.	.	.	.	.	.
+1D	La	.	.	1B	La	1f	La
+=71	=71	=71	=71	=71	=71	=71	=71
+1.C	pe-	1G	La	1.c	pe-	1e	pe-
+.	.	1.G	pe-	.	.	0g	-na
+2BB	.	.	.	2d	-na	.	.
+1GG	-na	.	.	[1B	que he,	.	.
+.	.	2G	-na	.	.	.	.
+=72	=72	=72	=72	=72	=72	=72	=72
+2r	.	1.G	que he	2B]	.	1.e	que he
+1C	que he	.	.	1c	.	.	.
+1C	de	2G	de	2G	.	2e	de
+.	.	1G	pas-	1c	.	1e	pas-
+2C	pas-	.	.	.	.	.	.
+=73	=73	=73	=73	=73	=73	=73	=73
+0FF	-sar,	[0.F	-sar,	2r	.	0.A	-sar,
+.	.	.	.	1C	que he	.	.
+.	.	.	.	2C	de	.	.
+2.FF	Pues	.	.	1C	pas-	.	.
+4GG	.	.	.	.	.	.	.
+=74	=74	=74	=74	=74	=74	=74	=74
+2AA	a-	0.F]	.	2C	-sar,	1r	.
+1BB-i	-mar,	.	.	1D	.	.	.
+.	.	.	.	.	.	1r	.
+2GG	.	.	.	2BB-	.	.	.
+1FF	.	.	.	2.F	Pues	2a	Pues
+.	.	.	.	.	.	2a	a-
+.	.	.	.	4E	.	.	.
+=75	=75	=75	=75	=75	=75	=75	=75
+1FF	.	1r	.	1C	a-	1a	-mar
+0C	.	1r	.	0E	-mar	0g	.
+.	.	1G	Pues	.	.	.	.
+=76	=76	=76	=76	=76	=76	=76	=76
+1r	.	2.A	a-	1D	.	2.f	.
+.	.	4B	.	.	.	4d	.
+2.C	a-	1c	-mar	2.G	.	2.e	.
+4BB	.	.	.	4C	.	4f	.
+2GG	-mar,	2B	.	2E	.	2g	.
+2FF	.	2c	.	[2F	.	[2a	.
+=77	=77	=77	=77	=77	=77	=77	=77
+2r	.	1d	.	1F]	.	4a]	.
+.	.	.	.	.	.	4g	.
+2DD	a-	.	.	.	.	4f	.
+.	.	.	.	.	.	4e	.
+1GG	-mar	1B	.	2.G	.	1d	.
+.	.	.	.	4E	.	.	.
+1AA	.	[1A	.	1E	.	1c	.
+=78	=78	=78	=78	=78	=78	=78	=78
+1D	e	1A]	.	1F	e	2r	.
+.	.	.	.	.	.	2f	e
+1C	la-	1c	e	1.G	la-	2e	la-
+.	.	.	.	.	.	1g	-men-
+2E	-men-	2B	la-	.	.	.	.
+[2F	-tar,	2A	.	2F	-men-	[2a	-tar
+=79	=79	=79	=79	=79	=79	=79	=79
+2F]	.	1d	.	1D	-tar,	2a]	.
+2BB-i	.	.	.	.	.	2b-	.
+1F	.	2c	.	2r	.	4a	.
+.	.	.	.	.	.	4g	.
+.	.	2A	.	2F	e	2.f	.
+2C	.	1G	-men-	2G	la-	.	.
+.	.	.	.	.	.	4e	.
+2r	.	.	.	2B-i	-men-	4e	.
+.	.	.	.	.	.	4d	.
+=80	=80	=80	=80	=80	=80	=80	=80
+0FF	la-	0F	-tar	0A	-tar	1.f	.
+.	.	.	.	.	.	2e	.
+1GG	-men-	1B-	.	2r	.	1d	.
+.	.	.	.	2G	Es	.	.
+=81	=81	=81	=81	=81	=81	=81	=81
+2.AA	-tar	0.A	.	1E	.	1c	.
+4BB	.	.	.	.	.	.	.
+2C	.	.	.	2E	la	1r	.
+1D	.	.	.	1F	vi-	.	.
+.	.	.	.	.	.	1f	Es
+2AA	Es	.	.	2C	.	.	.
+=82	=82	=82	=82	=82	=82	=82	=82
+1BB-	la	1r	.	1D	.	1g	la
+1AA	vi-	1r	.	1E	.	1.a	vi-
+2FF	.	2A	Es	2F	.	.	.
+2GG	.	2B	la	2D	.	2g	.
+=83	=83	=83	=83	=83	=83	=83	=83
+2AA	.	1.c	vi-	1C	.	2.e	.
+1C	.	.	.	.	.	.	.
+.	.	.	.	.	.	4f	.
+.	.	.	.	2E	.	1.g	.
+2GG	.	2B	.	1D	.	.	.
+2BB-i	.	2G	.	.	.	.	.
+2AA	.	[2A	.	[2A	.	[2f	.
+=84	=84	=84	=84	=84	=84	=84	=84
+2D	.	4A]	.	4A]	.	4f]	.
+.	.	4F	.	4B	.	4d	.
+1C	.	1G	.	1c	.	2.e	.
+.	.	.	.	.	.	4d	.
+2BB-i	.	2D	.	2G	.	1d	.
+1AA	-da	1E	.	1A	.	.	.
+.	.	.	.	.	.	2c#i	.
+=85	=85	=85	=85	=85	=85	=85	=85
+2r	.	2D	-da	2F	-da	1d	-da
+1BB-i	que	2F	.	1D	.	.	.
+.	.	2G	.	.	.	2r	.
+2AA	me	2A	que	2C	que	2f	que
+2GG	dais,	2B	me	2E	.	2g	me
+2FF	.	[2c	dais?	2F	.	[2a	dais?
+=86	=86	=86	=86	=86	=86	=86	=86
+1C	.	2c]	.	1E	me	4a]	.
+.	.	.	.	.	.	4g	.
+.	.	2.A	.	.	.	1cc	.
+2r	.	.	.	2F	dais?	.	.
+.	.	4F	.	.	.	.	.
+2GG	me	2G	.	1.D	.	2b	.
+2D	dais.	2.F	.	.	.	2.a	.
+2BB-i	.	.	.	.	.	.	.
+.	.	4G	.	.	.	4g	.
+=87	=87	=87	=87	=87	=87	=87	=87
+2AA	.	2A	.	2C	.	2f	.
+1C	.	1G	.	1E	.	4e	.
+.	.	.	.	.	.	2g	.
+.	.	.	.	.	.	4f	.
+2FF	.	2F	.	2AA	.	2d	.
+2GG	.	1E	.	2BB	.	2e	.
+2AA	.	.	.	2C	.	4c#i	.
+.	.	.	.	.	.	4B	.
+=88	=88	=88	=88	=88	=88	=88	=88
+0.DDl	.	0.Dl	.	0.AAl	.	0.dl	.
+==	==	==	==	==	==	==	==
+*-	*-	*-	*-	*-	*-	*-	*-
+!!!RDF**kern: l = long note in original notation
+!!!RDF**kern: i = editorial accidental
+!!!RDF**kern: V = start of tuplet marker
+!!!RDF**kern: Z = end of tuplet marker
+!!!RDF**kern: N = signum congruentiae
+!!!ENC: Jesse Rodin 17 April 2018
+!!!END: 2018/04/17/
+!!!EED: Jesse Rodin
+!!!EEV: 2018/07/23/
+!!!ONB: Translated from MusicXML and edited on 2018/07/23/ by Craig Sapp
+!!muse2ps: C^@{COM}\nEd. @{EED}^i2I150v90,90,90,120z18l2650t120c125
