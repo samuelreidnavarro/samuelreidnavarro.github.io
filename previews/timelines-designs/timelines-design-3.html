@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timelines design | Samuel Reid Navarro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+Double+Pica:ital@0;1&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap">
+  <link rel="stylesheet" href="../../style.css?v=18">
+</head>
+<style>.mock-tag{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:50;background:#3b3125;color:#fbf7ef;font-size:1rem;padding:.35rem 1rem;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.2)}.mock-tag a{color:#f1e8d8}</style><body>
+  <header class="banner">
+    <a href="../../index.html"><p class="site-name">Samuel Reid Navarro</p></a>
+  </header>
+  <nav class="nav" aria-label="Main">
+    <ul>
+      <li><a href="../../index.html">Home</a></li>
+      <li><a href="../../about.html">About</a></li>
+      <li><a href="../../music.html" aria-current="page">Timelines</a></li>
+      <li><a href="../../mensurator.html">Mensurator</a></li>
+      <li><a href="../../cantus-firmus.html">CantusFirmus</a></li>
+      <li><a href="../../choirbook.html">ChoirBook</a></li>
+      <li class="has-menu"><a href="../../canon.html">More</a>
+        <ul class="menu">
+          <li><a href="../../canon.html">Canon Canonum</a></li>
+          <li><a href="../../redix-progressio.html">ReDiX Progressio</a></li>
+          <li><a href="../../compressor.html">Magic black and white PDF compressor</a></li>
+        </ul>
+      </li>
+      <li><a href="../../contact.html">Contact</a></li>
+    </ul>
+  </nav>
+  <main class="wide">
+    <div class="embed">
+      <button class="fs" type="button" id="fs">Full screen</button>
+      <iframe class="game" id="lifelines" src="../../games/music-lifelines.html?v=11" title="Timelines" allow="fullscreen"></iframe>
+    </div>
+    <script>
+      document.getElementById("fs").addEventListener("click", function () {
+        var f = document.getElementById("lifelines");
+        if (f.requestFullscreen) f.requestFullscreen();
+        else if (f.webkitRequestFullscreen) f.webkitRequestFullscreen();
+        else window.location.href = f.src;
+      });
+    </script>
+  </main><div class="mock-tag"><a href="index.html">All designs</a> · <b>3. Sand and sepia</b> · <a href="timelines-design-1.html">1</a> <a href="timelines-design-2.html">2</a> <a href="timelines-design-4.html">4</a> <a href="timelines-design-5.html">5</a> </div><script>
+(function(){var f=document.getElementById("lifelines");
+function theme(){var d=f.contentDocument;if(!d||d.getElementById("mock"))return;
+var l=d.createElement("link");l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IM+Fell+English:ital@0;1&display=swap";d.head.appendChild(l);
+var s=d.createElement("style");s.id="mock";s.textContent=":root:root:root{--shadow:0 10px 30px rgba(59,49,37,.12), 0 1px 3px rgba(59,49,37,.08);--bg:#F7F1E6;--surface:#FCF9F2;--ink:#3B3125;--muted:#7A6A54;--faint:#A8987F;--rule:#E4D8C4;--wash:#EFE6D6;--grid:rgba(59,49,37,.06);--grid-strong:rgba(59,49,37,.16);--sea:#EAE2D3;--land:#FCF9F2;--coast:#C6B497;--border:#D8C9B0;--gold:#A9782C;--composer:#6B4E36;--theorist:#B5653A;--troubadour:#7B7A3C;--on-role:#FFF9EE;--f-serif:\"EB Garamond\",Garamond,Georgia,serif;color-scheme:light}";d.head.appendChild(s);
+d.documentElement.setAttribute("data-theme","light");}
+f.addEventListener("load",theme);if(f.contentDocument&&f.contentDocument.readyState==="complete")theme();})();
+</script>
+</body>
+</html>
