@@ -1,6 +1,6 @@
-# ReDiX in the browser
+# ReDiX Progressio: ReDiX in the browser
 
-This folder belongs to [redix.html](../redix.html), a browser version of
+This folder belongs to [redix.html](../redix.html), ReDiX Progressio, a browser version of
 **ReDiX – Renaissance Digital eXplorer** by **Ugo Bindini**
 (<https://github.com/ugobindini/redix>). The idea, the analysis of the scores
 and the original search are his. The browser version adds a search for
