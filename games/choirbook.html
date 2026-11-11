@@ -469,10 +469,9 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
 .embedded header.top{display:none}
 .embedded .wrap{padding-top:4px}
 [hidden]{display:none !important}
-.viewer{position:relative;padding:22px 18px 34px;border-radius:6px;
-  background:rgba(42,34,24,.06);box-shadow:inset 0 1px 3px rgba(42,34,24,.12)}
+.viewer{position:relative;padding:18px 0 34px}
 /* pages side by side: the row scrolls sideways, the page itself still scrolls up and down */
-.viewer.horiz{overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;overscroll-behavior-x:contain;scrollbar-width:thin;padding:22px 64px 34px}
+.viewer.horiz{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;padding:22px 64px 34px}
 .viewer.horiz #pages{flex-direction:row;align-items:flex-start;width:max-content;gap:34px}
 .viewer.horiz #pages>.page,.viewer.horiz #pages>.opening{scroll-snap-align:center}
 .pagenav{position:absolute;top:50%;z-index:4;width:46px;height:46px;min-height:0;padding:0;border-radius:50%;transform:translateY(-50%);
@@ -1226,7 +1225,7 @@ function mensW(sign){
 /* ------------------------------------------------------------------ */
 /* Horizontal layout                                                   */
 /* ------------------------------------------------------------------ */
-const spring = d => 0.12 + 0.18 * Math.min(1, st.hs) + (0.8 + 2.3 * Math.pow(Math.max(d, 0.05), 0.6)) * st.hs;
+const spring = d => 0.05 + 0.25 * Math.min(1, st.hs) + (0.8 + 2.3 * Math.pow(Math.max(d, 0.05), 0.6)) * st.hs;
 
 /* columns for a set of voices over [a, b) */
 function columns(vlist, a, b, withLyrics){
@@ -1239,20 +1238,22 @@ function columns(vlist, a, b, withLyrics){
   const lastX = new Map(), lastD = new Map(), lastSyl = new Map();
   let prev = null;
   const barOn = st.bars === 'full' || st.bars === 'tick';
+  /* the lowest quarter of the spacing slider lets notes and syllables crowd, even overlap */
+  const tight = Math.min(1, st.hs / 0.6), squeeze = 0.3 + 0.7 * tight;
   for (const c of cols) {
     let left = 0, right = 0.3;
     for (const s of c.items.values()) { left = Math.max(left, s.left); right = Math.max(right, s.right); }
     c.left = left; c.right = right;
     const needBar = c.bar && (barOn || c.bar === 'double');
-    let x = prev ? prev.x + prev.right + left + 0.08 + 0.47 * Math.min(1, st.hs) + (needBar ? 0.5 + 0.4 * Math.min(1, st.hs) : 0) : left;
+    let x = prev ? prev.x + (prev.right + left) * squeeze + 0.08 * tight + 0.47 * Math.min(1, st.hs) + (needBar ? 0.5 * tight + 0.4 * Math.min(1, st.hs) : 0) : left;
     for (const [v, s] of c.items) {
       if (lastX.has(v)) x = Math.max(x, lastX.get(v) + spring(lastD.get(v)) + (needBar ? 0.5 : 0));
-      if (withLyrics(v) && s.text && lastSyl.has(v)) x = Math.max(x, lastSyl.get(v) + s.tw / 2 - s.hw / 2 + 0.25 + 0.3 * Math.min(1, st.hs));
+      if (withLyrics(v) && s.text && lastSyl.has(v)) x = Math.max(x, lastSyl.get(v) + (s.tw / 2 - s.hw / 2) * squeeze + 0.25 * tight + 0.3 * Math.min(1, st.hs));
     }
     c.x = x;
     for (const [v, s] of c.items) {
       lastX.set(v, x); lastD.set(v, s.d);
-      if (withLyrics(v) && s.text) lastSyl.set(v, x + s.hw / 2 + s.tw / 2 + (s.hy ? 0.9 : 0));
+      if (withLyrics(v) && s.text) lastSyl.set(v, x + (s.hw / 2 + s.tw / 2 + (s.hy ? 0.9 : 0)) * squeeze);
     }
     prev = c;
   }
@@ -1826,6 +1827,15 @@ function syncNav(){
 $('#pgPrev').addEventListener('click', () => goPage(-1));
 $('#pgNext').addEventListener('click', () => goPage(1));
 viewerEl.addEventListener('scroll', () => syncNav(), {passive: true});
+viewerEl.addEventListener('wheel', e => {
+  if (st.flow !== 'horizontal' || e.ctrlKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+  if (!e.target.closest('.page')) return;
+  const max = viewerEl.scrollWidth - viewerEl.clientWidth;
+  const d = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? viewerEl.clientWidth : 1);
+  if ((d < 0 && viewerEl.scrollLeft <= 0) || (d > 0 && viewerEl.scrollLeft >= max - 1)) return;   /* at the end of the row the website scrolls on */
+  e.preventDefault();
+  viewerEl.scrollLeft += d;
+}, {passive: false});
 /* bring a note into sight: in the row of pages, and in the window (or the site page around the app) */
 function bringIntoView(el, force){
   const r = el.getBoundingClientRect();
