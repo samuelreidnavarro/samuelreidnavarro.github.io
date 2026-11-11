@@ -19,104 +19,494 @@
 :root{
   --ground:#FBF7EF; --surface:#F4EDE0; --text:#2A2218; --muted:#7D6F5B; --line:#D6C8B0;
   --accent:#8E2A1E; --accent-ink:#F7F2E6;
-  --leaf-ink:#2A2218; --rule:#8E2A1E; --paper:none;
+  --leaf:#F3E8CC; --leaf-ink:#2A2218; --leaf-muted:#7A6A4E; --rule:#8E2A1E;
+  --sel:#8E2A1E; --hov:#B8624A; --play:#8E2A1E; --del:#8E2A1E;
+  --paper:none; --pen:#8E2A1E;
   color-scheme: light;
 }
 *{box-sizing:border-box}
 .embedded,.embedded body{overflow:hidden;height:auto}
-.embedded header.top{display:none}
+.embedded #title{display:none}
+.embedded header.top .lede, .embedded header.top h1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.embedded header.top{justify-content:flex-end;margin-bottom:6px}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--ground);color:var(--text);
   font:400 19px/1.45 "IM Fell English","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif}
-.wrap{margin:0 auto;padding:22px clamp(14px,2.6vw,44px) 40px}
-.embedded .wrap{padding-top:6px}
-header.top{margin-bottom:14px}
-h1{font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif;font-weight:400;font-size:clamp(2.2rem,4.4vw,3.2rem);line-height:1.02;margin:0}
+.wrap{max-width:none;margin:0 auto;padding:22px clamp(14px,2.6vw,44px) 40px}
+header.top{display:flex;flex-wrap:wrap;gap:14px 32px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+h1{font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif;font-weight:400;font-size:clamp(2.2rem,4.4vw,3.2rem);line-height:1.02;margin:0;letter-spacing:-.012em}
+.lede{margin:.4rem 0 0;color:var(--muted);font-style:italic;max-width:62ch}
+.share{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.libwrap{position:relative}
+.libbtn{display:inline-flex;align-items:center;gap:8px;background:var(--text);color:var(--ground);border-color:var(--text)}
+.libbtn .chev{width:12px;height:12px;fill:currentColor}
+.library{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:min(500px,calc(100vw - 28px));max-height:min(72vh,680px);
+  overflow:auto;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 8px 10px;
+  box-shadow:0 18px 40px -16px rgba(0,0,0,.45)}
+.library h2{font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif;font-size:17px;font-weight:700;margin:12px 8px 2px}
+.library .gnote{margin:0 8px 6px;color:var(--muted);font-style:italic;font-size:14.5px}
+.libhint{margin:6px 8px 4px;color:var(--muted);font-style:italic;font-size:14.5px}
+.catitem{display:block;width:100%;text-align:left;padding:10px 10px 8px;margin:0 0 6px;border:1px solid var(--line);background:transparent;border-radius:6px;height:auto;min-height:0;line-height:1.3}
+.catitem:hover:not(:disabled){border-color:var(--text);background:var(--ground)}
+.catitem .cathead{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.catitem .t{font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif;font-size:19px;font-weight:700}
+.catitem .cnt{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;white-space:nowrap}
+.catitem .d{display:block;font-size:14px;color:var(--muted);font-style:italic;margin-top:1px}
+.catitem .pv{display:block;margin-top:6px;height:46px;background:var(--leaf);border-radius:3px;overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+.catitem .pv svg{display:block;height:46px;width:auto}
+.catitem .pv .staff{stroke:var(--rule)}
+.catitem .pv use{fill:var(--leaf-ink)}
+.catitem .pv .ledger{stroke:var(--leaf-ink)}
+.catitem .first{display:block;margin-top:4px;font-size:13.5px;color:var(--muted)}
+.libnav{padding:2px 0 0}
+.libback{height:34px;min-height:34px;padding:0 10px 0 6px;gap:4px;background:transparent;border-color:transparent;color:var(--text)}
+.libback:hover{border-color:var(--line);background:var(--ground)}
+.libback .chev{width:12px;height:12px}
+.catitem .chev{width:11px;height:11px}
+.cfitem{display:block;width:100%;text-align:left;padding:8px 10px 6px;border:1px solid transparent;background:transparent;border-radius:6px;min-height:0;line-height:1.3}
+.cfitem:hover:not(:disabled){border-color:var(--line);background:var(--ground)}
+.cfitem .t{display:block;font-size:16.5px}
+.cfitem .d{display:block;font-size:14px;color:var(--muted);font-style:italic;margin-top:1px}
+.cfitem .pv{display:block;margin-top:6px;height:46px;background:var(--leaf);border-radius:3px;overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+.cfitem .pv svg{display:block;height:46px;width:auto}
+.cfitem .pv .staff{stroke:var(--rule)}
+.cfitem .pv use{fill:var(--leaf-ink)}
+.cfitem .pv .ledger{stroke:var(--leaf-ink)}
+.cfitem .t,.cfitem .d,.catitem .d,.catitem .first{white-space:normal}
+.catitem .pv .punct,.cfitem .pv .punct,.catitem .pv .prest,.cfitem .pv .prest{fill:var(--leaf-ink)}
+#dotBtn svg{width:20px;height:20px;fill:currentColor}
+
 button{font:inherit;font-size:15.5px;color:var(--text);background:var(--surface);border:1px solid var(--line);
-  border-radius:6px;min-height:40px;padding:0 14px;cursor:pointer;line-height:1;display:inline-flex;align-items:center;gap:8px}
+  border-radius:6px;min-height:40px;padding:0 14px;cursor:pointer;line-height:1}
 button:hover:not(:disabled){border-color:var(--text)}
 button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 button:disabled{opacity:.42;cursor:not-allowed}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-select{font:inherit;font-size:15.5px;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:6px;min-height:38px;padding:0 8px}
-input[type=range]{accent-color:var(--accent);width:150px}
+select,input[type=number]{font:inherit;font-size:15.5px;color:var(--text);background:var(--surface);
+  border:1px solid var(--line);border-radius:6px;min-height:38px;padding:0 8px}
+input[type=number]{width:4.6em}
+input[type=range]{accent-color:var(--accent);width:120px}
 input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px;margin:0}
-.chev{width:11px;height:11px;fill:currentColor}
-.ib{width:44px;height:44px;padding:0;justify-content:center}
-.ib svg{width:22px;height:22px;fill:currentColor}
 
-.tools{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center;padding:4px 0 14px;background:var(--ground);z-index:5}
+.tools{background:var(--ground);padding:6px 0 12px;z-index:5}
 @media (min-width:760px) and (min-height:620px){ .tools{position:sticky;top:0} }
-.tools .spacer{flex:1}
-.pod{display:flex;gap:2px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px}
-.pod > button,.pod > .pop > button{border-color:transparent;background:transparent;min-height:38px}
-.pod > button:hover:not(:disabled),.pod > .pop > button:hover{border-color:var(--line)}
-.pod > button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tools .row{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-start}
+.grp{display:flex;flex-direction:column;gap:5px}
+.gl{font-size:14px;color:var(--muted);font-style:italic;white-space:nowrap}
+.btns{display:flex;gap:4px;flex-wrap:wrap}
+.ib{width:44px;height:44px;padding:0;display:grid;place-items:center}
+.ib svg{width:36px;height:36px;fill:currentColor;overflow:visible}
+.ib.small svg{width:22px;height:22px}
 .seg{display:flex}
-.seg button{border-radius:0;justify-content:center}
+.seg button{border-radius:0}
 .seg button:first-child{border-radius:6px 0 0 6px}
-.seg button:last-child{border-radius:0 6px 6px 0}
-.seg button + button{margin-left:-1px}
+.seg button:last-child{border-radius:0 6px 6px 0;margin-left:-1px}
+.tb{min-height:44px}
 .pop{position:relative}
-.popbody{display:none;position:absolute;left:-4px;top:calc(100% + 2px);z-index:15;padding:10px;background:var(--surface);width:max-content;max-width:calc(100vw - 24px);
+.popbtn{min-width:56px}
+.popbtn .chev{width:11px;height:11px;fill:currentColor;margin-left:8px}
+.popbody{display:none;position:absolute;left:-6px;top:calc(100% - 2px);z-index:15;padding:6px;background:var(--surface);
   border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 28px -12px rgba(0,0,0,.4)}
-.pop.right .popbody{left:auto;right:-4px}
-.pop.open .popbody{display:block}
-.grid{display:grid;grid-template-columns:auto auto;gap:10px 14px;align-items:center}
-.grid .lab{color:var(--muted);font-style:italic;font-size:15.5px;white-space:nowrap}
-.grid .val{display:flex;align-items:center;gap:8px}
-.grid .val output{font-size:14px;color:var(--muted);min-width:2.6em}
-.voices{border-collapse:collapse}
-.voices th{font-weight:400;font-style:italic;color:var(--muted);font-size:14.5px;padding:0 8px 6px;text-align:center}
-.voices td{padding:4px 8px;text-align:center}
-.voices td:first-child{text-align:left;white-space:nowrap;padding-left:2px}
-.piecelist{display:flex;flex-direction:column;gap:4px;min-width:min(420px,calc(100vw - 48px))}
-.piecelist button{display:block;text-align:left;height:auto;padding:9px 12px 8px;line-height:1.25;border-color:transparent;background:transparent}
-.piecelist button:hover{border-color:var(--line);background:var(--ground)}
-.piecelist button[aria-current="true"]{border-color:var(--accent)}
-.piecelist .t{display:block;font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif;font-size:18px}
-.piecelist .c{display:block;font-size:14.5px;color:var(--muted);font-style:italic}
-.piecelist hr{border:0;border-top:1px solid var(--line);margin:6px 0}
+.pop:hover .popbody,.pop:focus-within .popbody,.pop.open .popbody{display:block}
+.popbody{width:max-content}
+.popbody .btns:not(.col){flex-wrap:nowrap}
+.popbody .col{flex-direction:column}
+.popbody .col .tb{justify-content:flex-start;text-align:left;white-space:nowrap}
+#advBtn .chev{transition:transform .15s}#advBtn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.advt{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:8px 6px 4px;margin-top:2px;border-top:1px solid var(--line)}
+.advt[hidden]{display:none}
+.advt .seg{display:flex}.advt .seg button{flex:1;justify-content:center}
+.advt select{min-height:40px}
+.advt .ivrow{display:flex;gap:6px}.advt .ivrow select{flex:1 1 auto;min-width:0}.advt .ivrow select[hidden]{display:none}
+.advt .check{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.popbody .col .advt #advGo{justify-content:center;background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+@media (max-width:700px){#popXform{position:static}#popXform .popbody{left:0;right:0;width:auto}.advt .check{white-space:normal}#popLook{position:static}#popLook .popbody{left:0;right:0;width:auto}.staffset{grid-template-columns:auto 1fr}.staffset input[type=range]{width:100%}}
+.staffset{display:grid;grid-template-columns:auto 150px;gap:8px 12px;align-items:center;padding:4px 8px}
+.staffset input[type=range]{width:150px}
+.staffset .btns{display:flex;gap:2px}
+.staffset .btns .tb{min-width:44px}
+.tools .row .spacer{flex:1}
+.tools .row .ctl{align-self:flex-start;margin-top:20px}
+.tools .row #clear{align-self:flex-start;margin-top:15px}
 
-#pages{display:flex;flex-direction:column;align-items:center;gap:26px}
-.opening{display:flex;gap:0;justify-content:center;max-width:100%}
+.settings{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:center;margin:2px 0 12px}
+label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
+.settings .spacer{flex:1}
+
+.leaf{position:relative;background:#EFE3C7 var(--paper);background-size:512px 512px;color:var(--leaf-ink);border-radius:3px;padding:16px 22px 18px;
+  box-shadow:0 1px 1px rgba(60,40,10,.14),0 14px 32px -14px rgba(50,34,8,.42),inset 0 0 70px rgba(150,108,40,.13),inset 0 0 0 1px rgba(120,90,40,.16)}
+#title{display:block;width:100%;font:italic 400 1.4rem/1.3 "IM Fell English","Palatino Linotype",Palatino,Georgia,serif;
+  color:var(--leaf-ink);background:transparent;border:0;border-bottom:1px dashed transparent;padding:2px 0 4px;border-radius:0}
+#title:hover{border-bottom-color:rgba(31,26,20,.25)}
+#title:focus-visible{outline:none;border-bottom-color:var(--sel)}
+#title::placeholder{color:rgba(31,26,20,.42)}
+#score{margin-top:4px;cursor:crosshair;touch-action:manipulation;user-select:none;-webkit-user-select:none;border-radius:2px}
+#score:focus-visible{outline:1.5px solid rgba(142,42,30,.4);outline-offset:6px}
+#score svg{display:block;overflow:visible}
+#score .staff{stroke:var(--rule)}
+#score .ledger{stroke:var(--leaf-ink)}
+#score use,#score .bar,#score .dot{fill:var(--leaf-ink)}
+#score .punct,#score .prest{fill:var(--leaf-ink)}
+#score .it.hov .punct,#score .it.hov .prest{fill:var(--hov)}
+#score .it.sel .punct,#score .it.sel .prest{fill:var(--sel)}
+#score .it.play .punct,#score .it.play .prest{fill:var(--play)}
+#score use.clefhov{fill:var(--hov)}
+#score .it.hov use{fill:var(--hov)}
+#score .it.hov .ledger{stroke:var(--hov)}
+#score .menshov{stroke:var(--hov)}
+#score .it.dim{opacity:.28}
+#score use.sigghost{opacity:.26}
+#score use.sigghost.on{opacity:.85;fill:var(--hov)}
+#score .it.sel use{fill:var(--sel)}
+#score .it.sel .ledger{stroke:var(--sel)}
+#score .it.play use{fill:var(--play)}
+#score .it.play .ledger{stroke:var(--play)}
+#score .selbg{fill:var(--sel);opacity:.1}
+#score .ghost{opacity:.62}
+#score .mic{opacity:.5;pointer-events:none}
+#score .take use,#score .take .punct,#score .take .prest{fill:var(--pen)}
+#score .take .ledger{stroke:var(--pen)}
+#score .take .tie{fill:none;stroke:var(--pen);stroke-width:.12;stroke-linecap:round}
+#score .mic .micdot,#score .mic use{fill:var(--pen)}
+#score .mic .ledger{stroke:var(--pen)}
+#mic svg{width:17px;height:17px;margin:0 4px -3px -2px;fill:currentColor}
+.split{display:inline-flex;align-items:center}
+.latrow{display:flex;align-items:center;gap:6px;padding:6px 6px 2px 10px;margin-top:4px;border-top:1px solid var(--line);color:var(--muted);font-size:16px}
+.latrow input{width:4.2em;height:30px;min-height:30px;text-align:center}
+.latrow #micClap{margin-left:auto}
+#singOpts{padding:0 7px;min-width:0}
+#singOpts .chev{margin-left:0}
+#score .ghost use{fill:var(--sel)}
+#score .ghost .ledger{stroke:var(--sel)}
+#score .caret{fill:var(--sel);opacity:.75}
+#score .hint{fill:var(--leaf-muted);font:italic 1.15px "IM Fell English","Palatino Linotype",Palatino,Georgia,serif}
+
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.transport{display:flex;flex-wrap:wrap;align-items:flex-start;gap:18px 34px;margin-top:16px;padding-top:18px;border-top:1px solid var(--line)}
+.tp-play{display:flex;gap:8px;align-items:center}
+#play{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);min-width:110px;font-size:17px;
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px}
+#play svg{width:14px;height:14px;fill:currentColor}
+.tactus{display:flex;flex-direction:column;gap:8px}
+.vignette{width:176px;height:142px;background:var(--leaf);border:1.5px solid var(--leaf-ink);outline:1px solid var(--leaf-ink);
+  outline-offset:-5px;overflow:hidden;border-radius:1px}
+.handbox{position:absolute;right:0;top:4px;width:calc(250px * var(--hand-sc,1));height:calc(202px * var(--hand-sc,1));opacity:var(--hand-op,.3);pointer-events:none;z-index:0;transition:top .35s ease}
+.handbox svg{display:block;width:100%;height:100%;transform:scaleX(-1)}
+#title,#score{position:relative;z-index:1}
+.tempo-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.eq{font-size:22px;color:var(--text);padding:0 2px}
+.permin{color:var(--muted);margin-right:6px}
+.unitpick{position:relative}
+.unitbtn{width:58px;grid-template-columns:1fr 12px;gap:0;padding:0 4px 0 2px}
+.unitbtn svg{width:34px;height:34px;fill:currentColor}
+.unitbtn .chev{width:12px;height:12px;fill:currentColor}
+#unitList{left:0;bottom:calc(100% + 6px);min-width:190px}
+.menu{position:absolute;z-index:20;margin:0;padding:4px;list-style:none;color:var(--text);
+  background:var(--surface);border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 28px -10px rgba(0,0,0,.35)}
+.menu:focus{outline:none}
+.menu li{display:flex;align-items:center;gap:10px;padding:3px 12px 3px 4px;border-radius:4px;cursor:pointer;font-size:16px}
+.menu li svg{width:32px;height:32px;fill:currentColor;flex:none}
+.menu li[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.menu li.active:not([aria-selected="true"]){outline:2px solid var(--accent);outline-offset:-2px}
+.menu li:hover:not([aria-selected="true"]){background:color-mix(in srgb,var(--accent) 12%,transparent)}
+#clefMenu{display:grid;grid-template-columns:repeat(5,64px);gap:2px;padding:6px}
+#clefMenu[hidden]{display:none}
+#clefMenu li{flex-direction:column;gap:0;padding:4px 2px 4px;font-size:14px;text-align:center;line-height:1.2}
+#clefMenu li svg{width:40px;height:78px;overflow:visible}
+#clefMenu li.flatopt{grid-column:span 5;flex-direction:row;justify-content:center;gap:8px;padding:4px 8px;border-top:1px solid var(--line);border-radius:0 0 4px 4px;margin-top:2px}
+#clefMenu li.flatopt svg{width:40px;height:30px}
+#clefMenu li.off{opacity:.3;pointer-events:none}
+.stepper{display:flex}
+.stepper button{min-width:38px;padding:0;font-size:20px;border-radius:0}
+.stepper button:first-child{border-radius:6px 0 0 6px}
+.stepper button:last-child{border-radius:0 6px 6px 0}
+.stepper input{border-radius:0;border-left:0;border-right:0;width:3.6em;text-align:center;min-height:40px;font-size:17px;
+  -moz-appearance:textfield;appearance:textfield}
+.stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#heart{color:var(--rule)}
+#heart svg{width:22px;height:22px}
+.tune{display:grid;grid-template-columns:auto 150px 3.4em;gap:4px 10px;align-items:center;margin-top:6px;padding-top:8px;border-top:1px solid var(--line);width:100%}
+.tune .tg{grid-column:1/-1;font-style:italic;color:var(--muted);font-size:15px;margin-top:4px}
+.tune label{color:var(--muted);font-size:16px}
+.tune input[type=range]{width:150px}
+.tune output{font-variant-numeric:tabular-nums;font-size:15px;color:var(--text);text-align:right}
+.tp-side[hidden]{display:none}
+.tp-side{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+
+details.help{margin-top:26px;max-width:760px}
+details.help summary{cursor:pointer;color:var(--text);font-size:17px}
+.help p{color:var(--muted);margin:.6rem 0}
+.help table{border-collapse:collapse;margin-top:8px;font-size:16px}
+.help td{padding:5px 18px 5px 0;vertical-align:top}
+.help td:first-child{white-space:nowrap}
+kbd{font:inherit;font-size:14.5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 6px;background:var(--surface)}
+footer{margin-top:30px;color:var(--muted);font-size:14.5px}
+
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(8px);background:var(--text);color:var(--ground);
+  padding:10px 16px;border-radius:6px;font-size:16px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;max-width:calc(100vw - 32px)}
+#toast.on{opacity:1;transform:translateX(-50%)}
+@media (prefers-reduced-motion: reduce){ #toast{transition:none} }
+@media (max-width:640px){
+  .wrap{padding:18px 14px 40px}
+  .leaf{padding:12px 12px 14px}
+  .ib{width:40px;height:40px}
+  .ib svg{width:32px;height:32px}
+}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ================= Layout v2: one control height, one rhythm ================= */
+:root{--h:40px}
+button,select,input[type=number]{height:var(--h);min-height:var(--h);font-size:16px}
+button{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 14px;white-space:nowrap}
+select{padding:0 10px}
+.ib{width:var(--h);padding:0}
+.ib svg{width:22px;height:22px;fill:currentColor}
+.tb{min-height:var(--h)}
+.cfitem{height:auto;min-height:0;display:block}
+.chev{width:11px;height:11px;fill:currentColor;flex:none}
+header.top{margin-bottom:10px}
+.tools{padding:4px 0 10px;position:static}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 8px}
+.bar .spacer,.transport .spacer{flex:1 1 16px}
+.vsep{width:1px;height:24px;background:var(--line);margin:0 6px;flex:none}
+.pop{position:relative}
+.popbtn{min-width:0}
+.popbtn svg:not(.chev){width:22px;height:22px;fill:currentColor}
+#accBtns{display:flex;gap:4px}
+#accBtns .ib svg{width:20px;height:22px}
+label.ctl{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:16px}
+.libbtn{gap:8px}
+.leaf{margin-top:2px}
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:10px 8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+#play{min-width:104px;font-size:16px}
+#play svg{width:13px;height:13px}
+.tempo-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+.unitbtn{width:auto;padding:0 8px 0 4px;gap:2px}
+.unitbtn svg{width:30px;height:30px}
+.stepper button{min-width:var(--h);height:var(--h);padding:0;font-size:20px}
+.stepper input{height:var(--h);min-height:var(--h);font-size:16px}
+.tp-side{display:flex;flex-wrap:wrap;gap:18px 56px;align-items:flex-start;margin-top:12px;padding:14px 18px 16px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.tp-side[hidden]{display:none}
+.tune{display:contents;border:0;margin:0;padding:0}
+.tcol{display:grid;grid-template-columns:auto 150px 3.4em;gap:6px 12px;align-items:center;align-content:start}
+.tcol .tg{grid-column:1/-1;font-style:italic;color:var(--muted);font-size:15px;margin:0 0 2px}
+.tcol label{color:var(--muted);font-size:16px}
+.tcol input[type=range]{width:150px}
+.tcol output{font-variant-numeric:tabular-nums;font-size:15px;text-align:right}
+.tcol .check{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-top:8px}
+.tcol button{grid-column:1/-1;justify-self:start;margin-top:4px}
+#reg{width:176px}
+.grow{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+.tp-side{flex-direction:row}
+@media (max-width:700px){ .vsep{display:none} .bar .spacer,.transport .spacer{flex-basis:100%;height:0} }
+/* ================= Design E: grouped pods, one red, parchment score ================= */
+:root{--h:34px}
+button,select,input[type=number]{height:var(--h);min-height:var(--h)}
+button{background:transparent;border:0;border-radius:9px;padding:0 13px;font-size:17px}
+button:hover:not(:disabled){background:rgba(255,255,255,.72);border-color:transparent}
+button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--accent-ink)}
+.podg{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:11px;background:rgba(42,34,24,.075);flex-wrap:nowrap}
+.podg .ib{width:var(--h);height:var(--h)}
+.podg .ib svg{width:20px;height:22px}
+.podg .unitbtn svg:not(.chev){width:26px;height:26px}
+.podg #heart svg{width:20px;height:20px}
+.bar{gap:10px 12px}
+.grow{gap:12px}
+.libbtn,.libbtn:hover:not(:disabled){color:var(--text)}
+.libbtn{background:transparent}
+.libwrap{display:inline-flex}
+.podg select{background:transparent;border:0;border-radius:9px;padding:0 6px;color:var(--text)}
+.podg select:hover{background:rgba(255,255,255,.72)}
+.podg label.ctl{gap:2px;padding-left:10px}
+.podg .stepper button,.podg .stepper button:first-child,.podg .stepper button:last-child{border-radius:9px;margin:0}
+.podg .stepper input{background:transparent;border:0;border-radius:0;font-size:19px;width:3.2em;padding:0}
+.podg .unitbtn{width:auto}
+.tempo-row{flex-wrap:nowrap;gap:2px}
+.tempo-row .eq{padding:0 2px;font-size:20px;color:var(--muted)}
+#play{width:60px;height:60px;min-width:0;padding:0;border-radius:50%;background:var(--accent);color:var(--accent-ink)}
+#play:hover:not(:disabled){background:var(--text);color:var(--accent-ink)}
+#play span{display:none}
+#play svg{width:22px;height:22px}
+.transport{border-top:0;padding-top:0;margin-top:16px;gap:10px 12px;align-items:center}
+.transport .popbody{top:auto;bottom:calc(100% - 2px)}
+.handbox{color:#2A2218}
+.handbox[hidden]{display:none}
+.pendbox.both{right:calc(190px * var(--hand-sc,1))}
+#reg{width:178px}
+@media (max-width:700px){
+  .podg{flex-wrap:wrap}
+  .grow{display:contents;margin-left:0}
+  .bar{position:relative}
+  #libPod{order:-3}
+  #clearPod{order:-2}
+  #libPod .libwrap{position:static}
+  #libPod .library{position:absolute;left:0;right:0;width:auto;max-height:60vh;top:50px;margin-top:0}
+  #editPod{order:-1}
+  #navPod{order:-1}
+}
+/* ================= Below the score: playback on the left; sound, appearance and full screen on the right ================= */
+.transport{gap:10px 12px}
+.tp-main,.tp-stack{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
+.tp-tools{display:flex;align-items:center;gap:10px;margin-left:auto;flex-wrap:nowrap}
+.tp-tools .popbody{left:auto;right:-6px}
+.podg label.vol{padding:0 8px 0 9px;gap:7px}
+.vol svg{width:20px;height:20px;fill:currentColor;flex:none}
+.vol input[type=range]{width:72px}
+#fsBtn svg{width:20px;height:20px}
+#fsBtn .fs-out,.isfs #fsBtn .fs-in{display:none}
+.isfs #fsBtn .fs-out{display:inline}
+#fsBtn[hidden]{display:none}
+.staffset #darkBtn{grid-column:1/-1;justify-content:flex-start;margin-top:2px}
+.staffset .ctl,#linesLabel{color:var(--muted);font-size:16px}
+#linesLabel{padding-left:10px}
+.tcol #reg{width:100%}
+.tcol select{grid-column:2/-1;width:100%;max-width:none}
+.tcol .hz{grid-column:2/-1;display:flex;align-items:center;gap:6px;color:var(--muted)}
+.tcol .tg:not(:first-child){margin-top:8px}
+.transport button:not(.ib):not(#play){padding:0 10px}
+.transport #singOpts{padding:0 7px}
+@media (max-width:700px){
+  .transport .podg{flex-wrap:nowrap}
+  .tp-main{flex-wrap:nowrap;width:100%;gap:10px}
+  #play{width:54px;height:54px;flex:none}
+  .tp-stack{flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
+  .tp-tools{margin-left:0;width:100%;justify-content:space-between;position:relative}
+  .transport button:not(.ib):not(#play){padding:0 9px;font-size:16px}
+  .transport #singOpts{padding:0 5px}
+  .tempo-row .eq{padding:0}
+  .podg .stepper input{width:2.6em;font-size:18px}
+  .tp-tools{flex-wrap:wrap;gap:8px}
+  #podSound{flex:1 1 100%;min-width:0}
+  .podg label.vol{flex:1 1 auto;min-width:0}
+  .vol input[type=range]{flex:1 1 auto;width:auto;min-width:50px}
+}
+@media (max-width:389px){
+  #play{width:48px;height:48px}
+  .tp-main{gap:8px}
+  .transport button:not(.ib):not(#play){padding:0 7px}
+  .transport #singOpts{padding:0 4px}
+}
+@media (max-width:350px){ .tp-main{flex-wrap:wrap} }
+.isfs.embedded,.isfs.embedded body{overflow:auto;height:auto}
+.isfs.embedded{overflow-y:auto;height:100%}
+
+/* ================= Focus: only the music, on the dark brown ground ================= */
+html.focus{--ground:#15110D;background:#15110D}
+html.focus body{background:#15110D}
+html.focus .wrap>:not(.leaf){display:none}
+html.focus .wrap{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:56px clamp(14px,3vw,48px) 40px}
+html.focus .leaf{box-shadow:0 1px 1px rgba(0,0,0,.6),0 24px 50px -18px rgba(0,0,0,.95),inset 0 0 70px rgba(150,108,40,.13),inset 0 0 0 1px rgba(120,90,40,.16)}
+html.focus.embedded,html.focus.embedded body{overflow:auto}
+.focusbar{display:none;position:fixed;top:12px;right:12px;z-index:40;gap:6px;opacity:.4;transition:opacity .2s}
+html.focus .focusbar{display:flex}
+.focusbar:hover,.focusbar:focus-within{opacity:1}
+.focusbar button,.focusbar button:hover:not(:disabled){width:40px;height:40px;min-height:40px;padding:0;border-radius:50%;background:rgba(255,238,210,.12);color:#ECE2D0}
+.focusbar button:hover:not(:disabled){background:rgba(255,238,210,.22)}
+.focusbar svg{width:15px;height:15px;fill:currentColor}
+#fExit svg{width:20px;height:20px}
+#focusBtn[hidden]{display:none}
+.hzctl{gap:4px!important;padding:0 2px 0 8px!important;white-space:nowrap}
+.hzctl input[type=number]{width:3.4em;height:28px;min-height:28px;padding:0 3px;text-align:center;font-size:16px;background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:7px}
+html.dark .hzctl input[type=number]{background:rgba(255,238,210,.06)}
+@media (min-width:1000px) and (max-width:1439px){
+  .transport,.tp-main,.tp-stack{gap:10px}
+  .transport button:not(.ib):not(#play){padding:0 8px;font-size:16px}
+  .vol input[type=range]{width:56px}
+  .hzctl .eqs{display:none}
+  .hzctl input[type=number]{width:3em}
+  .tp-tools{gap:8px}
+  .podg label.vol{padding:0 4px 0 7px;gap:5px}
+  #play{width:54px;height:54px}
+}
+
+/* Count-in: a field beside the metronome; the beats counted down large over the score */
+#podCount{height:calc(var(--h) + 6px);box-sizing:border-box}
+.podg label.cntin{gap:7px;padding:0 3px 0 9px;white-space:nowrap;color:var(--muted)}
+.cntin input[type=number]{width:2.3em;height:28px;min-height:28px;padding:0 2px;text-align:center;font-size:16px;background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:7px;-moz-appearance:textfield}
+.cntin input::-webkit-inner-spin-button,.cntin input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+html.dark .cntin input[type=number]{background:rgba(255,238,210,.06)}
+#countBox{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:3;font-size:clamp(90px,16vw,180px);line-height:1;color:var(--accent);font-variant-numeric:lining-nums}
+#countBox[hidden]{display:none}
+#countBox span{animation:cntpop .5s ease-out both}
+@keyframes cntpop{from{transform:scale(1.25);opacity:0}25%{opacity:.85}to{transform:scale(1);opacity:.55}}
+@media (prefers-reduced-motion: reduce){ #countBox span{animation:none;opacity:.6} }
+@media (max-width:700px){ #podCount{order:3} }
+@media (min-width:701px) and (max-width:999px){ .tp-main{flex-wrap:nowrap} .tp-stack{min-width:0} }
+@media (min-width:1000px) and (max-width:1439px){ .podg label.cntin{font-size:15px;gap:5px;padding:0 2px 0 7px} .cntin input[type=number]{width:2.1em}
+  .transport,.tp-main,.tp-stack{gap:8px} .vol input[type=range]{width:44px} }
+
+/* ================= Dark mode: the room goes dark, the parchment stays as it is ================= */
+html.dark{--ground:#15110D;--surface:#211B15;--text:#ECE2D0;--muted:#A5957B;--line:#3A3027;--accent:#A53627;--accent-ink:#FBF4E8;color-scheme:dark}
+html.dark .podg{background:rgba(255,238,210,.075)}
+html.dark button:hover:not(:disabled),html.dark .podg select:hover{background:rgba(255,238,210,.12)}
+html.dark button[aria-pressed="true"]:hover:not(:disabled){background:#86281C}
+html.dark #play:hover:not(:disabled){background:var(--text);color:var(--ground)}
+html.dark :focus-visible{outline-color:#D9826F}
+html.dark .leaf{box-shadow:0 1px 1px rgba(0,0,0,.6),0 24px 50px -18px rgba(0,0,0,.95),inset 0 0 70px rgba(150,108,40,.13),inset 0 0 0 1px rgba(120,90,40,.16)}
+html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10px rgba(0,0,0,.85)}
+/* ================= Choir book ================= */
+.embedded header.top{display:none}
+.embedded .wrap{padding-top:4px}
+[hidden]{display:none !important}
+.viewer{position:relative;overflow:auto;height:var(--vh,calc(100vh - 200px));min-height:380px;padding:22px 18px 34px;border-radius:6px;
+  background:rgba(42,34,24,.06);box-shadow:inset 0 1px 3px rgba(42,34,24,.12);overscroll-behavior:contain}
+#pages{display:flex;flex-direction:column;align-items:center;gap:30px}
+.opening{display:flex;justify-content:center;max-width:100%}
 .opening .page:first-child{border-radius:3px 0 0 3px}
 .opening .page:last-child{border-radius:0 3px 3px 0}
 .opening .page + .page{box-shadow:inset 18px 0 22px -18px rgba(70,46,10,.35),0 1px 1px rgba(60,40,10,.14),0 14px 32px -14px rgba(50,34,8,.42)}
 .page{position:relative;background:#EFE3C7 var(--paper);background-size:512px 512px;color:var(--leaf-ink);border-radius:3px;flex:none;
   box-shadow:0 1px 1px rgba(60,40,10,.14),0 14px 32px -14px rgba(50,34,8,.42),inset 0 0 70px rgba(150,108,40,.13),inset 0 0 0 1px rgba(120,90,40,.16)}
 .page svg{display:block;width:100%;height:100%}
-.pnum{position:absolute;bottom:-22px;left:0;right:0;text-align:center;font-size:13px;color:var(--muted)}
-svg .staff{stroke:var(--rule)}
-svg .ledger,svg .barl,svg .tie,svg .ms{stroke:var(--leaf-ink)}
-svg use,svg .ink{fill:var(--leaf-ink)}
-svg text{fill:var(--leaf-ink);font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif}
-svg .title{font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif}
-svg .playing use{fill:var(--accent)}
+.pnum{position:absolute;bottom:-23px;left:0;right:0;text-align:center;font-size:13px;color:var(--muted)}
+#pages svg .staff{stroke:var(--staff,#8E2A1E)}
+#pages svg .ledger,#pages svg .barl,#pages svg .tie,#pages svg .ms{stroke:var(--leaf-ink)}
+#pages svg use,#pages svg .ink{fill:var(--leaf-ink)}
+#pages svg text{fill:var(--leaf-ink);font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif}
+#pages svg .title{font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif}
+#pages svg g.on use,#pages svg g.on .ink{fill:var(--accent)}
+#pages svg g.on .ledger{stroke:var(--accent)}
 .msg{color:var(--muted);font-style:italic;padding:30px 0}
-.drop{outline:2px dashed var(--accent);outline-offset:6px}
-[hidden]{display:none !important}
+.editbar{margin-top:10px}
+.editbar .ib svg{width:20px;height:22px;fill:currentColor}
+#valBtns .ib svg,#accBtns .ib svg,#restBtn svg{width:24px;height:24px}
+.selinfo{color:var(--muted);font-style:italic;font-size:16px}
+#pages g.sel use,#pages g.sel .ink{fill:var(--accent)}
+#pages g.sel .ledger{stroke:var(--accent)}
+#pages g[class^="n"]{cursor:pointer}
+#pages .hit{fill:transparent}
+.viewwrap{position:relative}
+.viewwrap .handbox{top:10px;right:22px;z-index:3}
+.viewwrap .pendbox.both{right:calc(22px + 190px * var(--hand-sc,1))}
+.drop .viewer{outline:2px dashed var(--accent);outline-offset:4px}
+.popbody .btns.col .tb[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.voices{border-collapse:collapse;margin:2px 4px}
+.voices th{font-weight:400;font-style:italic;color:var(--muted);font-size:14.5px;padding:0 8px 6px;text-align:center}
+.voices td{padding:5px 8px;text-align:center;font-size:17px}
+.voices td:first-child{text-align:left;white-space:nowrap;padding-left:4px}
+.staffset .btns .tb{min-width:0;padding:0 11px}
+.staffset .lab{color:var(--muted);font-size:16px}
+.swatches{display:flex;gap:6px}
+.swatch{width:var(--h);height:var(--h);min-width:0;padding:0;border-radius:50%;display:grid;place-items:center}
+.swatch i{display:block;width:20px;height:20px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.swatch[aria-pressed="true"]{background:transparent !important;box-shadow:inset 0 0 0 2px var(--accent)}
+.unitglyph{width:26px;height:26px;fill:currentColor;flex:none;margin:0 2px 0 8px}
+.library .pc{display:block;width:100%;text-align:left;height:auto;min-height:0;padding:9px 10px 8px;margin:0 0 4px;line-height:1.3;border-radius:6px}
+.library .pc .t{display:block;font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif;font-size:19px}
+.library .pc .c{display:block;font-size:14.5px;color:var(--muted);font-style:italic}
+.library .pc[aria-current="true"]{box-shadow:inset 0 0 0 1px var(--accent)}
 @media (max-width:700px){
-  .pop{position:static}
-  .popbody{position:absolute;left:12px !important;right:12px !important;width:auto;top:auto;margin-top:4px}
-  .tools{position:relative}
-  .grid{grid-template-columns:1fr}
-  .grid .lab{margin-bottom:-6px}
-  .seg{flex-wrap:wrap}
-  input[type=range]{width:100%;flex:1}
+  .viewer{padding:14px 8px 30px}
+  #popView,#popVoices,#popPage{position:static}
+  #popView .popbody,#popVoices .popbody,#popPage .popbody{left:0;right:0;width:auto}
 }
-.play{width:48px;height:48px;border-radius:50%;padding:0;justify-content:center;background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.play svg{width:20px;height:20px;fill:currentColor}
-.play:hover:not(:disabled){border-color:var(--text)}
-.tempo{display:flex;align-items:center;gap:6px;color:var(--muted);font-style:italic;font-size:15.5px}
-.tempo input{width:4.2em;font:inherit;font-style:normal;font-size:15.5px;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:6px;min-height:38px;padding:0 6px}
-svg g.on use,svg g.on .ink{fill:var(--accent)}
-svg g.on .ledger{stroke:var(--accent)}
-
 @media print{
-  html,body{background:#fff !important}
+  html,body{background:#fff !important;overflow:visible !important;height:auto !important}
   .wrap{padding:0 !important}
-  header.top,.tools,.pnum,.msg{display:none !important}
+  header.top,.tools,.transport,.pnum,.msg{display:none !important}
+  .viewer{height:auto !important;overflow:visible !important;padding:0 !important;background:none !important;box-shadow:none !important}
   #pages{display:block;gap:0}
   .opening{display:block}
   .page{background:#fff !important;box-shadow:none !important;border-radius:0 !important;break-after:page;page-break-after:always;margin:0}
@@ -126,49 +516,130 @@ svg g.on .ledger{stroke:var(--accent)}
 <style id="pagerule">@page{size:A4 portrait;margin:0}</style>
 </head>
 <body>
-<div class="wrap">
+<main class="wrap">
   <header class="top"><h1>Choir book</h1></header>
-  <div class="tools" id="tools">
-    <div class="pop" id="popPieces">
-      <button class="popbtn" id="piecesBtn" aria-haspopup="true" aria-expanded="false">Pieces <svg class="chev" viewBox="0 0 12 12"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-      <div class="popbody"><div class="piecelist" id="pieceList"></div></div>
+
+  <section class="tools" aria-label="View">
+    <div class="bar">
+      <div class="podg" id="editPod"><button class="ib" id="editBtn" aria-pressed="false" aria-label="Edit" title="Edit: change, add and remove notes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17.3 14.8 6l3.2 3.2L6.7 20.5 3 21Zm13.7-12.6 1.4-1.4a1.5 1.5 0 0 1 2.1 0l1.1 1.1a1.5 1.5 0 0 1 0 2.1l-1.4 1.4Z"/></svg></button></div>
+      <div class="podg"><div class="pop" id="popView">
+        <button class="tb popbtn" id="viewBtn" aria-haspopup="true" aria-expanded="false"><span id="viewName">Score</span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <div class="popbody"><div class="btns col" id="viewList" role="group" aria-label="View">
+          <button class="tb" data-v="score">Score</button><button class="tb" data-v="parts">Parts</button><button class="tb" data-v="choir">Choir book</button>
+        </div></div>
+      </div></div>
+      <div class="podg"><div class="pop" id="popVoices">
+        <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Voices<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <div class="popbody"><table class="voices" id="voiceTable"></table></div>
+      </div></div>
+      <div class="podg"><div class="pop" id="popPage">
+        <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Page<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <div class="popbody"><div class="staffset">
+          <span class="lab">Size</span><div class="btns" id="paperSeg" role="group" aria-label="Paper size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button></div>
+          <span class="lab">Orientation</span><div class="btns" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
+        </div></div>
+      </div></div>
+      <div class="grow">
+        <div class="podg"><div class="libwrap">
+          <button id="libBtn" class="libbtn" aria-haspopup="true" aria-expanded="false" aria-controls="library">Pieces<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+          <div id="library" class="library" role="dialog" aria-label="Pieces" hidden></div>
+        </div></div>
+        <div class="podg">
+          <button id="openBtn">Open file</button>
+          <button id="printBtn">Print</button>
+        </div>
+      </div>
+      <input type="file" id="fileIn" accept=".krn,.kern,.txt" hidden>
     </div>
-    <div class="seg" id="viewSeg" role="group" aria-label="View">
-      <button data-v="score">Score</button><button data-v="parts">Parts</button><button data-v="choir">Choir book</button>
-    </div>
-    <div class="pop" id="popVoices">
-      <button class="popbtn" aria-haspopup="true" aria-expanded="false">Voices <svg class="chev" viewBox="0 0 12 12"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-      <div class="popbody"><table class="voices" id="voiceTable"></table></div>
-    </div>
-    <div class="pop" id="popLook">
-      <button class="popbtn" aria-haspopup="true" aria-expanded="false">Appearance <svg class="chev" viewBox="0 0 12 12"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-      <div class="popbody"><div class="grid">
-        <span class="lab">Notation</span><div class="seg" id="notaSeg"><button data-v="real">Real mensural</button><button data-v="fake">Fake mensural</button></div>
-        <span class="lab">Clefs</span><div class="seg" id="clefSeg"><button data-v="mens">Mensural</button><button data-v="modern">Modern</button></div>
-        <span class="lab">Barlines</span><div class="seg" id="barSeg"><button data-v="none">None</button><button data-v="tick">Ticks</button><button data-v="mstrich">Mensurstrich</button><button data-v="full">Full</button></div>
-        <span class="lab">Staff size</span><div class="val"><input type="range" id="size" min="1" max="4" step="0.05"><output id="sizeOut"></output></div>
-        <span class="lab">Horizontal spacing</span><div class="val"><input type="range" id="hs" min="0.3" max="2.5" step="0.05"><output id="hsOut"></output></div>
-        <span class="lab">Vertical spacing</span><div class="val"><input type="range" id="vs" min="0.2" max="3" step="0.05"><output id="vsOut"></output></div>
-        <span class="lab">Editorial accidentals</span><div class="val"><input type="checkbox" id="edAcc"></div>
-        <span class="lab" id="verseLab">Verse</span><div class="val"><select id="verse"></select></div>
+    <div class="bar editbar" id="editBar" hidden>
+      <div class="podg">
+        <button class="ib" id="undoBtn" aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5V13.2c4.6-.4 7.4.6 9.6 4.3-.5-5.2-3.6-8.6-9.6-9.2Z"/></svg></button>
+        <button class="ib" id="redoBtn" aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5v-3.8c-4.6-.4-7.4.6-9.6 4.3.5-5.2 3.6-8.6 9.6-9.2Z"/></svg></button>
+        <button class="ib needsel" id="delBtn" aria-label="Delete the selected note" title="Delete the selected note (Delete)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 4h7l.8 1.5H20V7.5H4V5.5h3.7ZM6 9h12l-.9 11H6.9Z"/></svg></button>
+      </div>
+      <div class="podg">
+        <button class="ib needsel" id="selPrev" aria-label="Previous note" title="Previous note (Left arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12 17 6.2Z"/></svg></button>
+        <button class="ib needsel" id="stepUp" aria-label="A step up" title="A step up (Up arrow; with Shift an octave)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 15.4 12 8l7.4 7.4-1.6 1.6L12 11.2 6.2 17Z"/></svg></button>
+        <button class="ib needsel" id="stepDown" aria-label="A step down" title="A step down (Down arrow; with Shift an octave)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 8.6 12 16l7.4-7.4L17.8 7 12 12.8 6.2 7Z"/></svg></button>
+        <button class="ib needsel" id="selNext" aria-label="Next note" title="Next note (Right arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button>
+      </div>
+      <div class="podg" id="valBtns" role="group" aria-label="Note value"></div>
+      <div class="podg">
+        <button class="ib needsel" id="restBtn" aria-pressed="false" aria-label="Rest" title="Turn the note into a rest, or the rest into a note"></button>
+        <button class="ib needsel" id="dotBtn" aria-pressed="false" aria-label="Dot" title="Dot (.)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/></svg></button>
+      </div>
+      <div class="podg" id="accBtns" role="group" aria-label="Accidental"></div>
+      <div class="podg"><div class="pop" id="popXform">
+        <button class="tb popbtn needsel" aria-haspopup="true" aria-expanded="false">Transform voice<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <div class="popbody"><div class="btns col" id="xformList">
+          <button class="tb" data-x="octup">Octave up</button><button class="tb" data-x="octdn">Octave down</button>
+          <button class="tb" data-x="tonup">Step up</button><button class="tb" data-x="tondn">Step down</button>
+          <button class="tb" data-x="dbl">Double all values</button><button class="tb" data-x="hlv">Halve all values</button>
+        </div></div>
+      </div></div>
+      <span class="selinfo" id="selInfo"></span>
+      <div class="grow"><div class="podg">
+        <button id="revertBtn" title="Throw away your changes to this piece">Revert</button>
+        <button id="saveBtn" title="Save this piece, with your changes, as a .krn file">Download .krn</button>
       </div></div>
     </div>
-    <div class="pop" id="popPage">
-      <button class="popbtn" aria-haspopup="true" aria-expanded="false">Page <svg class="chev" viewBox="0 0 12 12"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-      <div class="popbody"><div class="grid">
-        <span class="lab">Size</span><div class="seg" id="paperSeg"><button data-v="A3">A3</button><button data-v="A4">A4</button><button data-v="A5">A5</button></div>
-        <span class="lab">Orientation</span><div class="seg" id="orientSeg"><button data-v="portrait">Portrait</button><button data-v="landscape">Landscape</button></div>
-      </div></div>
-    </div>
-    <button class="play" id="playBtn" aria-label="Play" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="playIcon" d="M7 4.5v15l12.5-7.5Z"/></svg></button>
-    <label class="tempo" title="Semibreves per minute">Tempo <input type="number" id="tempo" min="20" max="240" step="1"></label>
-    <span class="spacer"></span>
-    <button id="openBtn">Open file</button>
-    <input type="file" id="fileIn" accept=".krn,.kern,.txt" hidden>
-    <button id="printBtn">Print</button>
+  </section>
+
+  <div class="viewwrap">
+    <section class="viewer" id="viewer" aria-label="Music"><div id="pages"></div></section>
+    <div class="handbox" id="handBox" title="The tactus: the hand drops on one beat and lifts on the next" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="handRot"></g></svg></div><div class="handbox pendbox" id="pendBox" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="pendG"><path d="M66 158 H130 L120 142 H76Z" fill="currentColor"/><g id="pendRot"><line x1="98" y1="150" x2="98" y2="-16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="84" y="14" width="28" height="34" rx="4" fill="currentColor"/></g></g></svg></div>
   </div>
-  <div id="pages"></div>
-</div>
+
+  <section class="transport" aria-label="Playback">
+    <div class="tp-main">
+      <button id="play" aria-label="Play" title="Play (space bar)"><svg viewBox="0 0 14 14" aria-hidden="true"><path id="playIcon" d="M2 1 13 7 2 13Z"/></svg><span>Play</span></button>
+      <div class="tp-stack">
+        <div class="podg">
+          <button id="loop" aria-pressed="false" title="Start again from the beginning at the end">Loop</button>
+          <div class="pop" id="popMetro">
+            <button class="tb popbtn" id="metro" aria-haspopup="true" title="How the beat is shown or heard">Metronome<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+            <div class="popbody"><div class="btns col" id="beatList" role="group" aria-label="Beat">
+              <button class="tb" data-beat="hand" aria-pressed="false">Hand (tactus)</button>
+              <button class="tb" data-beat="pendulum" aria-pressed="false">Pendulum metronome</button>
+              <button class="tb" data-beat="tick" aria-pressed="false">Audible tick</button>
+            </div></div>
+          </div>
+        </div>
+        <div class="tempo-row podg" role="group" aria-label="Tempo">
+          <svg class="unitglyph" id="unitGlyph" aria-hidden="true"></svg>
+          <span class="eq" aria-hidden="true">=</span>
+          <div class="stepper">
+            <button id="tempoDown" aria-label="Slower" title="Slower">−</button>
+            <input type="number" id="tempo" min="20" max="240" step="1" inputmode="numeric" aria-label="Semibreves per minute">
+            <button id="tempoUp" aria-label="Faster" title="Faster">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tp-tools">
+      <div class="podg">
+        <label class="ctl vol" title="Volume"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.2h3.9L12.6 5v14l-5.2-4.2H3.5Zm11.6-1.1a5.5 5.5 0 0 1 0 7.8l-1.2-1.2a3.8 3.8 0 0 0 0-5.4Zm2.7-2.7a9.3 9.3 0 0 1 0 13.2l-1.2-1.2a7.6 7.6 0 0 0 0-10.8Z"/></svg><span class="sr">Volume</span><input type="range" id="vol" min="0" max="100" step="1"></label>
+      </div>
+      <div class="podg"><div class="pop" id="popLook">
+        <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Appearance<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <div class="popbody"><div class="staffset">
+          <span class="lab">Notation</span><div class="btns" id="notaSeg" role="group" aria-label="Notation"><button class="tb" data-v="real">Real mensural</button><button class="tb" data-v="fake">Fake mensural</button></div>
+          <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
+          <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Full</button></div>
+          <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
+          <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
+          <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0.05" max="2.5" step="0.05">
+          <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0.2" max="3" step="0.05">
+          <span class="lab">Syllable dashes</span><div class="btns" id="dashSeg" role="group" aria-label="Syllable dashes"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
+          <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
+          <label class="ctl" for="handOp">Hand opacity</label><input type="range" id="handOp" min="0.05" max="1" step="0.05">
+          <label class="ctl" for="handSize">Hand size</label><input type="range" id="handSize" min="0.4" max="2.5" step="0.05">
+          <span class="lab" id="verseLab">Verse</span><div class="btns" id="verseSeg" role="group" aria-label="Verse"></div>
+        </div></div>
+      </div></div>
+    </div>
+  </section>
+</main>
 <script>
 (function(){
 'use strict';
@@ -360,13 +831,13 @@ function parseKern(text){
         let m;
         if ((m = s.match(/^\*I"(.*)$/))) v.name = m[1];
         else if ((m = s.match(/^\*I'(.*)$/))) v.abbr = m[1];
-        else if ((m = s.match(/^\*clef(.+)$/))) v.clefs.push({t: v.t, c: m[1]});
+        else if ((m = s.match(/^\*clef(.+)$/))) v.clefs.push({t: v.t, c: m[1], ei: v.events.length});
         else if ((m = s.match(/^\*k\[(.*)\]$/))) {
           const alts = {};
           (m[1].match(/[a-g](#+|-+)/g) || []).forEach(a => { alts[a[0]] = a[1][0] === '#' ? 1 : -1; });
-          v.keys.push({t: v.t, alts});
+          v.keys.push({t: v.t, alts, raw: m[1], ei: v.events.length});
         }
-        else if ((m = s.match(/^\*met\((.*)\)$/))) v.mets.push({t: v.t, sign: m[1]});
+        else if ((m = s.match(/^\*met\((.*)\)$/))) v.mets.push({t: v.t, sign: m[1], ei: v.events.length});
         else if ((m = s.match(/^\*M(\d+)\/(\d+)$/))) v.lastM = +m[1] / +m[2];
       });
       continue;
@@ -484,6 +955,7 @@ function notate(piece, v, mode){
   if (mode === 'real') {
     for (let i = 0; i < ev.length; i++) {
       const e = Object.assign({}, ev[i]);
+      const i0 = i;
       if (!e.rest && e.tieStart && !e.tieEnd) {
         let j = i + 1;
         while (j < ev.length && !ev[j].rest && ev[j].step === e.step) {
@@ -494,9 +966,10 @@ function notate(piece, v, mode){
         i = j - 1;
         e.tieStart = e.tieEnd = false;
       }
+      e.src = []; for (let q = i0; q <= i; q++) e.src.push(q);
       evs.push(e);
     }
-  } else ev.forEach(e => evs.push(Object.assign({}, e)));
+  } else ev.forEach((e, i) => evs.push(Object.assign({}, e, {src: [i]})));
   /* segments by mensuration, for the perfection grid */
   let segStart = 0, curSign = undefined;
   let inTup = false;
@@ -510,7 +983,7 @@ function notate(piece, v, mode){
       curSign = sign; segStart = e.t;
     }
     const mi = mensInfo(sign);
-    const base = {t: e.t, d: e.d, rest: !!e.rest, step: e.step, alt: e.alt, ed: e.ed, syl: e.syl, ferm: e.ferm, mens, sign};
+    const base = {t: e.t, d: e.d, rest: !!e.rest, step: e.step, alt: e.alt, ed: e.ed, syl: e.syl, ferm: e.ferm, mens, sign, src: e.src};
     if (e.tupS) inTup = true;
     if (mode === 'fake') {
       const wd = rt(e.d * mi.p);
@@ -608,10 +1081,11 @@ function chooseClef(v, mode){
 /* ------------------------------------------------------------------ */
 const KEY = 'choirbook:v1';
 const st = {
-  piece: PIECES[0], view: 'score', nota: 'real', clefs: 'mens', bars: 'mstrich',
-  size: 1.75, hs: 1, vs: 1, tempo: 90, edAcc: true, verse: 0, paper: 'A4', orient: 'portrait', vis: {}
+  piece: PIECES[0], view: 'score', nota: 'real', clefs: 'mens', bars: 'tick', staff: 'red', dashes: 'on', ed: 'on',
+  size: 1.75, hs: 1, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', vis: {}
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+if (st.bars === 'mstrich') st.bars = 'full';
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
 
 let piece = null;           /* parsed piece */
@@ -656,7 +1130,7 @@ function prepare(){
         const key = keyAt(v, s.t), letter = LETTERS[((s.step % 7) + 7) % 7];
         const sigAlt = key[letter] || 0;
         const a = Math.max(-1, Math.min(1, s.alt));
-        if (s.ed) { if (a !== sigAlt) s.edAcc = ACCG[a]; }
+        if (s.ed) { if (a !== sigAlt && st.ed === 'on') s.edAcc = ACCG[a]; }
         else if (a !== sigAlt) s.acc = ACCG[a];
       }
       s.left = s.acc ? gw(s.acc) + 0.35 : 0;
@@ -666,7 +1140,7 @@ function prepare(){
       s.text = null; s.hy = false;
       if (sy && sy !== '.') {
         let tx = sy.replace(/^-/, '');
-        if (/-$/.test(tx)) { s.hy = true; tx = tx.slice(0, -1); }
+        if (/-$/.test(tx)) { s.hy = st.dashes === 'on'; tx = tx.slice(0, -1); }
         tx = tx.replace(/\|\|?/g, '').replace(/_/g, ' ').trim();
         if (tx.includes('&')) { decoder.innerHTML = tx; tx = decoder.value; }
         s.text = tx; s.tw = textW(tx, LYR);
@@ -691,7 +1165,7 @@ function mensW(sign){
 /* ------------------------------------------------------------------ */
 /* Horizontal layout                                                   */
 /* ------------------------------------------------------------------ */
-const spring = d => (1.0 + 2.3 * Math.pow(Math.max(d, 0.05), 0.6)) * st.hs;
+const spring = d => 0.3 + (0.8 + 2.3 * Math.pow(Math.max(d, 0.05), 0.6)) * st.hs;
 
 /* columns for a set of voices over [a, b) */
 function columns(vlist, a, b, withLyrics){
@@ -709,10 +1183,10 @@ function columns(vlist, a, b, withLyrics){
     for (const s of c.items.values()) { left = Math.max(left, s.left); right = Math.max(right, s.right); }
     c.left = left; c.right = right;
     const needBar = c.bar && (barOn || c.bar === 'double');
-    let x = prev ? prev.x + prev.right + left + 0.55 + (needBar ? 1.1 : 0) : left;
+    let x = prev ? prev.x + prev.right + left + 0.2 + 0.35 * Math.min(1, st.hs) + (needBar ? 0.9 : 0) : left;
     for (const [v, s] of c.items) {
       if (lastX.has(v)) x = Math.max(x, lastX.get(v) + spring(lastD.get(v)) + (needBar ? 0.5 : 0));
-      if (withLyrics(v) && s.text && lastSyl.has(v)) x = Math.max(x, lastSyl.get(v) + s.tw / 2 - s.hw / 2 + 0.55);
+      if (withLyrics(v) && s.text && lastSyl.has(v)) x = Math.max(x, lastSyl.get(v) + s.tw / 2 - s.hw / 2 + 0.25 + 0.3 * Math.min(1, st.hs));
     }
     c.x = x;
     for (const [v, s] of c.items) {
@@ -840,7 +1314,8 @@ const isFlipped = s => (STEMMED[s.g] && s.pos >= 7) || (TAILED[s.g] && s.pos <= 
 function symSvg(s, X, top, showNotes){
   /* with the notes hidden, the mensuration sign stays, like the clef */
   if (!showNotes) return s.mens ? mensSvg(s.mens, X - s.left, top) : '';
-  return `<g class="${s.id}">${symInner(s, X, top)}</g>`;
+  const hy = s.rest ? top + 0.5 : top + 4 - s.pos * 0.5 - 1;
+  return `<g class="${s.id}"><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top)}</g>`;
 }
 function symInner(s, X, top){
   let o = '';
@@ -947,7 +1422,7 @@ function barSvg(type, x, tops, single, segs){
   const between = xx => { for (const g of segs) for (const [a, b] of g) if (b - a > 0.2) s += vl(xx, a, b, 'barl', 0.14); };
   if (type === 'double') {
     for (const t of tops) { s += vl(x - 0.25, t, t + 4, 'barl', 0.14) + vl(x + 0.25, t, t + 4, 'barl', 0.14); }
-    if (style === 'mstrich' || style === 'full') { between(x - 0.25); between(x + 0.25); }
+    if (style === 'full') { between(x - 0.25); between(x + 0.25); }
     return s;
   }
   if (style === 'none') return '';
@@ -956,9 +1431,6 @@ function barSvg(type, x, tops, single, segs){
     between(x);
   } else if (style === 'tick') {
     for (const t of tops) s += vl(x, t - 0.9, t + 1, 'barl', 0.14);
-  } else if (style === 'mstrich') {
-    if (tops.length > 1 && !single) between(x);
-    else for (const t of tops) { s += vl(x, t - 1.0, t, 'barl', 0.14) + vl(x, t + 4, t + 5.0, 'barl', 0.14); }
   }
   return s;
 }
@@ -1225,7 +1697,7 @@ function layoutChoir(G){
 /* ------------------------------------------------------------------ */
 /* Render                                                              */
 /* ------------------------------------------------------------------ */
-const pagesEl = $('#pages');
+const pagesEl = $('#pages'), viewerEl = $('#viewer');
 let defsDone = false;
 function defs(){
   if (defsDone) return;
@@ -1242,7 +1714,7 @@ function render(){
   const G = pageGeom();
   document.getElementById('pagerule').textContent = `@page{size:${st.paper} ${st.orient};margin:0}`;
   let html = '';
-  const avail = pagesEl.clientWidth || window.innerWidth - 40;
+  const avail = (viewerEl.clientWidth || window.innerWidth) - 40;
   const pxmm = 96 / 25.4;
   if (st.view === 'choir') {
     const pages = layoutChoir(G);
@@ -1260,6 +1732,7 @@ function render(){
     if (!pages.length) html = '<p class="msg">No voices are shown.</p>';
   }
   pagesEl.innerHTML = html;
+  if (typeof showSel === 'function' && ed.sel) showSel();
   postHeight();
 }
 function pageDiv(svg, G, sc, extra){
@@ -1284,8 +1757,12 @@ async function loadPiece(file){
     text = cache[file] = await r.text();
   }
   stopPlay();
-  piece = parseKern(text);
+  let saved = null; try { saved = localStorage.getItem('choirbook:edit:' + file); } catch (e) {}
+  piece = null;
+  if (saved) { try { piece = parseKern(saved); piece.text = saved; } catch (e) { piece = null; } }
+  if (!piece) piece = parseKern(text);
   pieceKey = file;
+  if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; }
   st.piece = file; save();
   st.verse = 0;
   syncUI();
@@ -1301,39 +1778,40 @@ function loadText(name, text){
 }
 const meta = {};
 async function buildPieceList(){
-  const list = $('#pieceList');
   await Promise.all(PIECES.map(async p => {
     try {
-      const r = await fetch('choirbook/' + p); const t = await r.text(); cache[p] = t;
+      const t = cache[p] || (cache[p] = await (await fetch('choirbook/' + p)).text());
       const pc = parseKern(t); meta[p] = {title: pc.title, composer: pc.composer};
     } catch (e) { meta[p] = {title: p, composer: ''}; }
   }));
-  list.innerHTML = PIECES.map(p => `<button data-p="${esc(p)}"${p === pieceKey ? ' aria-current="true"' : ''}><span class="t">${esc(meta[p].title)}</span><span class="c">${esc(meta[p].composer)}</span></button>`).join('');
+  libEl.innerHTML = PIECES.map(p => `<button class="pc" data-p="${esc(p)}"><span class="t">${esc(meta[p].title)}</span><span class="c">${esc(meta[p].composer)}</span></button>`).join('');
 }
 
 /* ------------------------------------------------------------------ */
 /* Controls                                                            */
 /* ------------------------------------------------------------------ */
+const STAFF_COLORS = [['red', '#8E2A1E', 'Red'], ['black', '#2A2218', 'Black'], ['brown', '#8A6A44', 'Brown'], ['blue', '#2F4F8F', 'Blue'], ['grey', '#9A9286', 'Grey']];
+$('#staffSeg').innerHTML = STAFF_COLORS.map(([k, c, n]) => `<button class="tb swatch" data-v="${k}" style="--c:${c}" aria-label="${n}" title="${n}"><i></i></button>`).join('');
+const VIEW_NAMES = {score: 'Score', parts: 'Parts', choir: 'Choir book'};
 function segInit(id, key, after){
-  const el = $(id);
-  el.addEventListener('click', e => {
+  $(id).addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     st[key] = b.dataset.v; save(); syncUI(); render(); if (after) after();
   });
 }
 function syncUI(){
-  const segs = {'#viewSeg': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient'};
+  const segs = {'#viewList': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed'};
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
-  for (const k of ['size', 'hs', 'vs']) { $('#' + k).value = st[k]; }
-  $('#sizeOut').textContent = (st.size * 4).toFixed(1) + ' mm';
-  $('#hsOut').textContent = st.hs.toFixed(2);
-  $('#vsOut').textContent = st.vs.toFixed(2);
-  $('#edAcc').checked = st.edAcc;
+  $('#viewName').textContent = VIEW_NAMES[st.view] || 'Score';
+  for (const k of ['size', 'hs', 'vs']) $('#' + k).value = st[k];
   $('#tempo').value = st.tempo;
+  $('#vol').value = st.vol;
+  $('#loop').setAttribute('aria-pressed', String(!!st.loop));
+  document.documentElement.style.setProperty('--staff', (STAFF_COLORS.find(c => c[0] === st.staff) || STAFF_COLORS[0])[1]);
   /* verses */
   const nv = piece ? Math.max(1, ...piece.voices.map(v => v.verses)) : 1;
-  $('#verseLab').hidden = $('#verse').parentNode.hidden = nv < 2;
-  $('#verse').innerHTML = Array.from({length: nv}, (_, i) => `<option value="${i}"${i === st.verse ? ' selected' : ''}>${i + 1}</option>`).join('');
+  $('#verseLab').hidden = $('#verseSeg').hidden = nv < 2;
+  $('#verseSeg').innerHTML = Array.from({length: nv}, (_, i) => `<button class="tb" data-v="${i}" aria-pressed="${i === st.verse}">${i + 1}</button>`).join('');
   /* voice table */
   if (piece) {
     const row = (v) => {
@@ -1343,34 +1821,37 @@ function syncUI(){
     };
     $('#voiceTable').innerHTML = `<tr><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th></tr>` + piece.voices.map(row).join('');
   }
-  document.querySelectorAll('#pieceList button').forEach(b => b.setAttribute('aria-current', String(b.dataset.p === pieceKey)));
+  document.querySelectorAll('#library .pc').forEach(b => b.setAttribute('aria-current', String(b.dataset.p === pieceKey)));
 }
-segInit('#viewSeg', 'view'); segInit('#notaSeg', 'nota'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars');
-segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient');
+segInit('#viewList', 'view', closePops); segInit('#notaSeg', 'nota'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars');
+segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#edSeg', 'ed');
+$('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
 let rq = 0;
 const later = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); };
-for (const k of ['size', 'hs', 'vs']) $('#' + k).addEventListener('input', e => { st[k] = +e.target.value; save(); syncUI(); later(); });
-$('#edAcc').addEventListener('change', e => { st.edAcc = e.target.checked; save(); render(); });
-$('#verse').addEventListener('change', e => { st.verse = +e.target.value; save(); render(); });
+for (const k of ['size', 'hs', 'vs']) $('#' + k).addEventListener('input', e => { st[k] = +e.target.value; save(); later(); });
 $('#voiceTable').addEventListener('change', e => {
   const c = e.target; if (!c.dataset.k) return;
   vis(+c.dataset.i)[c.dataset.k] = c.checked; save(); syncUI(); render();
   if (play && c.dataset.k === 'on') { stopPlay(); startPlay(); }
 });
-$('#pieceList').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  closePops(); loadPiece(b.dataset.p).catch(err => { pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; });
+/* pieces */
+const libEl = $('#library'), libBtn = $('#libBtn');
+function setLib(open){ libEl.hidden = !open; libBtn.setAttribute('aria-expanded', String(open)); postHeight(); }
+libBtn.addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden); });
+libEl.addEventListener('click', e => {
+  const b = e.target.closest('.pc'); if (!b) return;
+  setLib(false); loadPiece(b.dataset.p).catch(err => { pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; });
 });
-/* pop-overs open on click */
+/* pop-overs: hover, or click to keep open */
 function closePops(except){ document.querySelectorAll('.pop.open').forEach(p => { if (p !== except) { p.classList.remove('open'); p.querySelector('button').setAttribute('aria-expanded', 'false'); } }); }
 document.querySelectorAll('.pop > button').forEach(b => b.addEventListener('click', () => {
   const p = b.parentNode, open = !p.classList.contains('open');
-  closePops(p); p.classList.toggle('open', open); b.setAttribute('aria-expanded', String(open));
+  closePops(p); setLib(false); p.classList.toggle('open', open); b.setAttribute('aria-expanded', String(open));
   postHeight();
 }));
-document.addEventListener('click', e => { if (!e.target.closest('.pop')) closePops(); });
+document.addEventListener('click', e => { if (!e.target.closest('.pop')) closePops(); if (!e.target.closest('.libwrap')) { if (!libEl.hidden) setLib(false); } });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closePops();
+  if (e.key === 'Escape') { closePops(); setLib(false); }
   if (e.key === ' ' && !/INPUT|SELECT|BUTTON|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); if (play) stopPlay(); else startPlay(); }
 });
 /* open a file from the computer, or drop one on the page */
@@ -1390,19 +1871,426 @@ $('#printBtn').addEventListener('click', () => {
   if (EMBED && !pieceKey.startsWith('file:')) { window.open('choirbook.html?print=1', '_blank'); return; }
   window.print();
 });
+/* tempo, loop, volume */
+const setTempo = v => { st.tempo = Math.max(20, Math.min(240, Math.round(v) || 90)); save(); syncUI(); if (play) { stopPlay(); startPlay(); } };
+$('#tempo').addEventListener('change', e => setTempo(+e.target.value));
+$('#tempoDown').addEventListener('click', () => setTempo(st.tempo - 4));
+$('#tempoUp').addEventListener('click', () => setTempo(st.tempo + 4));
+$('#loop').addEventListener('click', () => { st.loop = !st.loop; save(); syncUI(); });
+$('#vol').addEventListener('input', e => { st.vol = +e.target.value; save(); if (play) play.master.gain.setTargetAtTime(volGain(), actx.currentTime, 0.03); });
+{ const g = GLY.S, b = g.b; $('#unitGlyph').setAttribute('viewBox', `${b[0] - 0.1} ${b[1] - 0.1} ${b[2] - b[0] + 0.2} ${b[3] - b[1] + 0.2}`); $('#unitGlyph').innerHTML = `<path d="${g.d}"/>`; }
+
+/* ------------------------------------------------------------------ */
+/* Writing **kern back out (for edits, and to download)                */
+/* ------------------------------------------------------------------ */
+function recipOf(d){
+  for (let dots = 0; dots <= 2; dots++) {
+    const base = d / (2 - Math.pow(0.5, dots));
+    const k = Math.log2(base);
+    if (Math.abs(k - Math.round(k)) < 1e-6 && k >= -7 && k <= 3) {
+      const r = Math.round(k) >= 1 ? '0'.repeat(Math.round(k)) : String(Math.round(1 / base));
+      return r + '.'.repeat(dots);
+    }
+  }
+  /* rational value M/N of a whole note: N%M */
+  for (let n = 1; n <= 96; n++) { const m = d * n; if (Math.abs(m - Math.round(m)) < 1e-6) return n + '%' + Math.round(m); }
+  return '1';
+}
+function pitchTok(step){
+  const oct = Math.floor(step / 7), L = LETTERS[((step % 7) + 7) % 7];
+  return oct >= 4 ? L.repeat(oct - 3) : L.toUpperCase().repeat(4 - oct);
+}
+function noteTok(e, tie){
+  let s = recipOf(e.d);
+  if (e.rest) s += 'r';
+  else {
+    s = (tie === 'start' ? '[' : '') + s + pitchTok(e.step);
+    if (e.alt !== null && e.alt !== undefined) s += e.alt < 0 ? '-'.repeat(-e.alt) : e.alt > 0 ? '#'.repeat(e.alt) : 'n';
+    if (e.ed) s += 'i';
+    if (tie === 'mid') s += '_';
+    if (tie === 'end') s += ']';
+  }
+  if (e.long) s += 'l';
+  if (e.ferm) s += ';';
+  return s;
+}
+function retime(v){
+  let t = 0;
+  for (const e of v.events) { e.t = rt(t); t = rt(t + e.d); }
+  v.end = t;
+  const at = ei => ei < v.events.length ? v.events[ei].t : v.end;
+  for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) m.t = at(m.ei);
+}
+function writeKern(P){
+  const vs = P.voices.slice().reverse();          /* file order: lowest voice first */
+  P.voices.forEach(retime);
+  P.end = Math.max(...P.voices.map(v => v.end));
+  const out = [];
+  for (const [k, val] of Object.entries(P.meta)) out.push(`!!!${k}: ${val}`);
+  const cols = [];
+  vs.forEach(v => { cols.push({v, text: -1}); for (let k = 0; k < Math.max(v.verses, 0); k++) cols.push({v, text: k}); });
+  const line = f2 => cols.map(c => f2(c)).join('\t');
+  out.push(line(c => c.text < 0 ? '**kern' : '**text'));
+  out.push(line(c => c.text < 0 ? `*I"${c.v.name}` : '*'));
+  if (vs.some(v => v.abbr)) out.push(line(c => c.text < 0 && c.v.abbr ? `*I'${c.v.abbr}` : '*'));
+  /* every event split at the barlines, with ties */
+  const barT = P.bars.map(b => b.t);
+  const pieces = new Map();
+  vs.forEach(v => {
+    const list = [];
+    v.events.forEach((e, ei) => {
+      let a = e.t; const b = rt(e.t + e.d);
+      const cuts = barT.filter(t => t > a + EPS && t < b - EPS);
+      const ts = [a, ...cuts, b];
+      for (let q = 0; q + 1 < ts.length; q++) {
+        const part = Object.assign({}, e, {d: rt(ts[q + 1] - ts[q]), t: ts[q]});
+        let tie = null;
+        if (!e.rest && ts.length > 2) tie = q === 0 ? (e.tieEnd || e.tieMid ? 'mid' : 'start') : q === ts.length - 2 ? (e.tieStart || e.tieMid ? 'mid' : 'end') : 'mid';
+        else if (!e.rest) tie = e.tieStart && !e.tieEnd ? 'start' : e.tieMid ? 'mid' : e.tieEnd && !e.tieStart ? 'end' : null;
+        if (q) part.syl = [], part.ferm = false;
+        if (q < ts.length - 2) part.long = false;
+        list.push({t: rt(part.t), e: part, tie, ei, first: q === 0});
+      }
+    });
+    pieces.set(v, list);
+  });
+  const markersAt = (v, t) => ({
+    clef: v.clefs.filter(m => eq(m.t, t)), key: v.keys.filter(m => eq(m.t, t)), met: v.mets.filter(m => eq(m.t, t))
+  });
+  const times = new Set([0]);
+  vs.forEach(v => pieces.get(v).forEach(p => times.add(p.t)));
+  barT.forEach(t => times.add(t));
+  vs.forEach(v => [...v.mets, ...v.keys, ...v.clefs].forEach(m => times.add(rt(m.t))));
+  const sorted = [...times].sort((a, b) => a - b);
+  const ptr = new Map(vs.map(v => [v, 0]));
+  out.push(line(() => '=1-'));
+  for (const t of sorted) {
+    const bar = P.bars.find(b => eq(b.t, t) && !eq(t, P.end));
+    if (bar) out.push(line(() => bar.type === 'double' ? '=||' : '='));
+    for (const kind of ['clef', 'key', 'met']) {
+      const any = vs.some(v => markersAt(v, t)[kind].length);
+      if (!any) continue;
+      out.push(line(c => {
+        if (c.text >= 0) return '*';
+        const m = markersAt(c.v, t)[kind][0];
+        if (!m) return '*';
+        return kind === 'clef' ? `*clef${m.c}` : kind === 'key' ? `*k[${m.raw ?? Object.entries(m.alts).map(([l, a]) => l + (a < 0 ? '-' : '#')).join('')}]` : `*met(${m.sign})`;
+      }));
+    }
+    const sec = P.sections.find(x => eq(x.t, t));
+    if (sec) out.push('!!section: ' + sec.label);
+    const row = new Map();
+    vs.forEach(v => { const L = pieces.get(v); let i = ptr.get(v); if (i < L.length && eq(L[i].t, t)) { row.set(v, L[i]); ptr.set(v, i + 1); } });
+    if (!row.size) continue;
+    out.push(line(c => {
+      const p = row.get(c.v);
+      if (!p) return '.';
+      if (c.text < 0) return noteTok(p.e, p.tie);
+      const sy = p.first && p.e.syl && p.e.syl[c.text];
+      return sy ? sy : '.';
+    }));
+  }
+  out.push(line(() => '=='));
+  out.push(line(() => '*-'));
+  return out.join('\n') + '\n';
+}
+
+/* ------------------------------------------------------------------ */
+/* Editing                                                             */
+/* ------------------------------------------------------------------ */
+const ed = {on: false, sel: null, undo: [], redo: [], val: 'S'};   /* sel: {vi, ei} */
+const EKEY = k => 'choirbook:edit:' + k;
+const VALS = [['Mx', 8], ['L', 4], ['B', 2], ['S', 1], ['M', 0.5], ['Sm', 0.25], ['F', 0.125]];
+function selSym(){
+  if (!ed.sel || !piece) return null;
+  const v = piece.voices[ed.sel.vi];
+  if (!v || !v.syms) return null;
+  return v.syms.find(s => s.src && s.src.includes(ed.sel.ei)) || null;
+}
+function commit(mutate){
+  const before = piece.text || writeKern(piece);
+  mutate();
+  const text = writeKern(piece);
+  ed.undo.push(before); ed.redo = [];
+  applyText(text);
+}
+function applyText(text){
+  const sel = ed.sel;
+  const keep = piece;
+  try { piece = parseKern(text); } catch (e) { piece = keep; return; }
+  piece.text = text;
+  try { localStorage.setItem(EKEY(pieceKey), text); } catch (e) {}
+  if (sel) { const v = piece.voices[sel.vi]; if (!v || sel.ei >= v.events.length) ed.sel = v && v.events.length ? {vi: sel.vi, ei: v.events.length - 1} : null; }
+  syncEdit(); syncUI(); render();
+}
+function implied(v, step, t){
+  const k = keyAt(v, t), L = LETTERS[((step % 7) + 7) % 7];
+  return k[L] ? k[L] : null;
+}
+function curVoice(){ return ed.sel ? piece.voices[ed.sel.vi] : null; }
+function srcOf(){ const s = selSym(); return s ? s.src : ed.sel ? [ed.sel.ei] : []; }
+/* written value of the selection under its sign, for the value buttons */
+function propAt(v, t){ return mensInfo(metAt(v, t)).p; }
+const OPS = {
+  step(dir){
+    const v = curVoice(); if (!v) return;
+    commit(() => { for (const i of srcOf()) { const e = v.events[i]; if (e.rest) continue; e.step += dir; e.alt = implied(v, e.step, e.t); e.ed = false; } });
+  },
+  acc(a){
+    const v = curVoice(); if (!v) return;
+    commit(() => { for (const i of srcOf()) { const e = v.events[i]; if (e.rest) continue; const imp = implied(v, e.step, e.t) || 0; e.alt = (e.alt ?? imp) === a && a !== imp ? (imp || null) : a; e.ed = false; } });
+  },
+  value(g){
+    const v = curVoice(); if (!v) return;
+    const src = srcOf(); if (!src.length) return;
+    const val = VALS.find(x => x[0] === g)[1];
+    commit(() => {
+      const e = v.events[src[0]];
+      e.d = rt(val / propAt(v, e.t)); e.tieStart = e.tieEnd = e.tieMid = false; e.long = g === 'L' && e.long;
+      dropEvents(v, src.slice(1));
+    });
+    ed.val = g; syncEdit();
+  },
+  dot(){
+    const v = curVoice(), s = selSym(); if (!v || !s) return;
+    const src = srcOf();
+    commit(() => {
+      const e = v.events[src[0]];
+      const total = src.reduce((a, i) => a + v.events[i].d, 0);
+      e.d = rt(s.dot ? total / 1.5 : total * 1.5); e.tieStart = e.tieEnd = e.tieMid = false;
+      dropEvents(v, src.slice(1));
+    });
+  },
+  rest(){
+    const v = curVoice(); if (!v) return;
+    const src = srcOf();
+    commit(() => {
+      for (const i of src) {
+        const e = v.events[i];
+        if (e.rest) {
+          let j = i - 1; while (j >= 0 && v.events[j].rest) j--;
+          e.rest = false; e.step = j >= 0 ? v.events[j].step : CLEFS[v.clef || 'c3'].bottom + 4; e.alt = implied(v, e.step, e.t); e.ed = false;
+        } else { e.rest = true; e.tieStart = e.tieEnd = e.tieMid = false; }
+      }
+    });
+  },
+  del(){
+    const v = curVoice(); if (!v) return;
+    const src = srcOf();
+    /* a note becomes a rest of the same length so the other voices stay aligned; a rest is removed */
+    if (src.some(i => !v.events[i].rest)) { commit(() => { for (const i of src) { const e = v.events[i]; e.rest = true; e.tieStart = e.tieEnd = e.tieMid = false; const nx = v.events[i + 1]; if (e.syl && e.syl.some(Boolean) && nx && !nx.rest && !(nx.syl || []).some(Boolean)) nx.syl = e.syl; e.syl = []; } }); return; }
+    commit(() => dropEvents(v, src));
+    if (ed.sel) ed.sel.ei = Math.max(0, Math.min(src[0], piece.voices[ed.sel.vi].events.length - 1));
+    render();
+  },
+  insert(letter){
+    const v = curVoice(); if (!v) return;
+    const src = srcOf(), at = src.length ? src[src.length - 1] + 1 : v.events.length;
+    let ref = null; for (let j = at - 1; j >= 0; j--) if (!v.events[j].rest) { ref = v.events[j].step; break; }
+    if (ref === null) ref = CLEFS[v.clef || 'c3'].bottom + 4;
+    const idx = LETTERS.indexOf(letter);
+    let step = Math.round((ref - idx) / 7) * 7 + idx;
+    const val = VALS.find(x => x[0] === ed.val)[1];
+    const t = at < v.events.length ? v.events[at].t : v.end;
+    commit(() => {
+      const e = {d: rt(val / propAt(v, t)), rest: letter === 'r', step, alt: null, ed: false, syl: [], t};
+      if (!e.rest) e.alt = implied(v, step, t);
+      v.events.splice(at, 0, e);
+      for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > at || (m.ei === at && at > 0)) m.ei++;
+    });
+    ed.sel = {vi: ed.sel.vi, ei: at}; render(); syncEdit();
+  },
+  move(dir){
+    if (!ed.sel) return;
+    const v = curVoice(), s = selSym();
+    const k = v.syms.indexOf(s) + dir;
+    if (k >= 0 && k < v.syms.length) ed.sel = {vi: ed.sel.vi, ei: v.syms[k].src[0]};
+    showSel(true);
+  },
+  xform(kind){
+    const v = curVoice(); if (!v) return;
+    commit(() => {
+      for (const e of v.events) {
+        if (kind === 'octup' || kind === 'octdn') { if (!e.rest) e.step += kind === 'octup' ? 7 : -7; }
+        else if (kind === 'tonup' || kind === 'tondn') { if (!e.rest) { e.step += kind === 'tonup' ? 1 : -1; e.alt = implied(v, e.step, e.t); e.ed = false; } }
+        else if (kind === 'dbl') e.d = rt(e.d * 2);
+        else if (kind === 'hlv') e.d = rt(e.d / 2);
+      }
+    });
+  }
+};
+function dropEvents(v, list){
+  const sorted = list.slice().sort((a, b) => b - a);
+  for (const i of sorted) {
+    const e = v.events[i];
+    /* keep the syllable on the next note */
+    if (e.syl && e.syl.some(Boolean) && v.events[i + 1] && !(v.events[i + 1].syl || []).some(Boolean)) v.events[i + 1].syl = e.syl;
+    v.events.splice(i, 1);
+    for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > i) m.ei--;
+  }
+}
+function undo(){ if (!ed.undo.length) return; ed.redo.push(piece.text || writeKern(piece)); applyText(ed.undo.pop()); }
+function redo(){ if (!ed.redo.length) return; ed.undo.push(piece.text || writeKern(piece)); applyText(ed.redo.pop()); }
+function showSel(scroll){
+  document.querySelectorAll('#pages g.sel').forEach(g => g.classList.remove('sel'));
+  const s = selSym();
+  if (!s) { syncEdit(); return; }
+  let first = null;
+  piece.voices[ed.sel.vi].syms.filter(q => q.src && q.src[0] === s.src[0]).forEach(q => document.querySelectorAll('#pages g.' + q.id).forEach(g => { g.classList.add('sel'); first = first || g; }));
+  if (scroll && first) {
+    const r = first.getBoundingClientRect(), vr = viewerEl.getBoundingClientRect();
+    if (r.top < vr.top + 10 || r.bottom > vr.bottom - 10) viewerEl.scrollTo({top: viewerEl.scrollTop + r.top - vr.top - vr.height / 3, behavior: 'smooth'});
+  }
+  syncEdit();
+}
+/* clicking a note selects it (in any view); with Edit off it only marks where Play starts */
+pagesEl.addEventListener('click', e => {
+  const g = e.target.closest('g[class^="n"]');
+  if (!g || !piece) { if (ed.sel && !ed.on) { ed.sel = null; showSel(); } return; }
+  const id = g.classList[0], m = id.match(/^n(\d+)-(\d+)$/);
+  if (!m) return;
+  const s = piece.voices[+m[1]].syms[+m[2]];
+  ed.sel = {vi: +m[1], ei: s.src[0]};
+  showSel();
+});
+function syncEdit(){
+  $('#editBtn').setAttribute('aria-pressed', String(ed.on));
+  $('#editBar').hidden = !ed.on;
+  document.body.classList.toggle('editing', ed.on);
+  const s = selSym();
+  $('#undoBtn').disabled = !ed.undo.length; $('#redoBtn').disabled = !ed.redo.length;
+  const has = !!s;
+  document.querySelectorAll('#editBar .needsel').forEach(b => { b.disabled = !has; });
+  document.querySelectorAll('#valBtns button').forEach(b => b.setAttribute('aria-pressed', String(has ? (!s.rest || true) && s.g === b.dataset.g : b.dataset.g === ed.val)));
+  document.querySelectorAll('#accBtns button').forEach(b => b.setAttribute('aria-pressed', String(!!s && !s.rest && s.alt !== null && s.alt !== undefined && s.alt === +b.dataset.a && (s.acc || s.edAcc) !== null)));
+  $('#dotBtn').setAttribute('aria-pressed', String(!!s && !!s.dot));
+  $('#restBtn').setAttribute('aria-pressed', String(!!s && s.rest));
+  const edited = (() => { try { return !!localStorage.getItem(EKEY(pieceKey)); } catch (e) { return false; } })();
+  $('#revertBtn').disabled = !edited;
+  $('#selInfo').textContent = s ? piece.voices[ed.sel.vi].name : '';
+}
+function glyphIcon(k, pad = 0.2){
+  const g = GLY[k], b = g.b, w = b[2] - b[0], h = b[3] - b[1], m = Math.max(w, h);
+  return `<svg viewBox="${b[0] - (m - w) / 2 - pad} ${b[1] - (m - h) / 2 - pad} ${m + 2 * pad} ${m + 2 * pad}" aria-hidden="true"><path d="${g.d}"/></svg>`;
+}
+$('#valBtns').innerHTML = VALS.map(([g]) => `<button class="ib" data-g="${g}" title="${{Mx:'Maxima',L:'Longa',B:'Brevis',S:'Semibrevis',M:'Minima',Sm:'Semiminima',F:'Fusa'}[g]} (${VALS.findIndex(x => x[0] === g) + 1})">${glyphIcon(g)}</button>`).join('');
+$('#accBtns').innerHTML = [['-1', 'fl', 'Flat (-)'], ['0', 'na', 'Natural (N)'], ['1', 'sh', 'Sharp (=)']].map(([a, g, t]) => `<button class="ib needsel" data-a="${a}" title="${t}">${glyphIcon(g)}</button>`).join('');
+$('#restBtn').innerHTML = glyphIcon('rSm', 0.5);
+$('#editBtn').addEventListener('click', () => { ed.on = !ed.on; syncEdit(); postHeight(); });
+$('#undoBtn').addEventListener('click', undo); $('#redoBtn').addEventListener('click', redo);
+$('#delBtn').addEventListener('click', () => OPS.del());
+$('#selPrev').addEventListener('click', () => OPS.move(-1)); $('#selNext').addEventListener('click', () => OPS.move(1));
+$('#stepUp').addEventListener('click', () => OPS.step(1)); $('#stepDown').addEventListener('click', () => OPS.step(-1));
+$('#valBtns').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (selSym()) OPS.value(b.dataset.g); else { ed.val = b.dataset.g; syncEdit(); } });
+$('#accBtns').addEventListener('click', e => { const b = e.target.closest('button'); if (b) OPS.acc(+b.dataset.a); });
+$('#dotBtn').addEventListener('click', () => OPS.dot());
+$('#restBtn').addEventListener('click', () => OPS.rest());
+$('#xformList').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { OPS.xform(b.dataset.x); closePops(); } });
+$('#saveBtn').addEventListener('click', () => {
+  const text = piece.text || writeKern(piece);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type: 'text/plain'}));
+  a.download = (pieceKey.replace(/^file:/, '').replace(/\.(krn|kern|txt)$/i, '') || 'choirbook') + '.krn';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+$('#revertBtn').addEventListener('click', () => {
+  try { localStorage.removeItem(EKEY(pieceKey)); } catch (e) {}
+  ed.undo = []; ed.redo = [];
+  if (pieceKey.startsWith('file:')) { syncEdit(); return; }
+  loadPiece(pieceKey);
+});
+document.addEventListener('keydown', e => {
+  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+  if (mod) return;
+  if (e.key === 'ArrowLeft' && ed.sel) { e.preventDefault(); OPS.move(-1); return; }
+  if (e.key === 'ArrowRight' && ed.sel) { e.preventDefault(); OPS.move(1); return; }
+  if (!ed.on) return;
+  if (e.key === 'ArrowUp' && ed.sel) { e.preventDefault(); OPS.step(e.shiftKey ? 7 : 1); }
+  else if (e.key === 'ArrowDown' && ed.sel) { e.preventDefault(); OPS.step(e.shiftKey ? -7 : -1); }
+  else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); OPS.del(); }
+  else if (/^[1-7]$/.test(e.key)) { const g = VALS[+e.key - 1][0]; if (selSym()) OPS.value(g); else { ed.val = g; syncEdit(); } }
+  else if (e.key === '-') OPS.acc(-1);
+  else if (e.key === '=') OPS.acc(1);
+  else if (e.key === 'n' || e.key === 'N') OPS.acc(0);
+  else if (e.key === '.') OPS.dot();
+  else if (e.key === 'r' || e.key === 'R') OPS.insert('r');
+  else if (/^[a-gA-G]$/.test(e.key)) OPS.insert(e.key.toLowerCase());
+});
+syncEdit();
+
+/* tactus hand and pendulum (from the Cantus firmus app) */
+const HAND_SVG = `<g transform="translate(0 3)"><path d="M-44 88 C-14 85 18 84 44 86 L44 142 C18 144 -14 144 -44 142Z" fill="#F2E6C6"/><defs><clipPath id="cfSleeve"><path d="M-44 88 C-14 85 18 84 44 86 L44 142 C18 144 -14 144 -44 142Z"/></clipPath></defs><g clip-path="url(#cfSleeve)"><path d="M-30 86 L-29.4 88.8 L-28.8 91.5 L-28.3 94.2 L-28 97 L-27.7 99.8 L-27.4 102.6 L-27.2 105.5 L-27 108.3 L-26.7 111.3 L-26.4 114.2 L-26 117.2 L-25.4 120.2 L-24.7 123.2 L-23.8 126.2 L-22.6 129.2 L-21 132 L-21 132 L-21.7 128.8 L-22.5 125.8 L-23.1 122.8 L-23.6 119.9 L-24 116.9 L-24.3 114 L-24.5 111.1 L-24.8 108.2 L-25 105.3 L-25.3 102.4 L-25.7 99.5 L-26.1 96.7 L-26.7 93.9 L-27.5 91.2 L-28.5 88.5 L-30 86ZM-26.8 89.8 L-26.5 91.3 L-26.3 92.8 L-26 94.3 L-25.8 95.9 L-25.6 97.4 L-25.4 98.9 L-25.3 100.5 L-25.1 102 L-25 103.5 L-24.9 105.1 L-24.8 106.6 L-24.6 108.2 L-24.5 109.7 L-24.4 111.2 L-24.2 112.8 L-24 114.3 L-23.8 115.9 L-23.6 117.5 L-23.3 119 L-22.9 120.5 L-22.6 122.1 L-22.1 123.6 L-21.6 125.2 L-21.5 125.1 L-21.7 123.5 L-22 122 L-22.3 120.4 L-22.5 118.9 L-22.7 117.3 L-22.9 115.8 L-23 114.2 L-23.2 112.7 L-23.3 111.2 L-23.4 109.6 L-23.5 108.1 L-23.7 106.5 L-23.8 105 L-23.9 103.4 L-24.1 101.9 L-24.3 100.3 L-24.5 98.8 L-24.7 97.3 L-25 95.7 L-25.3 94.2 L-25.7 92.7 L-26.1 91.2 L-26.7 89.8ZM-24.4 92.5 L-24.3 94 L-24.1 95.6 L-23.9 97.1 L-23.7 98.7 L-23.5 100.3 L-23.4 101.8 L-23.3 103.4 L-23.1 104.9 L-23 106.5 L-22.9 108 L-22.8 109.5 L-22.6 111.1 L-22.5 112.6 L-22.3 114.2 L-22.1 115.7 L-21.9 117.2 L-21.6 118.7 L-21.3 120.2 L-20.9 121.7 L-20.4 123.2 L-20.3 123.2 L-20.6 121.7 L-20.8 120.2 L-21 118.6 L-21.2 117.1 L-21.4 115.6 L-21.5 114.1 L-21.7 112.5 L-21.8 111 L-21.9 109.5 L-22.1 107.9 L-22.2 106.4 L-22.3 104.8 L-22.5 103.3 L-22.6 101.7 L-22.8 100.2 L-23 98.6 L-23.3 97.1 L-23.6 95.5 L-23.9 94 L-24.4 92.5ZM-22.7 93.8 L-22.6 95.3 L-22.4 96.9 L-22.2 98.5 L-22 100.1 L-21.9 101.7 L-21.8 103.2 L-21.6 104.8 L-21.5 106.3 L-21.4 107.9 L-21.3 109.4 L-21.1 111 L-21 112.5 L-20.8 114 L-20.6 115.5 L-20.4 117 L-20.1 118.5 L-19.8 120 L-19.4 121.5 L-19.3 121.5 L-19.5 119.9 L-19.7 118.4 L-19.9 116.9 L-20.1 115.4 L-20.3 113.9 L-20.4 112.4 L-20.5 110.9 L-20.7 109.4 L-20.8 107.8 L-20.9 106.3 L-21.1 104.7 L-21.2 103.2 L-21.4 101.6 L-21.6 100 L-21.8 98.5 L-22 96.9 L-22.3 95.3 L-22.7 93.8ZM-6 86 L-5.5 88.8 L-4.8 91.5 L-4.3 94.2 L-4 97 L-3.7 99.8 L-3.4 102.6 L-3.2 105.5 L-3 108.3 L-2.7 111.3 L-2.4 114.2 L-2 117.2 L-1.4 120.2 L-0.7 123.2 L0.2 126.2 L1.4 129.2 L3 132 L3 132 L2.3 128.8 L1.5 125.8 L0.9 122.8 L0.4 119.9 L0 116.9 L-0.3 114 L-0.5 111.1 L-0.8 108.2 L-1 105.3 L-1.3 102.4 L-1.7 99.5 L-2.1 96.7 L-2.7 93.9 L-3.5 91.2 L-4.5 88.5 L-6 86ZM-2.8 89.8 L-2.5 91.3 L-2.3 92.8 L-2 94.3 L-1.8 95.9 L-1.6 97.4 L-1.4 98.9 L-1.3 100.5 L-1.1 102 L-1 103.5 L-0.9 105.1 L-0.8 106.6 L-0.6 108.2 L-0.5 109.7 L-0.3 111.2 L-0.2 112.8 L0 114.3 L0.2 115.9 L0.5 117.5 L0.7 119 L1.1 120.5 L1.4 122.1 L1.9 123.6 L2.5 125.2 L2.5 125.1 L2.3 123.5 L2 122 L1.7 120.4 L1.5 118.9 L1.3 117.3 L1.1 115.8 L1 114.2 L0.8 112.7 L0.7 111.2 L0.6 109.6 L0.5 108.1 L0.3 106.5 L0.2 105 L0.1 103.4 L-0.1 101.9 L-0.3 100.3 L-0.5 98.8 L-0.7 97.3 L-1 95.7 L-1.3 94.2 L-1.7 92.7 L-2.1 91.2 L-2.7 89.8ZM-0.4 92.5 L-0.3 94 L-0.1 95.6 L0.1 97.1 L0.3 98.7 L0.5 100.3 L0.6 101.8 L0.7 103.4 L0.8 104.9 L1 106.5 L1.1 108 L1.2 109.5 L1.4 111.1 L1.5 112.6 L1.7 114.2 L1.9 115.7 L2.1 117.2 L2.4 118.7 L2.7 120.2 L3.1 121.7 L3.6 123.2 L3.7 123.2 L3.4 121.7 L3.2 120.2 L3 118.6 L2.8 117.1 L2.6 115.6 L2.5 114.1 L2.3 112.5 L2.2 111 L2.1 109.5 L1.9 107.9 L1.8 106.4 L1.7 104.8 L1.5 103.3 L1.4 101.7 L1.2 100.2 L1 98.6 L0.7 97.1 L0.4 95.5 L0.1 94 L-0.4 92.5ZM1.3 93.8 L1.4 95.3 L1.6 96.9 L1.8 98.5 L2 100.1 L2.1 101.7 L2.2 103.2 L2.4 104.8 L2.5 106.3 L2.6 107.9 L2.7 109.4 L2.9 111 L3 112.5 L3.2 114 L3.4 115.5 L3.6 117 L3.9 118.5 L4.2 120 L4.6 121.5 L4.7 121.5 L4.5 119.9 L4.3 118.4 L4.1 116.9 L3.9 115.4 L3.7 113.9 L3.6 112.4 L3.5 110.9 L3.3 109.4 L3.2 107.8 L3.1 106.3 L3 104.7 L2.8 103.2 L2.6 101.6 L2.5 100 L2.2 98.5 L2 96.9 L1.7 95.3 L1.3 93.8ZM20 86 L20.6 88.8 L21.2 91.5 L21.7 94.2 L22 97 L22.3 99.8 L22.6 102.6 L22.8 105.5 L23 108.3 L23.3 111.3 L23.6 114.2 L24 117.2 L24.6 120.2 L25.3 123.2 L26.2 126.2 L27.4 129.2 L29 132 L29 132 L28.3 128.8 L27.5 125.8 L26.9 122.8 L26.4 119.9 L26 116.9 L25.7 114 L25.5 111.1 L25.2 108.2 L25 105.3 L24.7 102.4 L24.3 99.5 L23.9 96.7 L23.3 93.9 L22.5 91.2 L21.5 88.5 L20 86ZM23.2 89.8 L23.5 91.3 L23.7 92.8 L24 94.3 L24.2 95.9 L24.4 97.4 L24.6 98.9 L24.7 100.5 L24.9 102 L25 103.5 L25.1 105.1 L25.2 106.6 L25.4 108.2 L25.5 109.7 L25.6 111.2 L25.8 112.8 L26 114.3 L26.2 115.9 L26.4 117.5 L26.7 119 L27.1 120.5 L27.4 122.1 L27.9 123.6 L28.4 125.2 L28.5 125.1 L28.3 123.5 L28 122 L27.7 120.4 L27.5 118.9 L27.3 117.3 L27.1 115.8 L27 114.2 L26.8 112.7 L26.7 111.2 L26.6 109.6 L26.5 108.1 L26.3 106.5 L26.2 105 L26.1 103.4 L25.9 101.9 L25.7 100.3 L25.5 98.8 L25.3 97.3 L25 95.7 L24.7 94.2 L24.3 92.7 L23.9 91.2 L23.3 89.8ZM25.6 92.5 L25.7 94 L25.9 95.6 L26.1 97.1 L26.3 98.7 L26.5 100.3 L26.6 101.8 L26.7 103.4 L26.9 104.9 L27 106.5 L27.1 108 L27.2 109.5 L27.4 111.1 L27.5 112.6 L27.7 114.2 L27.9 115.7 L28.1 117.2 L28.4 118.7 L28.7 120.2 L29.1 121.7 L29.6 123.2 L29.7 123.2 L29.4 121.7 L29.2 120.2 L29 118.6 L28.8 117.1 L28.6 115.6 L28.5 114.1 L28.3 112.5 L28.2 111 L28.1 109.5 L27.9 107.9 L27.8 106.4 L27.7 104.8 L27.5 103.3 L27.4 101.7 L27.2 100.2 L27 98.6 L26.7 97.1 L26.4 95.5 L26.1 94 L25.6 92.5ZM27.3 93.8 L27.4 95.3 L27.6 96.9 L27.8 98.5 L28 100.1 L28.1 101.7 L28.2 103.2 L28.4 104.8 L28.5 106.3 L28.6 107.9 L28.7 109.4 L28.9 111 L29 112.5 L29.2 114 L29.4 115.5 L29.6 117 L29.9 118.5 L30.2 120 L30.6 121.5 L30.7 121.5 L30.5 119.9 L30.3 118.4 L30.1 116.9 L29.9 115.4 L29.7 113.9 L29.6 112.4 L29.5 110.9 L29.3 109.4 L29.2 107.8 L29.1 106.3 L28.9 104.7 L28.8 103.2 L28.6 101.6 L28.4 100 L28.2 98.5 L28 96.9 L27.7 95.3 L27.3 93.8ZM-46 141.4 L-41.2 142.2 L-36.4 142.6 L-31.6 143 L-26.9 143.3 L-22.1 143.5 L-17.3 143.7 L-12.6 143.9 L-7.9 144 L-3.2 144 L1.5 144.1 L6.1 144 L10.8 143.9 L15.3 143.8 L19.9 143.6 L24.4 143.4 L28.8 143.1 L33.2 142.7 L37.5 142.3 L41.8 141.8 L46 141 L46 141 L41.7 141 L37.4 141.3 L33.1 141.6 L28.7 141.8 L24.3 142 L19.8 142.2 L15.3 142.3 L10.7 142.4 L6.1 142.5 L1.5 142.6 L-3.2 142.6 L-7.8 142.5 L-12.6 142.4 L-17.3 142.3 L-22 142.2 L-26.8 142 L-31.6 141.8 L-36.4 141.6 L-41.2 141.4 L-46 141.4ZM-46 139 L-41.2 139.7 L-36.4 140.1 L-31.6 140.5 L-26.9 140.8 L-22.1 141 L-17.3 141.2 L-12.6 141.4 L-7.9 141.5 L-3.2 141.5 L1.5 141.6 L6.1 141.5 L10.8 141.4 L15.3 141.3 L19.9 141.1 L24.3 140.9 L28.8 140.6 L33.2 140.2 L37.5 139.8 L41.8 139.4 L46 138.6 L46 138.6 L41.7 138.7 L37.5 139 L33.1 139.3 L28.7 139.5 L24.3 139.7 L19.8 139.9 L15.3 140 L10.7 140.2 L6.1 140.2 L1.5 140.2 L-3.2 140.2 L-7.8 140.2 L-12.6 140.1 L-17.3 140 L-22 139.9 L-26.8 139.7 L-31.6 139.5 L-36.4 139.3 L-41.2 139 L-46 139ZM-46 136.4 L-41.2 137.1 L-36.4 137.5 L-31.6 137.8 L-26.9 138.1 L-22.1 138.3 L-17.3 138.5 L-12.6 138.7 L-7.9 138.8 L-3.2 138.8 L1.5 138.8 L6.1 138.8 L10.8 138.7 L15.3 138.6 L19.9 138.4 L24.3 138.2 L28.8 137.9 L33.2 137.6 L37.5 137.2 L41.8 136.7 L46 136 L46 136 L41.7 136.1 L37.5 136.4 L33.1 136.7 L28.7 137 L24.3 137.2 L19.8 137.4 L15.3 137.5 L10.7 137.7 L6.1 137.7 L1.5 137.8 L-3.2 137.8 L-7.8 137.7 L-12.6 137.6 L-17.3 137.5 L-22 137.4 L-26.8 137.2 L-31.6 137 L-36.4 136.7 L-41.2 136.5 L-46 136.4ZM-46 133.6 L-41.2 134.2 L-36.4 134.6 L-31.6 134.9 L-26.9 135.2 L-22.1 135.4 L-17.3 135.6 L-12.6 135.8 L-7.9 135.9 L-3.2 135.9 L1.5 135.9 L6.1 135.9 L10.8 135.8 L15.3 135.7 L19.9 135.5 L24.3 135.3 L28.8 135 L33.2 134.7 L37.5 134.3 L41.8 133.9 L46 133.2 L46 133.2 L41.8 133.4 L37.5 133.7 L33.1 134 L28.7 134.3 L24.3 134.5 L19.8 134.7 L15.3 134.8 L10.7 134.9 L6.1 135 L1.5 135.1 L-3.2 135.1 L-7.8 135 L-12.6 134.9 L-17.3 134.8 L-22.1 134.7 L-26.8 134.5 L-31.6 134.2 L-36.4 134 L-41.2 133.7 L-46 133.6ZM-46 130.6 L-41.2 131.2 L-36.4 131.5 L-31.6 131.9 L-26.9 132.1 L-22.1 132.4 L-17.3 132.6 L-12.6 132.7 L-7.9 132.8 L-3.2 132.8 L1.5 132.8 L6.1 132.8 L10.7 132.7 L15.3 132.6 L19.8 132.4 L24.3 132.2 L28.8 131.9 L33.2 131.6 L37.5 131.2 L41.8 130.8 L46 130.2 L46 130.2 L41.8 130.4 L37.5 130.8 L33.1 131.1 L28.7 131.3 L24.3 131.6 L19.8 131.8 L15.3 131.9 L10.7 132 L6.1 132.1 L1.5 132.2 L-3.2 132.2 L-7.8 132.1 L-12.6 132 L-17.3 131.9 L-22.1 131.8 L-26.8 131.6 L-31.6 131.3 L-36.4 131.1 L-41.2 130.8 L-46 130.6ZM-46 127.4 L-41.2 127.9 L-36.4 128.3 L-31.6 128.6 L-26.8 128.8 L-22.1 129.1 L-17.3 129.3 L-12.6 129.4 L-7.9 129.5 L-3.2 129.5 L1.5 129.6 L6.1 129.5 L10.7 129.4 L15.3 129.3 L19.8 129.1 L24.3 128.9 L28.8 128.7 L33.2 128.3 L37.5 128 L41.8 127.6 L46 127 L46 127 L41.8 127.3 L37.5 127.7 L33.1 128 L28.7 128.2 L24.3 128.5 L19.8 128.7 L15.3 128.8 L10.7 128.9 L6.1 129 L1.5 129.1 L-3.2 129.1 L-7.8 129 L-12.6 128.9 L-17.3 128.8 L-22.1 128.6 L-26.8 128.4 L-31.6 128.2 L-36.4 127.9 L-41.2 127.6 L-46 127.4Z" fill="#1F1A14"/></g><path d="M-44 88 C-14 85 18 84 44 86 L44 142 C18 144 -14 144 -44 142Z" fill="none" stroke="#1F1A14" stroke-width="2.4" stroke-linejoin="round"/><defs><clipPath id="cfHand"><path d="M58 97 C74 94 92 91.5 108 91 C118 90.8 126 91.5 132 93 C150 95 170 96.5 188 98.5 C196 99.4 201 101 201 104.5 C201 107.5 198 109 194 109.2 C200 109.5 207 110.5 207 114 C207 117.5 202 118.6 196 118.4 C200 119.2 201 122.5 197 123.6 C193 124.6 188 124.2 184 123.8 C188 124.8 188 128 183 128.6 C176 129.2 168 128.6 160 128.2 C146 127.6 134 128.6 122 130.6 C104 133.6 82 133.6 58 131 Z"/></clipPath></defs><path d="M58 97 C74 94 92 91.5 108 91 C118 90.8 126 91.5 132 93 C150 95 170 96.5 188 98.5 C196 99.4 201 101 201 104.5 C201 107.5 198 109 194 109.2 C200 109.5 207 110.5 207 114 C207 117.5 202 118.6 196 118.4 C200 119.2 201 122.5 197 123.6 C193 124.6 188 124.2 184 123.8 C188 124.8 188 128 183 128.6 C176 129.2 168 128.6 160 128.2 C146 127.6 134 128.6 122 130.6 C104 133.6 82 133.6 58 131 Z" fill="#F2E6C6"/><g clip-path="url(#cfHand)"><path d="M185.2 125.8 L185.2 126 L185.3 126.1 L185.3 126.2 L185.3 126.2 L185.3 126.3 L185.2 126.3 L185.8 126.2 L185.8 126.2 L185.2 126 L185.2 126 L185.2 126 L185.2 126 L185.1 126.1 L185 126.1 L184.9 126.2 L184.8 126.2 L184.6 126.3 L184.4 126.4 L184.2 126.5 L183.9 126.5 L183.5 126.6 L183.2 126.7 L182.8 126.7 L182.2 126.8 L181.5 126.8 L180.8 126.8 L180.1 126.9 L179.4 126.9 L178.6 126.9 L177.9 126.9 L177.2 126.9 L176.5 126.9 L175.7 126.9 L175 126.9 L174.2 126.9 L173.5 126.8 L172.7 126.8 L171.9 126.8 L171.2 126.8 L170.4 126.7 L169.6 126.7 L168.8 126.7 L168.1 126.6 L167.3 126.6 L166.5 126.5 L165.7 126.5 L164.9 126.4 L164.1 126.4 L163.3 126.3 L162.5 126.3 L161.7 126.3 L160.9 126.2 L160.1 126.2 L158.7 126.1 L157.3 126.1 L155.9 126 L154.5 126 L153.2 126 L151.8 126 L150.5 126 L149.2 126 L147.8 126.1 L146.5 126.1 L145.2 126.2 L143.9 126.2 L142.7 126.3 L141.4 126.3 L140.1 126.4 L138.8 126.5 L137.6 126.6 L136.3 126.7 L135.1 126.9 L133.9 127 L132.6 127.1 L131.4 127.3 L130.2 127.4 L129 127.6 L127.8 127.8 L126.5 127.9 L125.3 128.1 L124.1 128.3 L122.9 128.5 L121.7 128.7 L119.9 129 L118.1 129.3 L116.2 129.5 L114.4 129.8 L112.5 130 L110.6 130.2 L108.6 130.4 L106.7 130.5 L104.7 130.7 L102.7 130.8 L100.6 130.9 L98.5 131 L96.5 131.1 L94.4 131.1 L92.2 131.2 L90.1 131.2 L87.9 131.2 L85.8 131.2 L83.5 131.1 L81.3 131.1 L79.1 131 L76.8 130.9 L74.5 130.8 L72.2 130.7 L69.9 130.7 L69.9 130.7 L72.2 130.9 L74.5 131.1 L76.8 131.3 L79.1 131.4 L81.3 131.6 L83.5 131.7 L85.7 131.7 L87.9 131.8 L90.1 131.8 L92.2 131.8 L94.4 131.8 L96.5 131.8 L98.6 131.8 L100.6 131.7 L102.7 131.6 L104.7 131.5 L106.7 131.4 L108.7 131.3 L110.7 131.1 L112.6 130.9 L114.5 130.7 L116.4 130.5 L118.2 130.3 L120 130 L121.9 129.7 L123.1 129.5 L124.3 129.3 L125.5 129.2 L126.7 129 L127.9 128.8 L129.1 128.7 L130.3 128.5 L131.5 128.4 L132.8 128.3 L134 128.1 L135.2 128 L136.5 127.9 L137.7 127.8 L138.9 127.7 L140.2 127.6 L141.5 127.5 L142.7 127.5 L144 127.4 L145.3 127.4 L146.6 127.3 L147.9 127.3 L149.2 127.3 L150.5 127.2 L151.8 127.2 L153.2 127.2 L154.5 127.3 L155.9 127.3 L157.2 127.3 L158.6 127.4 L160 127.4 L160.8 127.5 L161.6 127.5 L162.4 127.5 L163.2 127.6 L164 127.6 L164.8 127.7 L165.6 127.7 L166.4 127.8 L167.2 127.8 L168 127.8 L168.8 127.9 L169.6 127.9 L170.3 127.9 L171.1 127.9 L171.9 128 L172.7 128 L173.4 128 L174.2 128 L175 128 L175.7 128 L176.5 128 L177.2 128 L177.9 128 L178.7 128 L179.4 127.9 L180.1 127.9 L180.8 127.9 L181.5 127.8 L182.2 127.8 L182.9 127.7 L183.3 127.6 L183.7 127.5 L184.1 127.4 L184.4 127.3 L184.7 127.2 L185 127.1 L185.2 127 L185.4 126.8 L185.5 126.7 L185.6 126.6 L185.7 126.5 L185.8 126.4 L185.8 126.3 L185.8 126.3 L185.2 126.2 L185.2 126.2 L185.7 126.1 L185.7 126.1 L185.7 126 L185.6 126 L185.5 125.9 L185.4 125.9 L185.2 125.8ZM184.1 126.2 L184.2 126.2 L184.2 126 L184.3 125.8 L184.4 125.7 L184.5 125.6 L184.5 125.5 L184.6 125.5 L184.3 125.1 L184.2 125.1 L184.2 125.1 L184.1 125.2 L183.9 125.2 L183.8 125.2 L183.5 125.3 L183.3 125.3 L183 125.4 L182.7 125.4 L182.1 125.5 L181.4 125.5 L180.7 125.5 L180 125.6 L179.3 125.6 L178.6 125.6 L177.9 125.6 L177.2 125.6 L176.4 125.6 L175.7 125.6 L175 125.6 L174.2 125.5 L173.5 125.5 L172.7 125.5 L172 125.5 L171.2 125.5 L170.4 125.4 L169.7 125.4 L168.9 125.3 L168.1 125.3 L167.3 125.3 L166.6 125.2 L165.8 125.2 L165 125.1 L164.2 125.1 L163.4 125 L162.6 125 L161.8 125 L161 124.9 L160.1 124.9 L158.7 124.8 L157.3 124.8 L155.9 124.7 L154.6 124.7 L153.2 124.7 L151.8 124.7 L150.5 124.7 L149.1 124.7 L147.8 124.8 L146.5 124.8 L145.2 124.8 L143.9 124.9 L142.6 125 L141.3 125 L140 125.1 L138.8 125.2 L137.5 125.3 L136.2 125.4 L135 125.6 L133.7 125.7 L132.5 125.8 L131.3 126 L130 126.1 L128.8 126.3 L127.6 126.5 L126.3 126.6 L125.1 126.8 L123.9 127 L122.7 127.2 L121.5 127.4 L119.7 127.7 L117.9 128 L116.1 128.2 L114.2 128.5 L112.3 128.7 L110.4 128.9 L108.5 129.1 L106.6 129.2 L104.6 129.4 L102.6 129.5 L100.6 129.6 L98.5 129.7 L96.4 129.8 L94.3 129.8 L92.2 129.9 L90.1 129.9 L88 129.9 L85.8 129.9 L83.6 129.9 L81.3 129.9 L81.3 129.9 L83.6 130.1 L85.8 130.2 L87.9 130.2 L90.1 130.3 L92.2 130.3 L94.4 130.3 L96.5 130.3 L98.5 130.3 L100.6 130.2 L102.6 130.1 L104.6 130 L106.6 129.9 L108.6 129.8 L110.5 129.6 L112.4 129.4 L114.3 129.2 L116.2 129 L118 128.8 L119.8 128.5 L121.6 128.2 L122.8 128.1 L124 127.9 L125.2 127.7 L126.5 127.5 L127.7 127.4 L128.9 127.2 L130.1 127.1 L131.4 126.9 L132.6 126.8 L133.8 126.7 L135.1 126.5 L136.3 126.4 L137.6 126.3 L138.8 126.2 L140.1 126.1 L141.4 126.1 L142.6 126 L143.9 125.9 L145.2 125.9 L146.5 125.8 L147.8 125.8 L149.2 125.8 L150.5 125.8 L151.8 125.8 L153.2 125.8 L154.5 125.8 L155.9 125.8 L157.3 125.8 L158.7 125.9 L160.1 125.9 L160.9 126 L161.7 126 L162.5 126.1 L163.3 126.1 L164.1 126.1 L164.9 126.2 L165.7 126.2 L166.5 126.3 L167.3 126.3 L168.1 126.3 L168.8 126.4 L169.6 126.4 L170.4 126.4 L171.2 126.5 L171.9 126.5 L172.7 126.5 L173.5 126.5 L174.2 126.5 L175 126.5 L175.7 126.5 L176.4 126.5 L177.2 126.5 L177.9 126.5 L178.6 126.5 L179.3 126.4 L180.1 126.4 L180.8 126.4 L181.4 126.3 L182.1 126.3 L182.8 126.2 L183.1 126.1 L183.4 126.1 L183.7 126 L184 125.9 L184.2 125.8 L184.3 125.7 L184.5 125.7 L184.5 125.6 L184.5 125.6 L184.2 125.2 L184.2 125.2 L184.1 125.4 L184 125.5 L184 125.8 L184 126 L184 126.2 L184.1 126.2ZM183.4 124.4 L183.5 124.5 L183.6 124.4 L183.7 124.4 L183.8 124.4 L183.6 124.1 L183.5 124.1 L183.4 124.1 L183.2 124.2 L183 124.2 L182.8 124.2 L182.5 124.2 L182 124.3 L181.3 124.3 L180.6 124.3 L180 124.4 L179.3 124.4 L178.6 124.4 L177.9 124.4 L177.2 124.4 L176.4 124.4 L175.7 124.4 L175 124.4 L174.3 124.3 L173.5 124.3 L172.8 124.3 L172 124.3 L171.3 124.2 L170.5 124.2 L169.7 124.2 L169 124.1 L168.2 124.1 L167.4 124 L166.6 124 L165.8 124 L165 123.9 L164.2 123.9 L163.4 123.8 L162.6 123.8 L161.8 123.8 L161 123.7 L160.2 123.7 L158.8 123.6 L157.3 123.6 L155.9 123.5 L154.6 123.5 L153.2 123.5 L151.8 123.5 L150.5 123.5 L149.1 123.5 L147.8 123.5 L146.4 123.6 L145.1 123.6 L143.8 123.7 L142.5 123.8 L141.2 123.8 L139.9 123.9 L138.7 124 L137.4 124.1 L136.1 124.2 L134.9 124.3 L133.6 124.5 L132.4 124.6 L131.1 124.8 L129.9 124.9 L128.6 125.1 L127.4 125.3 L126.2 125.4 L125 125.6 L123.7 125.8 L122.5 126 L121.3 126.2 L119.5 126.5 L117.7 126.8 L115.9 127.1 L114.1 127.3 L112.2 127.5 L110.3 127.7 L108.4 127.9 L106.5 128.1 L104.5 128.2 L102.5 128.3 L100.5 128.4 L98.5 128.5 L96.4 128.6 L94.3 128.7 L92.2 128.8 L92.2 128.8 L94.3 128.9 L96.4 128.9 L98.5 128.8 L100.5 128.8 L102.5 128.7 L104.5 128.6 L106.5 128.5 L108.5 128.4 L110.4 128.2 L112.3 128 L114.2 127.8 L116 127.6 L117.8 127.4 L119.6 127.2 L121.4 126.9 L122.6 126.7 L123.8 126.5 L125 126.3 L126.3 126.2 L127.5 126 L128.7 125.8 L130 125.7 L131.2 125.5 L132.4 125.4 L133.7 125.3 L134.9 125.2 L136.2 125 L137.5 124.9 L138.7 124.8 L140 124.8 L141.3 124.7 L142.6 124.6 L143.9 124.5 L145.2 124.5 L146.5 124.5 L147.8 124.4 L149.1 124.4 L150.5 124.4 L151.8 124.4 L153.2 124.4 L154.6 124.4 L155.9 124.4 L157.3 124.5 L158.7 124.5 L160.2 124.5 L161 124.6 L161.8 124.6 L162.6 124.7 L163.4 124.7 L164.2 124.8 L165 124.8 L165.8 124.8 L166.6 124.9 L167.4 124.9 L168.1 124.9 L168.9 125 L169.7 125 L170.5 125 L171.2 125.1 L172 125.1 L172.8 125.1 L173.5 125.1 L174.2 125.1 L175 125.1 L175.7 125.1 L176.4 125.1 L177.2 125.1 L177.9 125.1 L178.6 125.1 L179.3 125 L180 125 L180.7 125 L181.3 124.9 L182 124.9 L182.6 124.8 L182.9 124.8 L183.1 124.7 L183.3 124.6 L183.5 124.5 L183.7 124.5 L183.7 124.4 L183.6 124.1 L183.6 124.2 L183.5 124.2 L183.4 124.4 L183.5 124.4ZM183.3 123.1 L183.1 123.1 L183 123.1 L182.8 123.1 L182.6 123.2 L182.4 123.2 L181.9 123.2 L181.2 123.2 L180.6 123.2 L179.9 123.3 L179.2 123.3 L178.6 123.3 L177.9 123.3 L177.2 123.3 L176.4 123.3 L175.7 123.3 L175 123.3 L174.3 123.2 L173.6 123.2 L172.8 123.2 L172.1 123.2 L171.3 123.1 L170.5 123.1 L169.8 123.1 L169 123 L168.2 123 L167.4 123 L166.7 122.9 L165.9 122.9 L165.1 122.8 L164.3 122.8 L163.5 122.7 L162.7 122.7 L161.9 122.6 L161.1 122.6 L160.2 122.5 L158.8 122.5 L157.4 122.5 L156 122.4 L154.6 122.4 L153.2 122.4 L151.8 122.4 L150.4 122.4 L149.1 122.4 L147.8 122.4 L146.4 122.5 L145.1 122.5 L143.8 122.6 L142.5 122.6 L141.2 122.7 L139.9 122.8 L138.6 122.9 L137.3 123 L136 123.1 L134.8 123.2 L133.5 123.4 L132.2 123.5 L131 123.7 L129.7 123.8 L128.5 124 L127.2 124.2 L126 124.3 L124.8 124.5 L123.5 124.7 L122.3 124.9 L121.1 125.1 L119.3 125.4 L117.6 125.7 L115.8 126 L114 126.2 L112.1 126.4 L110.2 126.6 L108.3 126.8 L106.4 127 L104.5 127.1 L102.4 127.3 L102.5 127.3 L104.5 127.3 L106.4 127.2 L108.3 127.1 L110.3 126.9 L112.1 126.7 L114 126.5 L115.8 126.3 L117.6 126.1 L119.4 125.9 L121.2 125.6 L122.4 125.4 L123.6 125.2 L124.9 125 L126.1 124.9 L127.3 124.7 L128.6 124.5 L129.8 124.4 L131.1 124.2 L132.3 124.1 L133.6 124 L134.8 123.9 L136.1 123.8 L137.3 123.7 L138.6 123.5 L139.9 123.5 L141.2 123.4 L142.5 123.3 L143.8 123.3 L145.1 123.2 L146.4 123.2 L147.8 123.1 L149.1 123.1 L150.5 123.1 L151.8 123.1 L153.2 123.1 L154.6 123.1 L156 123.1 L157.4 123.2 L158.8 123.2 L160.2 123.3 L161.1 123.3 L161.9 123.3 L162.7 123.4 L163.5 123.4 L164.3 123.5 L165.1 123.5 L165.8 123.5 L166.6 123.6 L167.4 123.6 L168.2 123.7 L169 123.7 L169.8 123.7 L170.5 123.7 L171.3 123.8 L172 123.8 L172.8 123.8 L173.5 123.8 L174.3 123.8 L175 123.8 L175.7 123.8 L176.4 123.8 L177.2 123.8 L177.9 123.8 L178.6 123.8 L179.3 123.7 L179.9 123.7 L180.6 123.7 L181.3 123.6 L181.9 123.5 L182.5 123.5 L182.7 123.4 L182.9 123.4 L183 123.3 L183.1 123.3 L183.3 123.1ZM135 110.7 L134.2 110.7 L133.4 110.8 L132.6 110.8 L131.8 110.9 L130.9 111 L130.1 111 L129.2 111.1 L128.3 111.1 L127.4 111.2 L126.5 111.2 L125.6 111.2 L124.7 111.3 L123.7 111.3 L122.8 111.4 L121.8 111.4 L120.9 111.4 L119.9 111.5 L119 111.5 L118 111.6 L117 111.6 L116 111.7 L115 111.8 L114 111.8 L113.1 111.9 L112.1 112 L111.1 112 L110.1 112.2 L109 112.3 L107.9 112.4 L106.9 112.6 L105.8 112.7 L104.8 112.9 L103.8 113.1 L102.8 113.3 L101.8 113.6 L100.8 113.8 L99.8 114.1 L98.9 114.3 L97.9 114.6 L97 114.9 L96.1 115.3 L95.2 115.6 L94.3 115.9 L93.4 116.3 L92.5 116.7 L91.6 117 L90.8 117.4 L89.9 117.8 L89.1 118.3 L88.2 118.7 L87.4 119.2 L86.6 119.6 L85.8 120.1 L85 120.7 L85.1 120.7 L86 120.3 L86.8 120 L87.6 119.6 L88.5 119.2 L89.3 118.8 L90.2 118.4 L91 118.1 L91.9 117.7 L92.8 117.4 L93.7 117 L94.5 116.7 L95.5 116.4 L96.4 116.1 L97.3 115.8 L98.2 115.6 L99.1 115.3 L100.1 115 L101 114.8 L102 114.6 L103 114.4 L104 114.2 L105 114 L106 113.8 L107 113.7 L108.1 113.5 L109.1 113.4 L110.2 113.2 L111.2 113.2 L112.2 113.1 L113.1 113 L114.1 112.9 L115.1 112.8 L116.1 112.8 L117.1 112.7 L118 112.6 L119 112.5 L120 112.5 L121 112.4 L121.9 112.4 L122.8 112.3 L123.8 112.2 L124.7 112.2 L125.7 112.1 L126.6 112 L127.5 111.9 L128.4 111.8 L129.2 111.8 L130.1 111.7 L131 111.5 L131.8 111.4 L132.7 111.3 L133.5 111.1 L134.3 111 L135 110.7ZM132.8 112.3 L131.9 112.3 L131.1 112.4 L130.2 112.4 L129.3 112.5 L128.4 112.5 L127.5 112.6 L126.6 112.6 L125.7 112.6 L124.8 112.7 L123.8 112.7 L122.9 112.8 L121.9 112.8 L121 112.8 L120 112.9 L119 112.9 L118.1 113 L117.1 113 L116.1 113.1 L115.1 113.1 L114.2 113.2 L113.2 113.3 L112.2 113.3 L111.2 113.4 L110.2 113.5 L109.2 113.7 L108.1 113.8 L107.1 113.9 L106.1 114.1 L105 114.3 L104.1 114.5 L103.1 114.7 L102.1 114.9 L101.1 115.2 L100.2 115.4 L99.2 115.7 L98.3 116 L97.4 116.3 L96.5 116.6 L95.6 116.9 L94.7 117.2 L93.9 117.6 L93 117.9 L92.2 118.3 L91.3 118.7 L90.5 119.1 L89.7 119.5 L88.9 120 L88.1 120.4 L87.3 120.9 L87.3 121 L88.2 120.6 L89 120.2 L89.8 119.9 L90.7 119.5 L91.5 119.2 L92.4 118.8 L93.2 118.5 L94.1 118.2 L95 117.9 L95.8 117.6 L96.8 117.3 L97.7 117 L98.6 116.7 L99.5 116.5 L100.4 116.2 L101.3 116 L102.3 115.8 L103.3 115.6 L104.2 115.4 L105.2 115.2 L106.2 115 L107.2 114.8 L108.2 114.7 L109.3 114.6 L110.3 114.4 L111.3 114.3 L112.3 114.3 L113.2 114.2 L114.2 114.1 L115.2 114 L116.2 114 L117.2 113.9 L118.1 113.8 L119.1 113.8 L120 113.7 L121 113.6 L122 113.6 L122.9 113.5 L123.9 113.4 L124.8 113.4 L125.7 113.3 L126.7 113.2 L127.6 113.1 L128.5 113 L129.3 112.9 L130.2 112.8 L131.1 112.7 L131.9 112.6 L132.8 112.4ZM130.3 113.8 L129.4 113.8 L128.5 113.8 L127.6 113.9 L126.7 113.9 L125.8 113.9 L124.8 114 L123.9 114 L123 114 L122 114.1 L121 114.1 L120.1 114.2 L119.1 114.2 L118.2 114.3 L117.2 114.3 L116.2 114.4 L115.2 114.4 L114.2 114.5 L113.3 114.6 L112.3 114.6 L111.3 114.7 L110.4 114.8 L109.3 114.9 L108.3 115.1 L107.3 115.2 L106.3 115.4 L105.3 115.6 L104.3 115.8 L103.3 116 L102.4 116.2 L101.5 116.4 L100.5 116.7 L99.6 116.9 L98.7 117.2 L97.8 117.5 L96.9 117.8 L96 118.1 L95.2 118.5 L94.3 118.8 L93.5 119.2 L92.7 119.5 L91.8 119.9 L91 120.3 L90.2 120.8 L90.2 120.8 L91.1 120.5 L92 120.2 L92.8 119.8 L93.6 119.5 L94.5 119.2 L95.3 118.9 L96.2 118.6 L97.1 118.3 L98 118 L98.9 117.8 L99.8 117.5 L100.7 117.3 L101.6 117.1 L102.5 116.8 L103.5 116.7 L104.5 116.5 L105.4 116.3 L106.4 116.1 L107.4 115.9 L108.4 115.8 L109.4 115.7 L110.4 115.5 L111.4 115.5 L112.3 115.4 L113.3 115.3 L114.3 115.2 L115.3 115.1 L116.2 115.1 L117.2 115 L118.2 114.9 L119.2 114.9 L120.1 114.8 L121.1 114.7 L122 114.7 L123 114.6 L123.9 114.5 L124.9 114.5 L125.8 114.4 L126.7 114.3 L127.6 114.2 L128.5 114.1 L129.4 114 L130.3 113.8ZM150.6 107.1 L152.6 107.5 L154.5 107.7 L156.4 107.9 L158.4 108.1 L160.4 108.3 L162.4 108.5 L164.4 108.7 L166.4 108.8 L168.4 109 L170.5 109.1 L172.5 109.3 L174.6 109.4 L176.7 109.6 L178.8 109.7 L180.9 109.8 L183.1 109.9 L185.2 110 L187.4 109.9 L187.4 109.9 L185.2 109.5 L183.1 109.3 L181 109.1 L178.9 108.9 L176.8 108.7 L174.7 108.5 L172.6 108.3 L170.6 108.2 L168.5 108 L166.5 107.8 L164.4 107.7 L162.4 107.6 L160.4 107.4 L158.5 107.3 L156.5 107.2 L154.5 107.1 L152.6 107 L150.7 107.1ZM152.5 108.4 L154.4 108.7 L156.4 108.9 L158.3 109.1 L160.3 109.3 L162.3 109.5 L164.3 109.7 L166.3 109.8 L168.3 110 L170.4 110.2 L172.5 110.3 L174.5 110.4 L176.6 110.6 L178.7 110.7 L180.8 110.8 L183 110.9 L185.1 110.9 L185.1 110.8 L183 110.5 L180.9 110.3 L178.8 110.1 L176.7 109.9 L174.6 109.7 L172.5 109.5 L170.5 109.3 L168.4 109.2 L166.4 109 L164.4 108.9 L162.3 108.8 L160.4 108.6 L158.4 108.5 L156.4 108.4 L154.4 108.3 L152.5 108.3ZM160.7 116.2 L162.4 116.6 L164.1 116.8 L165.8 117 L167.4 117.2 L169.1 117.5 L170.8 117.7 L172.5 117.8 L174.2 118 L175.9 118.2 L177.6 118.4 L179.3 118.5 L181 118.7 L182.7 118.8 L184.4 118.9 L186 119 L187.7 119.1 L189.4 119.2 L191 119.2 L191 119.1 L189.4 118.8 L187.8 118.6 L186.1 118.3 L184.4 118.1 L182.8 117.9 L181.1 117.7 L179.4 117.6 L177.7 117.4 L176 117.2 L174.3 117 L172.6 116.9 L170.9 116.7 L169.2 116.6 L167.5 116.5 L165.8 116.3 L164.1 116.2 L162.4 116.1 L160.7 116.2ZM162.3 117.5 L164 117.8 L165.7 118 L167.3 118.2 L169 118.5 L170.7 118.7 L172.4 118.8 L174.1 119 L175.8 119.2 L177.5 119.4 L179.2 119.5 L180.9 119.7 L182.6 119.8 L184.3 119.9 L185.9 120 L187.6 120.1 L189.3 120.1 L189.3 120.1 L187.7 119.8 L186 119.5 L184.3 119.3 L182.7 119.1 L181 118.9 L179.3 118.7 L177.6 118.6 L175.9 118.4 L174.2 118.2 L172.5 118.1 L170.8 117.9 L169.1 117.8 L167.4 117.6 L165.7 117.5 L164 117.4 L162.3 117.4ZM164.8 122.7 L165.8 123 L166.7 123.2 L167.7 123.4 L168.6 123.6 L169.6 123.8 L170.5 123.9 L171.5 124 L172.4 124.2 L173.4 124.3 L174.3 124.4 L175.2 124.5 L176.1 124.6 L177 124.7 L177.9 124.7 L178.8 124.8 L179.7 124.8 L180.5 124.8 L181.4 124.8 L181.4 124.7 L180.6 124.4 L179.7 124.3 L178.9 124.1 L178 124 L177.1 123.8 L176.2 123.7 L175.3 123.5 L174.4 123.4 L173.5 123.3 L172.6 123.2 L171.6 123.1 L170.7 123 L169.7 122.9 L168.7 122.8 L167.8 122.7 L166.8 122.7 L165.8 122.6 L164.8 122.7ZM165.6 123.9 L166.6 124.2 L167.6 124.4 L168.5 124.6 L169.5 124.8 L170.4 124.9 L171.4 125 L172.3 125.2 L173.2 125.3 L174.2 125.4 L175.1 125.5 L176 125.6 L176.9 125.7 L177.8 125.7 L178.7 125.8 L179.6 125.8 L180.4 125.8 L180.4 125.7 L179.6 125.5 L178.7 125.3 L177.9 125.1 L177 125 L176.1 124.8 L175.2 124.7 L174.3 124.6 L173.3 124.5 L172.4 124.4 L171.5 124.3 L170.5 124.2 L169.6 124.1 L168.6 124 L167.6 123.9 L166.6 123.9 L165.6 123.9Z" fill="#1F1A14"/></g><path d="M58 97 C74 94 92 91.5 108 91 C118 90.8 126 91.5 132 93 C150 95 170 96.5 188 98.5 C196 99.4 201 101 201 104.5 C201 107.5 198 109 194 109.2 C200 109.5 207 110.5 207 114 C207 117.5 202 118.6 196 118.4 C200 119.2 201 122.5 197 123.6 C193 124.6 188 124.2 184 123.8 C188 124.8 188 128 183 128.6 C176 129.2 168 128.6 160 128.2 C146 127.6 134 128.6 122 130.6 C104 133.6 82 133.6 58 131 Z" fill="none" stroke="#1F1A14" stroke-width="2.3" stroke-linejoin="round"/><path d="M133.9 105.6 L137.3 105.8 L140.8 106.1 L144.3 106.3 L147.8 106.5 L151.4 106.8 L155 107 L158.7 107.3 L162.4 107.5 L166.2 107.8 L170 108.1 L173.9 108.3 L177.8 108.6 L181.8 108.8 L185.8 109.1 L189.9 109.4 L194 109.7 L194 108.8 L189.9 108.4 L185.9 108.1 L181.9 107.8 L177.9 107.4 L174 107.1 L170.1 106.8 L166.3 106.4 L162.6 106.1 L158.8 105.8 L155.2 105.5 L151.5 105.1 L147.9 104.8 L144.4 104.5 L140.9 104.2 L137.5 103.9 L134.1 103.6ZM145.9 114.6 L148.9 114.8 L152 115.1 L155.1 115.3 L158.2 115.6 L161.4 115.9 L164.6 116.2 L167.7 116.4 L170.9 116.7 L174.1 117 L177.3 117.3 L180.5 117.6 L183.6 117.8 L186.8 118.1 L189.9 118.4 L192.9 118.6 L196 118.8 L196 118 L193 117.7 L190 117.3 L186.9 117 L183.7 116.7 L180.6 116.3 L177.4 116 L174.3 115.6 L171.1 115.3 L167.9 114.9 L164.7 114.6 L161.5 114.2 L158.4 113.9 L155.3 113.5 L152.2 113.2 L149.1 112.9 L146.1 112.6ZM155.9 121.4 L157.8 121.6 L159.6 121.8 L161.5 122 L163.4 122.2 L165.2 122.4 L167 122.6 L168.9 122.8 L170.7 123 L172.4 123.2 L174.2 123.3 L175.9 123.5 L177.6 123.7 L179.2 123.8 L180.8 124 L182.4 124.1 L183.9 124.2 L184.1 123.3 L182.5 123.2 L181 123 L179.4 122.7 L177.7 122.5 L176.1 122.3 L174.3 122 L172.6 121.8 L170.8 121.5 L169.1 121.3 L167.2 121 L165.4 120.7 L163.6 120.5 L161.7 120.2 L159.9 119.9 L158 119.7 L156.1 119.4Z" fill="#1F1A14"/><path d="M70 106 C84 100.5 102 98 118 99 C127 99.6 133 100.8 137.5 102.8 C141 104.4 140.6 108 137 109 C130 110.6 120 110.4 110 111.4 C99 112.6 90 116 82 121" fill="#F2E6C6" stroke="#1F1A14" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M128 100.4 C132 100.9 135.6 102 137.2 103.6 C134.6 104.2 131.4 104 128.6 103.6ZM186 98.6 C191 99.2 195.6 100.2 198.4 102 C195 102.6 190.6 102.2 186.4 101.8Z" fill="none" stroke="#1F1A14" stroke-width="1.1"/><path d="M158 96.4 L158 96.8 L158 97.2 L158.1 97.5 L158.1 97.9 L158.2 98.2 L158.2 98.5 L158.2 98.8 L158.2 99.1 L158.2 99.4 L158.2 99.7 L158.2 100 L158.2 100.4 L158.2 100.7 L158.2 101 L158.2 101.4 L158.2 101.8 L158.2 101.8 L158.5 101.5 L158.8 101.2 L158.9 100.9 L159.1 100.5 L159.2 100.2 L159.3 99.8 L159.3 99.5 L159.3 99.1 L159.3 98.7 L159.2 98.3 L159.1 98 L159 97.6 L158.8 97.3 L158.6 97 L158.4 96.7 L158 96.4ZM161.2 96.8 L161.2 97.1 L161.2 97.4 L161.3 97.7 L161.3 98 L161.3 98.2 L161.3 98.5 L161.4 98.8 L161.4 99 L161.4 99.3 L161.4 99.5 L161.4 99.8 L161.4 100 L161.4 100.3 L161.3 100.6 L161.3 100.9 L161.4 101.2 L161.4 101.2 L161.7 101 L161.8 100.7 L162 100.5 L162.1 100.2 L162.2 99.9 L162.2 99.6 L162.3 99.3 L162.3 99 L162.2 98.7 L162.2 98.4 L162.1 98.1 L162 97.8 L161.9 97.5 L161.7 97.2 L161.5 97 L161.2 96.8ZM181 98.3 L181 98.6 L181 98.9 L181 99.2 L181.1 99.4 L181.1 99.7 L181.1 99.9 L181.1 100.1 L181.1 100.4 L181.1 100.6 L181.1 100.8 L181.1 101.1 L181.1 101.3 L181.1 101.6 L181.1 101.8 L181.1 102.1 L181.2 102.4 L181.2 102.4 L181.5 102.2 L181.7 102 L181.8 101.7 L181.9 101.5 L182 101.2 L182.1 100.9 L182.1 100.6 L182.1 100.3 L182.1 100 L182 99.8 L182 99.5 L181.8 99.2 L181.7 98.9 L181.5 98.7 L181.3 98.5 L181 98.3ZM126.4 92.6 L126.6 93 L126.9 93.3 L127.1 93.7 L127.3 94 L127.4 94.3 L127.6 94.6 L127.7 94.9 L127.8 95.2 L127.8 95.5 L127.9 95.8 L127.9 96.1 L128 96.4 L128 96.7 L128 97 L128 97.4 L128 97.8 L128 97.8 L128.3 97.5 L128.5 97.2 L128.7 96.8 L128.8 96.5 L128.8 96.1 L128.8 95.7 L128.8 95.3 L128.7 94.9 L128.6 94.5 L128.4 94.2 L128.2 93.8 L127.9 93.5 L127.6 93.2 L127.3 93 L126.9 92.7 L126.4 92.6ZM104 103.4 L104 103.7 L104 104 L104.1 104.3 L104.1 104.6 L104.1 104.8 L104.1 105.1 L104.2 105.3 L104.2 105.6 L104.2 105.8 L104.1 106.1 L104.1 106.4 L104.1 106.6 L104.1 106.9 L104 107.2 L104 107.5 L104 107.8 L104 107.8 L104.3 107.6 L104.5 107.4 L104.7 107.1 L104.8 106.8 L104.9 106.5 L105 106.2 L105 105.9 L105 105.6 L105 105.3 L105 105 L104.9 104.7 L104.8 104.4 L104.7 104.1 L104.5 103.8 L104.3 103.6 L104 103.4Z" fill="#1F1A14"/><path d="M44 82 q-5.5 5.3 0 10.7 q-5.5 5.3 0 10.7 q-5.5 5.3 0 10.7 q-5.5 5.3 0 10.7 q-5.5 5.3 0 10.7 q-5.5 5.3 0 10.7 L60 146 q5.5 -5.3 0 -10.7 q5.5 -5.3 0 -10.7 q5.5 -5.3 0 -10.7 q5.5 -5.3 0 -10.7 q5.5 -5.3 0 -10.7 q5.5 -5.3 0 -10.7 Z" fill="#F2E6C6" stroke="#1F1A14" stroke-width="2.4" stroke-linejoin="round"/><path d="M48.5 85.2 L55.5 88.2 M48.5 95.9 L55.5 98.9 M48.5 106.5 L55.5 109.5 M48.5 117.2 L55.5 120.2 M48.5 127.9 L55.5 130.9 M48.5 138.5 L55.5 141.5 " stroke="#1F1A14" stroke-width="1.3" stroke-linecap="round"/></g>`;
+let handEl = null, handAngle = -1, pendEl = null, pendAngle = 99;
+function setHand(deg){
+  if (!handEl) return;
+  const a = Math.round(deg * 10) / 10;
+  if (a === handAngle) return;
+  handAngle = a;
+  handEl.setAttribute('transform', `rotate(${-a * 0.51} -170 118)`);
+}
+function setPend(deg){
+  if (!pendEl) pendEl = document.getElementById('pendRot');
+  if (!pendEl) return;
+  const a = Math.round(deg * 10) / 10;
+  if (a === pendAngle) return;
+  pendAngle = a;
+  pendEl.setAttribute('transform', `rotate(${a} 98 150)`);
+}
+function syncBeat(){
+  const on = {hand: st.beatHand, pendulum: st.beatPend, tick: st.beatTick};
+  document.querySelectorAll('#beatList button').forEach(b => b.setAttribute('aria-pressed', String(!!on[b.dataset.beat])));
+  $('#handBox').hidden = !st.beatHand; $('#pendBox').hidden = !st.beatPend;
+  $('#pendBox').classList.toggle('both', st.beatHand && st.beatPend);
+  const r = document.documentElement.style;
+  r.setProperty('--hand-op', String(st.handOp)); r.setProperty('--hand-sc', String(st.handSize));
+  $('#handOp').value = st.handOp; $('#handSize').value = st.handSize;
+}
+handEl = $('#handRot'); handEl.innerHTML = HAND_SVG; setHand(0); setPend(0);
+$('#beatList').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const k = b.dataset.beat;
+  if (k === 'hand') st.beatHand = !st.beatHand; else if (k === 'pendulum') st.beatPend = !st.beatPend; else st.beatTick = !st.beatTick;
+  save(); syncBeat(); if (k === 'tick' && play) { stopPlay(); startPlay(); }
+});
+$('#handOp').addEventListener('input', e => { st.handOp = +e.target.value; save(); syncBeat(); });
+$('#handSize').addEventListener('input', e => { st.handSize = +e.target.value; save(); syncBeat(); });
+syncBeat();
+function metroClick(t, dest){
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(1500, t);
+  o.frequency.exponentialRampToValueAtTime(820, t + 0.035);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.55, t + 0.002);
+  g.gain.exponentialRampToValueAtTime(0.0005, t + 0.07);
+  o.connect(g); g.connect(dest);
+  o.start(t); o.stop(t + 0.08);
+  return o;
+}
+
+/* the music box fills the window (or the visitor's window, when embedded), with the controls above and below it */
+function sizeViewer(){
+  let H = window.innerHeight;
+  if (EMBED) { try { H = window.top.innerHeight; } catch (e) { H = Math.max(window.screen.availHeight - 160, 600); } }
+  const used = ($('.tools').offsetHeight || 60) + ($('.transport').offsetHeight || 70) + (EMBED ? 40 : 120);
+  document.documentElement.style.setProperty('--vh', Math.max(380, H - used) + 'px');
+}
 
 /* ------------------------------------------------------------------ */
 /* Playback: a small organ, every shown voice                          */
 /* ------------------------------------------------------------------ */
 const SEMI = [0, 2, 4, 5, 7, 9, 11];
 let actx = null, wave = null, play = null;
+const volGain = () => 0.9 * Math.pow((st.vol ?? 70) / 100, 2) / Math.sqrt(Math.max(1, visibleVoices().length));
 function midiOf(s){
   const oct = Math.floor(s.step / 7), idx = ((s.step % 7) + 7) % 7;
   return 12 * (oct + 1) + SEMI[idx] + (s.alt || 0);
 }
 function setPlayIcon(on){
-  $('#playIcon').setAttribute('d', on ? 'M6 5h4.5v14H6Zm7.5 0H18v14h-4.5Z' : 'M7 4.5v15l12.5-7.5Z');
-  $('#playBtn').setAttribute('aria-label', on ? 'Stop' : 'Play'); $('#playBtn').title = on ? 'Stop' : 'Play';
+  $('#playIcon').setAttribute('d', on ? 'M2 1.5h3.6v11H2Zm6.4 0H12v11H8.4Z' : 'M2 1 13 7 2 13Z');
+  $('#play').setAttribute('aria-label', on ? 'Stop' : 'Play'); $('#play').title = on ? 'Stop (space bar)' : 'Play (space bar)';
 }
 function stopPlay(){
   if (!play) return;
@@ -1410,7 +2298,7 @@ function stopPlay(){
   play.master.gain.setTargetAtTime(0, actx.currentTime, 0.03);
   cancelAnimationFrame(play.raf);
   document.querySelectorAll('svg g.on').forEach(g => g.classList.remove('on'));
-  play = null; setPlayIcon(false);
+  play = null; setPlayIcon(false); setHand(0); setPend(0);
 }
 function startPlay(){
   if (!piece) return;
@@ -1423,7 +2311,7 @@ function startPlay(){
   }
   const voices = visibleVoices();
   const spb = 60 / Math.max(20, st.tempo || 90);       /* seconds per semibreve */
-  const master = actx.createGain(); master.gain.value = 0.5 / Math.sqrt(Math.max(1, voices.length));
+  const master = actx.createGain(); master.gain.value = volGain();
   master.connect(actx.destination);
   const t0 = actx.currentTime + 0.12, nodes = [], events = [];
   voices.forEach(v => {
@@ -1452,28 +2340,41 @@ function startPlay(){
     }
   });
   const end = t0 + piece.end * spb;
-  play = {nodes, master, raf: 0};
+  if (st.beatTick) for (let k = 0; t0 + k * spb < end - 0.02; k++) nodes.push(metroClick(t0 + k * spb, actx.destination));
+  /* how many semibreves the hand counts per breve: three under a perfect sign */
+  const top = voices[0];
+  play = {nodes, master, raf: 0, t0, spb, top};
   setPlayIcon(true);
   let lastScroll = 0;
   const tick = () => {
     if (!play) return;
     const now = actx.currentTime;
-    if (now > end + 0.2) { stopPlay(); return; }
+    if (now > end + 0.2) { stopPlay(); if (st.loop) startPlay(); return; }
+    /* tactus: a quick drop on one beat, a quick lift on the next, held still in between (as in Cantus firmus) */
+    {
+      const el = Math.max(0, now - t0), bi = Math.floor(el / spb), tt = el - bi * spb;
+      if (st.beatPend) setPend(now < t0 ? 24 : 24 * Math.cos(Math.PI * el / spb));
+      const sign = metAt(top, bi), N = mensInfo(sign).T === 3 ? 3 : 2;
+      let seg = 0; for (const m of top.mets) if (m.t <= bi + EPS) seg = m.t;
+      const ph = ((bi - Math.round(seg)) % N + N) % N;
+      const from = ph === 0 && bi > 0 ? 45 : 0, to = ph === N - 1 ? 45 : 0;
+      const pr = Math.min(1, tt / Math.min(0.09, spb * 0.3)), e = 1 - Math.pow(1 - pr, 3);
+      setHand(now < t0 ? 0 : from + (to - from) * e);
+    }
     const on = new Set();
     for (const e of events) if (e.a <= now && e.b > now) on.add(e.id);
     document.querySelectorAll('svg g.on').forEach(g => { if (!on.has(g.classList[0])) g.classList.remove('on'); });
     let first = null;
     on.forEach(id => document.querySelectorAll('svg g.' + id).forEach(g => { g.classList.add('on'); first = first || g; }));
     if (first && performance.now() - lastScroll > 900) {
-      const r = first.getBoundingClientRect();
-      if (r.top < 70 || r.bottom > window.innerHeight - 20) { first.scrollIntoView({block: 'center', behavior: 'smooth'}); lastScroll = performance.now(); }
+      const r = first.getBoundingClientRect(), vr = viewerEl.getBoundingClientRect();
+      if (r.top < vr.top + 20 || r.bottom > vr.bottom - 20) { viewerEl.scrollTo({top: viewerEl.scrollTop + r.top - vr.top - vr.height / 3, behavior: 'smooth'}); lastScroll = performance.now(); }
     }
     play.raf = requestAnimationFrame(tick);
   };
   play.raf = requestAnimationFrame(tick);
 }
-$('#playBtn').addEventListener('click', () => { if (play) stopPlay(); else startPlay(); });
-$('#tempo').addEventListener('change', e => { st.tempo = Math.max(20, Math.min(240, +e.target.value || 90)); save(); if (play) { stopPlay(); startPlay(); } });
+$('#play').addEventListener('click', () => { if (play) stopPlay(); else startPlay(); });
 
 /* tell the site page how tall the app is */
 let lastH = 0;
@@ -1487,18 +2388,19 @@ function postHeight(){
   });
 }
 let rw = 0, lastW = window.innerWidth;
-window.addEventListener('resize', () => { if (window.innerWidth === lastW) return; lastW = window.innerWidth; clearTimeout(rw); rw = setTimeout(render, 150); });
+window.addEventListener('resize', () => { if (window.innerWidth === lastW) return; lastW = window.innerWidth; clearTimeout(rw); rw = setTimeout(() => { sizeViewer(); render(); }, 150); });
+if (EMBED) try { window.top.addEventListener('resize', () => { clearTimeout(rw); rw = setTimeout(() => { sizeViewer(); postHeight(); }, 150); }); } catch (e) {}
 
 /* start */
 (async () => {
   try { await document.fonts.load('100px "IM Fell English"'); await document.fonts.load('italic 100px "IM Fell English"'); } catch (e) {}
   pieceKey = PIECES.includes(st.piece) ? st.piece : PIECES[0];
-  syncUI();
+  syncUI(); sizeViewer();
   try { await loadPiece(pieceKey); } catch (e) { pagesEl.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
   buildPieceList().then(syncUI);
   if (/[?&]print=1/.test(location.search)) setTimeout(() => window.print(), 600);
 })();
-window.__cb = {st, get piece(){ return piece; }, render, parseKern, notate};
+window.__cb = {st, get piece(){ return piece; }, render, parseKern, notate, ed, writeKern};
 })();
 </script>
 </body>
