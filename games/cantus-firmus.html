@@ -461,45 +461,7 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
     <div class="bar">
       <div class="podg" id="editPod">
         <button class="ib" id="editBtn" aria-pressed="false" aria-label="Edit: place notes on the staff" title="Edit: turn on to place and change notes on the staff"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17.3 14.8 6l3.2 3.2L6.7 20.5 3 21Zm13.7-12.6 1.4-1.4a1.5 1.5 0 0 1 2.1 0l1.1 1.1a1.5 1.5 0 0 1 0 2.1l-1.4 1.4Z"/></svg></button>
-        <button class="ib" id="undo" aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5V13.2c4.6-.4 7.4.6 9.6 4.3-.5-5.2-3.6-8.6-9.6-9.2Z"/></svg></button>
-        <button class="ib" id="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5v-3.8c-4.6-.4-7.4.6-9.6 4.3.5-5.2 3.6-8.6 9.6-9.2Z"/></svg></button>
-        <button class="ib" id="del" aria-label="Delete selected note" title="Delete the selected note (Delete)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 4h7l.8 1.5H20V7.5H4V5.5h3.7ZM6 9h12l-.9 11H6.9Z"/></svg></button>
       </div>
-      <div class="podg" id="navPod">
-        <button class="ib" id="selPrev" aria-label="Select the previous note" title="Select the previous note (Left arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12 17 6.2Z"/></svg></button>
-        <button class="ib" id="stepUp" aria-label="Move the selected note up a step" title="Move the selected note up a step (Up arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 15.4 12 8l7.4 7.4-1.6 1.6L12 11.2 6.2 17Z"/></svg></button>
-        <button class="ib" id="stepDown" aria-label="Move the selected note down a step" title="Move the selected note down a step (Down arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 8.6 12 16l7.4-7.4L17.8 7 12 12.8 6.2 7Z"/></svg></button>
-        <button class="ib" id="selNext" aria-label="Select the next note" title="Select the next note (Right arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button>
-      </div>
-      <div class="podg">
-      <div class="pop" id="popDur">
-        <span class="sr" id="durLabel">Note value</span>
-        <button class="tb popbtn" id="durSum" aria-haspopup="true" aria-label="Note value"></button>
-        <div class="popbody"><div class="btns" id="durBtns" role="group" aria-labelledby="durLabel"></div></div>
-      </div>
-      <button class="ib" id="restBtn" aria-pressed="false" aria-label="Enter rests" title="Enter rests (R)"></button>
-      </div>
-      <div class="podg"><div class="btns" id="accBtns" role="group" aria-label="Accidental"></div></div>
-      <div class="podg"><div class="pop" id="popXform">
-        <button class="tb popbtn" aria-haspopup="true">Transform melody<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-        <div class="popbody">
-          <div class="btns col">
-            <button class="tb" id="octup" title="Move the whole cantus firmus up an octave">Octave up</button>
-            <button class="tb" id="octdn" title="Move the whole cantus firmus down an octave">Octave down</button>
-            <button class="tb" id="tonup" title="Move the whole cantus firmus up to the next key on C D E F G A B♭, adding sharps and flats to the notes where needed">Tone up</button>
-            <button class="tb" id="tondn" title="Move the whole cantus firmus down to the previous key on C D E F G A B♭, adding sharps and flats to the notes where needed">Tone down</button>
-            <button class="tb" id="dbl" title="Doubles every note and rest: brevis becomes longa, and so on">Double all values</button>
-            <button class="tb" id="hlv" title="Halves every note and rest: brevis becomes semibrevis, and so on">Halve all values</button>
-            <button class="tb" id="advBtn" data-keep aria-expanded="false" aria-controls="advT">Advanced transposition<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-            <div id="advT" class="advt" hidden>
-              <div class="seg" role="group" aria-label="Direction"><button class="tb" data-dir="1" data-keep aria-pressed="true">Up</button><button class="tb" data-dir="-1" data-keep aria-pressed="false">Down</button></div>
-              <div class="ivrow"><select id="advQ" aria-label="Quality of the interval"></select><select id="advN" aria-label="Interval"></select></div>
-              <label class="check" title="On: every interval stays exactly the same, so D minor becomes G minor, with sharps and flats on the notes. Off: every note moves the same number of steps along the scale, so D dorian becomes E phrygian"><input type="checkbox" id="advExact" checked> Respect intervallic structure</label>
-              <button class="tb" id="advGo">Transpose</button>
-            </div>
-          </div>
-        </div>
-      </div></div>
       <div class="grow">
       <div class="podg" id="libPod">
       <div class="libwrap">
@@ -514,6 +476,7 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
       </div>
       </div>
     </div>
+    <div class="bar editbar" id="editBar" hidden></div>
   </section>
 
   <section class="leaf" aria-label="Score">
@@ -638,6 +601,8 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="shared/organ.js?v=2"></script>
+<script src="shared/note-input.js?v=1"></script>
+<script src="shared/frame-height.js?v=1"></script>
 <script>
 (function(){
 'use strict';
@@ -1210,34 +1175,8 @@ function iconSVG(k, minBox){
 function buildTools(){
   defsMarkup = '<defs>' + Object.entries(GLY).map(([k, v]) => `<path id="g-${k}" d="${v.d}"/>`).join('') + '</defs>';
   $('#glyph-defs').innerHTML = defsMarkup;
-  const durBtns = $('#durBtns');
-  DKEYS.forEach((k, ix) => {
-    const b = document.createElement('button');
-    b.className = 'ib'; b.dataset.d = k;
-    b.title = `${DUR[k].name} (${ix + 1})`;
-    b.setAttribute('aria-label', DUR[k].name);
-    b.innerHTML = iconSVG(k, 2.7);
-    b.addEventListener('click', () => setDur(k));
-    durBtns.appendChild(b);
-  });
-  $('#restBtn').innerHTML = iconSVG('rB', 1.4);
-  const accBtns = $('#accBtns');
-  Object.entries(ACC).forEach(([a, A]) => {
-    const b = document.createElement('button');
-    b.className = 'ib'; b.dataset.a = a;
-    b.title = `${A.name} (${A.key})`;
-    b.setAttribute('aria-label', A.name);
-    b.innerHTML = iconSVG(A.g, 2.9);
-    b.addEventListener('click', () => toggleAcc(a));
-    accBtns.appendChild(b);
-  });
-  const db = document.createElement('button');
-  db.className = 'ib'; db.id = 'dotBtn';
-  db.title = 'Dot, punctus (.)';
-  db.setAttribute('aria-label', 'Dot (punctus)');
-  db.innerHTML = '<svg viewBox="-1 -1 2 2" aria-hidden="true"><circle r="0.3"/></svg>';
-  db.addEventListener('click', toggleDot);
-  accBtns.appendChild(db);
+  NoteInput.build($('#editBar'), {what: 'melody', whole: 'the whole cantus firmus'});
+  NoteInput.fill(CFA, iconSVG);
 }
 function targetIndex(){
   if (ui.sel !== null) return ui.sel;
@@ -1245,126 +1184,39 @@ function targetIndex(){
 }
 function setPressed(el, on){ el.setAttribute('aria-pressed', on ? 'true' : 'false'); }
 function syncTools(){
-  const sel = ui.sel !== null ? doc.notes[ui.sel] : null;
-  const shownDur = sel ? sel.d : ui.inDur;
-  document.querySelectorAll('#durBtns button').forEach(b => setPressed(b, b.dataset.d === shownDur));
-  $('#durLabel').textContent = sel ? `Note value: ${DUR[shownDur].name.toLowerCase()}, selected`
-                                   : `Note value: ${DUR[shownDur].name.toLowerCase()}`;
-  const sb = document.querySelector('#durBtns button[data-d="' + shownDur + '"]');
-  if (sb) $('#durSum').innerHTML = sb.innerHTML + `<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg>`;
-  const shownRest = sel ? sel.r : ui.inRest;
-  setPressed($('#restBtn'), shownRest);
-  const ti = targetIndex(), t = ti !== null ? doc.notes[ti] : null;
-  document.querySelectorAll('#accBtns button').forEach(b => {
-    setPressed(b, !!t && !t.r && t.a === b.dataset.a);
-    b.disabled = !t || t.r;
-  });
-  setPressed($('#dotBtn'), !!t && !t.r && !!t.p);
-  $('#dotBtn').disabled = !t || t.r;
-  $('#stepUp').disabled = $('#stepDown').disabled = !t || t.r;
-  $('#del').disabled = !t;
-  $('#selPrev').disabled = $('#selNext').disabled = !doc.notes.length;
-  $('#undo').disabled = !undoStack.length;
-  $('#redo').disabled = !redoStack.length;
-  const n = doc.notes;
-  const dbl = $('#dbl'), hlv = $('#hlv');
-  dbl.disabled = !n.length || n.some(x => x.d === 'Mx');
-  hlv.disabled = !n.length || n.some(x => x.d === 'F');
-  dbl.title = n.some(x => x.d === 'Mx') ? 'A maxima has no larger value, so nothing can be doubled'
-                                        : 'Doubles every note and rest: brevis becomes longa, and so on';
-  hlv.title = n.some(x => x.d === 'F') ? 'A fusa is the smallest value here, so nothing can be halved'
-                                       : 'Halves every note and rest: brevis becomes semibrevis, and so on';
-  $('#clear').disabled = !n.length;
-  const pn = n.filter(x => !x.r);
-  $('#octdn').disabled = !pn.length || pn.some(x => x.s - 7 < STEP_MIN);
-  $('#octup').disabled = !pn.length || pn.some(x => x.s + 7 > STEP_MAX);
-  $('#tonup').disabled = tonePlan(1) === null;
-  $('#tondn').disabled = tonePlan(-1) === null;
-  $('#advGo').disabled = !pn.length;
+  NoteInput.sync(CFA);
+  $('#clear').disabled = !doc.notes.length;
 }
-/* Diatonic transposition: the final moves to the next (or previous) of C D E F G A Bb, which is a tone or a
-   semitone. Every note moves one step on the staff, and the sharps and flats needed to keep the intervals
-   exact go on the individual notes, never into a signature. */
-const KEYS = [0, 2, 4, 5, 7, 9, 10];
-const midiOf = n => 12 * (Math.floor(n.s / 7) + 1) + SEMI[mod7(n.s)] + alterOf(n);
-function tonePlan(dir){
-  const pn = doc.notes.filter(x => !x.r);
-  if (!pn.length) return null;
-  const pc = ((midiOf(pn[pn.length - 1]) % 12) + 12) % 12;
-  let semis = 0;
-  for (let k = 1; k <= 12; k++) { if (KEYS.includes((((pc + dir * k) % 12) + 12) % 12)) { semis = dir * k; break; } }
-  if (!semis || pn.some(x => x.s + dir < STEP_MIN || x.s + dir > STEP_MAX)) return null;
-  return semis;
-}
-function transposeTone(dir){
-  const semis = tonePlan(dir);
-  if (semis === null) return;
-  mutate(() => {
-    doc.notes.forEach(x => {
-      if (x.r) return;
-      const target = midiOf(x) + semis;
-      x.s = x.s + dir;
-      const nat = 12 * (Math.floor(x.s / 7) + 1) + SEMI[mod7(x.s)];
-      const want = Math.max(-1, Math.min(1, target - nat));
-      const sig = (doc.bflat && mod7(x.s) === 6) ? -1 : 0;
-      x.a = want === sig ? '' : (want < 0 ? 'b' : want > 0 ? '#' : 'n');
-    });
-  });
-}
-/* Advanced transposition. With the intervallic structure respected, every note moves by exactly the interval:
-   the staff steps of its name and the semitones of its quality, with a sharp, flat or natural on the notes
-   that need one (D minor up a fourth is G minor). Without, every note moves the same number of steps along
-   the scale and loses its own sharps and flats (D dorian up a second is E phrygian). */
-/* the interval: its number (how many steps up the staff) and its quality (how many semitones, counted from the
-   major or perfect one of that number). A minor fifth, as some call it, is the diminished fifth. */
-const IV_NUM = ['unison', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'octave'];
-const IV_BASE = [0, 2, 4, 5, 7, 9, 11, 12];
-const IV_Q = {d: 'diminished', m: 'minor', M: 'major', P: 'perfect', A: 'augmented'};
-const ivPerfect = n => n === 0 || n === 3 || n === 4 || n === 7;
-const ivQualities = n => n === 0 ? ['A'] : ivPerfect(n) ? ['d', 'P', 'A'] : ['d', 'm', 'M', 'A'];
-const ivSemis = (n, q) => IV_BASE[n] + ({d: ivPerfect(n) ? -1 : -2, m: -1, M: 0, P: 0, A: 1})[q];
-const adv = {dir: 1, n: 3, q: 'P', exact: true};
-function fillAdvIntervals(){
-  const N = $('#advN'), Q = $('#advQ');
-  if (!adv.exact && adv.n === 0) adv.n = 1;
-  N.innerHTML = IV_NUM.map((w, i) => i === 0 && !adv.exact ? '' : `<option value="${i}">${w}</option>`).join('');
-  N.value = String(adv.n);
-  const qs = ivQualities(adv.n);
-  if (!qs.includes(adv.q)) { const alt = ({M: 'P', m: 'P', P: 'M'})[adv.q]; adv.q = qs.includes(alt) ? alt : qs.includes('P') ? 'P' : qs.includes('M') ? 'M' : qs[0]; }
-  Q.innerHTML = qs.map(q => `<option value="${q}">${IV_Q[q]}</option>`).join('');
-  Q.value = adv.q;
-  Q.hidden = !adv.exact;
-}
-/* the sharp, flat or natural that makes the note at step x.s sound `target`; when that would take a double sharp
-   or flat, the neighbouring letter is used instead (F double sharp is written G) */
-function spellAs(x, target){
-  for (const ds of [0, 1, -1]) {
-    const s = x.s + ds, want = target - (12 * (Math.floor(s / 7) + 1) + SEMI[mod7(s)]);
-    if (Math.abs(want) > 1) continue;
+/* what the shared note-input tools (shared/note-input.js) need from this app */
+const CFA = {
+  edit: () => ui.edit,
+  state(){
+    const sel = ui.sel !== null ? doc.notes[ui.sel] : null, ti = targetIndex(), t = ti !== null ? doc.notes[ti] : null;
+    return {selected: !!sel, dur: sel ? sel.d : ui.inDur, rest: sel ? sel.r : ui.inRest, target: t && {r: t.r, a: t.a, p: t.p},
+      canUndo: undoStack.length > 0, canRedo: redoStack.length > 0, hasNotes: doc.notes.length > 0, durs: doc.notes.map(n => n.d)};
+  },
+  setDur: k => setDur(k), setRestMode: on => setRestMode(on), toggleAcc: a => toggleAcc(a), toggleDot: () => toggleDot(),
+  stepPitch: d => stepPitch(d), moveSel: d => moveSel(d), deleteTarget: () => deleteTarget(),
+  typeNote: L => typeNote(L), typeRest: () => typeRest(), undo: () => undo(), redo: () => redo(),
+  deselect(){ if (ui.sel !== null) { ui.sel = null; render(); } },
+  togglePlay: () => togglePlay(), scaleAll: d => scaleAll(d), shiftOctave: d => shiftOctave(d),
+  mutate: fn => mutate(fn),
+  pitched: () => doc.notes.filter(n => !n.r).map(n => ({n, s: n.s, alter: alterOf(n)})),
+  setPitch(h, s, alter){
     const sig = (doc.bflat && mod7(s) === 6) ? -1 : 0;
-    x.s = s; x.a = want === sig ? '' : (want < 0 ? 'b' : want > 0 ? '#' : 'n');
-    return;
-  }
-}
-function advTranspose(){
-  const steps = adv.n, semis = ivSemis(adv.n, adv.q), dir = adv.dir;
-  const pn = doc.notes.filter(x => !x.r);
-  if (!pn.length) return;
-  if (pn.some(x => x.s + dir * steps < STEP_MIN + 1 || x.s + dir * steps > STEP_MAX - 1)) { toast('That would take the notes out of range.'); return; }
-  mutate(() => {
-    doc.notes.forEach(x => {
-      if (x.r) return;
-      const target = midiOf(x) + dir * semis;
-      x.s += dir * steps;
-      if (adv.exact) spellAs(x, target); else x.a = '';
-    });
-  });
-}
+    h.n.s = s;
+    h.n.a = alter === null || alter === sig ? '' : (alter < 0 ? 'b' : alter > 0 ? '#' : 'n');
+  },
+  range: [STEP_MIN, STEP_MAX],
+  toast: m => toast(m)
+};
+const midiOf = n => 12 * (Math.floor(n.s / 7) + 1) + SEMI[mod7(n.s)] + alterOf(n);
 function shiftOctave(dir){
   mutate(() => { doc.notes.forEach(x => { if (!x.r) x.s = clampStep(x.s + 7 * dir); }); });
 }
 function syncEdit(){
   const b = $('#editBtn'); if (b) b.setAttribute('aria-pressed', ui.edit ? 'true' : 'false');
+  const eb = $('#editBar'); if (eb) eb.hidden = !ui.edit;
   scoreEl.style.cursor = '';
 }
 function syncLines(){
@@ -1671,39 +1523,7 @@ scoreEl.addEventListener('blur', () => { if (!drag) render(); });
 /* ------------------------------------------------------------------ */
 /* Keyboard                                                            */
 /* ------------------------------------------------------------------ */
-/* a focused button would otherwise also "click" on the space bar's release */
-document.addEventListener('keyup', e => {
-  const t = e.target, tag = t.tagName;
-  if (e.key === ' ' && (tag === 'BUTTON' || tag === 'SUMMARY')) e.preventDefault();
-});
-document.addEventListener('keydown', e => {
-  const t = e.target, tag = t.tagName;
-  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || t.isContentEditable) return;
-  const mod = e.ctrlKey || e.metaKey, k = e.key;
-  if (mod && (k === 'z' || k === 'Z')) { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
-  if (mod && (k === 'y' || k === 'Y')) { e.preventDefault(); redo(); return; }
-  if (k === 'ArrowUp' || k === 'ArrowDown') {
-    e.preventDefault();
-    const dir = k === 'ArrowUp' ? 1 : -1;
-    stepPitch(dir * (e.shiftKey || mod ? 7 : 1));
-    return;
-  }
-  if (mod || e.altKey) return;
-  if (k === ' ') {
-    e.preventDefault(); togglePlay(); return;
-  }
-  if (tag === 'BUTTON' && k === 'Enter') return;
-  if (/^[a-gA-G]$/.test(k)) { e.preventDefault(); typeNote(k.toUpperCase()); return; }
-  if (k === 'r' || k === 'R') { e.preventDefault(); typeRest(); return; }
-  if (/^[1-7]$/.test(k)) { e.preventDefault(); setDur(DKEYS[Number(k) - 1]); return; }
-  if (k === 'ArrowLeft' || k === 'ArrowRight') { e.preventDefault(); moveSel(k === 'ArrowLeft' ? -1 : 1); return; }
-  if (k === 'Backspace' || k === 'Delete') { e.preventDefault(); deleteTarget(); return; }
-  if (k === 'Escape') { if (ui.sel !== null) { ui.sel = null; render(); } return; }
-  if (k === '-' || k === '_') { e.preventDefault(); toggleAcc('b'); return; }
-  if (k === '=' || k === '+' || k === '#') { e.preventDefault(); toggleAcc('#'); return; }
-  if (k === 'n' || k === 'N') { e.preventDefault(); toggleAcc('n'); return; }
-  if (k === '.') { e.preventDefault(); toggleDot(); return; }
-});
+/* the keys for note input are in shared/note-input.js */
 
 /* ------------------------------------------------------------------ */
 /* Sound                                                               */
@@ -2838,31 +2658,8 @@ function takeHandoff(){
   toast(`${doc.title || 'The voice'} came over from ChoirBook${notes.length ? ' (' + notes.join('; ') + ')' : ''}. Undo brings back what you had.`);
 }
 function wire(){
-  $('#restBtn').addEventListener('click', () => setRestMode(!(ui.sel !== null ? doc.notes[ui.sel].r : ui.inRest)));
-  $('#stepUp').addEventListener('click', () => stepPitch(1));
-  $('#stepDown').addEventListener('click', () => stepPitch(-1));
-  $('#selPrev').addEventListener('click', () => moveSel(-1));
-  $('#selNext').addEventListener('click', () => moveSel(1));
-  $('#del').addEventListener('click', deleteTarget);
-  $('#undo').addEventListener('click', undo);
+  NoteInput.wire(CFA);
   $('#editBtn').addEventListener('click', () => { ui.edit = !ui.edit; ui.hover = null; cancelTouch(); syncEdit(); render(); });
-  $('#redo').addEventListener('click', redo);
-  $('#dbl').addEventListener('click', () => scaleAll(-1));
-  $('#hlv').addEventListener('click', () => scaleAll(1));
-  $('#octdn').addEventListener('click', () => shiftOctave(-1));
-  $('#octup').addEventListener('click', () => shiftOctave(1));
-  $('#tonup').addEventListener('click', () => transposeTone(1));
-  $('#tondn').addEventListener('click', () => transposeTone(-1));
-  fillAdvIntervals();
-  $('#advBtn').addEventListener('click', () => { const t = $('#advT'); t.hidden = !t.hidden; $('#advBtn').setAttribute('aria-expanded', t.hidden ? 'false' : 'true'); });
-  document.querySelectorAll('#advT [data-dir]').forEach(b => b.addEventListener('click', () => {
-    adv.dir = Number(b.dataset.dir);
-    document.querySelectorAll('#advT [data-dir]').forEach(o => setPressed(o, o === b));
-  }));
-  $('#advN').addEventListener('change', e => { const was = adv.n; adv.n = Number(e.target.value); if (was === 0) adv.q = 'M'; fillAdvIntervals(); });
-  $('#advQ').addEventListener('change', e => { adv.q = e.target.value; });
-  $('#advExact').addEventListener('change', e => { adv.exact = e.target.checked; fillAdvIntervals(); });
-  $('#advGo').addEventListener('click', advTranspose);
   $('#clear').addEventListener('click', () => {
     mutate(() => { doc.notes = []; ui.sel = null; ui.caret = 0; });
     toast('All notes cleared. Undo brings them back.');
@@ -2924,18 +2721,7 @@ syncSettings();
 wire();
 render();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
-/* inside the website's frame: tell the page how tall the app is, so the page scrolls and the frame doesn't */
-try {
-  if (window.parent !== window && window.ResizeObserver) {
-    let last = 0;
-    const post = () => {
-      const h = Math.ceil(Math.max(document.documentElement.scrollHeight, document.body.getBoundingClientRect().bottom + window.scrollY));
-      if (h !== last) { last = h; parent.postMessage({cantusFirmusHeight: h}, '*'); }
-    };
-    new ResizeObserver(post).observe(document.body); new ResizeObserver(post).observe(document.documentElement); post();
-    setInterval(post, 400);     /* menus that open below the page's end */
-  }
-} catch (e) {}
+frameHeight('cantusFirmusHeight');   /* shared/frame-height.js */
 })();
 </script>
 </body>

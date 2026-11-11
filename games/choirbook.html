@@ -519,6 +519,7 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 .selinfo{color:var(--muted);font-style:italic;font-size:16px}
 #pages g.sel use,#pages g.sel .ink{fill:var(--accent)}
 #pages g.sel .ledger{stroke:var(--accent)}
+#pages .caret{fill:var(--accent);opacity:.75;pointer-events:none}
 #pages g[class^="n"]{cursor:pointer}
 #pages .hit{fill:transparent}
 .viewwrap{position:relative}
@@ -653,34 +654,7 @@ body.editing #pages .stafhit{cursor:crosshair}
       </div>
       <input type="file" id="fileIn" accept=".krn,.kern,.txt" hidden>
     </div>
-    <div class="bar editbar" id="editBar" hidden>
-      <div class="podg">
-        <button class="ib" id="undoBtn" aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5V13.2c4.6-.4 7.4.6 9.6 4.3-.5-5.2-3.6-8.6-9.6-9.2Z"/></svg></button>
-        <button class="ib" id="redoBtn" aria-label="Redo" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5v-3.8c-4.6-.4-7.4.6-9.6 4.3.5-5.2 3.6-8.6 9.6-9.2Z"/></svg></button>
-        <button class="ib needsel" id="delBtn" aria-label="Delete the selected note" title="Delete the selected note (Delete)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 4h7l.8 1.5H20V7.5H4V5.5h3.7ZM6 9h12l-.9 11H6.9Z"/></svg></button>
-      </div>
-      <div class="podg">
-        <button class="ib needsel" id="selPrev" aria-label="Previous note" title="Previous note (Left arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12 17 6.2Z"/></svg></button>
-        <button class="ib needsel" id="stepUp" aria-label="A step up" title="A step up (Up arrow; with Shift an octave)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 15.4 12 8l7.4 7.4-1.6 1.6L12 11.2 6.2 17Z"/></svg></button>
-        <button class="ib needsel" id="stepDown" aria-label="A step down" title="A step down (Down arrow; with Shift an octave)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 8.6 12 16l7.4-7.4L17.8 7 12 12.8 6.2 7Z"/></svg></button>
-        <button class="ib needsel" id="selNext" aria-label="Next note" title="Next note (Right arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button>
-      </div>
-      <div class="podg" id="valBtns" role="group" aria-label="Note value"></div>
-      <div class="podg">
-        <button class="ib needsel" id="restBtn" aria-pressed="false" aria-label="Rest" title="Turn the note into a rest, or the rest into a note"></button>
-        <button class="ib needsel" id="dotBtn" aria-pressed="false" aria-label="Dot" title="Dot (.)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/></svg></button>
-      </div>
-      <div class="podg" id="accBtns" role="group" aria-label="Accidental"></div>
-      <div class="podg"><div class="pop" id="popXform">
-        <button class="tb popbtn needsel" aria-haspopup="true" aria-expanded="false">Transform voice<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-        <div class="popbody"><div class="btns col" id="xformList">
-          <button class="tb" data-x="octup">Octave up</button><button class="tb" data-x="octdn">Octave down</button>
-          <button class="tb" data-x="tonup">Step up</button><button class="tb" data-x="tondn">Step down</button>
-          <button class="tb" data-x="dbl">Double all values</button><button class="tb" data-x="hlv">Halve all values</button>
-        </div></div>
-      </div></div>
-      <span class="selinfo" id="selInfo"></span>
-    </div>
+    <div class="bar editbar" id="editBar" hidden></div>
   </section>
 
   <div class="markbar" id="markBar" hidden><span id="markTxt"></span><button id="markClear">Clear marking</button></div>
@@ -769,6 +743,8 @@ body.editing #pages .stafhit{cursor:crosshair}
   <div id="toast" role="status" aria-live="polite"></div>
 </main>
 <script src="shared/organ.js?v=2"></script>
+<script src="shared/note-input.js?v=1"></script>
+<script src="shared/frame-height.js?v=1"></script>
 <script>
 (function(){
 'use strict';
@@ -1207,7 +1183,8 @@ function pushSplit(out, base, w, T, P, tieLast, p = 1){
 /* clef for a voice: as encoded, or a mensural C/F clef that keeps the range on the staff */
 function chooseClef(v, mode){
   if (mode === 'modern') return KERN_CLEF[v.kclef] || 'treble';
-  const steps = v.events.filter(e => !e.rest).map(e => e.step);
+  /* tied continuations don't count, so a clef doesn't change because an edit split notes at the barlines */
+  const steps = v.events.filter(e => !e.rest && !e.tieEnd && !e.tieMid).map(e => e.step);
   if (!steps.length) return 'c3';
   let best = null, bestCost = Infinity;
   MENS_CLEFS.forEach((k, i) => {
@@ -1949,7 +1926,7 @@ function render(){
   viewerEl.classList.toggle('frame', framed);
   const widest = Math.max(0, ...[...pagesEl.children].map(c => c.offsetWidth || 0));
   viewerEl.style.width = framed && widest ? (widest + 24) + 'px' : '';
-  if (typeof showSel === 'function' && ed.sel) showSel();
+  if (typeof showSel === 'function' && (ed.sel || ed.ins)) showSel();
   applyMark();
   if (!play) { handTop = -1; $('#handBox').style.top = ''; $('#pendBox').style.top = ''; }
   syncNav();
@@ -2542,6 +2519,8 @@ libEl.addEventListener('click', e => {
   setLib(false); mark = null;
   loadPiece(b.dataset.p).then(() => { if (!b.dataset.p.startsWith('mine:')) setAddress(b.dataset.p); }).catch(err => { pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; });
 });
+/* the note-input tools (shared/note-input.js, the same as CantusFirmus) go in before the pop-overs are wired */
+NoteInput.build($('#editBar'), {what: 'voice', whole: 'the whole voice'});
 /* pop-overs: hover, or click to keep open */
 function closePops(except){ document.querySelectorAll('.pop.open').forEach(p => { if (p !== except) { p.classList.remove('open'); p.querySelector('button').setAttribute('aria-expanded', 'false'); } }); }
 document.querySelectorAll('.pop > button').forEach(b => b.addEventListener('click', () => {
@@ -2552,7 +2531,6 @@ document.querySelectorAll('.pop > button').forEach(b => b.addEventListener('clic
 document.addEventListener('click', e => { if (!e.target.closest('.pop')) closePops(); if (!e.target.closest('.libwrap')) { if (!libEl.hidden) setLib(false); } });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closePops(); setLib(false); }
-  if (e.key === ' ' && !/INPUT|SELECT|BUTTON|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); if (play) stopPlay(); else startPlay(); }
 });
 /* open a file from the computer, or drop one on the page */
 $('#openBtn').addEventListener('click', () => $('#fileIn').click());
@@ -2689,7 +2667,9 @@ function writeKern(P){
 /* ------------------------------------------------------------------ */
 /* Editing                                                             */
 /* ------------------------------------------------------------------ */
-const ed = {on: false, sel: null, undo: [], redo: [], val: 'S'};   /* sel: {vi, ei} */
+/* As in CantusFirmus: after a note is entered nothing stays selected; the cursor (ins) moves on to where the next
+   note goes, and the arrows, accidentals, dot and Delete act on the selected note or else on the note just entered. */
+const ed = {on: false, sel: null, ins: null, inRest: false, undo: [], redo: [], val: 'S'};   /* sel, ins: {vi, ei}; val: the value to enter */
 const EKEY = k => 'choirbook:edit:' + k;
 const VALS = [['Mx', 8], ['L', 4], ['B', 2], ['S', 1], ['M', 0.5], ['Sm', 0.25], ['F', 0.125]];
 function selSym(){
@@ -2714,13 +2694,14 @@ function applyText(text){
   else if (!ed.warned) { ed.warned = true; toast('Changes to this piece are not kept once you leave it. Export, Save to My scores keeps a copy.'); }
   if (pieceKey && pieceKey.startsWith('mine:')) { const all = mineAll(); if (all[pieceKey]) { all[pieceKey].title = piece.title; all[pieceKey].at = Date.now(); mineSave(all); } }
   if (sel) { const v = piece.voices[sel.vi]; if (!v || sel.ei >= v.events.length) ed.sel = v && v.events.length ? {vi: sel.vi, ei: v.events.length - 1} : null; }
+  if (ed.ins) { const v = piece.voices[ed.ins.vi]; if (!v) ed.ins = null; else ed.ins.ei = Math.min(ed.ins.ei, v.events.length); }
   syncEdit(); syncUI(); render();
 }
 function implied(v, step, t){
   const k = keyAt(v, t), L = LETTERS[((step % 7) + 7) % 7];
   return k[L] ? k[L] : null;
 }
-function curVoice(){ return ed.sel ? piece.voices[ed.sel.vi] : null; }
+function curVoice(){ return !piece ? null : ed.sel ? piece.voices[ed.sel.vi] : ed.ins ? piece.voices[ed.ins.vi] || null : null; }
 function srcOf(){ const s = selSym(); return s ? s.src : ed.sel ? [ed.sel.ei] : []; }
 /* written value of the selection under its sign, for the value buttons */
 function propAt(v, t){ return mensInfo(metAt(v, t)).p; }
@@ -2729,9 +2710,9 @@ function insertEvent(vi, at, step, isRest){
   const v = piece.voices[vi]; if (!v) return;
   const val = VALS.find(x => x[0] === ed.val)[1];
   const t = at < v.events.length ? v.events[at].t : v.end;
+  const alt0 = isRest ? null : implied(v, step, t);
   commit(() => {
-    const e = {d: rt(val / propAt(v, t)), rest: !!isRest, step, alt: null, ed: false, syl: [], t};
-    if (!e.rest) e.alt = implied(v, step, t);
+    const e = {d: rt(val / propAt(v, t)), rest: !!isRest, step, alt: alt0, ed: false, syl: [], t};
     v.events.splice(at, 0, e);
     for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > at || (m.ei === at && at > 0)) m.ei++;
     if (!e.rest) {
@@ -2745,8 +2726,8 @@ function insertEvent(vi, at, step, isRest){
       }
     }
   });
-  ed.sel = {vi, ei: at}; render(); syncEdit();
-  if (!isRest && st.audition) { const s = selSym(); if (s) Organ.audition(midiOf(s)); }
+  ed.sel = null; ed.ins = {vi, ei: at + 1}; render(); syncEdit();
+  if (!isRest) hear(step, alt0);
 }
 const OPS = {
   step(dir){
@@ -2879,8 +2860,9 @@ function undo(){ if (!ed.undo.length) return; ed.redo.push(piece.text || writeKe
 function redo(){ if (!ed.redo.length) return; ed.undo.push(piece.text || writeKern(piece)); applyText(ed.redo.pop()); }
 function showSel(scroll){
   document.querySelectorAll('#pages g.sel').forEach(g => g.classList.remove('sel'));
+  document.querySelectorAll('#pages .caret').forEach(c => c.remove());
   const s = selSym();
-  if (!s) { syncEdit(); return; }
+  if (!s) { if (ed.on && ed.ins) drawCaret(scroll); syncEdit(); return; }
   let first = null;
   piece.voices[ed.sel.vi].syms.filter(q => q.src && q.src[0] === s.src[0]).forEach(q => document.querySelectorAll('#pages g.' + q.id).forEach(g => { g.classList.add('sel'); first = first || g; }));
   if (scroll && first) bringIntoView(first);
@@ -2893,7 +2875,8 @@ pagesEl.addEventListener('click', e => {
   const id = g.classList[0], m = id.match(/^n(\d+)-(\d+)$/);
   if (!m) return;
   const s = piece.voices[+m[1]].syms[+m[2]];
-  ed.sel = {vi: +m[1], ei: s.src[0]};
+  ed.sel = {vi: +m[1], ei: s.src[0]}; ed.ins = {vi: +m[1], ei: s.src[s.src.length - 1] + 1};
+  if (!s.rest) hear(s.step, s.alt);
   showSel();
 });
 /* the clef menu, from a click on a clef in the score */
@@ -2961,12 +2944,14 @@ let ghostEl = null;
 function clearGhost(){ if (ghostEl) { ghostEl.remove(); ghostEl = null; } }
 pagesEl.addEventListener('pointermove', e => {
   if (!ed.on || e.pointerType !== 'mouse' || !piece) { clearGhost(); return; }
+  const on = noteAt(e);
+  if (on && !on.s.rest) { clearGhost(); return; }   /* over a note: it is clicked, dragged or right-clicked */
   const rect = stafFor(e.target);
   if (!rect) { clearGhost(); return; }
   const tg = staffTarget(rect, e); if (!tg) { clearGhost(); return; }
-  const g = ed.val, w = gw(g), x = tg.x - w / 2, y = tg.top + 4 - tg.pos * 0.5;
+  const g = ed.val, w = ed.inRest ? 0.42 : gw(g), x = tg.x - w / 2, y = tg.top + 4 - tg.pos * 0.5;
   const flip = (STEMMED[g] && tg.pos >= 7) || (TAILED[g] && tg.pos <= -1);
-  let html = ledgers(tg.pos, x, w, tg.top) + (flip ? useT(g, x, y, 1, -1) : use(g, x, y));
+  let html = ed.inRest ? restSvg({g, glyph: SHAPE_REST[g]}, tg.x, tg.top) : ledgers(tg.pos, x, w, tg.top) + (flip ? useT(g, x, y, 1, -1) : use(g, x, y));
   /* past the end of the music: a faint piece of staff for the note to stand on */
   if (tg.x > tg.end) for (let q = 0; q < 5; q++) html += `<line class="ledger" x1="${f(tg.end)}" x2="${f(x + w + 1)}" y1="${f(tg.top + q)}" y2="${f(tg.top + q)}" stroke-width="0.1" opacity="0.5"/>`;
   if (!ghostEl || ghostEl.parentNode !== tg.g) { clearGhost(); ghostEl = document.createElementNS('http://www.w3.org/2000/svg', 'g'); ghostEl.setAttribute('class', 'ghost'); tg.g.appendChild(ghostEl); }
@@ -2977,46 +2962,237 @@ pagesEl.addEventListener('pointerleave', clearGhost);
 pagesEl.addEventListener('click', e => {
   const ch = e.target.closest && e.target.closest('.clefhit');
   if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e); return; }
-  const rect = ed.on ? stafFor(e.target) : null;
+  if (ed.on && typeof noteAt === 'function') {
+    const n = noteAt(e);
+    if (n && (!n.s.rest || e.shiftKey)) {
+      e.stopImmediatePropagation();
+      ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1};
+      if (!n.s.rest) hear(n.s.step, n.s.alt);
+      showSel(); return;
+    }
+  }
+  const rect = ed.on && !e.shiftKey ? stafFor(e.target) : null;
   if (rect) {
     e.stopImmediatePropagation();
     const tg = staffTarget(rect, e); if (!tg) return;
     const {at} = eventIndexFor(tg);
     clearGhost();
-    insertEvent(tg.vi, at, tg.step, false);
+    insertEvent(tg.vi, at, tg.step, ed.inRest);
   }
 }, true);
+const STEP_MIN = 7, STEP_MAX = 55;
+const clampStep = s => Math.max(STEP_MIN, Math.min(STEP_MAX, Math.round(s)));
+const ACC_ALT = {b: -1, n: 0, '#': 1}, ACC_OF = {fl: 'b', na: 'n', sh: '#'};
+const valKey = s => VALS.some(x => x[0] === s.g) ? s.g : 'S';
+const accOf = s => ACC_OF[s.acc] || ACC_OF[s.edAcc] || '';
+function hear(step, alt){ if (st.audition !== false && !play && step !== null && step !== undefined) Organ.audition(midiOf({step, alt})); }
+function symAt(vi, ei){
+  const v = piece && piece.voices[vi];
+  return v && v.syms ? v.syms.find(q => q.src && q.src.includes(ei)) || null : null;
+}
+/* the note the arrows, accidentals, dot and Delete act on: the selected one, or else the one just entered */
+function targetSym(){
+  if (ed.sel) return selSym();
+  if (ed.ins && ed.ins.ei > 0) return symAt(ed.ins.vi, ed.ins.ei - 1);
+  return null;
+}
+function insertionIndex(v){
+  const s = selSym();
+  if (s) return s.src[s.src.length - 1] + 1;
+  return ed.ins ? Math.min(ed.ins.ei, v.events.length) : v.events.length;
+}
+function refStepBefore(v, idx){
+  for (let i = Math.min(idx, v.events.length) - 1; i >= 0; i--) if (!v.events[i].rest) return v.events[i].step;
+  for (let i = idx; i < v.events.length; i++) if (!v.events[i].rest) return v.events[i].step;
+  return CLEFS[v.clef || 'c3'].bottom + 4;
+}
+/* a pitch change keeps a written sharp or flat, and follows the signature otherwise */
+function moveStep(v, e, s){
+  const followed = (e.alt || 0) === (implied(v, e.step, e.t) || 0);
+  e.step = s; e.ed = false;
+  if (followed) e.alt = implied(v, s, e.t);
+}
+function toRestOrRemove(vi, s){
+  const v = piece.voices[vi];
+  if (s.rest) commit(() => { dropEvents(v, s.src); ed.sel = null; ed.ins = {vi, ei: s.src[0]}; });
+  else commit(() => { for (const i of s.src) { const e = v.events[i]; e.rest = true; e.tieStart = e.tieEnd = e.tieMid = false; } ed.sel = null; ed.ins = {vi, ei: s.src[s.src.length - 1] + 1}; });
+}
+/* what the shared note-input tools (shared/note-input.js) need from this app */
+const CBA = {
+  edit: () => ed.on,
+  state(){
+    const s = selSym(), t = targetSym(), v = curVoice();
+    return {selected: !!s, dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
+      target: t && {r: t.rest, a: accOf(t), p: t.dot}, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
+      hasNotes: !!(piece && piece.voices.length), durs: v && v.syms ? v.syms.map(valKey) : []};
+  },
+  setDur(k){
+    ed.val = k;
+    if (selSym()) OPS.value(k);
+    else { ed.inRest = false; syncEdit(); }
+  },
+  setRestMode(rest){
+    ed.inRest = rest;
+    const s = selSym();
+    if (s && s.rest !== rest) OPS.rest(); else syncEdit();
+  },
+  toggleAcc(a){
+    const t = targetSym(), v = curVoice(); if (!t || t.rest) return;
+    const off = accOf(t) === a;
+    commit(() => { for (const i of t.src) { const e = v.events[i]; e.alt = off ? implied(v, e.step, e.t) : ACC_ALT[a]; e.ed = false; } });
+    const e = curVoice().events[t.src[0]]; if (e) hear(e.step, e.alt);
+  },
+  toggleDot(){
+    const t = targetSym(), v = curVoice(); if (!t || t.rest) return;
+    commit(() => {
+      const e = v.events[t.src[0]];
+      const total = t.src.reduce((a, i) => a + v.events[i].d, 0);
+      e.d = rt(t.dot ? total / 1.5 : total * 1.5); e.tieStart = e.tieEnd = e.tieMid = false;
+      dropEvents(v, t.src.slice(1));
+    });
+  },
+  stepPitch(d){
+    const t = targetSym(), v = curVoice(); if (!t || t.rest) return;
+    commit(() => { for (const i of t.src) { const e = v.events[i]; moveStep(v, e, clampStep(e.step + d)); } });
+    const e = curVoice().events[t.src[0]]; if (e) hear(e.step, e.alt);
+  },
+  moveSel(dir){
+    if (!piece) return;
+    let vi = ed.sel ? ed.sel.vi : ed.ins ? ed.ins.vi : null;
+    if (vi === null) { const vs = visibleVoices(); if (!vs.length) return; vi = vs[0].idx; }
+    const v = piece.voices[vi], syms = v.syms || [];
+    if (!syms.length) return;
+    const s = selSym();
+    let k;
+    if (s) k = syms.indexOf(s) + dir;
+    else if (ed.ins) {
+      const c = ed.ins.ei;
+      k = dir < 0 ? syms.findIndex(q => q.src.includes(c - 1)) : syms.findIndex(q => q.src[0] >= c);
+      if (k < 0) k = dir < 0 ? 0 : syms.length - 1;
+    } else k = 0;
+    const q = syms[Math.max(0, Math.min(syms.length - 1, k))];
+    ed.sel = {vi, ei: q.src[0]}; ed.ins = {vi, ei: q.src[q.src.length - 1] + 1};
+    if (!q.rest) hear(q.step, q.alt);
+    showSel(true);
+  },
+  deleteTarget(){
+    const t = targetSym(), v = curVoice(); if (!t) return;
+    const vi = v.idx, first = t.src[0];
+    commit(() => { dropEvents(v, t.src); ed.sel = null; ed.ins = {vi, ei: first}; });
+  },
+  typeNote(L){
+    const v = curVoice(); if (!v) return;
+    const idx = insertionIndex(v), ref = refStepBefore(v, idx), li = 'CDEFGAB'.indexOf(L);
+    let best = null;
+    for (let o = 0; o <= 8; o++) {
+      const s = 7 * o + li;
+      if (s < STEP_MIN || s > STEP_MAX) continue;
+      if (best === null || Math.abs(s - ref) < Math.abs(best - ref)) best = s;
+    }
+    ed.inRest = false;
+    insertEvent(v.idx, idx, best, false);
+  },
+  typeRest(){
+    const v = curVoice(); if (!v) return;
+    const idx = insertionIndex(v);
+    insertEvent(v.idx, idx, refStepBefore(v, idx), true);
+  },
+  undo: () => undo(), redo: () => redo(),
+  deselect(){ if (ed.sel) { ed.sel = null; showSel(); } },
+  togglePlay(){ if (play) stopPlay(); else startPlay(); },
+  scaleAll(dir){ const v = curVoice(); if (v) commit(() => { for (const e of v.events) e.d = rt(dir < 0 ? e.d * 2 : e.d / 2); }); },
+  shiftOctave(dir){ const v = curVoice(); if (v) commit(() => { for (const e of v.events) if (!e.rest) e.step = clampStep(e.step + 7 * dir); }); },
+  mutate: fn => commit(fn),
+  pitched(){
+    const v = curVoice();
+    return v ? v.events.filter(e => !e.rest).map(e => ({e, v, s: e.step, alter: e.alt || 0})) : [];
+  },
+  setPitch(h, s, alter){
+    const e = h.e, imp = implied(h.v, s, e.t);
+    e.step = s; e.ed = false;
+    e.alt = alter === null ? imp : alter === 0 && !imp ? null : alter;
+  },
+  range: [STEP_MIN, STEP_MAX],
+  toast: m => toast(m)
+};
+/* the cursor: a thin line after the note just entered (or before the next one) */
+function drawCaret(scroll){
+  if (!piece) return;
+  const {vi, ei} = ed.ins, v = piece.voices[vi];
+  if (!v || !v.syms) return;
+  let k = v.syms.findIndex(q => q.src && q.src.includes(ei - 1)), after = true;
+  if (k < 0) { k = v.syms.findIndex(q => q.src && q.src[0] >= ei); after = false; }
+  if (k < 0) return;
+  document.querySelectorAll('#pages g.n' + vi + '-' + k).forEach((el, n) => {
+    const par = el.parentNode;
+    let r = null;
+    for (const r2 of par.querySelectorAll('rect.stafhit[data-v="' + vi + '"]')) if (r2.dataset.k0 !== '' && +r2.dataset.k0 <= k && k <= +r2.dataset.k1) r = r2;
+    if (!r) return;
+    const bb = el.getBBox(), top = +r.dataset.top;
+    const x = after ? bb.x + bb.width + 0.35 : bb.x - 0.45;
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    c.setAttribute('class', 'caret'); c.setAttribute('x', f(x - 0.07)); c.setAttribute('y', f(top - 1));
+    c.setAttribute('width', '0.14'); c.setAttribute('height', '6');
+    par.appendChild(c);
+    if (scroll && !n) bringIntoView(c);
+  });
+}
+/* with the mouse, as in CantusFirmus: right-click turns a note into a rest and removes a rest; drag a note up or down */
+/* the note under the pointer: in Edit the staff's writing area lies on top, so look underneath it too */
+function noteAt(e){
+  let g = null;
+  for (const el of document.elementsFromPoint(e.clientX, e.clientY)) { const q = el.closest && el.closest('#pages g[class^="n"]'); if (q) { g = q; break; } }
+  const m = g && /^n(\d+)-(\d+)/.exec(g.getAttribute('class') || '');
+  if (!m || !piece) return null;
+  const v = piece.voices[+m[1]], s = v && v.syms[+m[2]];
+  return s && s.src ? {vi: +m[1], s, g} : null;
+}
+pagesEl.addEventListener('contextmenu', e => {
+  if (!ed.on) return;
+  const n = noteAt(e); if (!n) return;
+  e.preventDefault(); clearGhost();
+  toRestOrRemove(n.vi, n.s);
+});
+let noteDrag = null;
+pagesEl.addEventListener('pointerdown', e => {
+  if (!ed.on || e.button !== 0 || e.pointerType !== 'mouse' || e.shiftKey) return;
+  const n = noteAt(e); if (!n || n.s.rest) return;
+  const m = n.g.getScreenCTM(); if (!m) return;
+  noteDrag = {n, y0: new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse()).y, steps: 0, id: e.pointerId};
+});
+pagesEl.addEventListener('pointermove', e => {
+  if (!noteDrag || e.pointerId !== noteDrag.id) return;
+  const m = noteDrag.n.g.getScreenCTM(); if (!m) return;
+  const y = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse()).y, steps = Math.round((noteDrag.y0 - y) / 0.5);
+  if (steps === noteDrag.steps) return;
+  noteDrag.steps = steps; noteDrag.moved = true; clearGhost();
+  document.querySelectorAll('#pages g.' + noteDrag.n.s.id).forEach(g => g.setAttribute('transform', `translate(0 ${f(-steps * 0.5)})`));
+  hear(clampStep(noteDrag.n.s.step + steps), noteDrag.n.s.alt);
+});
+pagesEl.addEventListener('pointerup', () => {
+  if (!noteDrag) return;
+  const d = noteDrag; noteDrag = null;
+  if (!d.moved || !d.steps) return;           /* a plain click: the click handler selects */
+  const {vi, s} = d.n, v = piece.voices[vi];
+  ed.sel = {vi, ei: s.src[0]}; ed.ins = {vi, ei: s.src[s.src.length - 1] + 1};
+  commit(() => { for (const i of s.src) { const ev = v.events[i]; moveStep(v, ev, clampStep(ev.step + d.steps)); } });
+});
+pagesEl.addEventListener('pointercancel', () => { if (noteDrag) { noteDrag = null; render(); } });
+
 function syncEdit(){
   $('#editBtn').setAttribute('aria-pressed', String(ed.on));
   $('#editBar').hidden = !ed.on;
   document.body.classList.toggle('editing', ed.on);
-  const s = selSym();
-  $('#undoBtn').disabled = !ed.undo.length; $('#redoBtn').disabled = !ed.redo.length;
-  const has = !!s;
-  document.querySelectorAll('#editBar .needsel').forEach(b => { b.disabled = !has; });
-  document.querySelectorAll('#valBtns button').forEach(b => b.setAttribute('aria-pressed', String(has ? (!s.rest || true) && s.g === b.dataset.g : b.dataset.g === ed.val)));
-  document.querySelectorAll('#accBtns button').forEach(b => b.setAttribute('aria-pressed', String(!!s && !s.rest && s.alt !== null && s.alt !== undefined && s.alt === +b.dataset.a && (s.acc || s.edAcc) !== null)));
-  $('#dotBtn').setAttribute('aria-pressed', String(!!s && !!s.dot));
-  $('#restBtn').setAttribute('aria-pressed', String(!!s && s.rest));
-  $('#selInfo').textContent = s ? piece.voices[ed.sel.vi].name : '';
+  if (piece) NoteInput.sync(CBA);
 }
-function glyphIcon(k, pad = 0.2){
-  const g = GLY[k], b = g.b, w = b[2] - b[0], h = b[3] - b[1], m = Math.max(w, h);
-  return `<svg viewBox="${b[0] - (m - w) / 2 - pad} ${b[1] - (m - h) / 2 - pad} ${m + 2 * pad} ${m + 2 * pad}" aria-hidden="true"><path d="${g.d}"/></svg>`;
+function glyphIcon(k, minBox){
+  const b = GLY[k].b, cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
+  const box = Math.max(minBox, b[2] - b[0] + 0.5, b[3] - b[1] + 0.5);
+  return `<svg viewBox="${f(cx - box / 2)} ${f(cy - box / 2)} ${f(box)} ${f(box)}" aria-hidden="true"><path d="${GLY[k].d}"/></svg>`;
 }
-$('#valBtns').innerHTML = VALS.map(([g]) => `<button class="ib" data-g="${g}" title="${{Mx:'Maxima',L:'Longa',B:'Brevis',S:'Semibrevis',M:'Minima',Sm:'Semiminima',F:'Fusa'}[g]} (${VALS.findIndex(x => x[0] === g) + 1})">${glyphIcon(g)}</button>`).join('');
-$('#accBtns').innerHTML = [['-1', 'fl', 'Flat (-)'], ['0', 'na', 'Natural (N)'], ['1', 'sh', 'Sharp (=)']].map(([a, g, t]) => `<button class="ib needsel" data-a="${a}" title="${t}">${glyphIcon(g)}</button>`).join('');
-$('#restBtn').innerHTML = glyphIcon('rSm', 0.5);
-$('#editBtn').addEventListener('click', () => { ed.on = !ed.on; syncEdit(); postHeight(); });
-$('#undoBtn').addEventListener('click', undo); $('#redoBtn').addEventListener('click', redo);
-$('#delBtn').addEventListener('click', () => OPS.del());
-$('#selPrev').addEventListener('click', () => OPS.move(-1)); $('#selNext').addEventListener('click', () => OPS.move(1));
-$('#stepUp').addEventListener('click', () => OPS.step(1)); $('#stepDown').addEventListener('click', () => OPS.step(-1));
-$('#valBtns').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (selSym()) OPS.value(b.dataset.g); else { ed.val = b.dataset.g; syncEdit(); } });
-$('#accBtns').addEventListener('click', e => { const b = e.target.closest('button'); if (b) OPS.acc(+b.dataset.a); });
-$('#dotBtn').addEventListener('click', () => OPS.dot());
-$('#restBtn').addEventListener('click', () => OPS.rest());
-$('#xformList').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { OPS.xform(b.dataset.x); closePops(); } });
+NoteInput.fill(CBA, glyphIcon);
+NoteInput.wire(CBA);
+$('#editBtn').addEventListener('click', () => { ed.on = !ed.on; clearGhost(); showSel(); postHeight(); });
 $('#saveBtn').addEventListener('click', () => {
   closePops();
   const text = piece.text || writeKern(piece);
@@ -3034,25 +3210,11 @@ $('#keepBtn').addEventListener('click', () => {
   try { localStorage.setItem(EKEY(id), text); } catch (e) {}
   loadPiece(id).then(() => { ed.undo = undo; ed.redo = redo; syncEdit(); refreshMine(); toast('Saved to My scores. Changes to this copy are kept.'); });
 });
+/* Ctrl+Left / Ctrl+Right move the selection a minim (the other keys are the shared tools') */
 document.addEventListener('keydown', e => {
   if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
   const mod = e.ctrlKey || e.metaKey;
-  if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
-  if (mod && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && ed.on && ed.sel) { e.preventDefault(); OPS.shift(e.key === 'ArrowRight' ? 1 : -1); return; }
-  if (mod) return;
-  if (e.key === 'ArrowLeft' && ed.sel) { e.preventDefault(); OPS.move(-1); return; }
-  if (e.key === 'ArrowRight' && ed.sel) { e.preventDefault(); OPS.move(1); return; }
-  if (!ed.on) return;
-  if (e.key === 'ArrowUp' && ed.sel) { e.preventDefault(); OPS.step(e.shiftKey ? 7 : 1); }
-  else if (e.key === 'ArrowDown' && ed.sel) { e.preventDefault(); OPS.step(e.shiftKey ? -7 : -1); }
-  else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); OPS.del(); }
-  else if (/^[1-7]$/.test(e.key)) { const g = VALS[+e.key - 1][0]; if (selSym()) OPS.value(g); else { ed.val = g; syncEdit(); } }
-  else if (e.key === '-') OPS.acc(-1);
-  else if (e.key === '=') OPS.acc(1);
-  else if (e.key === 'n' || e.key === 'N') OPS.acc(0);
-  else if (e.key === '.') OPS.dot();
-  else if (e.key === 'r' || e.key === 'R') OPS.insert('r');
-  else if (/^[a-gA-G]$/.test(e.key)) OPS.insert(e.key.toLowerCase());
+  if (mod && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && ed.on && ed.sel) { e.preventDefault(); OPS.shift(e.key === 'ArrowRight' ? 1 : -1); }
 });
 syncEdit();
 
@@ -3148,17 +3310,10 @@ function followHand(el){
   $('#handBox').style.top = y + 'px'; $('#pendBox').style.top = y + 'px';
 }
 
-/* tell the site page how tall the app is */
-let lastH = 0;
-function postHeight(){
-  if (!EMBED) return;
-  requestAnimationFrame(() => {
-    let h = document.documentElement.scrollHeight;
-    const pop = document.querySelector('.pop.open .popbody');
-    if (pop) h = Math.max(h, pop.getBoundingClientRect().bottom + window.scrollY + 20);
-    if (h !== lastH) { lastH = h; parent.postMessage({choirbookHeight: h}, '*'); }
-  });
-}
+/* tell the site page how tall the app is (shared/frame-height.js, as in CantusFirmus) */
+var postFrame = null;
+function postHeight(){ if (EMBED && postFrame) requestAnimationFrame(postFrame); }
+postFrame = frameHeight('choirbookHeight');
 let rw = 0, lastW = window.innerWidth;
 window.addEventListener('resize', () => { if (window.innerWidth === lastW) return; lastW = window.innerWidth; clearTimeout(rw); rw = setTimeout(() => { sizeViewer(); render(); }, 150); });
 if (EMBED) try { window.top.addEventListener('resize', () => { clearTimeout(rw); rw = setTimeout(() => { sizeViewer(); postHeight(); }, 150); }); } catch (e) {}
