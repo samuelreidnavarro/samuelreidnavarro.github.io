@@ -1069,7 +1069,6 @@ function restGlyph(d, cx, top){
   const y = top + 2;
   if (d === 'Mx') return use('rL', cx - 0.45, y) + use('rL', cx + 0.26, y);
   const k = REST[d];
-  if (d === 'B' && ui.tempus === 'O') return `<rect class="prest" x="${f(cx - gw(k) / 2)}" y="${f(top + 0.5)}" width="${f(gw(k))}" height="1.5"/>`;
   return use(k, cx - gw(k) / 2, y);
 }
 function mensSign(cx, cy, hov){
@@ -3078,7 +3077,7 @@ function previewSVG(item){
   itemNotes(item).slice(0, 40).forEach(n => {
     if (n.r) {
       const k = REST[n.d], cx = x + 0.6;
-      o += (n.d === 'B' && O) ? `<rect x="${f(cx - gw(k) / 2)}" y="${f(top + 0.5)}" width="${f(gw(k))}" height="1.5" class="prest"/>` : restGlyph(n.d, cx, top);
+      o += restGlyph(n.d, cx, top);
       x += 2.2;
       return;
     }

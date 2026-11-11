@@ -450,14 +450,33 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
 .embedded header.top{display:none}
 .embedded .wrap{padding-top:4px}
 [hidden]{display:none !important}
-.viewer{position:relative;overflow:auto;height:var(--vh,calc(100vh - 200px));min-height:380px;padding:22px 18px 34px;border-radius:6px;
-  background:rgba(42,34,24,.06);box-shadow:inset 0 1px 3px rgba(42,34,24,.12);overscroll-behavior:contain}
+.viewer{position:relative;padding:22px 18px 34px;border-radius:6px;
+  background:rgba(42,34,24,.06);box-shadow:inset 0 1px 3px rgba(42,34,24,.12)}
+/* pages side by side: the row scrolls sideways, the page itself still scrolls up and down */
+.viewer.horiz{overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;overscroll-behavior-x:contain;scrollbar-width:thin;padding:22px 64px 34px}
+.viewer.horiz #pages{flex-direction:row;align-items:flex-start;width:max-content;gap:34px}
+.viewer.horiz #pages>.page,.viewer.horiz #pages>.opening{scroll-snap-align:center}
+.pagenav{position:absolute;top:50%;z-index:4;width:46px;height:46px;min-height:0;padding:0;border-radius:50%;transform:translateY(-50%);
+  background:rgba(42,34,24,.62);color:#FBF4E8;box-shadow:0 6px 16px -6px rgba(0,0,0,.5)}
+.pagenav:hover:not(:disabled){background:var(--accent);color:var(--accent-ink)}
+.pagenav:disabled{opacity:0;pointer-events:none}
+.pagenav svg{width:20px;height:20px;fill:currentColor}
+.pagenav.prev{left:8px}.pagenav.next{right:8px}
+.viewwrap:not(.horiz) .pagenav{display:none}
+@media (max-width:700px){ .viewer.horiz{padding:14px 26px 30px} .pagenav{width:38px;height:38px} .pagenav.prev{left:2px} .pagenav.next{right:2px} }
+/* paper colours other than parchment: flat, without the parchment's browned edges */
+html.flatpaper .page{background-image:none;box-shadow:0 1px 1px rgba(0,0,0,.12),0 14px 32px -14px rgba(0,0,0,.35)}
+html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,0,0,.22),0 1px 1px rgba(0,0,0,.12),0 14px 32px -14px rgba(0,0,0,.35)}
+.swatch.pick{position:relative;overflow:hidden;cursor:pointer}
+.swatch.pick i{background:conic-gradient(#c0392b,#d4a017,#5a8f3a,#2f6f9f,#7a4f9a,#c0392b)}
+.swatch.pick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+.swatch.pick[aria-pressed="true"] i{background:var(--c)}
 #pages{display:flex;flex-direction:column;align-items:center;gap:30px}
 .opening{display:flex;justify-content:center;max-width:100%}
 .opening .page:first-child{border-radius:3px 0 0 3px}
 .opening .page:last-child{border-radius:0 3px 3px 0}
 .opening .page + .page{box-shadow:inset 18px 0 22px -18px rgba(70,46,10,.35),0 1px 1px rgba(60,40,10,.14),0 14px 32px -14px rgba(50,34,8,.42)}
-.page{position:relative;background:#EFE3C7 var(--paper);background-size:512px 512px;color:var(--leaf-ink);border-radius:3px;flex:none;
+.page{position:relative;background:var(--pagebg,#EFE3C7) var(--paper);background-size:512px 512px;color:var(--leaf-ink);border-radius:3px;flex:none;
   box-shadow:0 1px 1px rgba(60,40,10,.14),0 14px 32px -14px rgba(50,34,8,.42),inset 0 0 70px rgba(150,108,40,.13),inset 0 0 0 1px rgba(120,90,40,.16)}
 .page svg{display:block;width:100%;height:100%}
 .pnum{position:absolute;bottom:-23px;left:0;right:0;text-align:center;font-size:13px;color:var(--muted)}
@@ -487,6 +506,7 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
 .voices td{padding:5px 8px;text-align:center;font-size:17px}
 .voices td:first-child{text-align:left;white-space:nowrap;padding-left:4px}
 .staffset .btns .tb{min-width:0;padding:0 11px}
+#popLook .staffset,#popPage .staffset{grid-template-columns:auto minmax(150px,auto)}
 .staffset .lab{color:var(--muted);font-size:16px}
 .swatches{display:flex;gap:6px}
 .swatch{width:var(--h);height:var(--h);min-width:0;padding:0;border-radius:50%;display:grid;place-items:center}
@@ -505,9 +525,9 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
 @media print{
   html,body{background:#fff !important;overflow:visible !important;height:auto !important}
   .wrap{padding:0 !important}
-  header.top,.tools,.transport,.pnum,.msg{display:none !important}
+  header.top,.tools,.transport,.pnum,.msg,.handbox,.pendbox,#countBox,.pagenav{display:none !important}
   .viewer{height:auto !important;overflow:visible !important;padding:0 !important;background:none !important;box-shadow:none !important}
-  #pages{display:block;gap:0}
+  #pages{display:block !important;gap:0;width:auto !important}
   .opening{display:block}
   .page{background:#fff !important;box-shadow:none !important;border-radius:0 !important;break-after:page;page-break-after:always;margin:0}
   .page:last-child{break-after:auto}
@@ -537,6 +557,7 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
         <div class="popbody"><div class="staffset">
           <span class="lab">Size</span><div class="btns" id="paperSeg" role="group" aria-label="Paper size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button></div>
           <span class="lab">Orientation</span><div class="btns" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
+          <span class="lab">Pages</span><div class="btns" id="flowSeg" role="group" aria-label="Pages"><button class="tb" data-v="vertical">Vertical</button><button class="tb" data-v="horizontal">Horizontal</button></div>
         </div></div>
       </div></div>
       <div class="grow">
@@ -587,6 +608,8 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
 
   <div class="viewwrap">
     <section class="viewer" id="viewer" aria-label="Music"><div id="pages"></div></section>
+    <button class="pagenav prev" id="pgPrev" aria-label="Previous page" title="Previous page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12 17 6.2Z"/></svg></button>
+    <button class="pagenav next" id="pgNext" aria-label="Next page" title="Next page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button>
     <div class="handbox" id="handBox" title="The tactus: the hand drops on one beat and lifts on the next" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="handRot"></g></svg></div><div class="handbox pendbox" id="pendBox" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="pendG"><path d="M66 158 H130 L120 142 H76Z" fill="currentColor"/><g id="pendRot"><line x1="98" y1="150" x2="98" y2="-16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="84" y="14" width="28" height="34" rx="4" fill="currentColor"/></g></g></svg></div>
   </div>
 
@@ -627,9 +650,10 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
           <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
           <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Full</button></div>
           <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
+          <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
           <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
-          <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0.05" max="2.5" step="0.05">
-          <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0.2" max="3" step="0.05">
+          <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0" max="2.5" step="0.05">
+          <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0" max="3" step="0.05">
           <span class="lab">Syllable dashes</span><div class="btns" id="dashSeg" role="group" aria-label="Syllable dashes"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <label class="ctl" for="handOp">Hand opacity</label><input type="range" id="handOp" min="0.05" max="1" step="0.05">
@@ -970,6 +994,18 @@ function notate(piece, v, mode){
       evs.push(e);
     }
   } else ev.forEach((e, i) => evs.push(Object.assign({}, e, {src: [i]})));
+  /* real mensural: rests that follow each other are one rest (two breve rests are a long rest, two spaces),
+     except across a change of sign, a new section or a double bar */
+  if (mode === 'real') {
+    for (let i = evs.length - 1; i > 0; i--) {
+      const a = evs[i - 1], b = evs[i];
+      if (!a.rest || !b.rest || a.ferm || !eq(a.t + a.d, b.t)) continue;
+      if (v.mets.some(m => m.t > a.t + EPS && m.t <= b.t + EPS)) continue;
+      if (piece.sections.some(sec => eq(sec.t, b.t)) || piece.bars.some(br => br.type === 'double' && eq(br.t, b.t))) continue;
+      a.d = rt(a.d + b.d); a.src = a.src.concat(b.src); a.ferm = b.ferm;
+      evs.splice(i, 1);
+    }
+  }
   /* segments by mensuration, for the perfection grid */
   let segStart = 0, curSign = undefined;
   let inTup = false;
@@ -1003,8 +1039,10 @@ function notate(piece, v, mode){
       const tab = valueTable(mi.T, mi.P);
       let guard = 0;
       while (r > 0.01 && guard++ < 30) {
-        let pick = tab.find(([g, val]) => val <= r + EPS && g !== 'Mx');
-        if (mi.T === 3 && eq(r, 2 * tab[3][1])) pick = ['B', r];
+        /* breve and long rests stand on the breve grid (a rest is never imperfect: two semibreves of rest in O are two semibreve rests) */
+        const Bv = tab[2][1], posB = ((rt(t - segStart) * mi.p) % Bv + Bv) % Bv;
+        const room = eq(posB, 0) || eq(posB, Bv) ? r : Math.min(r, Bv - posB);
+        let pick = tab.find(([g, val]) => val <= room + EPS && g !== 'Mx');
         /* a rest inside a coloured group counts two thirds of its value */
         const cp = tab.find(([g, val]) => eq(r * 1.5, val));
         if (cp && !tab.some(([g, val]) => eq(r, val))) pick = [cp[0], r];
@@ -1082,13 +1120,14 @@ function chooseClef(v, mode){
 const KEY = 'choirbook:v1';
 const st = {
   piece: PIECES[0], view: 'score', nota: 'real', clefs: 'mens', bars: 'tick', staff: 'red', dashes: 'on', ed: 'on',
-  size: 1.75, hs: 1, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', vis: {}
+  size: 1.75, hs: 1, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
 if (st.bars === 'mstrich') st.bars = 'full';
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
 
 let piece = null;           /* parsed piece */
+let handTop = -1;           /* where the hand stands beside the music, px */
 let pieceKey = null;
 const cache = {};
 
@@ -1165,7 +1204,7 @@ function mensW(sign){
 /* ------------------------------------------------------------------ */
 /* Horizontal layout                                                   */
 /* ------------------------------------------------------------------ */
-const spring = d => 0.3 + (0.8 + 2.3 * Math.pow(Math.max(d, 0.05), 0.6)) * st.hs;
+const spring = d => 0.12 + 0.18 * Math.min(1, st.hs) + (0.8 + 2.3 * Math.pow(Math.max(d, 0.05), 0.6)) * st.hs;
 
 /* columns for a set of voices over [a, b) */
 function columns(vlist, a, b, withLyrics){
@@ -1183,7 +1222,7 @@ function columns(vlist, a, b, withLyrics){
     for (const s of c.items.values()) { left = Math.max(left, s.left); right = Math.max(right, s.right); }
     c.left = left; c.right = right;
     const needBar = c.bar && (barOn || c.bar === 'double');
-    let x = prev ? prev.x + prev.right + left + 0.2 + 0.35 * Math.min(1, st.hs) + (needBar ? 0.9 : 0) : left;
+    let x = prev ? prev.x + prev.right + left + 0.08 + 0.47 * Math.min(1, st.hs) + (needBar ? 0.5 + 0.4 * Math.min(1, st.hs) : 0) : left;
     for (const [v, s] of c.items) {
       if (lastX.has(v)) x = Math.max(x, lastX.get(v) + spring(lastD.get(v)) + (needBar ? 0.5 : 0));
       if (withLyrics(v) && s.text && lastSyl.has(v)) x = Math.max(x, lastSyl.get(v) + s.tw / 2 - s.hw / 2 + 0.25 + 0.3 * Math.min(1, st.hs));
@@ -1475,12 +1514,13 @@ function buildLines(vlist, a, b, W, opts = {}){
 }
 /* vertical room a voice needs in a line */
 function lineRoom(v, line){
-  let lo = -1.2, hi = 5.2;
+  const m = Math.min(1, st.vs), pad = 0.15 + 0.25 * m;
+  let lo = -(0.3 + 0.9 * m), hi = 4.3 + 0.9 * m;
   for (let i = line.from; i < line.to; i++) {
     const s = line.cols[i].items.get(v);
     if (!s) continue;
     const e = extent(s);
-    lo = Math.min(lo, e[0] - 0.4); hi = Math.max(hi, e[1] + 0.4);
+    lo = Math.min(lo, e[0] - pad); hi = Math.max(hi, e[1] + pad);
   }
   const lyr = vis(v.idx).lyr && v.syms.some(s => s.text);
   const lyrY = Math.max(4 + 2.6, hi + 1.5);
@@ -1584,7 +1624,7 @@ function layoutScore(G){
 function paginate(G, lines, vlist, optsFor, sub){
   const pages = [];
   let body = '', y = G.M, first = true;
-  const sysGap = 2.2 * st.vs + 1;
+  const sysGap = 2.2 * st.vs + 0.3 + 0.7 * Math.min(1, st.vs);
   const newPage = () => { pages.push(body); body = ''; y = G.M; };
   if (first) { const tb = titleBlock(G, G.M, G.W - G.M, y, sub); body += tb.svg; y += tb.h; }
   lines.forEach((line, li) => {
@@ -1641,7 +1681,7 @@ function layoutChoir(G){
   };
   const sysPitch = v => {
     const lyr = vis(v.idx).lyr && v.syms.some(s => s.text);
-    return 4 + 2.4 + (lyr ? 3.0 : 0) + 1.6 * st.vs;
+    return 4 + 1.2 + 1.2 * Math.min(1, st.vs) + (lyr ? 3.0 : 0) + 1.6 * st.vs;
   };
   /* region heights per side; the first opening carries the title */
   const tb = titleBlock(G, G.M, G.W - G.M, G.M, null);
@@ -1714,11 +1754,15 @@ function render(){
   const G = pageGeom();
   document.getElementById('pagerule').textContent = `@page{size:${st.paper} ${st.orient};margin:0}`;
   let html = '';
-  const avail = (viewerEl.clientWidth || window.innerWidth) - 40;
+  const horiz = st.flow === 'horizontal';
+  const avail = (viewerEl.clientWidth || window.innerWidth) - (horiz ? (window.innerWidth <= 700 ? 60 : 140) : 40);
   const pxmm = 96 / 25.4;
+  /* side by side, a page (or an opening) fits the height of the window */
+  const availH = Math.max(320, (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) || 700) - 60);
+  const fitH = horiz ? availH / (G.hmm * pxmm) : Infinity;
   if (st.view === 'choir') {
     const pages = layoutChoir(G);
-    const sc = Math.min(1.25, avail / (2 * G.wmm * pxmm));
+    const sc = Math.min(1.25, avail / (2 * G.wmm * pxmm), fitH);
     for (let i = 0; i < pages.length; i += 2) {
       html += `<div class="opening">`;
       for (const p of pages.slice(i, i + 2)) html += pageDiv(p.svg, G, sc, '');
@@ -1727,13 +1771,57 @@ function render(){
     if (!pages.length) html = '<p class="msg">No voices are shown.</p>';
   } else {
     const pages = st.view === 'parts' ? layoutParts(G) : layoutScore(G);
-    const sc = Math.min(1.25, avail / (G.wmm * pxmm));
+    const sc = Math.min(1.25, avail / (G.wmm * pxmm), fitH);
     pages.forEach((p, i) => { html += pageDiv(p, G, sc, `<span class="pnum">${i + 1}</span>`); });
     if (!pages.length) html = '<p class="msg">No voices are shown.</p>';
   }
   pagesEl.innerHTML = html;
   if (typeof showSel === 'function' && ed.sel) showSel();
+  if (!play) { handTop = -1; $('#handBox').style.top = ''; $('#pendBox').style.top = ''; }
+  syncNav();
   postHeight();
+}
+/* pages side by side: the arrows move one page (one opening in the choir book) left or right */
+const navItems = () => [...pagesEl.children].filter(c => c.classList.contains('page') || c.classList.contains('opening'));
+function navIndex(){
+  const items = navItems(), mid = viewerEl.scrollLeft + viewerEl.clientWidth / 2;
+  let best = 0, bd = Infinity;
+  items.forEach((c, i) => { const d = Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid); if (d < bd) { bd = d; best = i; } });
+  return best;
+}
+function goPage(dir){
+  const items = navItems(); if (!items.length) return;
+  const i = Math.max(0, Math.min(items.length - 1, navIndex() + dir)), c = items[i];
+  viewerEl.scrollTo({left: c.offsetLeft + c.offsetWidth / 2 - viewerEl.clientWidth / 2, behavior: 'smooth'});
+}
+function syncNav(){
+  const horiz = st.flow === 'horizontal';
+  const max = viewerEl.scrollWidth - viewerEl.clientWidth;
+  $('#pgPrev').disabled = !horiz || viewerEl.scrollLeft <= 2;
+  $('#pgNext').disabled = !horiz || viewerEl.scrollLeft >= max - 2;
+}
+$('#pgPrev').addEventListener('click', () => goPage(-1));
+$('#pgNext').addEventListener('click', () => goPage(1));
+viewerEl.addEventListener('scroll', () => syncNav(), {passive: true});
+/* bring a note into sight: in the row of pages, and in the window (or the site page around the app) */
+function bringIntoView(el, force){
+  const r = el.getBoundingClientRect();
+  let top = 0, bottom = window.innerHeight;
+  if (EMBED) {
+    try { const fr = window.frameElement.getBoundingClientRect(), H = window.top.innerHeight; top = -fr.top; bottom = H - fr.top; }
+    catch (e) { top = 0; bottom = window.innerHeight; }
+  }
+  const vr = viewerEl.getBoundingClientRect();
+  const offX = st.flow === 'horizontal' && (r.left < vr.left + 50 || r.right > vr.right - 50);
+  const offY = r.top < top + 20 || r.bottom > bottom - 20;
+  if (!force && !offX && !offY) return false;
+  if (offX) { const c = navItems().find(c => c.contains(el)); if (c) viewerEl.scrollTo({left: c.offsetLeft + c.offsetWidth / 2 - viewerEl.clientWidth / 2, behavior: 'smooth'}); }
+  if (offY) {
+    const y = r.top - top - (bottom - top) / 3;
+    if (EMBED) { try { window.top.scrollBy({top: y, behavior: 'smooth'}); return true; } catch (e) {} }
+    window.scrollBy({top: y, behavior: 'smooth'});
+  }
+  return true;
 }
 function pageDiv(svg, G, sc, extra){
   return `<div class="page" style="width:${f(G.wmm * 96 / 25.4 * sc)}px;height:${f(G.hmm * 96 / 25.4 * sc)}px" data-w="${G.wmm}" data-h="${G.hmm}">${svg}${extra}</div>`;
@@ -1792,6 +1880,24 @@ async function buildPieceList(){
 /* ------------------------------------------------------------------ */
 const STAFF_COLORS = [['red', '#8E2A1E', 'Red'], ['black', '#2A2218', 'Black'], ['brown', '#8A6A44', 'Brown'], ['blue', '#2F4F8F', 'Blue'], ['grey', '#9A9286', 'Grey']];
 $('#staffSeg').innerHTML = STAFF_COLORS.map(([k, c, n]) => `<button class="tb swatch" data-v="${k}" style="--c:${c}" aria-label="${n}" title="${n}"><i></i></button>`).join('');
+const PAPER_COLORS = [['parchment', '#EFE3C7', 'Parchment'], ['beige', '#EADCC0', 'Beige'], ['white', '#FFFFFF', 'White']];
+$('#paperColSeg').innerHTML = PAPER_COLORS.map(([k, c, n]) => `<button class="tb swatch" data-v="${k}" style="--c:${c}" aria-label="${n}" title="${n}"><i${k === 'parchment' ? ' style="background:#EFE3C7 var(--paper);background-size:160px"' : ''}></i></button>`).join('') +
+  `<label class="tb swatch pick" id="paperPickL" title="Any colour" aria-label="Any colour"><i></i><input type="color" id="paperPick" value="#e8e0d0"></label>`;
+$('#paperColSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  st.paperCol = b.dataset.v; save(); syncUI();
+});
+$('#paperPick').addEventListener('input', e => { st.paperCol = e.target.value; save(); syncUI(); });
+function applyPaper(){
+  const named = PAPER_COLORS.find(c => c[0] === st.paperCol);
+  const col = named ? named[1] : (/^#[0-9a-f]{6}$/i.test(st.paperCol) ? st.paperCol : '#EFE3C7');
+  document.documentElement.style.setProperty('--pagebg', col);
+  document.documentElement.classList.toggle('flatpaper', st.paperCol !== 'parchment');
+  $('#paperColSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st.paperCol)));
+  const custom = !named;
+  $('#paperPickL').setAttribute('aria-pressed', String(custom));
+  if (custom) { $('#paperPickL').style.setProperty('--c', col); $('#paperPick').value = col; }
+}
 const VIEW_NAMES = {score: 'Score', parts: 'Parts', choir: 'Choir book'};
 function segInit(id, key, after){
   $(id).addEventListener('click', e => {
@@ -1800,7 +1906,7 @@ function segInit(id, key, after){
   });
 }
 function syncUI(){
-  const segs = {'#viewList': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed'};
+  const segs = {'#viewList': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed'};
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
   $('#viewName').textContent = VIEW_NAMES[st.view] || 'Score';
   for (const k of ['size', 'hs', 'vs']) $('#' + k).value = st[k];
@@ -1808,6 +1914,9 @@ function syncUI(){
   $('#vol').value = st.vol;
   $('#loop').setAttribute('aria-pressed', String(!!st.loop));
   document.documentElement.style.setProperty('--staff', (STAFF_COLORS.find(c => c[0] === st.staff) || STAFF_COLORS[0])[1]);
+  applyPaper();
+  const horiz = st.flow === 'horizontal';
+  viewerEl.classList.toggle('horiz', horiz); $('.viewwrap').classList.toggle('horiz', horiz);
   /* verses */
   const nv = piece ? Math.max(1, ...piece.voices.map(v => v.verses)) : 1;
   $('#verseLab').hidden = $('#verseSeg').hidden = nv < 2;
@@ -1824,7 +1933,7 @@ function syncUI(){
   document.querySelectorAll('#library .pc').forEach(b => b.setAttribute('aria-current', String(b.dataset.p === pieceKey)));
 }
 segInit('#viewList', 'view', closePops); segInit('#notaSeg', 'nota'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars');
-segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#edSeg', 'ed');
+segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#edSeg', 'ed');
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
 let rq = 0;
 const later = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); };
@@ -1832,7 +1941,7 @@ for (const k of ['size', 'hs', 'vs']) $('#' + k).addEventListener('input', e => 
 $('#voiceTable').addEventListener('change', e => {
   const c = e.target; if (!c.dataset.k) return;
   vis(+c.dataset.i)[c.dataset.k] = c.checked; save(); syncUI(); render();
-  if (play && c.dataset.k === 'on') { stopPlay(); startPlay(); }
+  if (play && c.dataset.k === 'on') restartPlay();
 });
 /* pieces */
 const libEl = $('#library'), libBtn = $('#libBtn');
@@ -1872,7 +1981,7 @@ $('#printBtn').addEventListener('click', () => {
   window.print();
 });
 /* tempo, loop, volume */
-const setTempo = v => { st.tempo = Math.max(20, Math.min(240, Math.round(v) || 90)); save(); syncUI(); if (play) { stopPlay(); startPlay(); } };
+const setTempo = v => { st.tempo = Math.max(20, Math.min(240, Math.round(v) || 90)); save(); syncUI(); restartPlay(); };
 $('#tempo').addEventListener('change', e => setTempo(+e.target.value));
 $('#tempoDown').addEventListener('click', () => setTempo(st.tempo - 4));
 $('#tempoUp').addEventListener('click', () => setTempo(st.tempo + 4));
@@ -2137,10 +2246,7 @@ function showSel(scroll){
   if (!s) { syncEdit(); return; }
   let first = null;
   piece.voices[ed.sel.vi].syms.filter(q => q.src && q.src[0] === s.src[0]).forEach(q => document.querySelectorAll('#pages g.' + q.id).forEach(g => { g.classList.add('sel'); first = first || g; }));
-  if (scroll && first) {
-    const r = first.getBoundingClientRect(), vr = viewerEl.getBoundingClientRect();
-    if (r.top < vr.top + 10 || r.bottom > vr.bottom - 10) viewerEl.scrollTo({top: viewerEl.scrollTop + r.top - vr.top - vr.height / 3, behavior: 'smooth'});
-  }
+  if (scroll && first) bringIntoView(first);
   syncEdit();
 }
 /* clicking a note selects it (in any view); with Edit off it only marks where Play starts */
@@ -2252,7 +2358,7 @@ $('#beatList').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const k = b.dataset.beat;
   if (k === 'hand') st.beatHand = !st.beatHand; else if (k === 'pendulum') st.beatPend = !st.beatPend; else st.beatTick = !st.beatTick;
-  save(); syncBeat(); if (k === 'tick' && play) { stopPlay(); startPlay(); }
+  save(); syncBeat(); if (k === 'tick') restartPlay();
 });
 $('#handOp').addEventListener('input', e => { st.handOp = +e.target.value; save(); syncBeat(); });
 $('#handSize').addEventListener('input', e => { st.handSize = +e.target.value; save(); syncBeat(); });
@@ -2300,8 +2406,14 @@ function stopPlay(){
   document.querySelectorAll('svg g.on').forEach(g => g.classList.remove('on'));
   play = null; setPlayIcon(false); setHand(0); setPend(0);
 }
-function startPlay(){
+/* where the music stands while it plays, in semibreves */
+const playPos = () => play ? Math.max(0, (actx.currentTime - play.t0) / play.spb) : 0;
+function restartPlay(){ if (!play) return; const at = playPos(); stopPlay(); startPlay(at); }
+function startPlay(from){
   if (!piece) return;
+  /* Play starts at the selected note (or the beginning) */
+  if (typeof from !== 'number') { const s = selSym(); from = s ? s.t : 0; }
+  from = Math.max(0, Math.min(from, piece.end));
   actx = actx || new (window.AudioContext || window.webkitAudioContext)();
   if (actx.state === 'suspended') actx.resume();
   if (!wave) {
@@ -2313,7 +2425,7 @@ function startPlay(){
   const spb = 60 / Math.max(20, st.tempo || 90);       /* seconds per semibreve */
   const master = actx.createGain(); master.gain.value = volGain();
   master.connect(actx.destination);
-  const t0 = actx.currentTime + 0.12, nodes = [], events = [];
+  const start = actx.currentTime + 0.12, t0 = start - from * spb, nodes = [], events = [];
   voices.forEach(v => {
     const pan = actx.createStereoPanner ? actx.createStereoPanner() : null;
     const out = pan || master;
@@ -2324,7 +2436,9 @@ function startPlay(){
       /* tied pieces sound as one note */
       let d = s.d, j = k;
       while (v.syms[j].tieNext && v.syms[j + 1] && !v.syms[j + 1].rest && v.syms[j + 1].step === s.step) { j++; d += v.syms[j].d; }
-      const a = t0 + s.t * spb, b = t0 + (s.t + d) * spb;
+      const a0 = t0 + s.t * spb, b = t0 + (s.t + d) * spb;
+      if (b <= start + 0.02) { k = j; continue; }
+      const a = Math.max(a0, start);
       const o = actx.createOscillator(), g = actx.createGain();
       o.setPeriodicWave(wave);
       o.frequency.value = 440 * Math.pow(2, (midiOf(s) - 69) / 12);
@@ -2340,41 +2454,48 @@ function startPlay(){
     }
   });
   const end = t0 + piece.end * spb;
-  if (st.beatTick) for (let k = 0; t0 + k * spb < end - 0.02; k++) nodes.push(metroClick(t0 + k * spb, actx.destination));
+  if (st.beatTick) for (let k = Math.ceil(from - EPS); t0 + k * spb < end - 0.02; k++) nodes.push(metroClick(t0 + k * spb, actx.destination));
   /* how many semibreves the hand counts per breve: three under a perfect sign */
   const top = voices[0];
-  play = {nodes, master, raf: 0, t0, spb, top};
+  play = {nodes, master, raf: 0, t0, spb, top, from};
   setPlayIcon(true);
   let lastScroll = 0;
   const tick = () => {
     if (!play) return;
     const now = actx.currentTime;
-    if (now > end + 0.2) { stopPlay(); if (st.loop) startPlay(); return; }
+    if (now > end + 0.2) { stopPlay(); if (st.loop) startPlay(0); return; }
     /* tactus: a quick drop on one beat, a quick lift on the next, held still in between (as in Cantus firmus) */
     {
       const el = Math.max(0, now - t0), bi = Math.floor(el / spb), tt = el - bi * spb;
-      if (st.beatPend) setPend(now < t0 ? 24 : 24 * Math.cos(Math.PI * el / spb));
+      if (st.beatPend) setPend(now < start ? 24 : 24 * Math.cos(Math.PI * el / spb));
       const sign = metAt(top, bi), N = mensInfo(sign).T === 3 ? 3 : 2;
       let seg = 0; for (const m of top.mets) if (m.t <= bi + EPS) seg = m.t;
       const ph = ((bi - Math.round(seg)) % N + N) % N;
-      const from = ph === 0 && bi > 0 ? 45 : 0, to = ph === N - 1 ? 45 : 0;
+      const a1 = ph === 0 && bi > 0 ? 45 : 0, a2 = ph === N - 1 ? 45 : 0;
       const pr = Math.min(1, tt / Math.min(0.09, spb * 0.3)), e = 1 - Math.pow(1 - pr, 3);
-      setHand(now < t0 ? 0 : from + (to - from) * e);
+      setHand(now < start ? 0 : a1 + (a2 - a1) * e);
     }
     const on = new Set();
     for (const e of events) if (e.a <= now && e.b > now) on.add(e.id);
     document.querySelectorAll('svg g.on').forEach(g => { if (!on.has(g.classList[0])) g.classList.remove('on'); });
     let first = null;
     on.forEach(id => document.querySelectorAll('svg g.' + id).forEach(g => { g.classList.add('on'); first = first || g; }));
-    if (first && performance.now() - lastScroll > 900) {
-      const r = first.getBoundingClientRect(), vr = viewerEl.getBoundingClientRect();
-      if (r.top < vr.top + 20 || r.bottom > vr.bottom - 20) { viewerEl.scrollTo({top: viewerEl.scrollTop + r.top - vr.top - vr.height / 3, behavior: 'smooth'}); lastScroll = performance.now(); }
-    }
+    if (first) followHand(first);
+    if (first && performance.now() - lastScroll > 900 && bringIntoView(first)) lastScroll = performance.now();
     play.raf = requestAnimationFrame(tick);
   };
   play.raf = requestAnimationFrame(tick);
 }
 $('#play').addEventListener('click', () => { if (play) stopPlay(); else startPlay(); });
+/* the hand (and pendulum) stand beside the music that is sounding */
+function followHand(el){
+  const wr = $('.viewwrap').getBoundingClientRect(), r = el.getBoundingClientRect();
+  const hb = $('#handBox').getBoundingClientRect().height || 200;
+  const y = Math.max(10, Math.round(r.top - wr.top + r.height / 2 - hb * 0.45));
+  if (Math.abs(y - handTop) < 24) return;
+  handTop = y;
+  $('#handBox').style.top = y + 'px'; $('#pendBox').style.top = y + 'px';
+}
 
 /* tell the site page how tall the app is */
 let lastH = 0;
