@@ -80,7 +80,7 @@
       <li><a href="music.html">Timelines</a></li>
       <li><a href="mensurator.html">Mensurator</a></li>
       <li><a href="cantus-firmus.html">Cantus firmus</a></li>
-      <li><a href="choirbook.html">Choir book</a></li>
+      <li><a href="choirbook.html">ChoirBook</a></li>
       <li class="has-menu"><a href="canon.html" aria-current="page">More</a>
         <ul class="menu">
           <li><a href="canon.html">Canon Canonum</a></li>
@@ -96,7 +96,7 @@
     <h1 class="page-title">ReDiX Progressio</h1>
     <div class="page-intro">
       <p><strong>ReDiX Progressio is based on <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">ReDiX – Renaissance Digital eXplorer</a> by <a href="https://github.com/ugobindini" target="_blank" rel="noopener">Ugo Bindini</a>.</strong> Ugo wrote the original program and analysed the scores: every sonority of about 2,870 pieces of fifteenth- and sixteenth-century polyphony, with its lowest note, its intervals above the bass and its place in the bar. That analysis, and the search for single sonorities on this page, are his work. This page translates his code so that it runs entirely in your browser; his original program is on <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">GitHub</a>.</p>
-      <p>Progressio adds a search for <em>successions</em> of two sonorities, for example 3&nbsp;6&nbsp;10 followed a semibreve later by 5&nbsp;8&nbsp;10, if you like with a given motion of the bass. Every result can be shown here or opened in the <a href="choirbook.html">Choir book</a>, with the passage marked in the score.</p>
+      <p>Progressio adds a search for <em>successions</em> of two sonorities, for example 3&nbsp;6&nbsp;10 followed a semibreve later by 5&nbsp;8&nbsp;10, if you like with a given motion of the bass. Every result can be shown here or opened in the <a href="choirbook.html">ChoirBook</a>, with the passage marked in the score.</p>
     </div>
     <p class="credit">Like ReDiX, this page is free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GPL-3.0</a>. Scores: <a href="https://josquin.stanford.edu" target="_blank" rel="noopener">Josquin Research Project</a> and <a href="https://1520s-project.org" target="_blank" rel="noopener">the 1520s Project</a> (both CC BY-NC 4.0), and the Palestrina masses encoded by John Miller in the <a href="https://github.com/cuthbertLab/music21" target="_blank" rel="noopener">music21</a> corpus. Music notation by <a href="https://www.verovio.org" target="_blank" rel="noopener">Verovio</a>.</p>
 
@@ -402,7 +402,7 @@ function itemRows(D, g, gi, from, to){
   let h = '';
   for (let k = from; k < to; k++) {
     const r = g.list[k], e = CAT.pieces[r.p], id = `s${gi}-${k}`;
-    h += `<tr><td><button class="btn light small show" data-g="${gi}" data-k="${k}" aria-expanded="false">Show</button></td><td>${esc(nameOf(e.c))}${e.a ? ' (attr.)' : ''}</td><td>${esc(e.t)}</td><td class="where">${whereText(D, r)}</td><td><a href="${esc(cbLink(D, r))}" target="_blank" rel="noopener">Open in Choir book ↗</a></td></tr>`;
+    h += `<tr><td><button class="btn light small show" data-g="${gi}" data-k="${k}" aria-expanded="false">Show</button></td><td>${esc(nameOf(e.c))}${e.a ? ' (attr.)' : ''}</td><td>${esc(e.t)}</td><td class="where">${whereText(D, r)}</td><td><a href="${esc(cbLink(D, r))}" target="_blank" rel="noopener">Open in ChoirBook ↗</a></td></tr>`;
     h += `<tr hidden id="${id}"><td colspan="5"><div class="snip"></div></td></tr>`;
   }
   return h;
