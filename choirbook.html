@@ -39,7 +39,7 @@
       (function () {
         var f = document.getElementById("cb");
         var q = location.search ? location.search.slice(1) + "&" : "";
-        f.src = "games/choirbook.html?" + q + "v=4";
+        f.src = "games/choirbook.html?" + q + "v=5";
         window.addEventListener("message", function (e) {
           if (e.source !== f.contentWindow || !e.data) return;
           if (e.data.choirbookHeight) f.style.height = e.data.choirbookHeight + "px";
