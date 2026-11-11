@@ -159,7 +159,7 @@ const Synth = {
       n.start(t0, Math.random() * 0.8); n.stop(t0 + 0.12); parts.push(n);
     }
     out.connect(dest);
-    return {osc: {stop(t){ parts.forEach(p => { try { p.stop(t); } catch (e) {} }); }}, g: out};
+    return {osc: {stop(t){ parts.forEach(p => { try { p.stop(t); } catch (e) {} }); }}, g: out, t1};
   }
 };
 function silence(v, now){
@@ -236,7 +236,7 @@ function metroClick(ctx, dest, t){
   g.gain.exponentialRampToValueAtTime(0.0005, t + 0.07);
   o.connect(g); g.connect(dest);
   o.start(t); o.stop(t + 0.08);
-  return {osc: o, g};
+  return {osc: o, g, t1: t + 0.08};
 }
 
 Object.assign(Organ, {ensureAudio, roomLevel, masterLevel, REGISTERS, FEET, padDraw, organAmps, Synth, silence, TUNE, buildTune, syncTune, testTone, audition, metroClick, freq});
@@ -320,22 +320,40 @@ function notateValues(items, tempus){
   const RC = [['L', 8], ['B', 4], ['S', 2], ['M', 1], ['Sm', 0.5], ['F', 0.25]];
   const RO = [['L', 12], ['B', 6], ['S', 2], ['M', 1], ['Sm', 0.5], ['F', 0.25]];
   const key = m => String(Math.round(m * 1000) / 1000);
+  const MAP = O ? OMAP : CMAP;
+  /* values the notation has no single note for (a proportion's thirds, say) are rounded, keeping the music's
+     overall time: each note ends on the nearest semiminima to where it really ends */
+  let te = 0, tw = 0, rounded = 0;
+  const r3 = x => Math.round(x * 1000) / 1000;
+  const onGrid = (x, g) => Math.abs(x / g - Math.round(x / g)) < 1e-3;
+  const vals = items.map(it => {
+    te += it.m;
+    let want = r3(te - tw);
+    const ok = it.rest ? onGrid(want, 0.25) : !!MAP[key(want)];
+    if (ok) { want = it.rest ? Math.round(want * 4) / 4 : want; tw = r3(tw + want); return want; }
+    const was = want;
+    want = Math.max(0.5, r3(Math.round(te * 2) / 2 - tw));
+    if (Math.abs(want - was) > 1e-3) rounded++;
+    tw = r3(tw + want);
+    return want;
+  });
   const notes = [], target = [], from = [];
   let split = 0;
   items.forEach((it, k) => {
-    let m = Math.round(it.m * 1000) / 1000;
+    let m = vals[k];
+    if (m <= 1e-6) return;
     if (it.rest) {
-      for (const [d, v] of (O ? RO : RC)) while (m >= v - 1e-6) { notes.push({d, r: true, s: it.s || 26, a: '', p: false}); target.push(v); from.push(k); m = Math.round((m - v) * 1000) / 1000; }
+      for (const [d, v] of (O ? RO : RC)) while (m >= v - 1e-3) { notes.push({d, r: true, s: it.s || 26, a: '', p: false}); target.push(v); from.push(k); m = Math.round((m - v) * 1000) / 1000; }
       return;
     }
-    const map = (O ? OMAP : CMAP)[key(m)];
+    const map = MAP[key(m)];
     if (map) { notes.push({d: map[0], r: false, s: it.s, a: it.a || '', p: !!map[1]}); target.push(m); from.push(k); return; }
-    /* not one note: the largest plain values, as repeated notes */
+    /* still not one note: the largest plain values, as repeated notes */
     let first = true;
-    for (const [d, v] of (O ? RO : RC)) while (m >= v - 1e-6) { notes.push({d, r: false, s: it.s, a: it.a || '', p: false}); target.push(v); from.push(k); m = Math.round((m - v) * 1000) / 1000; if (!first) split++; first = false; }
+    for (const [d, v] of (O ? RO : RC)) while (m >= v - 1e-3) { notes.push({d, r: false, s: it.s, a: it.a || '', p: false}); target.push(v); from.push(k); m = Math.round((m - v) * 1000) / 1000; if (!first) split++; first = false; }
   });
   const bad = () => { const v = readValues(notes, tempus).v; for (let i = 0; i < v.length; i++) if (Math.abs(v[i] - target[i]) > 1e-6) return i; return -1; };
-  if (!O) return {notes, ok: bad() < 0, split, from};
+  if (!O) return {notes, ok: bad() < 0, split, rounded, from, target};
   /* tempus perfectum: perfect or imperfect by the rules; a dot where the rules alone would read it otherwise */
   let b = bad(), guard = 0;
   while (b >= 0 && guard++ < 600) {
@@ -353,7 +371,7 @@ function notateValues(items, tempus){
     apply(best.ms);
     b = bad();
   }
-  return {notes, ok: b < 0, split, from};
+  return {notes, ok: b < 0, split, rounded, from, target};
 }
 Object.assign(Organ, {DUR, readValues, notateValues});
 
@@ -426,21 +444,37 @@ function play(spec){
   const t0 = c0 + count * beat, origin = t0 - offset;
   /* several voices at once: each a little softer, so the sum stays as loud as one */
   const dest = ctx.createGain(); dest.gain.value = spec.level || 1; dest.connect(audio.bus);
-  const tl = [];
+  const tl = [], pending = [];
   let end = t0;
   for (const e of spec.events) {
     const a = origin + e.t * spm, b = origin + (e.t + e.d) * spm;
     if (b <= t0 + 1e-4) continue;
     const a1 = Math.max(a, t0);
-    if (e.midi !== null && e.midi !== undefined && !e.silent) {
-      const hb = origin + (e.t + (e.hold || e.d)) * spm;
-      audio.voices.push(Synth.voice(ctx, dest, freq(e.midi), a1, hb - 0.012));
-    }
+    if (e.midi !== null && e.midi !== undefined && !e.silent) pending.push({a: a1, b: origin + (e.t + (e.hold || e.d)) * spm - 0.012, midi: e.midi});
     tl.push({i: e.id, t0: a1, t1: b});
     end = Math.max(end, b);
   }
-  if (S.beatTick) for (let k = Math.ceil(offset / beat - 1e-6); origin + k * beat < end - 0.02; k++) audio.voices.push(metroClick(ctx, audio.master, origin + k * beat));
-  audio.timeline = {tl, end, origin, beat, count, c0, t0, spm, spec};
+  pending.sort((x, y) => x.a - y.a);
+  /* the audible tick, one per beat */
+  const ticks = [];
+  if (S.beatTick) for (let k = Math.ceil(offset / beat - 1e-6); origin + k * beat < end - 0.02; k++) ticks.push(origin + k * beat);
+  /* Notes are made just before they sound (a little more than a second ahead), not all at once:
+     a whole polyphonic piece made in advance would be thousands of oscillators and choke the browser. */
+  const sched = {pending, pi: 0, ticks, ti: 0, dest, timer: 0};
+  const feed = () => {
+    if (audio.timeline !== T) return;
+    const until = ctx.currentTime + 1.2;
+    while (sched.pi < pending.length && pending[sched.pi].a < until) {
+      const n = pending[sched.pi++];
+      audio.voices.push(Synth.voice(ctx, dest, freq(n.midi), Math.max(n.a, ctx.currentTime + 0.005), n.b));
+    }
+    while (sched.ti < ticks.length && ticks[sched.ti] < until) audio.voices.push(metroClick(ctx, audio.master, ticks[sched.ti++]));
+    /* let go of the notes that are over */
+    if (audio.voices.length > 64) { const now = ctx.currentTime; audio.voices = audio.voices.filter(v => !(v.t1 < now - 0.5)); }
+  };
+  const T = audio.timeline = {tl, end, origin, beat, count, c0, t0, spm, spec, sched, feed};
+  feed();
+  sched.timer = setInterval(feed, 200);   /* keeps feeding when the tab is in the background */
   if (spec.onStart) spec.onStart(audio.timeline);
   H.playing(true);
   audio.raf = requestAnimationFrame(tick);
@@ -454,6 +488,7 @@ function tick(){
     if (S.loop) { if (T.spec.onLoop) T.spec.onLoop(); else play(Object.assign({}, T.spec, {from: 0, count: 0})); return; }
     stop(); return;
   }
+  T.feed();
   const ids = [];
   for (const x of T.tl) if (now >= x.t0 && now < x.t1) ids.push(x.i);
   showCount(T.count && now >= T.c0 && now < T.t0 ? T.count - Math.floor((now - T.c0) / T.beat + 1e-6) : 0);
@@ -476,6 +511,7 @@ function stop(){
   const T = audio.timeline;
   if (!T) return;
   cancelAnimationFrame(audio.raf);
+  clearInterval(T.sched.timer);
   const now = audio.ctx.currentTime;
   if (T.spec.onStop) T.spec.onStop(now, T);
   audio.voices.forEach(v => silence(v, now));

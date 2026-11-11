@@ -510,6 +510,7 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
       <div class="podg" id="clearPod">
       <button id="clear">Clear</button>
       <button id="copyLink" title="Copy a link that opens this exact cantus firmus">Copy link</button>
+      <button id="toChoir" title="Open this cantus firmus in the Choir book, to add voices to it">Choir book</button>
       </div>
       </div>
     </div>
@@ -636,7 +637,7 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="shared/organ.js?v=1"></script>
+<script src="shared/organ.js?v=2"></script>
 <script>
 (function(){
 'use strict';
@@ -2798,6 +2799,44 @@ function toast(msg){
 /* ------------------------------------------------------------------ */
 /* Wiring                                                              */
 /* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ */
+/* Between Cantus firmus and Choir book (the same site, so the same    */
+/* browser storage): the melody goes over as sounding values.          */
+/* ------------------------------------------------------------------ */
+const HANDOFF = 'organ:handoff:v1';
+function goTo(page){
+  try { if (window.top !== window && window.top.location.host === location.host) { window.top.location.href = new URL(page, window.top.location.href).href; return; } } catch (e) {}
+  location.href = page;
+}
+function openInChoirbook(){
+  if (!doc.notes.length) { toast('Write a cantus firmus first.'); return; }
+  const vals = readValues(doc.notes, ui.tempus).v;
+  const items = doc.notes.map((n, i) => n.r ? {rest: true, m: vals[i]}
+    : {m: vals[i], s: n.s, alt: alterOf(n), nat: alterOf(n) === 0 && (n.a === 'n' || (doc.bflat && mod7(n.s) === 6))});
+  try { localStorage.setItem(HANDOFF, JSON.stringify({to: 'choirbook', title: doc.title || 'Cantus firmus', clef: doc.clef, bflat: doc.bflat, tempus: ui.tempus, items, at: Date.now()})); }
+  catch (e) { toast('This browser would not pass the melody on.'); return; }
+  stopPlayback();
+  goTo('choirbook.html');
+}
+/* a voice from the Choir book: written as mensural notes in its own mensuration, checked with the reading */
+function takeHandoff(){
+  let h = null; try { h = JSON.parse(localStorage.getItem(HANDOFF) || 'null'); } catch (e) {}
+  if (!h || h.to !== 'cantus-firmus' || !Array.isArray(h.items) || Date.now() - (h.at || 0) > 10 * 60 * 1000) return;
+  try { localStorage.removeItem(HANDOFF); } catch (e) {}
+  const items = h.items.map(it => it.rest ? {rest: true, m: it.m, s: CLEFS[h.clef] ? CLEFS[h.clef].bottom + 4 : 26} : {m: it.m, s: clampStep(it.s), a: ACC[it.a] ? it.a : ''});
+  let tempus = h.tempus === 'O' ? 'O' : 'C';
+  let res = Organ.notateValues(items, tempus);
+  if (!res.ok && tempus === 'O') { tempus = 'C'; res = Organ.notateValues(items, 'C'); }
+  mutate(() => {
+    doc = {title: String(h.title || '').slice(0, 120), clef: CLEFS[h.clef] ? h.clef : 'treble8', bflat: !!h.bflat, lines: 5, notes: res.notes.map(n => ({d: n.d, r: n.r, s: n.s, a: n.r ? '' : n.a, p: !!n.p && !n.r}))};
+    ui.tempus = tempus; ui.sel = null; ui.caret = doc.notes.length; ui.hover = null;
+  });
+  syncSettings();
+  const notes = [];
+  if (res.rounded) notes.push(`${res.rounded} value${res.rounded > 1 ? 's' : ''} in proportion rounded to the nearest written value`);
+  if (res.split) notes.push(`${res.split} value${res.split > 1 ? 's' : ''} with no single note written as repeated notes`);
+  toast(`${doc.title || 'The voice'} came over from the Choir book${notes.length ? ' (' + notes.join('; ') + ')' : ''}. Undo brings back what you had.`);
+}
 function wire(){
   $('#restBtn').addEventListener('click', () => setRestMode(!(ui.sel !== null ? doc.notes[ui.sel].r : ui.inRest)));
   $('#stepUp').addEventListener('click', () => stepPitch(1));
@@ -2870,6 +2909,7 @@ function wire(){
   Organ.wire();
   $('#audition').addEventListener('change', e => { ui.audition = e.target.checked; save(); });
   $('#copyLink').addEventListener('click', copyLink);
+  $('#toChoir').addEventListener('click', openInChoirbook);
   let rq = 0;
   new ResizeObserver(() => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); }).observe(scoreEl);
 }
@@ -2879,6 +2919,7 @@ buildClefMenu();
 buildLibrary();
 loadAll();
 Organ.loadShared();
+setTimeout(takeHandoff, 0);
 syncSettings();
 wire();
 render();

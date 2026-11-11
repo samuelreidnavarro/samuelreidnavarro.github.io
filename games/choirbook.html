@@ -526,6 +526,19 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 .drop .viewer{outline:2px dashed var(--accent);outline-offset:4px}
 .popbody .btns.col .tb[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .voices{border-collapse:collapse;margin:2px 4px}
+.voices input.vname{font:inherit;font-size:16px;width:9em;padding:3px 6px;min-height:30px;height:30px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--text)}
+.voices input.vname:hover,.voices input.vname:focus{border-color:var(--line);background:var(--ground)}
+.voices select.vclef{font:inherit;font-size:15px;min-height:30px;height:30px;padding:0 4px;border:1px solid var(--line);border-radius:6px;background:var(--ground);color:var(--text)}
+.voices .vbtn{height:30px;min-height:30px;padding:0 8px;font-size:15px}
+.voices .vdel{width:30px;padding:0;color:var(--muted)}
+.voices tfoot td{padding-top:8px;text-align:left}
+.voices tfoot button{height:32px;min-height:32px;padding:0 10px;font-size:15px}
+#popVoices .popbody{max-width:calc(100vw - 28px);overflow-x:auto}
+.pagemeta{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;margin-top:6px;padding-top:8px;border-top:1px solid var(--line)}
+.pagemeta input{font:inherit;font-size:16px;min-height:32px;height:32px;padding:0 8px;border:1px solid var(--line);border-radius:6px;background:var(--ground);color:var(--text)}
+.library .mine{display:flex;gap:6px;align-items:center}
+.library .mine .pc{flex:1}
+.library .mine .mdel{flex:none;width:32px;height:32px;min-height:32px;padding:0;color:var(--muted)}
 .voices th{font-weight:400;font-style:italic;color:var(--muted);font-size:14.5px;padding:0 8px 6px;text-align:center}
 .voices td{padding:5px 8px;text-align:center;font-size:17px}
 .voices td:first-child{text-align:left;white-space:nowrap;padding-left:4px}
@@ -581,6 +594,7 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
         <div class="popbody"><div class="staffset">
           <span class="lab">Size</span><div class="btns" id="paperSeg" role="group" aria-label="Paper size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button></div>
           <span class="lab">Orientation</span><div class="btns" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
+          <div class="pagemeta"><label class="lab" for="metaTitle">Title</label><input id="metaTitle" type="text" autocomplete="off"><label class="lab" for="metaComp">Composer</label><input id="metaComp" type="text" autocomplete="off"></div>
           <span class="lab">Pages</span><div class="btns" id="flowSeg" role="group" aria-label="Pages"><button class="tb" data-v="vertical">Vertical</button><button class="tb" data-v="horizontal">Horizontal</button></div>
         </div></div>
       </div></div>
@@ -590,6 +604,7 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
           <div id="library" class="library" role="dialog" aria-label="Pieces" hidden></div>
         </div></div>
         <div class="podg">
+          <button id="newBtn" title="A new, empty score to write polyphony in">New score</button>
           <button id="openBtn">Open file</button>
           <button id="printBtn">Print</button>
         </div>
@@ -681,14 +696,14 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
       <div class="podg"><div class="pop" id="popLook">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Appearance<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="staffset">
-          <span class="lab">Notation</span><div class="btns" id="notaSeg" role="group" aria-label="Notation"><button class="tb" data-v="real">Real mensural</button><button class="tb" data-v="fake">Fake mensural</button></div>
+          <span class="lab">Notation</span><div class="btns" id="notaSeg" role="group" aria-label="Notation"><button class="tb" data-v="real">Mensural</button><button class="tb" data-v="fake">Modern</button></div>
           <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
           <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Full</button></div>
           <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
           <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
           <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
-          <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0" max="2.5" step="0.05">
-          <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0" max="3" step="0.05">
+          <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0" max="0.85" step="0.01">
+          <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0" max="2" step="0.02">
           <span class="lab">Syllable dashes</span><div class="btns" id="dashSeg" role="group" aria-label="Syllable dashes"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <label class="ctl" for="handOp">Hand opacity</label><input type="range" id="handOp" min="0.05" max="1" step="0.05">
@@ -713,7 +728,7 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 
   <div id="toast" role="status" aria-live="polite"></div>
 </main>
-<script src="shared/organ.js?v=1"></script>
+<script src="shared/organ.js?v=2"></script>
 <script>
 (function(){
 'use strict';
@@ -956,7 +971,7 @@ function parseKern(text){
   /* top voice first */
   const vs = voices.slice().reverse();
   const end = Math.max(...vs.map(v => v.end));
-  return {title, composer, attributed: !meta.COM && !!meta.COA, voices: vs, bars, sections, end, meta, barNums};
+  return {title, composer, attributed: !meta.COM && !!meta.COA, voices: vs, bars: bars.filter(b => b.t < end - EPS), sections, end, meta, barNums};
 }
 
 /* ------------------------------------------------------------------ */
@@ -1171,9 +1186,11 @@ function chooseClef(v, mode){
 const KEY = 'choirbook:v1';
 const st = {
   piece: PIECES[0], view: 'score', nota: 'real', clefs: 'mens', bars: 'tick', staff: 'red', dashes: 'on', ed: 'on',
-  size: 1.75, hs: 1, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}
+  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+/* the spacing sliders now cover only their tight end */
+st.hs = Math.max(0, Math.min(0.85, Number(st.hs) || 0)); st.vs = Math.max(0, Math.min(2, Number(st.vs) || 0));
 if (st.bars === 'mstrich') st.bars = 'full';
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} if (window.Organ) Organ.saveShared(); };
 /* playback, metronome and sound: shared/organ.js, the same engine as the Cantus firmus app's */
@@ -1220,7 +1237,7 @@ function prepare(){
   const mode = st.nota;
   piece.voices.forEach((v, i) => {
     v.idx = i;
-    v.clef = chooseClef(v, st.clefs);
+    v.clef = (vis(i).clef && CLEFS[vis(i).clef]) ? vis(i).clef : chooseClef(v, st.clefs);
     const syms = notate(piece, v, mode);
     const C = CLEFS[v.clef];
     for (const s of syms) {
@@ -1581,8 +1598,8 @@ function buildLines(vlist, a, b, W, opts = {}){
 }
 /* vertical room a voice needs in a line */
 function lineRoom(v, line){
-  const m = Math.min(1, st.vs), pad = 0.15 + 0.25 * m;
-  let lo = -(0.3 + 0.9 * m), hi = 4.3 + 0.9 * m;
+  const m = Math.min(1, st.vs), pad = 0.05 + 0.35 * m;
+  let lo = -(0.05 + 1.15 * m), hi = 4.05 + 1.15 * m;
   for (let i = line.from; i < line.to; i++) {
     const s = line.cols[i].items.get(v);
     if (!s) continue;
@@ -1590,7 +1607,7 @@ function lineRoom(v, line){
     lo = Math.min(lo, e[0] - pad); hi = Math.max(hi, e[1] + pad);
   }
   const lyr = vis(v.idx).lyr && v.syms.some(s => s.text);
-  const lyrY = Math.max(4 + 2.6, hi + 1.5);
+  const lyrY = Math.max(4 + 1.5 + 1.1 * m, hi + 0.9 + 0.6 * m);
   if (lyr) hi = lyrY + 0.7;
   return {above: -lo, below: hi - 4, lyrY};
 }
@@ -1691,7 +1708,7 @@ function layoutScore(G){
 function paginate(G, lines, vlist, optsFor, sub){
   const pages = [];
   let body = '', y = G.M, first = true;
-  const sysGap = 2.2 * st.vs + 0.3 + 0.7 * Math.min(1, st.vs);
+  const sysGap = 2.2 * st.vs + Math.min(1, st.vs);
   const newPage = () => { pages.push(body); body = ''; y = G.M; };
   if (first) { const tb = titleBlock(G, G.M, G.W - G.M, y, sub); body += tb.svg; y += tb.h; }
   lines.forEach((line, li) => {
@@ -1748,7 +1765,7 @@ function layoutChoir(G){
   };
   const sysPitch = v => {
     const lyr = vis(v.idx).lyr && v.syms.some(s => s.text);
-    return 4 + 1.2 + 1.2 * Math.min(1, st.vs) + (lyr ? 3.0 : 0) + 1.6 * st.vs;
+    return 4 + 0.6 + 1.8 * Math.min(1, st.vs) + (lyr ? 2.4 + 0.6 * Math.min(1, st.vs) : 0) + 1.6 * st.vs;
   };
   /* region heights per side; the first opening carries the title */
   const tb = titleBlock(G, G.M, G.W - G.M, G.M, null);
@@ -1990,8 +2007,23 @@ function applyMark(){
   }
   if (first && !mark.scrolled) { mark.scrolled = true; setTimeout(() => { try { if (typeof bringIntoView === 'function') bringIntoView(first, true); else first.scrollIntoView({block: 'center'}); } catch (e) {} }, 60); }
 }
+/* My scores: new scores, and cantus firmi brought over from the Cantus firmus app, kept in this browser */
+const MINE_KEY = 'choirbook:mine:v1';
+function mineAll(){ try { return JSON.parse(localStorage.getItem(MINE_KEY) || '{}'); } catch (e) { return {}; } }
+function mineSave(all){ try { localStorage.setItem(MINE_KEY, JSON.stringify(all)); } catch (e) {} }
+function mineAdd(title, text){
+  const all = mineAll(), id = 'mine:' + Date.now().toString(36);
+  all[id] = {title, text, at: Date.now()};
+  mineSave(all);
+  return id;
+}
 async function loadPiece(file){
   let text = cache[file];
+  if (!text && file.startsWith('mine:')) {
+    const m = mineAll()[file];
+    if (!m) throw new Error('This score is no longer kept in this browser.');
+    text = m.text;
+  }
   if (!text) {
     const r = await fetch(await pieceUrl(file));
     if (!r.ok) throw new Error('Could not load ' + file);
@@ -2046,6 +2078,17 @@ function libList(){
   if (n > show.length) html += `<button class="more" id="libMore">Show more</button>`;
   box.innerHTML = html;
 }
+function mineHtml(){
+  const all = mineAll(), ids = Object.keys(all).sort((a, b) => all[b].at - all[a].at);
+  if (!ids.length) return '';
+  return '<h2>My scores</h2>' + ids.map(id => `<div class="mine">${itemHtml(id, all[id].title || 'Untitled', 'Kept in this browser, ' + new Date(all[id].at).toLocaleDateString())}<button class="mdel" data-del="${esc(id)}" aria-label="Remove ${esc(all[id].title || 'this score')}" title="Remove from My scores">×</button></div>`).join('');
+}
+function refreshMine(){
+  const feat = $('#libFeat'); if (!feat) return;
+  feat.querySelectorAll('.mine').forEach(m => m.remove());
+  const h = [...feat.querySelectorAll('h2')].find(x => x.textContent === 'My scores'); if (h) h.remove();
+  feat.insertAdjacentHTML('afterbegin', mineHtml());
+}
 async function buildPieceList(){
   await Promise.all(PIECES.map(async p => {
     try {
@@ -2068,7 +2111,7 @@ async function buildPieceList(){
       <select id="libVoices" aria-label="Voices"><option value="">Any number of voices</option><option value="2">2 voices</option><option value="3">3 voices</option><option value="4">4 voices</option><option value="5">5 voices</option><option value="6">6 or more</option></select>
       <select id="libSort" aria-label="Sort"><option value="composer">Sort by composer</option><option value="title">Sort by title</option><option value="voices">Sort by voices</option></select>
     </div>
-    <div id="libFeat"><h2>On this site</h2>${PIECES.map(p => itemHtml(p, meta[p].title, meta[p].composer)).join('')}<h2>Library</h2>
+    <div id="libFeat">${mineHtml()}<h2>On this site</h2>${PIECES.map(p => itemHtml(p, meta[p].title, meta[p].composer)).join('')}<h2>Library</h2>
     <p class="gnote">From the <a href="https://josquin.stanford.edu" target="_blank" rel="noopener">Josquin Research Project</a>, <a href="https://1520s-project.org" target="_blank" rel="noopener">the 1520s Project</a> and the <a href="https://github.com/cuthbertLab/music21" target="_blank" rel="noopener">music21</a> Palestrina masses, as collected by <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">ReDiX</a> (Ugo Bindini). Search their sonorities with <a href="../redix-progressio.html" target="_top">ReDiX Progressio</a>.</p></div>
     <div id="libList"></div>`;
   const upd = () => { lib.shown = 150; $('#libFeat').hidden = !!(lib.q || lib.comp || lib.genre || lib.voices); libList(); };
@@ -2131,9 +2174,15 @@ function syncUI(){
     const row = (v) => {
       const s = vis(v.idx);
       const cb = (k, label) => `<td><input type="checkbox" data-i="${v.idx}" data-k="${k}" aria-label="${esc(v.name)}: ${label}"${s[k] ? ' checked' : ''}${k !== 'on' && !s.on ? ' disabled' : ''}></td>`;
-      return `<tr><td>${esc(v.name)}</td>${cb('on', 'shown')}${cb('notes', 'notes')}${cb('lyr', 'lyrics')}</tr>`;
+      const clefSel = `<select class="vclef" data-i="${v.idx}" aria-label="${esc(v.name)}: clef">${VCLEFS.map(([k, n]) => `<option value="${k}"${(s.clef || '') === k ? ' selected' : ''}>${n}</option>`).join('')}</select>`;
+      return `<tr><td><input class="vname" data-i="${v.idx}" value="${esc(v.name)}" aria-label="Name of the voice" title="Click to rename"></td>${cb('on', 'shown')}${cb('notes', 'notes')}${cb('lyr', 'lyrics')}<td>${clefSel}</td>` +
+        `<td><button class="vbtn" data-op="cf" data-i="${v.idx}" title="Open ${esc(v.name)} in the Cantus firmus app">Cantus firmus</button></td>` +
+        `<td><button class="vbtn vdel" data-op="del" data-i="${v.idx}" aria-label="Remove ${esc(v.name)}" title="Remove this voice">×</button></td></tr>`;
     };
-    $('#voiceTable').innerHTML = `<tr><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th></tr>` + piece.voices.map(row).join('');
+    $('#voiceTable').innerHTML = `<thead><tr><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th><th>Clef</th><th></th><th></th></tr></thead><tbody>` + piece.voices.map((v, i) => { v.idx = i; return row(v); }).join('') +
+      `</tbody><tfoot><tr><td colspan="7"><button data-op="above">+ Voice above</button> <button data-op="below">+ Voice below</button></td></tr></tfoot>`;
+    if (document.activeElement !== $('#metaTitle')) $('#metaTitle').value = (piece.meta.OTL || piece.title || '').replace(/\s*\.\.\.\s*/g, ' … ');
+    if (document.activeElement !== $('#metaComp')) $('#metaComp').value = piece.meta.COM || piece.meta.COA || '';
   }
   document.querySelectorAll('#library .pc').forEach(b => b.setAttribute('aria-current', String(b.dataset.p === pieceKey)));
 }
@@ -2143,6 +2192,157 @@ $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('butt
 let rq = 0;
 const later = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); };
 for (const k of ['size', 'hs', 'vs']) $('#' + k).addEventListener('input', e => { st[k] = +e.target.value; save(); later(); });
+/* ---------------- Voices: name, clef, add, remove, open in Cantus firmus ---------------- */
+const VCLEFS = [['', 'As written'], ['treble', 'G clef'], ['treble8', 'G clef, octave lower'], ['f3', 'F clef on 3'], ['bass', 'F clef on 4']];
+const CLEF_KERN = {treble: 'G2', treble8: 'Gv2', bass: 'F4', f3: 'F3', c1: 'C1', c2: 'C2', c3: 'C3', c4: 'C4', c5: 'C5'};
+/* a voice of rests as long as the piece, with the signs of the voice next to it */
+function restVoice(name, clef, like){
+  const v = {name, abbr: '', kclef: CLEF_KERN[clef], events: [], mets: [], keys: [], clefs: [{t: 0, c: CLEF_KERN[clef], ei: 0}], verses: 0, t: 0};
+  const cuts = like ? [...new Set([0, ...like.mets.map(m => m.t), piece.end])].sort((a, b) => a - b) : [0, piece.end || 2];
+  for (let k = 0; k + 1 < cuts.length; k++) {
+    let r = rt(cuts[k + 1] - cuts[k]), t = cuts[k];
+    const m = like && like.mets.find(x => eq(x.t, cuts[k]));
+    if (m) v.mets.push({t, sign: m.sign, ei: v.events.length});
+    while (r > EPS) { const d = r >= 2 - EPS ? 2 : r >= 1 - EPS ? 1 : r; v.events.push({d, kd: d, rest: true, t, syl: []}); t = rt(t + d); r = rt(r - d); }
+  }
+  if (!like || !like.mets.length) v.mets.push({t: 0, sign: 'C', ei: 0});
+  if (like) for (const k of like.keys) if (eq(k.t, 0)) v.keys.push({t: 0, alts: Object.assign({}, k.alts), raw: k.raw, ei: 0});
+  v.end = rt(v.events.reduce((a, e) => a + e.d, 0));
+  return v;
+}
+/* the per-voice view switches follow their voice when voices are added or removed */
+function shiftVis(at, by){
+  const all = st.vis[pieceKey]; if (!all) return;
+  const out = {};
+  for (const [k, val] of Object.entries(all)) { const i = +k; if (by < 0 && i === at) continue; out[i >= at ? i + by : i] = val; }
+  st.vis[pieceKey] = out; save();
+}
+const VOICE_OPS = {
+  rename(i, name){ name = name.trim().slice(0, 40); if (!name || piece.voices[i].name === name) return; commit(() => { piece.voices[i].name = name; }); },
+  clef(i, c){
+    vis(i).clef = c || null; save();
+    if (c) commit(() => { const v = piece.voices[i]; if (v.clefs.length && eq(v.clefs[0].t, 0)) v.clefs[0].c = CLEF_KERN[c]; else v.clefs.unshift({t: 0, c: CLEF_KERN[c], ei: 0}); });
+    else render();
+  },
+  add(where){
+    const n = piece.voices.length;
+    const ref = where === 'above' ? piece.voices[0] : piece.voices[n - 1];
+    const clef = where === 'above' ? 'treble' : (ref && (ref.clef === 'bass' || ref.clef === 'f3') ? 'bass' : (ref && ref.clef === 'treble' ? 'treble8' : 'bass'));
+    const v = restVoice('Voice ' + (n + 1), clef, ref);
+    ed.sel = null;
+    if (where === 'above') shiftVis(0, 1);
+    vis(where === 'above' ? 0 : n).clef = clef; save();
+    commit(() => { if (where === 'above') piece.voices.unshift(v); else piece.voices.push(v); });
+    toast(`A voice was added ${where === 'above' ? 'above' : 'below'}. Edit, click one of its rests, then type the letters A to G: the notes take the rests’ place.`);
+  },
+  remove(i){
+    if (piece.voices.length < 2) { toast('A score keeps at least one voice.'); return; }
+    const name = piece.voices[i].name;
+    if (ed.sel && ed.sel.vi >= i) ed.sel = null;
+    shiftVis(i, -1);
+    commit(() => { piece.voices.splice(i, 1); });
+    toast(`${name} removed. Undo brings it back.`);
+  }
+};
+$('#voiceTable').addEventListener('click', e => {
+  const b = e.target.closest('button[data-op]'); if (!b) return;
+  e.stopPropagation();
+  const i = +b.dataset.i;
+  if (b.dataset.op === 'cf') openInCantusFirmus(i);
+  else if (b.dataset.op === 'del') VOICE_OPS.remove(i);
+  else VOICE_OPS.add(b.dataset.op);
+});
+$('#voiceTable').addEventListener('change', e => {
+  if (e.target.classList.contains('vname')) { VOICE_OPS.rename(+e.target.dataset.i, e.target.value); return; }
+  if (e.target.classList.contains('vclef')) { VOICE_OPS.clef(+e.target.dataset.i, e.target.value); return; }
+});
+$('#voiceTable').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('vname')) e.target.blur(); e.stopPropagation(); });
+/* title and composer */
+$('#metaTitle').addEventListener('change', e => { const t = e.target.value.trim(); if (!piece || !t) return; commit(() => { for (const k of Object.keys(piece.meta)) if (k.startsWith('OTL') || k === 'OPR') delete piece.meta[k]; piece.meta.OTL = t; }); });
+$('#metaComp').addEventListener('change', e => { if (!piece) return; const c = e.target.value.trim(); commit(() => { delete piece.meta.COA; if (c) piece.meta.COM = c; else delete piece.meta.COM; }); });
+['#metaTitle', '#metaComp'].forEach(id => $(id).addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); }));
+
+/* a new score: four voices, a brevis rest each, ready to write in */
+function kernOf(title, voices){
+  const vs = voices.slice().reverse();
+  const L = [`!!!OTL: ${title}`, vs.map(() => '**kern').join('\t'), vs.map(v => `*I"${v[0]}`).join('\t'), vs.map(v => `*clef${v[1]}`).join('\t'),
+    vs.map(() => '*met(C)').join('\t'), vs.map(() => '=1-').join('\t'), vs.map(() => '0r').join('\t'), vs.map(() => '==').join('\t'), vs.map(() => '*-').join('\t')];
+  return L.join('\n') + '\n';
+}
+async function newScore(){
+  const id = mineAdd('New score', kernOf('New score', [['Superius', 'G2'], ['Altus', 'Gv2'], ['Tenor', 'Gv2'], ['Bassus', 'F4']]));
+  await loadPiece(id);
+  ['treble', 'treble8', 'treble8', 'bass'].forEach((c, i) => { vis(i).clef = c; });
+  save(); render();
+  refreshMine();
+  ed.on = true; ed.sel = {vi: 0, ei: 0}; syncEdit(); showSel();
+  toast('A new score. Select a rest and type the letters A to G: the notes take the rest’s place. Voices adds, names and removes voices.');
+}
+$('#newBtn').addEventListener('click', () => { newScore().catch(err => toast(err.message)); });
+
+/* ---------------- between the two apps ---------------- */
+const HANDOFF = 'organ:handoff:v1';
+const CF_CLEF = {treble: 'treble', treble8: 'treble8', bass: 'bass', f3: 'baritone', c1: 'c1', c2: 'c2', c3: 'c3', c4: 'c4', c5: 'c5'};
+function goTo(page){
+  try { if (EMBED && window.top.location.host === location.host) { window.top.location.href = new URL(page, window.top.location.href).href; return; } } catch (e) {}
+  location.href = page;
+}
+/* one voice as a melody for the Cantus firmus app: sounding values in minims, pitches, accidentals as written */
+function openInCantusFirmus(i){
+  const v = piece.voices[i];
+  const k0 = keyAt(v, 0), bflat = k0.b === -1;
+  const items = [];
+  for (let q = 0; q < v.events.length; q++) {
+    const e = v.events[q];
+    let d = e.d;
+    if (!e.rest) { let j = q; while ((v.events[j].tieStart || v.events[j].tieMid) && v.events[j + 1] && !v.events[j + 1].rest && v.events[j + 1].step === e.step) { j++; d += v.events[j].d; } q = j; }
+    if (e.rest) { const last = items[items.length - 1]; if (last && last.rest) { last.m += d * 2; continue; } items.push({rest: true, m: d * 2}); continue; }
+    const letter = ((e.step % 7) + 7) % 7, sig = (bflat && letter === 6) ? -1 : 0;
+    let alt = e.alt === null || e.alt === undefined ? 0 : e.alt;
+    if (e.ed && st.ed === 'off') alt = sig;
+    const a = alt === sig ? '' : alt < 0 ? 'b' : alt > 0 ? '#' : 'n';
+    items.push({m: d * 2, s: e.step, a});
+  }
+  while (items.length && items[0].rest) items.shift();
+  while (items.length && items[items.length - 1].rest) items.pop();
+  if (!items.length) { toast(`${v.name} has no notes yet.`); return; }
+  const tempus = mensInfo(metAt(v, 0)).T === 3 ? 'O' : 'C';
+  const clef = CF_CLEF[vis(i).clef || KERN_CLEF[v.kclef] || 'treble8'] || 'treble8';
+  try { localStorage.setItem(HANDOFF, JSON.stringify({to: 'cantus-firmus', title: `${piece.title}: ${v.name}`, clef, bflat, tempus, items, at: Date.now()})); }
+  catch (e) { toast('This browser would not pass the voice on.'); return; }
+  stopPlay();
+  goTo('cantus-firmus.html');
+}
+/* a melody from the Cantus firmus app becomes a score of one voice, ready for voices to be added */
+async function takeHandoff(){
+  let h = null; try { h = JSON.parse(localStorage.getItem(HANDOFF) || 'null'); } catch (e) {}
+  if (!h || h.to !== 'choirbook' || !Array.isArray(h.items) || Date.now() - (h.at || 0) > 10 * 60 * 1000) return false;
+  try { localStorage.removeItem(HANDOFF); } catch (e) {}
+  const clef = ({treble: 'G2', treble8: 'Gv2', bass: 'F4', baritone: 'F3', g1: 'G1', c1: 'C1', c2: 'C2', c3: 'C3', c4: 'C4', c5: 'C5'})[h.clef] || 'Gv2';
+  const title = h.title || 'Cantus firmus';
+  const lines = [`!!!OTL: ${title}`, '**kern', '*I"Cantus firmus', `*clef${clef}`];
+  if (h.bflat) lines.push('*k[b-]');
+  lines.push(`*met(${h.tempus === 'O' ? 'O' : 'C'})`, '=1-');
+  for (const it of h.items) {
+    const d = recipOf(it.m / 2);
+    if (it.rest) { lines.push(d + 'r'); continue; }
+    const tok = pitchTok(it.s) + (it.alt === -1 ? '-' : it.alt === 1 ? '#' : it.alt === 0 && it.nat ? 'n' : '');
+    lines.push(d + tok);
+  }
+  lines.push('==', '*-');
+  /* barlines at every perfection (every brevis), with ties where a note runs over */
+  const P = parseKern(lines.join('\n') + '\n');
+  const per = h.tempus === 'O' ? 3 : 2;
+  for (let t = per; t < P.end - EPS; t += per) P.bars.push({t: rt(t), type: 'single'});
+  P.meta.OTL = title;
+  const text = writeKern(P);
+  const id = mineAdd(title, text);
+  await loadPiece(id);
+  vis(0).clef = KERN_CLEF[clef] || 'treble8'; save(); render();
+  refreshMine();
+  toast(`${title} came over from Cantus firmus. Voices adds voices above or below it.`);
+  return true;
+}
 $('#voiceTable').addEventListener('change', e => {
   const c = e.target; if (!c.dataset.k) return;
   vis(+c.dataset.i)[c.dataset.k] = c.checked; save(); syncUI(); render();
@@ -2154,11 +2354,19 @@ function setLib(open){ libEl.hidden = !open; libBtn.setAttribute('aria-expanded'
 $('#markClear').addEventListener('click', () => { mark = null; document.querySelectorAll('#pages g.mark').forEach(g => g.classList.remove('mark')); $('#markBar').hidden = true; setAddress(pieceKey); postHeight(); });
 libBtn.addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden); });
 libEl.addEventListener('click', e => {
+  const del = e.target.closest('.mdel');
+  if (del) {
+    e.stopPropagation();
+    const id = del.dataset.del, all = mineAll(), name = (all[id] && all[id].title) || 'This score';
+    if (!confirm(`Remove “${name}” from My scores? It cannot be brought back.`)) return;
+    delete all[id]; mineSave(all); try { localStorage.removeItem(EKEY(id)); } catch (err) {}
+    refreshMine(); return;
+  }
   e.stopPropagation();
   if (e.target.id === 'libMore') { lib.shown += 300; libList(); return; }
   const b = e.target.closest('.pc'); if (!b) return;
   setLib(false); mark = null;
-  loadPiece(b.dataset.p).then(() => { setAddress(b.dataset.p); }).catch(err => { pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; });
+  loadPiece(b.dataset.p).then(() => { if (!b.dataset.p.startsWith('mine:')) setAddress(b.dataset.p); }).catch(err => { pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; });
 });
 /* pop-overs: hover, or click to keep open */
 function closePops(except){ document.querySelectorAll('.pop.open').forEach(p => { if (p !== except) { p.classList.remove('open'); p.querySelector('button').setAttribute('aria-expanded', 'false'); } }); }
@@ -2329,6 +2537,7 @@ function applyText(text){
   try { piece = parseKern(text); } catch (e) { piece = keep; return; }
   piece.text = text;
   try { localStorage.setItem(EKEY(pieceKey), text); } catch (e) {}
+  if (pieceKey && pieceKey.startsWith('mine:')) { const all = mineAll(); if (all[pieceKey]) { all[pieceKey].title = piece.title; all[pieceKey].at = Date.now(); mineSave(all); } }
   if (sel) { const v = piece.voices[sel.vi]; if (!v || sel.ei >= v.events.length) ed.sel = v && v.events.length ? {vi: sel.vi, ei: v.events.length - 1} : null; }
   syncEdit(); syncUI(); render();
 }
@@ -2394,7 +2603,10 @@ const OPS = {
   },
   insert(letter){
     const v = curVoice(); if (!v) return;
-    const src = srcOf(), at = src.length ? src[src.length - 1] + 1 : v.events.length;
+    const src = srcOf();
+    /* on a selected rest, the note goes where the rest begins */
+    const onRest = src.length && v.events[src[0]] && v.events[src[0]].rest && letter !== 'r';
+    const at = onRest ? src[0] : src.length ? src[src.length - 1] + 1 : v.events.length;
     let ref = null; for (let j = at - 1; j >= 0; j--) if (!v.events[j].rest) { ref = v.events[j].step; break; }
     if (ref === null) ref = CLEFS[v.clef || 'c3'].bottom + 4;
     const idx = LETTERS.indexOf(letter);
@@ -2406,6 +2618,17 @@ const OPS = {
       if (!e.rest) e.alt = implied(v, step, t);
       v.events.splice(at, 0, e);
       for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > at || (m.ei === at && at > 0)) m.ei++;
+      /* a note written into rests uses up their time, so what follows stays in place */
+      if (!e.rest) {
+        let need = e.d, k = at + 1;
+        while (need > EPS && v.events[k] && v.events[k].rest) {
+          const r = v.events[k];
+          if (r.d <= need + EPS) {
+            need = rt(need - r.d); v.events.splice(k, 1);
+            for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > k) m.ei--;
+          } else { r.d = rt(r.d - need); r.kd = r.d; need = 0; }
+        }
+      }
     });
     ed.sel = {vi: ed.sel.vi, ei: at}; render(); syncEdit();
   },
@@ -2646,6 +2869,7 @@ Organ.wire();
     if (from > 0) mark = {piece: want, from, to: Math.max(from, to || from)};
   }
   syncUI(); sizeViewer();
+  if (await takeHandoff().catch(() => false)) { buildPieceList().then(syncUI); return; }
   try { await loadPiece(pieceKey); }
   catch (e) {
     if (!want && pieceKey !== PIECES[0]) { pieceKey = PIECES[0]; try { await loadPiece(pieceKey); } catch (e2) { pagesEl.innerHTML = `<p class="msg">${esc(e2.message)}</p>`; } }
