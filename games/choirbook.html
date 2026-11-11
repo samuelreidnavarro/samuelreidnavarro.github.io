@@ -507,6 +507,7 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 #pages svg .staff{stroke:var(--staff,#8E2A1E)}
 #pages svg .ledger,#pages svg .barl,#pages svg .tie,#pages svg .ms{stroke:var(--leaf-ink)}
 #pages svg use,#pages svg .ink{fill:var(--leaf-ink)}
+#pages svg text.foot{opacity:.8}
 #pages svg text{fill:var(--leaf-ink);font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif}
 #pages svg .title{font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif}
 #pages svg g.on use,#pages svg g.on .ink{fill:var(--accent)}
@@ -556,7 +557,14 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 body.editing #pages .stafhit{cursor:crosshair}
 .pagemeta{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;margin-top:6px;padding-top:8px;border-top:1px solid var(--line)}
 .pagemeta input{font:inherit;font-size:16px;min-height:32px;height:32px;padding:0 8px;border:1px solid var(--line);border-radius:6px;background:var(--ground);color:var(--text)}
-.library .mine{display:flex;gap:6px;align-items:center}
+.library .mine,.library .lrow{display:flex;gap:6px;align-items:center}
+.library .lrow .pc{flex:1}
+.library .fav{flex:none;width:32px;height:32px;min-height:32px;padding:0;border:0;background:transparent;color:var(--muted);display:inline-grid;place-items:center}
+.library .fav svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
+.library .fav:hover{color:var(--text)}
+.library .fav[aria-pressed="true"]{color:var(--accent)}
+.library .fav[aria-pressed="true"] svg{fill:currentColor}
+@media (hover:hover){ .library .lrow .fav[aria-pressed="false"]{opacity:0} .library .lrow:hover .fav,.library .lrow .fav:focus-visible{opacity:1} }
 .library .mine .pc{flex:1}
 .library .mine .mdel{flex:none;width:32px;height:32px;min-height:32px;padding:0;color:var(--muted)}
 .voices th{font-weight:400;font-style:italic;color:var(--muted);font-size:14.5px;padding:0 8px 6px;text-align:center}
@@ -589,7 +597,7 @@ body.editing #pages .stafhit{cursor:crosshair}
 @media print{
   html,body{background:#fff !important;overflow:visible !important;height:auto !important}
   .wrap{padding:0 !important}
-  header.top,.tools,.transport,.pnum,.msg,.handbox,.pendbox,#countBox,.pagenav{display:none !important}
+  header.top,.tools,.transport,.pnum,.msg,.handbox,.pendbox,#countBox,.pagenav,#toast,#clefPick,.markbar,.srcnote{display:none !important}
   .viewer{height:auto !important;width:auto !important;overflow:visible !important;padding:0 !important;background:none !important;box-shadow:none !important}
   #pages{display:block !important;gap:0;width:auto !important}
   .opening{display:block}
@@ -729,7 +737,7 @@ body.editing #pages .stafhit{cursor:crosshair}
         <div class="popbody"><div class="staffset">
           <span class="lab">Notation</span><div class="btns" id="notaSeg" role="group" aria-label="Notation"><button class="tb" data-v="real">Mensural</button><button class="tb" data-v="fake">Modern</button></div>
           <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
-          <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Full</button></div>
+          <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Through the staff</button></div>
           <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
           <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
           <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
@@ -1217,7 +1225,7 @@ function chooseClef(v, mode){
 /* ------------------------------------------------------------------ */
 const KEY = 'choirbook:v1';
 const st = {
-  piece: PIECES[0], view: 'score', nota: 'real', clefs: 'mens', bars: 'tick', staff: 'red', dashes: 'on', ed: 'on',
+  piece: PIECES[0], view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on',
   size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
@@ -1228,6 +1236,8 @@ function resetLook(){ Object.assign(st, LOOK); save(); for (const k of ['size', 
 for (const [k, v] of Object.entries(LOOK)) if (typeof st[k] !== 'number' || !isFinite(st[k])) st[k] = v;
 st.hs = Math.max(0, Math.min(1.2, st.hs)); st.vs = Math.max(0, Math.min(2, st.vs)); st.ss = Math.max(0, Math.min(3, st.ss));
 if (st.bars === 'mstrich') st.bars = 'full';
+/* barlines now stand in each staff only; everyone starts again from those */
+if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} if (window.Organ) Organ.saveShared(); };
 /* playback, metronome and sound: shared/organ.js, the same engine as the Cantus firmus app's */
 const UNIT_NAMES = {Mx: 'Maxima', L: 'Longa', B: 'Brevis', S: 'Semibrevis', M: 'Minima', Sm: 'Semiminima', F: 'Fusa'};
@@ -1582,16 +1592,14 @@ function staffLine(o){
 function barSvg(type, x, tops, single, segs){
   let s = '';
   const style = st.bars;
-  const between = xx => { for (const g of segs) for (const [a, b] of g) if (b - a > 0.2) s += vl(xx, a, b, 'barl', 0.14); };
+  /* barlines stand in each staff only, never in the space between the staves */
   if (type === 'double') {
     for (const t of tops) { s += vl(x - 0.25, t, t + 4, 'barl', 0.14) + vl(x + 0.25, t, t + 4, 'barl', 0.14); }
-    if (style === 'full') { between(x - 0.25); between(x + 0.25); }
     return s;
   }
   if (style === 'none') return '';
   if (style === 'full') {
     for (const t of tops) s += vl(x, t, t + 4, 'barl', 0.14);
-    between(x);
   } else if (style === 'tick') {
     for (const t of tops) s += vl(x, t - 0.9, t + 1, 'barl', 0.14);
   }
@@ -1726,6 +1734,38 @@ function pageGeom(){
   const m = Math.min(w, h) * 0.065;
   return {wmm: w, hmm: h, sp, W: w / sp, H: h / sp, M: m / sp};
 }
+/* the foot of a page: the credits on the first, the title and the page number on the others */
+function footFont(G){ return Math.min(G.wmm, G.hmm) * 0.0115 / G.sp; }
+function wrapText(text, size, width){
+  const words = text.split(/\s+/).filter(Boolean), lines = [];
+  let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (cur && textW(t, size, false) > width) { lines.push(cur); cur = w; } else cur = t; }
+  if (cur) lines.push(cur);
+  return lines;
+}
+function footLines(G){
+  const c = creditText(), fs = footFont(G), W = G.W - 2 * G.M;
+  return [...(c.about ? wrapText(c.about, fs, W) : []), c.made];
+}
+/* how far up the first page's credits reach, so the music stops above them */
+function footTop(G, first){
+  const fs = footFont(G), lh = fs * 1.35, base = G.H - G.M * 0.42;
+  const n = first ? footLines(G).length : 1;
+  return Math.min(G.H - G.M, base - (n - 1) * lh - fs * 1.2);
+}
+function footSvg(G, first, num){
+  const fs = footFont(G), lh = fs * 1.35, base = G.H - G.M * 0.42;
+  let s = '';
+  if (first) {
+    const L = footLines(G);
+    L.forEach((t, i) => { s += `<text class="foot" x="${f(G.W / 2)}" y="${f(base - (L.length - 1 - i) * lh)}" font-size="${f(fs)}" text-anchor="middle"${i === L.length - 1 ? ' font-style="italic"' : ''}>${esc(t)}</text>`; });
+  } else {
+    const who = piece.composer ? `${piece.title}, ${piece.composer}` : piece.title;
+    s += `<text class="foot" x="${f(G.M)}" y="${f(base)}" font-size="${f(fs)}" font-style="italic">${esc(who)}</text>`;
+    s += `<text class="foot" x="${f(G.W - G.M)}" y="${f(base)}" font-size="${f(fs)}" text-anchor="end">${num}</text>`;
+  }
+  return s;
+}
 function pageSvg(G, body){
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(G.W)} ${f(G.H)}" preserveAspectRatio="xMidYMid meet">${body}</svg>`;
 }
@@ -1753,15 +1793,16 @@ function paginate(G, lines, vlist, optsFor, sub){
   const sysGap = 2.2 * st.ss + Math.min(1, st.ss);
   const newPage = () => { pages.push(body); body = ''; y = G.M; };
   if (first) { const tb = titleBlock(G, G.M, G.W - G.M, y, sub); body += tb.svg; y += tb.h; }
+  const bottom1 = footTop(G, true) - 0.8, bottom = footTop(G, false) - 0.8;
   lines.forEach((line, li) => {
     const probe = drawSystem(vlist, line, 0, optsFor(line, li));
-    if (y + probe.h > G.H - G.M && body) newPage();
+    if (y + probe.h > (pages.length ? bottom : bottom1) && body) newPage();
     const sys = drawSystem(vlist, line, y, optsFor(line, li));
     body += `<g transform="translate(${f(G.M)} 0)">${sys.svg}</g>`;
     y += sys.h + sysGap;
   });
   if (body) pages.push(body);
-  return pages.map(b => pageSvg(G, b));
+  return pages.map((b, i) => pageSvg(G, b + footSvg(G, i === 0, i + 1)));
 }
 function layoutParts(G){
   const out = [];
@@ -1811,8 +1852,8 @@ function layoutChoir(G){
   };
   /* region heights per side; the first opening carries the title */
   const tb = titleBlock(G, G.M, G.W - G.M, G.M, null);
-  const capacity = (side, top) => {
-    const H = G.H - G.M - top;
+  const capacity = (side, top, first) => {
+    const H = (first ? footTop(G, true) - 0.8 : footTop(G, false) - 0.8) - top;
     const n = side.length || 1;
     const per = H / n;
     return side.map(v => Math.max(1, Math.floor((per - 2.4) / sysPitch(v))));
@@ -1822,7 +1863,7 @@ function layoutChoir(G){
   while (a < piece.end - EPS && guard++ < 500) {
     const top = G.M + (openings.length === 0 ? tb.h : 0) + 0.4;
     const caps = new Map();
-    sides.forEach(side => capacity(side, top).forEach((c, k) => caps.set(side[k], c)));
+    sides.forEach(side => capacity(side, top, openings.length === 0).forEach((c, k) => caps.set(side[k], c)));
     const fits = b => vlist.every(v => linesNeeded(v, a, b) <= caps.get(v));
     let lo = cands.findIndex(t => t > a + EPS);
     if (lo < 0) break;
@@ -1841,7 +1882,7 @@ function layoutChoir(G){
     sides.forEach((side, si) => {
       let body = '';
       if (oi === 0 && si === 0) body += titleBlock(G, G.M, G.W - G.M, G.M, null).svg;
-      const H = G.H - G.M - op.top, per = H / (side.length || 1);
+      const H = (oi === 0 ? footTop(G, true) - 0.8 : footTop(G, false) - 0.8) - op.top, per = H / (side.length || 1);
       side.forEach((v, k) => {
         const y0 = op.top + per * k;
         body += `<text x="${f(G.M)}" y="${f(y0 + 1.6)}" font-size="1.8" font-style="italic">${esc(v.name)}</text>`;
@@ -1854,6 +1895,7 @@ function layoutChoir(G){
           body += `<g transform="translate(${f(G.M)} 0)">${sys.svg}</g>`;
         });
       });
+      body += footSvg(G, oi === 0 && si === 0, pages.length + 1);
       pages.push({svg: pageSvg(G, body), side: si, opening: oi});
     });
   });
@@ -1898,7 +1940,7 @@ function render(){
   } else {
     const pages = st.view === 'parts' ? layoutParts(G) : layoutScore(G);
     const sc = Math.min(1.25, avail / (G.wmm * pxmm), fitH);
-    pages.forEach((p, i) => { html += pageDiv(p, G, sc, `<span class="pnum">${i + 1}</span>`); });
+    pages.forEach(p => { html += pageDiv(p, G, sc, ''); });
     if (!pages.length) html = '<p class="msg">No voices are shown.</p>';
   }
   pagesEl.innerHTML = html;
@@ -1990,8 +2032,27 @@ window.addEventListener('afterprint', () => {
 /* ------------------------------------------------------------------ */
 /* the full library: games/choirbook/catalogue.json (made from the ReDiX data by Ugo Bindini) */
 let CAT = null, CATBY = {};
-const SRC_NAMES = {jrp: ['Josquin Research Project', 'https://josquin.stanford.edu', 'CC BY-NC 4.0'],
-  '1520': ['The 1520s Project', 'https://1520s-project.org', 'CC BY-NC 4.0'],
+const APP_NAME = 'Choir book', APP_URL = 'samuelreidnavarro.github.io/choirbook.html';
+const SRC_FROM = {jrp: 'the Josquin Research Project, josquin.stanford.edu', '1520': 'the 1520s Project, 1520s-project.org',
+  pal: 'the music21 corpus, github.com/cuthbertLab/music21'};
+/* what the first page says about where the score comes from, who made it and its copyright */
+function creditText(){
+  const m = (piece && piece.meta) || {};
+  const e = CATBY[pieceKey];
+  const s = e ? e.s : (m.jrpid || (pieceKey && PIECES.includes(pieceKey)) ? 'jrp' : null);
+  const parts = [];
+  const mine = pieceKey && pieceKey.startsWith('mine:');
+  if (s && !mine) parts.push(`Score from ${SRC_FROM[s]}.`);
+  else if (s && mine) parts.push(`Based on a score from ${SRC_FROM[s]}.`);
+  if (m.SMS) parts.push(`Source: ${m.SMS}.`);
+  if (m.YOR) parts.push(`After ${m.YOR.replace(/\.$/, '')}.`);
+  if (m.EED) parts.push(`Edited by ${m.EED.replace(/\.$/, '')}.`);
+  else if (m.ENC) parts.push(`Encoded by ${m.ENC.replace(/\.$/, '')}.`);
+  if (m.YEC) parts.push(m.YEC.replace(/\.?$/, '.'));
+  return {about: parts.join(' '), made: `Made with ${APP_NAME}, ${APP_URL}`};
+}
+const SRC_NAMES = {jrp: ['Josquin Research Project', 'https://josquin.stanford.edu', ''],
+  '1520': ['The 1520s Project', 'https://1520s-project.org', ''],
   pal: ['music21 corpus (Palestrina, encoded by John Miller)', 'https://github.com/cuthbertLab/music21', '']};
 let catPromise = null;
 function loadCatalogue(){
@@ -2016,8 +2077,9 @@ function showSource(key){
   const el = $('#srcNote'); if (!el) return;
   const e = CATBY[key];
   if (!e) { el.textContent = ''; return; }
-  const [n, href, lic] = SRC_NAMES[e.s] || ['', '', ''];
-  el.innerHTML = `Score: <a href="${esc(href)}" target="_blank" rel="noopener">${esc(n)}</a>${lic ? ', ' + esc(lic) : ''} · <a href="${esc(catUrl(e))}" target="_blank" rel="noopener">source file</a>`;
+  const [n, href] = SRC_NAMES[e.s] || ['', '', ''];
+  const lic = piece && piece.meta && piece.meta.YEC;
+  el.innerHTML = `Score: <a href="${esc(href)}" target="_blank" rel="noopener">${esc(n)}</a>${lic ? '. ' + esc(lic) : ''} · <a href="${esc(catUrl(e))}" target="_blank" rel="noopener">source file</a>`;
 }
 /* the address shows the open piece, so it can be bookmarked or shared */
 function setAddress(key, extra){
@@ -2119,20 +2181,44 @@ function libList(){
   list.sort(by);
   const n = list.length, show = list.slice(0, lib.shown);
   let html = `<p class="libhint">${n} piece${n === 1 ? '' : 's'}${n > show.length ? ` (showing ${show.length})` : ''}</p>`;
-  html += show.map(e => itemHtml(e.k, e.t, `${nameOf(e.c)}${e.a ? ' (attributed)' : ''}${e.d ? ', ' + e.d : ''} · ${e.v} voices · ${(GENRES[e.g] || e.g).replace(/s$/, '')}`)).join('');
+  const favs = favAll();
+  html += show.map(e => `<div class="lrow">${itemHtml(e.k, e.t, `${nameOf(e.c)}${e.a ? ' (attributed)' : ''}${e.d ? ', ' + e.d : ''} · ${e.v} voices · ${(GENRES[e.g] || e.g).replace(/s$/, '')}`)}${favBtn(e.k, !!favs[e.k], e.t)}</div>`).join('');
   if (n > show.length) html += `<button class="more" id="libMore">Show more</button>`;
   box.innerHTML = html;
 }
+/* pieces from the library starred into My scores: kept in this browser as links, the pieces themselves stay as they are */
+const FAV_KEY = 'choirbook:fav:v1';
+function favAll(){ try { return JSON.parse(localStorage.getItem(FAV_KEY) || '{}'); } catch (e) { return {}; } }
+function favSave(all){ try { localStorage.setItem(FAV_KEY, JSON.stringify(all)); } catch (e) {} }
+const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 14.7 9l6.7.6-5.1 4.5 1.5 6.6L12 17.2l-5.8 3.5 1.5-6.6-5.1-4.5L9.3 9Z"/></svg>';
+function favBtn(key, on, title){
+  return `<button class="fav" data-fav="${esc(key)}" aria-pressed="${on}" aria-label="${on ? 'Remove' : 'Add'} ${esc(title)} ${on ? 'from' : 'to'} My scores" title="${on ? 'Remove from My scores' : 'Add to My scores'}">${STAR}</button>`;
+}
 function mineHtml(){
-  const all = mineAll(), ids = Object.keys(all).sort((a, b) => all[b].at - all[a].at);
-  if (!ids.length) return '';
-  return '<h2>My scores</h2>' + ids.map(id => `<div class="mine">${itemHtml(id, all[id].title || 'Untitled', 'Kept in this browser, ' + new Date(all[id].at).toLocaleDateString())}<button class="mdel" data-del="${esc(id)}" aria-label="Remove ${esc(all[id].title || 'this score')}" title="Remove from My scores">×</button></div>`).join('');
+  const all = mineAll(), favs = favAll();
+  const rows = [
+    ...Object.keys(all).map(id => ({at: all[id].at, html: `<div class="mine">${itemHtml(id, all[id].title || 'Untitled', 'Your score, kept in this browser, ' + new Date(all[id].at).toLocaleDateString())}<button class="mdel" data-del="${esc(id)}" aria-label="Remove ${esc(all[id].title || 'this score')}" title="Remove from My scores">×</button></div>`})),
+    ...Object.keys(favs).map(k => ({at: favs[k].at, html: `<div class="mine">${itemHtml(k, favs[k].t, favs[k].c)}${favBtn(k, true, favs[k].t)}</div>`}))
+  ].sort((a, b) => b.at - a.at);
+  return '<h2>My scores</h2>' + (rows.length ? rows.map(r => r.html).join('')
+    : '<p class="libhint">Star a piece in the library to keep it here. Scores you write with New score are kept here too.</p>');
 }
 function refreshMine(){
-  const feat = $('#libFeat'); if (!feat) return;
-  feat.querySelectorAll('.mine').forEach(m => m.remove());
-  const h = [...feat.querySelectorAll('h2')].find(x => x.textContent === 'My scores'); if (h) h.remove();
-  feat.insertAdjacentHTML('afterbegin', mineHtml());
+  const box = $('#libMine'); if (box) box.innerHTML = mineHtml();
+  const favs = favAll();
+  document.querySelectorAll('#libList .fav').forEach(b => {
+    const on = !!favs[b.dataset.fav], t = b.closest('.lrow').querySelector('.t').textContent;
+    b.outerHTML = favBtn(b.dataset.fav, on, t);
+  });
+}
+function toggleFav(key){
+  const favs = favAll();
+  if (favs[key]) delete favs[key];
+  else {
+    const e = CATBY[key];
+    favs[key] = {t: e ? e.t : (piece && pieceKey === key ? piece.title : key), c: e ? `${nameOf(e.c)}${e.d ? ', ' + e.d : ''}` : (piece && pieceKey === key ? piece.composer || '' : ''), at: Date.now()};
+  }
+  favSave(favs); refreshMine();
 }
 async function buildPieceList(){
   await Promise.all(PIECES.map(async p => {
@@ -2156,7 +2242,7 @@ async function buildPieceList(){
       <select id="libVoices" aria-label="Voices"><option value="">Any number of voices</option><option value="2">2 voices</option><option value="3">3 voices</option><option value="4">4 voices</option><option value="5">5 voices</option><option value="6">6 or more</option></select>
       <select id="libSort" aria-label="Sort"><option value="composer">Sort by composer</option><option value="title">Sort by title</option><option value="voices">Sort by voices</option></select>
     </div>
-    <div id="libFeat">${mineHtml()}<h2>On this site</h2>${PIECES.map(p => itemHtml(p, meta[p].title, meta[p].composer)).join('')}<h2>Library</h2>
+    <div id="libFeat"><div id="libMine">${mineHtml()}</div><h2>Library</h2>
     <p class="gnote">From the <a href="https://josquin.stanford.edu" target="_blank" rel="noopener">Josquin Research Project</a>, <a href="https://1520s-project.org" target="_blank" rel="noopener">the 1520s Project</a> and the <a href="https://github.com/cuthbertLab/music21" target="_blank" rel="noopener">music21</a> Palestrina masses, as collected by <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">ReDiX</a> (Ugo Bindini). Search their sonorities with <a href="../redix-progressio.html" target="_top">ReDiX Progressio</a>.</p></div>
     <div id="libList"></div>`;
   const upd = () => { lib.shown = 150; $('#libFeat').hidden = !!(lib.q || lib.comp || lib.genre || lib.voices); libList(); };
@@ -2440,6 +2526,8 @@ function setLib(open){ libEl.hidden = !open; libBtn.setAttribute('aria-expanded'
 $('#markClear').addEventListener('click', () => { mark = null; document.querySelectorAll('#pages g.mark').forEach(g => g.classList.remove('mark')); $('#markBar').hidden = true; setAddress(pieceKey); postHeight(); });
 libBtn.addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden); });
 libEl.addEventListener('click', e => {
+  const fv = e.target.closest('.fav');
+  if (fv) { e.stopPropagation(); toggleFav(fv.dataset.fav); return; }
   const del = e.target.closest('.mdel');
   if (del) {
     e.stopPropagation();
