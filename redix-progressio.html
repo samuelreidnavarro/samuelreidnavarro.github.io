@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReDiX Progressio | Samuel Reid Navarro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+Double+Pica:ital@0;1&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap">
+  <link rel="stylesheet" href="style.css?v=17">
+  <!--
+    ReDiX Progressio: ReDiX – Renaissance Digital eXplorer, in the browser.
+    Based on ReDiX by Ugo Bindini (https://github.com/ugobindini/redix), GPL-3.0.
+    This page is a JavaScript port of its search, with an added search for successions
+    of two sonorities; it is likewise licensed under the GPL-3.0.
+    Data: redix-progressio/index.json + redix-progressio/points.bin (sonorities exported from the ReDiX database),
+    games/choirbook/catalogue.json (pieces and where their scores are published).
+  -->
+  <style>
+    main.rdx { max-width: 72rem; justify-items: stretch; gap: 1.4rem; }
+    .rdx .page-intro { max-width: 46rem; text-align: left; }
+    .credit { font-size: 1.02rem; color: var(--soft); max-width: 46rem; margin: 0 auto; }
+    .credit a { color: var(--mark); }
+    .tabs { display: flex; gap: .4rem; justify-content: center; flex-wrap: wrap; }
+    .tabs button { font: inherit; font-size: 1.12rem; padding: .35rem 1.1rem; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--soft); cursor: pointer; }
+    .tabs button[aria-selected=true] { color: var(--text); border-color: var(--mark); background: var(--band); }
+    .panel-form { display: grid; gap: 1rem; padding: 1.2rem 1.4rem; border: 1px solid var(--line); border-radius: 10px; background: #fffdf8; }
+    .panel-form h2 { margin: 0; font-size: 1.35rem; }
+    .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); gap: .9rem 1.6rem; }
+    .fld { display: grid; gap: .2rem; font-size: 1.05rem; }
+    .fld .hint { color: var(--soft); font-size: .92rem; font-style: italic; line-height: 1.35; }
+    .rdx input[type=text], .rdx input[type=search], .rdx select {
+      font: inherit; font-size: 1.05rem; color: var(--text); background: var(--bg); border: 1px solid var(--line);
+      border-radius: 5px; padding: .3rem .55rem; width: 100%; }
+    .rdx input:focus, .rdx select:focus { outline: 2px solid var(--mark); outline-offset: 1px; }
+    .checks { display: flex; flex-wrap: wrap; gap: .3rem 1.4rem; font-size: 1.05rem; }
+    .checks label { display: inline-flex; align-items: center; gap: .4rem; }
+    .rdx input[type=checkbox] { accent-color: var(--mark); width: 1.05rem; height: 1.05rem; }
+    .quarters { display: flex; gap: .2rem 1rem; align-items: center; flex-wrap: wrap; font-size: 1.05rem; }
+    .quarters label { display: inline-flex; align-items: center; gap: .25rem; }
+    details.comp { border: 1px solid var(--line); border-radius: 5px; background: var(--bg); }
+    details.comp summary { padding: .3rem .6rem; cursor: pointer; font-size: 1.05rem; }
+    details.comp .box { padding: .4rem .6rem .6rem; border-top: 1px solid var(--line); }
+    details.comp .clist { max-height: 16rem; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: .05rem 1rem; font-size: 1rem; margin-top: .4rem; }
+    details.comp .clist label { display: flex; gap: .4rem; align-items: baseline; }
+    details.comp .clist .n { color: var(--soft); font-size: .9rem; }
+    .btnrow { display: flex; gap: .7rem; flex-wrap: wrap; align-items: center; }
+    .btn { font: inherit; font-size: 1.1rem; padding: .4rem 1.3rem; border-radius: 6px; border: 1px solid var(--mark); background: var(--mark); color: #fffdf8; cursor: pointer; }
+    .btn.light { background: transparent; color: var(--mark); }
+    .btn.small { font-size: .95rem; padding: .15rem .7rem; }
+    .btn:disabled { opacity: .55; cursor: default; }
+    .status { color: var(--soft); font-style: italic; }
+    .err { color: #9b2a1a; }
+    .summary { margin: 0; }
+    table.groups, table.items { width: 100%; border-collapse: collapse; font-size: 1.05rem; }
+    table.groups th, table.items th { text-align: left; font-weight: 400; color: var(--soft); border-bottom: 1px solid var(--line); padding: .2rem .5rem; font-size: .95rem; }
+    table.groups td { padding: .3rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    table.groups td.num, table.groups th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .gbtn { font: inherit; font-size: 1.05rem; background: var(--band); border: 1px solid var(--line); border-radius: 5px; padding: .1rem .6rem; cursor: pointer; color: var(--text); text-align: left; }
+    .gbtn[aria-expanded=true] { border-color: var(--mark); }
+    td.sub { padding: .2rem 0 .8rem 1.2rem !important; background: #fffdf8; }
+    table.items td { padding: .25rem .5rem; border-bottom: 1px dotted var(--line); vertical-align: top; }
+    table.items td.where { white-space: nowrap; }
+    table.items a { white-space: nowrap; }
+    .snip { padding: .4rem 0 .8rem; overflow-x: auto; }
+    .snip svg { max-width: 100%; height: auto; background: #fff; }
+    .snip .cap { font-size: .95rem; color: var(--soft); font-style: italic; margin-top: .2rem; }
+    .more { margin: .5rem 0; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <header class="banner">
+    <a href="index.html"><p class="site-name">Samuel Reid Navarro</p></a>
+  </header>
+  <nav class="nav" aria-label="Main">
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="music.html">Timelines</a></li>
+      <li><a href="mensurator.html">Mensurator</a></li>
+      <li><a href="canon.html">Canon Canonum</a></li>
+      <li><a href="cantus-firmus.html">Cantus firmus</a></li>
+      <li><a href="choirbook.html">Choir book</a></li>
+      <li><a href="redix-progressio.html" aria-current="page">ReDiX Progressio</a></li>
+      <li class="has-menu"><a href="compressor.html">Tools</a>
+        <ul class="menu">
+          <li><a href="compressor.html">Magic black and white PDF compressor</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+
+  <main class="rdx">
+    <h1 class="page-title">ReDiX Progressio</h1>
+    <div class="page-intro">
+      <p><strong>ReDiX Progressio is based on <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">ReDiX – Renaissance Digital eXplorer</a> by <a href="https://github.com/ugobindini" target="_blank" rel="noopener">Ugo Bindini</a>.</strong> Ugo wrote the original program and analysed the scores: every sonority of about 2,870 pieces of fifteenth- and sixteenth-century polyphony, with its lowest note, its intervals above the bass and its place in the bar. That analysis, and the search for single sonorities on this page, are his work. This page translates his code so that it runs entirely in your browser; his original program is on <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">GitHub</a>.</p>
+      <p>Progressio adds a search for <em>successions</em> of two sonorities, for example 3&nbsp;6&nbsp;10 followed a semibreve later by 5&nbsp;8&nbsp;10, if you like with a given motion of the bass. Every result can be shown here or opened in the <a href="choirbook.html">Choir book</a>, with the passage marked in the score.</p>
+    </div>
+    <p class="credit">Like ReDiX, this page is free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GPL-3.0</a>. Scores: <a href="https://josquin.stanford.edu" target="_blank" rel="noopener">Josquin Research Project</a> and <a href="https://1520s-project.org" target="_blank" rel="noopener">the 1520s Project</a> (both CC BY-NC 4.0), and the Palestrina masses encoded by John Miller in the <a href="https://github.com/cuthbertLab/music21" target="_blank" rel="noopener">music21</a> corpus. Music notation by <a href="https://www.verovio.org" target="_blank" rel="noopener">Verovio</a>.</p>
+
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabSucc" aria-selected="true">Interval successions</button>
+      <button role="tab" id="tabFb" aria-selected="false">Single sonorities</button>
+    </div>
+
+    <form class="panel-form" id="form" autocomplete="off">
+      <h2>Which pieces</h2>
+      <div class="grid2">
+        <div class="fld">
+          <span>Composers</span>
+          <details class="comp" id="compBox">
+            <summary id="compSum">All composers</summary>
+            <div class="box">
+              <div class="btnrow"><button type="button" class="btn light small" id="compAll">All</button><button type="button" class="btn light small" id="compNone">None</button></div>
+              <div class="clist" id="compList"></div>
+            </div>
+          </details>
+          <label class="checks"><label><input type="checkbox" id="attr" checked> include pieces whose attribution is uncertain</label></label>
+        </div>
+        <div class="fld">
+          <label for="title">Title contains</label>
+          <input type="text" id="title" placeholder="e.g. homme">
+          <label for="genre" style="margin-top:.4rem">Genre</label>
+          <select id="genre"><option value="">All</option><option value="Mass">Mass movements</option><option value="Motet">Motets</option><option value="Song">Songs</option><option value="Other">Other</option></select>
+        </div>
+      </div>
+
+      <div id="succFields">
+        <h2>Succession</h2>
+        <div class="grid2">
+          <div class="fld"><label for="first">First sonority: intervals above the bass</label><input type="text" id="first" placeholder="e.g. 3 6 10"></div>
+          <div class="fld"><label for="second">Second sonority: intervals above the bass</label><input type="text" id="second" placeholder="e.g. 5 8 10"></div>
+          <div class="fld"><label for="dist">The second sonority sounds this much later</label>
+            <select id="dist"><option value="1">a semiminim</option><option value="2">a minim</option><option value="3">a dotted minim</option><option value="4" selected>a semibreve</option><option value="6">a dotted semibreve</option><option value="8">a breve</option></select></div>
+          <div class="fld"><label for="bass">Bass motion (optional)</label><input type="text" id="bass" placeholder="e.g. -5 +4">
+            <span class="hint">1 = the bass stays, +2 = a step up, −5 = a fifth down, 4 = a fourth up or down. Several are allowed.</span></div>
+        </div>
+        <div class="checks" style="margin-top:.8rem">
+          <label><input type="checkbox" id="reduce"> reduce intervals to the octave (10 = 3, octaves ignored)</label>
+          <label><input type="checkbox" id="more"> allow additional intervals (extra voices)</label>
+          <label><input type="checkbox" id="struck"> something must be newly struck at the second sonority</label>
+        </div>
+      </div>
+
+      <div id="fbFields" hidden>
+        <h2>Sonority</h2>
+        <div class="grid2">
+          <div class="fld"><label for="contains">The figures contain</label><input type="text" id="contains" placeholder="e.g. 3 5">
+            <span class="hint">Reduced to the octave; add * for an exact interval, e.g. 10*.</span></div>
+          <div class="fld"><label for="notcontains">The figures do not contain</label><input type="text" id="notcontains" placeholder="e.g. 4 7"></div>
+          <div class="fld"><label for="noreduce">Do not reduce these intervals to the octave</label><input type="text" id="noreduce" placeholder="e.g. 9 11"></div>
+          <div class="fld"><label for="lowest">The lowest note is among</label><input type="text" id="lowest" placeholder="e.g. b2-c3 g3">
+            <span class="hint">c3 is middle C.</span></div>
+        </div>
+      </div>
+
+      <div class="quarters"><span id="qLabel">The first sonority falls on these quarters of the semibreve (none ticked = all):</span>
+        <label><input type="checkbox" class="q" value="0"> 1st</label>
+        <label><input type="checkbox" class="q" value="1"> 2nd</label>
+        <label><input type="checkbox" class="q" value="2"> 3rd</label>
+        <label><input type="checkbox" class="q" value="3"> 4th</label>
+      </div>
+
+      <div class="btnrow">
+        <button type="submit" class="btn" id="go">Search</button>
+        <button type="button" class="btn light" id="clear">Clear</button>
+        <span class="status" id="status"></span>
+      </div>
+    </form>
+
+    <section id="results" aria-live="polite"></section>
+  </main>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let mode = 'succ';
+
+/* ---------------------------------------------------------------- data */
+let CAT = null, DATA = null, dataPromise = null;
+function loadCatalogue(){
+  return fetch('games/choirbook/catalogue.json').then(r => r.json()).then(j => { CAT = j; return j; });
+}
+const catPromise = loadCatalogue().then(buildComposers).catch(e => { $('#status').innerHTML = '<span class="err">Could not load the list of pieces.</span>'; });
+function loadData(){
+  if (dataPromise) return dataPromise;
+  $('#status').textContent = 'Loading the analysis data (about 5 MB, only the first time)…';
+  dataPromise = Promise.all([catPromise, fetch('redix-progressio/index.json').then(r => r.json()), fetch('redix-progressio/points.bin').then(r => { if (!r.ok) throw new Error('points'); return r.arrayBuffer(); })])
+    .then(([_, idx, buf]) => {
+      const n = buf.byteLength / 10, dv = new DataView(buf);
+      const T = new Int32Array(n), BAR = new Uint16Array(n), BEAT = new Uint8Array(n), BASE = new Uint8Array(n), CH = new Uint16Array(n);
+      for (let i = 0, o = 0; i < n; i++, o += 10) {
+        T[i] = dv.getInt32(o, true); BAR[i] = dv.getUint16(o + 4, true); BEAT[i] = dv.getUint8(o + 6); BASE[i] = dv.getUint8(o + 7); CH[i] = dv.getUint16(o + 8, true);
+      }
+      const chords = idx.chords.map(s => s ? s.split(',').map(Number) : []);
+      const pieces = []; let off = 0;
+      for (const [ci, cnt] of idx.index) { pieces.push({ci, a: off, b: off + cnt}); off += cnt; }
+      DATA = {T, BAR, BEAT, BASE, CH, chords, pieces};
+      return DATA;
+    });
+  dataPromise.catch(() => { dataPromise = null; });
+  return dataPromise;
+}
+
+/* ---------------------------------------------------------------- composers */
+let comps = [];
+function nameOf(c){ const i = c.indexOf(', '); return i > 0 ? c.slice(i + 2) + ' ' + c.slice(0, i) : c; }
+function buildComposers(){
+  const cnt = {}, dates = {};
+  CAT.pieces.forEach(e => { cnt[e.c] = (cnt[e.c] || 0) + 1; if (e.d) dates[e.c] = e.d; });
+  comps = Object.keys(cnt).sort((a, b) => a.localeCompare(b));
+  $('#compList').innerHTML = comps.map((c, i) => `<label><input type="checkbox" class="cc" value="${i}"> <span>${esc(c)}${dates[c] ? ' <span class="n">' + esc(dates[c]) + '</span>' : ''} <span class="n">(${cnt[c]})</span></span></label>`).join('');
+  restore();
+}
+function selectedComps(){ return [...document.querySelectorAll('.cc:checked')].map(x => comps[+x.value]); }
+function compSummary(){
+  const s = selectedComps();
+  $('#compSum').textContent = !s.length ? 'All composers' : s.length <= 3 ? s.map(nameOf).join(', ') : `${s.length} composers`;
+}
+$('#compList').addEventListener('change', compSummary);
+$('#compAll').addEventListener('click', () => { document.querySelectorAll('.cc').forEach(x => x.checked = true); compSummary(); });
+$('#compNone').addEventListener('click', () => { document.querySelectorAll('.cc').forEach(x => x.checked = false); compSummary(); });
+
+/* ---------------------------------------------------------------- tabs */
+function setMode(m){
+  mode = m;
+  $('#tabSucc').setAttribute('aria-selected', String(m === 'succ'));
+  $('#tabFb').setAttribute('aria-selected', String(m === 'fb'));
+  $('#succFields').hidden = m !== 'succ';
+  $('#fbFields').hidden = m !== 'fb';
+  $('#qLabel').textContent = m === 'succ' ? 'The first sonority falls on these quarters of the semibreve (none ticked = all):' : 'Only sonorities on these quarters of the semibreve (none ticked = all):';
+}
+$('#tabSucc').addEventListener('click', () => { setMode('succ'); $('#results').innerHTML = ''; });
+$('#tabFb').addEventListener('click', () => { setMode('fb'); $('#results').innerHTML = ''; });
+
+/* ---------------------------------------------------------------- parsing input */
+function toInt(tok){ const n = parseInt(tok.replace('−', '-'), 10); if (isNaN(n) || !/^[+\-−]?\d+\*?$/.test(tok)) throw new Error(`“${tok}” is not a number`); return n; }
+function tokens(s){ return s.replace(/,/g, ' ').split(/\s+/).filter(Boolean); }
+function parseIntervals(s){ const r = new Set(); for (const t of tokens(s)) { const n = toInt(t); if (n < 1) throw new Error(`“${t}” is not an interval`); r.add(n); } return r; }
+const red = x => ((x - 1) % 7) + 1;
+function normalise(list, reduce){
+  const s = new Set();
+  for (const x of list) { if (x === 1) continue; const y = reduce ? red(x) : x; if (y !== 1) s.add(y); }
+  return s;
+}
+function parseBass(s){
+  const r = new Set();
+  for (const t of tokens(s)) {
+    const n = toInt(t);
+    if (n === 0) throw new Error(`“${t}” is not a bass interval (use 1 for “stays”)`);
+    if (/^[+\-−]/.test(t) || n === 1) r.add(n); else { r.add(n); r.add(-n); }
+  }
+  return r;
+}
+const NOTE = {c: 0, d: 1, e: 2, f: 3, g: 4, a: 5, b: 6};
+function noteNum(s){ const m = s.toLowerCase().match(/^([a-g])(\d)$/); if (!m) throw new Error(`“${s}” is not a note (use e.g. c3, g2)`); return 7 + NOTE[m[1]] + 7 * +m[2]; }
+function parseLowest(s){
+  const r = new Set();
+  for (const t of tokens(s)) {
+    if (t.includes('-')) { const [a, b] = t.split('-'); for (let n = noteNum(a); n <= noteNum(b); n++) r.add(n); }
+    else r.add(noteNum(t));
+  }
+  return r;
+}
+const bassMotion = (a, b) => { const d = b - a; return d >= 0 ? d + 1 : d - 1; };
+const INAMES = {1: 'unison', 2: 'second', 3: 'third', 4: 'fourth', 5: 'fifth', 6: 'sixth', 7: 'seventh', 8: 'octave'};
+function motionLabel(m){
+  if (m === 1) return 'bass stays';
+  const a = Math.abs(m);
+  return `bass ${m > 0 ? '+' : '−'}${a} (${INAMES[a] || a + 'th'} ${m > 0 ? 'up' : 'down'})`;
+}
+const fig = list => '[' + list.join(' ') + ']';
+const fmtT = t => { const q = t / 100; return Number.isInteger(q) ? q : q.toFixed(2); };
+
+/* ---------------------------------------------------------------- piece filter */
+function pieceFilter(){
+  const sel = new Set(selectedComps()), attr = $('#attr').checked;
+  const title = $('#title').value.trim().toLowerCase(), genre = $('#genre').value;
+  return e => (!sel.size || sel.has(e.c)) && (attr || !e.a) && (!title || e.t.toLowerCase().includes(title)) && (!genre || e.g === genre);
+}
+function quarters(){ return [...document.querySelectorAll('.q:checked')].map(x => +x.value * 100); }
+
+/* ---------------------------------------------------------------- searches */
+function searchSucc(D){
+  const reduce = $('#reduce').checked, more = $('#more').checked, struck = $('#struck').checked;
+  const p1 = normalise(parseIntervals($('#first').value), reduce), p2 = normalise(parseIntervals($('#second').value), reduce);
+  if (!p1.size || !p2.size) throw new Error('enter the intervals of both sonorities (other than 1, or 8 when reducing)');
+  const bass = $('#bass').value.trim() ? parseBass($('#bass').value) : null;
+  const dist = Math.round(+$('#dist').value * 100);
+  const match = pat => D.chords.map(c => {
+    const s = normalise(c, reduce);
+    if (more) { for (const x of pat) if (!s.has(x)) return false; return true; }
+    if (s.size !== pat.size) return false; for (const x of pat) if (!s.has(x)) return false; return true;
+  });
+  const m1 = match(p1), m2 = match(p2);
+  const ok = pieceFilter(), qs = quarters();
+  const {T, CH, BASE} = D, res = []; let examined = 0;
+  for (const P of D.pieces) {
+    const e = CAT.pieces[P.ci]; if (!ok(e)) continue;
+    for (let i = P.a; i < P.b; i++) {
+      if (qs.length && !qs.includes(((T[i] % 400) + 400) % 400)) continue;
+      examined++;
+      if (!m1[CH[i]]) continue;
+      const target = T[i] + dist;
+      let lo = i, hi = P.b - 1;          /* last sonority sounding at the target time */
+      while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (T[mid] <= target + 2) lo = mid; else hi = mid - 1; }
+      const j = lo;
+      if (j <= i) continue;
+      if (struck && Math.abs(T[j] - target) > 2) continue;
+      if (!m2[CH[j]]) continue;
+      const mo = bassMotion(BASE[i], BASE[j]);
+      if (bass && !bass.has(mo)) continue;
+      res.push({p: P.ci, i, j, key: `${fig(D.chords[CH[i]])} → ${fig(D.chords[CH[j]])}`, sub: motionLabel(mo)});
+    }
+  }
+  return {res, examined};
+}
+function searchFb(D){
+  const contains = [], exact = [];
+  for (const t of tokens($('#contains').value)) { if (t.endsWith('*')) exact.push(toInt(t.slice(0, -1))); else contains.push(toInt(t)); }
+  const not = tokens($('#notcontains').value).map(toInt), noRed = tokens($('#noreduce').value).map(toInt);
+  const lowest = $('#lowest').value.trim() ? parseLowest($('#lowest').value) : null;
+  const ok = pieceFilter(), qs = quarters();
+  /* per chord: does it pass the interval tests, and its figure key */
+  const pass = D.chords.map(full => {
+    const rd = full.map(red);
+    for (const x of contains) if (!rd.includes(x)) return false;
+    for (const x of exact) if (!full.includes(x)) return false;
+    for (const x of not) {
+      if (full.includes(x)) return false;
+      if (x <= 7 && !noRed.some(y => y % 7 === x % 7) && rd.includes(x)) return false;
+    }
+    return true;
+  });
+  const keyOf = D.chords.map(full => {
+    const out = new Set();
+    for (const x of full) { if (noRed.includes(x)) out.add(x); else if (x % 7 !== 1) out.add(red(x)); }
+    return '[' + [...out].sort((a, b) => a - b).join(',') + ']';
+  });
+  const kind = D.chords.map(full => {
+    const rd = new Set(full.map(red));
+    if ([...rd].every(x => x === 1 || x === 3 || x === 5)) return 'root';
+    if (rd.has(6) && [...rd].every(x => x === 1 || x === 3 || x === 6)) return 'sixth';
+    return 'dis';
+  });
+  const {T, CH, BASE} = D, res = []; let total = 0; const kinds = {root: 0, sixth: 0, dis: 0};
+  for (const P of D.pieces) {
+    const e = CAT.pieces[P.ci]; if (!ok(e)) continue;
+    for (let i = P.a; i < P.b; i++) {
+      if (qs.length && !qs.includes(((T[i] % 400) + 400) % 400)) continue;
+      if (lowest && !lowest.has(BASE[i])) continue;
+      total++;
+      if (!pass[CH[i]]) continue;
+      kinds[kind[CH[i]]]++;
+      res.push({p: P.ci, i, j: i, key: keyOf[CH[i]], sub: ''});
+    }
+  }
+  return {res, total, kinds};
+}
+
+/* ---------------------------------------------------------------- results */
+let groups = [], openSnip = null;
+const SHOW_STEP = 200;
+function whereText(D, r){
+  const a = r.i, b = r.j, BAR = D.BAR, BEAT = D.BEAT;
+  if (a === b) return `bar ${BAR[a]}, beat ${BEAT[a]}`;
+  if (BAR[a] === BAR[b]) return `bar ${BAR[a]}, beat ${BEAT[a]} → ${BEAT[b]}`;
+  return `bar ${BAR[a]}.${BEAT[a]} → ${BAR[b]}.${BEAT[b]}`;
+}
+function cbLink(D, r){
+  const e = CAT.pieces[r.p];
+  return `choirbook.html?piece=${encodeURIComponent(e.k).replace(/%2F/g, '/')}&bar=${D.BAR[r.i]}&to=${D.BAR[r.j]}`;
+}
+function render(D, out){
+  const res = out.res, n = res.length;
+  const by = new Map();
+  for (const r of res) { const k = r.key + '\u0000' + r.sub; if (!by.has(k)) by.set(k, []); by.get(k).push(r); }
+  groups = [...by.entries()].map(([k, list]) => ({key: list[0].key, sub: list[0].sub, list, shown: 0})).sort((a, b) => b.list.length - a.list.length);
+  const nPieces = new Set(res.map(r => r.p)).size;
+  let h = '';
+  if (mode === 'succ') {
+    h += `<p class="summary">Found <strong>${n}</strong> successions in ${nPieces} pieces (${out.examined.toLocaleString('en')} sonorities examined).</p>`;
+  } else {
+    const pc = x => n ? (x * 100 / n).toFixed(2) : '0';
+    h += `<p class="summary">Found <strong>${n}</strong> of ${out.total.toLocaleString('en')} sonorities (${out.total ? (n * 100 / out.total).toFixed(2) : 0} %) in ${nPieces} pieces. Root position: ${out.kinds.root} (${pc(out.kinds.root)} %), sixth chords: ${out.kinds.sixth} (${pc(out.kinds.sixth)} %), dissonant: ${out.kinds.dis} (${pc(out.kinds.dis)} %).</p>`;
+  }
+  if (n) {
+    h += `<table class="groups"><thead><tr><th>${mode === 'succ' ? 'Succession' : 'Figures'}</th>${mode === 'succ' ? '<th>Bass</th>' : ''}<th class="num">Number</th><th class="num">Share</th></tr></thead><tbody>`;
+    groups.forEach((g, gi) => {
+      h += `<tr><td><button class="gbtn" data-g="${gi}" aria-expanded="false">${esc(g.key)}</button></td>${mode === 'succ' ? `<td>${esc(g.sub)}</td>` : ''}<td class="num">${g.list.length}</td><td class="num">${(g.list.length * 100 / n).toFixed(2)} %</td></tr>`;
+      h += `<tr hidden id="gr${gi}"><td class="sub" colspan="${mode === 'succ' ? 4 : 3}"></td></tr>`;
+    });
+    h += '</tbody></table>';
+  }
+  $('#results').innerHTML = h;
+}
+function itemRows(D, g, gi, from, to){
+  let h = '';
+  for (let k = from; k < to; k++) {
+    const r = g.list[k], e = CAT.pieces[r.p], id = `s${gi}-${k}`;
+    h += `<tr><td><button class="btn light small show" data-g="${gi}" data-k="${k}" aria-expanded="false">Show</button></td><td>${esc(nameOf(e.c))}${e.a ? ' (attr.)' : ''}</td><td>${esc(e.t)}</td><td class="where">${whereText(D, r)}</td><td><a href="${esc(cbLink(D, r))}" target="_blank" rel="noopener">Open in Choir book ↗</a></td></tr>`;
+    h += `<tr hidden id="${id}"><td colspan="5"><div class="snip"></div></td></tr>`;
+  }
+  return h;
+}
+function openGroup(gi){
+  const g = groups[gi], row = $('#gr' + gi), cell = row.firstElementChild;
+  if (!g.shown) {
+    g.shown = Math.min(SHOW_STEP, g.list.length);
+    cell.innerHTML = `<table class="items"><thead><tr><th></th><th>Composer</th><th>Title</th><th>Where</th><th></th></tr></thead><tbody>${itemRows(DATA, g, gi, 0, g.shown)}</tbody></table>` +
+      (g.shown < g.list.length ? `<button class="btn light small more" data-g="${gi}">Show more (${g.list.length - g.shown} left)</button>` : '');
+  }
+}
+$('#results').addEventListener('click', ev => {
+  const gb = ev.target.closest('.gbtn');
+  if (gb) {
+    const gi = +gb.dataset.g, row = $('#gr' + gi), open = row.hidden;
+    openGroup(gi); row.hidden = !open; gb.setAttribute('aria-expanded', String(open));
+    return;
+  }
+  const mb = ev.target.closest('.more');
+  if (mb) {
+    const gi = +mb.dataset.g, g = groups[gi], to = Math.min(g.shown + SHOW_STEP, g.list.length);
+    mb.previousElementSibling.querySelector('tbody').insertAdjacentHTML('beforeend', itemRows(DATA, g, gi, g.shown, to));
+    g.shown = to;
+    if (to >= g.list.length) mb.remove(); else mb.textContent = `Show more (${g.list.length - to} left)`;
+    return;
+  }
+  const sb = ev.target.closest('.show');
+  if (sb) toggleSnippet(sb);
+});
+
+/* ---------------------------------------------------------------- music examples (Verovio with the Humdrum filter myank) */
+let vrvPromise = null, tk = null;
+function loadVerovio(){
+  if (vrvPromise) return vrvPromise;
+  vrvPromise = new Promise((resolve, reject) => {
+    window.Module = window.Module || {};
+    const ready = () => { try { tk = new verovio.toolkit(); resolve(tk); } catch (e) { reject(e); } };
+    window.Module.onRuntimeInitialized = ready;
+    const s = document.createElement('script');
+    s.src = 'redix-progressio/verovio-humdrum-3.10.0.js';
+    s.onerror = () => reject(new Error('Could not load the music notation library.'));
+    document.head.appendChild(s);
+  });
+  vrvPromise.catch(() => { vrvPromise = null; });
+  return vrvPromise;
+}
+const kernCache = {};
+function catUrl(e){
+  if (e.h) return 'games/choirbook/redix-progressio/' + e.k + '.krn';
+  return CAT.sources[e.s] + (e.u || (e.s === 'pal' ? e.k.slice(4) : e.k) + '.krn');
+}
+async function toggleSnippet(btn){
+  const gi = +btn.dataset.g, k = +btn.dataset.k, row = $(`#s${gi}-${k}`), box = row.querySelector('.snip');
+  if (openSnip && openSnip.row === row) { closeSnip(); return; }
+  closeSnip();
+  openSnip = {row, btn};
+  row.hidden = false; btn.textContent = 'Hide'; btn.setAttribute('aria-expanded', 'true');
+  box.innerHTML = '<p class="status">Loading…</p>';
+  const r = groups[gi].list[k], e = CAT.pieces[r.p];
+  try {
+    const [t] = await Promise.all([kernCache[e.k] || (kernCache[e.k] = fetch(catUrl(e)).then(x => { if (!x.ok) throw new Error('Could not load the score.'); return x.text(); })), loadVerovio()]);
+    if (!openSnip || openSnip.row !== row) return;
+    const b1 = DATA.BAR[r.i], b2 = DATA.BAR[r.j];
+    const from = mode === 'fb' ? Math.max(b1 - 1, 0) : b1, to = mode === 'fb' ? b2 + 1 : b2;
+    const data = t.replace(/\s*$/, '\n') + `!!!filter: myank -m ${from}-${to}\n`;
+    const svg = tk.renderData(data, {inputFrom: 'humdrum', breaks: 'none', adjustPageHeight: true, scale: 40, pageWidth: 4000, footer: 'none', header: 'none', font: 'Leipzig'});
+    box.innerHTML = svg + `<p class="cap">${from === to ? 'Bar ' + from : `Bars ${from}–${to}`}${mode === 'succ' ? `; the first sonority at ${whereText(DATA, {i: r.i, j: r.i})}, the second at ${whereText(DATA, {i: r.j, j: r.j})}` : ''}.</p>`;
+  } catch (err) {
+    box.innerHTML = `<p class="err">${esc(err.message || err)}</p>`;
+  }
+}
+function closeSnip(){
+  if (!openSnip) return;
+  openSnip.row.hidden = true; openSnip.row.querySelector('.snip').innerHTML = '';
+  openSnip.btn.textContent = 'Show'; openSnip.btn.setAttribute('aria-expanded', 'false');
+  openSnip = null;
+}
+
+/* ---------------------------------------------------------------- the form, and the address */
+const FIELDS = ['first', 'second', 'dist', 'bass', 'title', 'genre', 'contains', 'notcontains', 'noreduce', 'lowest'];
+const BOXES = ['reduce', 'more', 'struck', 'attr'];
+function toQuery(){
+  const q = new URLSearchParams(); q.set('m', mode);
+  const own = mode === 'succ' ? ['first', 'second', 'dist', 'bass', 'title', 'genre'] : ['title', 'genre', 'contains', 'notcontains', 'noreduce', 'lowest'];
+  own.forEach(f => { const v = $('#' + f).value.trim(); if (v && !(f === 'dist' && v === '4')) q.set(f, v); });
+  BOXES.forEach(b => { if ((mode === 'succ' || b === 'attr') && $('#' + b).checked !== (b === 'attr')) q.set(b, $('#' + b).checked ? '1' : '0'); });
+  const qs = [...document.querySelectorAll('.q:checked')].map(x => x.value).join(''); if (qs) q.set('q', qs);
+  const cs = selectedComps(); if (cs.length) q.set('c', cs.join('|'));
+  return q.toString();
+}
+function restore(){
+  const q = new URLSearchParams(location.search);
+  setMode(q.get('m') === 'fb' ? 'fb' : 'succ');
+  FIELDS.forEach(f => { if (q.has(f)) $('#' + f).value = q.get(f); });
+  BOXES.forEach(b => { if (q.has(b)) $('#' + b).checked = q.get(b) === '1'; });
+  const qs = q.get('q') || ''; document.querySelectorAll('.q').forEach(x => x.checked = qs.includes(x.value));
+  const cs = new Set((q.get('c') || '').split('|').filter(Boolean)); document.querySelectorAll('.cc').forEach(x => x.checked = cs.has(comps[+x.value]));
+  compSummary();
+  if ((mode === 'succ' && q.get('first') && q.get('second')) || (mode === 'fb' && q.has('m'))) run(false);
+}
+async function run(push){
+  const st = $('#status'), go = $('#go');
+  go.disabled = true; closeSnip();
+  try {
+    const D = await loadData();
+    st.textContent = 'Searching…';
+    await new Promise(r => setTimeout(r, 20));
+    const t0 = performance.now();
+    const out = mode === 'succ' ? searchSucc(D) : searchFb(D);
+    render(D, out);
+    st.textContent = `Done in ${((performance.now() - t0) / 1000).toFixed(1)} s.`;
+    if (push) try { history.replaceState(null, '', 'redix-progressio.html?' + toQuery()); } catch (e) {}
+  } catch (err) {
+    st.innerHTML = `<span class="err">Please check your input: ${esc(err.message || err)}</span>`;
+  } finally { go.disabled = false; }
+}
+$('#form').addEventListener('submit', ev => { ev.preventDefault(); run(true); });
+$('#clear').addEventListener('click', () => {
+  FIELDS.forEach(f => { $('#' + f).value = f === 'dist' ? '4' : ''; });
+  BOXES.forEach(b => { $('#' + b).checked = b === 'attr'; });
+  document.querySelectorAll('.q, .cc').forEach(x => x.checked = false); compSummary();
+  $('#results').innerHTML = ''; $('#status').textContent = '';
+  try { history.replaceState(null, '', 'redix-progressio.html'); } catch (e) {}
+});
+})();
+</script>
+</body>
+</html>

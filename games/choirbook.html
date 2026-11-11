@@ -1884,7 +1884,7 @@ function loadCatalogue(){
   return catPromise;
 }
 function catUrl(e){
-  if (e.h) return 'choirbook/redix/' + e.k + '.krn';
+  if (e.h) return 'choirbook/redix-progressio/' + e.k + '.krn';
   return CAT.sources[e.s] + (e.u || (e.s === 'pal' ? e.k.slice(4) : e.k) + '.krn');
 }
 async function pieceUrl(key){
@@ -1907,7 +1907,7 @@ function setAddress(key, extra){
   try { history.replaceState(null, '', location.pathname + q); } catch (e) {}
   if (EMBED) try { parent.postMessage({choirbookQuery: q}, '*'); } catch (e) {}
 }
-/* marked bars (e.g. from a ReDiX search result) */
+/* marked bars (e.g. from a ReDiX Progressio search result) */
 let mark = null;
 function barTime(n){
   if (!piece || !piece.barNums) return null;
@@ -2010,7 +2010,7 @@ async function buildPieceList(){
       <select id="libSort" aria-label="Sort"><option value="composer">Sort by composer</option><option value="title">Sort by title</option><option value="voices">Sort by voices</option></select>
     </div>
     <div id="libFeat"><h2>On this site</h2>${PIECES.map(p => itemHtml(p, meta[p].title, meta[p].composer)).join('')}<h2>Library</h2>
-    <p class="gnote">From the <a href="https://josquin.stanford.edu" target="_blank" rel="noopener">Josquin Research Project</a>, <a href="https://1520s-project.org" target="_blank" rel="noopener">the 1520s Project</a> and the <a href="https://github.com/cuthbertLab/music21" target="_blank" rel="noopener">music21</a> Palestrina masses, as collected by <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">ReDiX</a> (Ugo Bindini).</p></div>
+    <p class="gnote">From the <a href="https://josquin.stanford.edu" target="_blank" rel="noopener">Josquin Research Project</a>, <a href="https://1520s-project.org" target="_blank" rel="noopener">the 1520s Project</a> and the <a href="https://github.com/cuthbertLab/music21" target="_blank" rel="noopener">music21</a> Palestrina masses, as collected by <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">ReDiX</a> (Ugo Bindini). Search their sonorities with <a href="../redix-progressio.html" target="_top">ReDiX Progressio</a>.</p></div>
     <div id="libList"></div>`;
   const upd = () => { lib.shown = 150; $('#libFeat').hidden = !!(lib.q || lib.comp || lib.genre || lib.voices); libList(); };
   $('#libQ').addEventListener('input', e => { lib.q = e.target.value; upd(); });

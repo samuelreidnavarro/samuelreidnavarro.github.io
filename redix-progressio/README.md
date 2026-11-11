@@ -1,13 +1,13 @@
 # ReDiX Progressio: ReDiX in the browser
 
-This folder belongs to [redix.html](../redix.html), ReDiX Progressio, a browser version of
+This folder belongs to [redix-progressio.html](../redix-progressio.html), ReDiX Progressio, a browser version of
 **ReDiX – Renaissance Digital eXplorer** by **Ugo Bindini**
 (<https://github.com/ugobindini/redix>). The idea, the analysis of the scores
 and the original search are his. The browser version adds a search for
 successions of two sonorities ("interval successions") and links every result
 to the [Choir book](../choirbook.html).
 
-Like the original, `redix.html` and the files in this folder are free software
+Like the original, `redix-progressio.html` and the files in this folder are free software
 under the GNU General Public License, version 3 (see `LICENSE`).
 
 ## Files
@@ -35,6 +35,6 @@ The scores are not stored here; they are loaded from where they are published:
   <https://github.com/cuthbertLab/music21>
 
 80 files whose current published version differs from the one ReDiX analysed
-(renamed or re-edited since) are kept in `../games/choirbook/redix/`, so that bar
+(renamed or re-edited since) are kept in `../games/choirbook/redix-progressio/`, so that bar
 numbers match the search results; they are from the JRP and the 1520s Project
 and are shared under CC BY-NC 4.0 with attribution.
