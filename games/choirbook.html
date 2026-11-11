@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Choir book</title>
+<title>ChoirBook</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 27 16 16 29 5 16Z' fill='%2324479A'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+Double+Pica:ital@0;1&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <!--
-  Choir book: a reader for mensural polyphony (score, parts, choir book openings).
+  ChoirBook: a reader for mensural polyphony (score, parts, choir book openings).
   Reads Humdrum **kern files such as those of the Josquin Research Project.
   Everything is in this one file; a few pieces live in games/choirbook/*.krn (see PIECES below),
   the full library (games/choirbook/catalogue.json) is loaded from the public repositories of the
@@ -465,7 +465,7 @@ html.dark #play:hover:not(:disabled){background:var(--text);color:var(--ground)}
 html.dark :focus-visible{outline-color:#D9826F}
 html.dark .leaf{box-shadow:0 1px 1px rgba(0,0,0,.6),0 24px 50px -18px rgba(0,0,0,.95),inset 0 0 70px rgba(150,108,40,.13),inset 0 0 0 1px rgba(120,90,40,.16)}
 html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10px rgba(0,0,0,.85)}
-/* ================= Choir book ================= */
+/* ================= ChoirBook ================= */
 .embedded header.top{display:none}
 .embedded .wrap{padding-top:4px}
 [hidden]{display:none !important}
@@ -609,7 +609,7 @@ body.editing #pages .stafhit{cursor:crosshair}
 </head>
 <body>
 <main class="wrap">
-  <header class="top"><h1>Choir book</h1></header>
+  <header class="top"><h1>ChoirBook</h1></header>
 
   <section class="tools" aria-label="View">
     <div class="bar">
@@ -800,7 +800,7 @@ const EPS = 1e-6, eq = (a, b) => Math.abs(a - b) < 1e-4;
 const rt = x => Math.round(x * 5040) / 5040;
 const $ = s => document.querySelector(s);
 
-/* Manuscript paper (same recipe as the Cantus firmus app) */
+/* Manuscript paper (same recipe as the CantusFirmus app) */
 (function(){
   try {
     const rng = seed => { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; };
@@ -1239,7 +1239,7 @@ if (st.bars === 'mstrich') st.bars = 'full';
 /* barlines now stand in each staff only; everyone starts again from those */
 if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} if (window.Organ) Organ.saveShared(); };
-/* playback, metronome and sound: shared/organ.js, the same engine as the Cantus firmus app's */
+/* playback, metronome and sound: shared/organ.js, the same engine as the CantusFirmus app's */
 const UNIT_NAMES = {Mx: 'Maxima', L: 'Longa', B: 'Brevis', S: 'Semibrevis', M: 'Minima', Sm: 'Semiminima', F: 'Fusa'};
 let play = false;
 Organ.init(st, {
@@ -2032,7 +2032,7 @@ window.addEventListener('afterprint', () => {
 /* ------------------------------------------------------------------ */
 /* the full library: games/choirbook/catalogue.json (made from the ReDiX data by Ugo Bindini) */
 let CAT = null, CATBY = {};
-const APP_NAME = 'Choir book', APP_URL = 'samuelreidnavarro.github.io/choirbook.html';
+const APP_NAME = 'ChoirBook', APP_URL = 'samuelreidnavarro.github.io/choirbook.html';
 const SRC_FROM = {jrp: 'the Josquin Research Project, josquin.stanford.edu', '1520': 'the 1520s Project, 1520s-project.org',
   pal: 'the music21 corpus, github.com/cuthbertLab/music21'};
 /* what the first page says about where the score comes from, who made it and its copyright */
@@ -2111,7 +2111,7 @@ function applyMark(){
   }
   if (first && !mark.scrolled) { mark.scrolled = true; setTimeout(() => { try { if (typeof bringIntoView === 'function') bringIntoView(first, true); else first.scrollIntoView({block: 'center'}); } catch (e) {} }, 60); }
 }
-/* My scores: new scores, and cantus firmi brought over from the Cantus firmus app, kept in this browser */
+/* My scores: new scores, and cantus firmi brought over from the CantusFirmus app, kept in this browser */
 const MINE_KEY = 'choirbook:mine:v1';
 function mineAll(){ try { return JSON.parse(localStorage.getItem(MINE_KEY) || '{}'); } catch (e) { return {}; } }
 function mineSave(all){ try { localStorage.setItem(MINE_KEY, JSON.stringify(all)); } catch (e) {} }
@@ -2307,7 +2307,7 @@ function syncUI(){
       const cb = (k, label) => `<td><input type="checkbox" data-i="${v.idx}" data-k="${k}" aria-label="${esc(v.name)}: ${label}"${s[k] ? ' checked' : ''}${k !== 'on' && !s.on ? ' disabled' : ''}></td>`;
       return `<tr data-i="${v.idx}"><td><span class="drag" data-i="${v.idx}" title="Drag to change the order" aria-hidden="true">⠿</span></td>` +
         `<td><input class="vname" data-i="${v.idx}" value="${esc(v.name)}" aria-label="Name of the voice" title="Click to rename"></td>${cb('on', 'shown')}${cb('notes', 'notes')}${cb('lyr', 'lyrics')}` +
-        `<td><button class="vbtn vexp" data-op="cf" data-i="${v.idx}" title="Open in Cantus firmus" aria-label="Open ${esc(v.name)} in Cantus firmus"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3.5h6.5V10h-2V6.9l-6.8 6.8-1.4-1.4 6.8-6.8H14ZM4.5 6.5h7v2h-5v9h9v-5h2v7h-13Z"/></svg></button></td>` +
+        `<td><button class="vbtn vexp" data-op="cf" data-i="${v.idx}" title="Open in CantusFirmus" aria-label="Open ${esc(v.name)} in CantusFirmus"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3.5h6.5V10h-2V6.9l-6.8 6.8-1.4-1.4 6.8-6.8H14ZM4.5 6.5h7v2h-5v9h9v-5h2v7h-13Z"/></svg></button></td>` +
         `<td><button class="vbtn vdel" data-op="del" data-i="${v.idx}" aria-label="Remove ${esc(v.name)}" title="Remove this voice">×</button></td></tr>`;
     };
     $('#voiceTable').innerHTML = `<thead><tr><th></th><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th><th></th><th></th></tr></thead><tbody>` + piece.voices.map((v, i) => { v.idx = i; return row(v); }).join('') +
@@ -2323,7 +2323,7 @@ $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('butt
 let rq = 0;
 const later = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); };
 for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).addEventListener('input', e => { st[k] = +e.target.value; save(); later(); });
-/* ---------------- Voices: name, clef, add, remove, open in Cantus firmus ---------------- */
+/* ---------------- Voices: name, clef, add, remove, open in CantusFirmus ---------------- */
 const VCLEFS = [['', 'As written'], ['treble', 'G clef'], ['treble8', 'G clef, octave lower'], ['f3', 'F clef on 3'], ['bass', 'F clef on 4']];
 const CLEF_KERN = {treble: 'G2', treble8: 'Gv2', bass: 'F4', f3: 'F3', c1: 'C1', c2: 'C2', c3: 'C3', c4: 'C4', c5: 'C5'};
 /* a voice of rests as long as the piece, with the signs of the voice next to it */
@@ -2459,7 +2459,7 @@ function goTo(page){
   try { if (EMBED && window.top.location.host === location.host) { window.top.location.href = new URL(page, window.top.location.href).href; return; } } catch (e) {}
   location.href = page;
 }
-/* one voice as a melody for the Cantus firmus app: sounding values in minims, pitches, accidentals as written */
+/* one voice as a melody for the CantusFirmus app: sounding values in minims, pitches, accidentals as written */
 function openInCantusFirmus(i){
   const v = piece.voices[i];
   const k0 = keyAt(v, 0), bflat = k0.b === -1;
@@ -2485,7 +2485,7 @@ function openInCantusFirmus(i){
   stopPlay();
   goTo('cantus-firmus.html');
 }
-/* a melody from the Cantus firmus app becomes a score of one voice, ready for voices to be added */
+/* a melody from the CantusFirmus app becomes a score of one voice, ready for voices to be added */
 async function takeHandoff(){
   let h = null; try { h = JSON.parse(localStorage.getItem(HANDOFF) || 'null'); } catch (e) {}
   if (!h || h.to !== 'choirbook' || !Array.isArray(h.items) || Date.now() - (h.at || 0) > 10 * 60 * 1000) return false;
@@ -2512,7 +2512,7 @@ async function takeHandoff(){
   await loadPiece(id);
   vis(0).clef = KERN_CLEF[clef] || 'treble8'; save(); render();
   refreshMine();
-  toast(`${title} came over from Cantus firmus. Voices adds voices above or below it.`);
+  toast(`${title} came over from CantusFirmus. Voices adds voices above or below it.`);
   return true;
 }
 $('#voiceTable').addEventListener('change', e => {

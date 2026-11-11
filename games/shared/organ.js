@@ -1,5 +1,5 @@
 /* ======================================================================
-   Organ: the sound and the beat shared by Cantus firmus and Choir book.
+   Organ: the sound and the beat shared by CantusFirmus and ChoirBook.
    One playback engine for both: the organ voice (registers, drawbars, room),
    the metronome (hand, pendulum, audible tick, count-in), tempo with tap and
    the heart, loop, volume and the pitch of a′. Both apps load this file; the
