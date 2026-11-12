@@ -524,12 +524,10 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 #pages .caret{fill:var(--accent);opacity:.75;pointer-events:none}
 #pages g[class^="n"]{cursor:pointer}
 #pages .hit{fill:transparent}
-/* the sounding (and the selected) note: a faint box around it, as a selection in CantusFirmus */
-#pages svg g.on .hit,#pages g.sel .hit{fill:var(--accent);fill-opacity:.1;stroke:var(--accent);stroke-opacity:.45;stroke-width:.09px;rx:.3px}
+/* the sounding (and the selected) note: a faint box over the height of the staff, as a selection in CantusFirmus */
+#pages .selbg{fill:transparent;pointer-events:none}
+#pages svg g.on .selbg,#pages g.sel .selbg{fill:var(--sel);opacity:.1}
 .viewwrap{position:relative}
-/* Choirbook: the hand stands still in the middle */
-.viewwrap.handmid .handbox{right:auto;left:calc(50% - 125px * var(--hand-sc,1))}
-.viewwrap.handmid .pendbox.both{right:auto;left:calc(50% - 315px * var(--hand-sc,1))}
 /* full screen */
 .fsbtn{position:absolute;top:4px;left:6px;z-index:5;width:32px;height:32px;min-height:0;padding:0;border-radius:6px;display:flex;align-items:center;justify-content:center;
   background:rgba(42,34,24,.45);color:#FBF4E8;border:0;transition:opacity .4s}
@@ -1489,7 +1487,7 @@ function symSvg(s, X, top, showNotes){
   /* with the notes hidden, the mensuration sign stays, like the clef */
   if (!showNotes) return s.mens ? mensSvg(s.mens, X - s.left, top) : '';
   const hy = s.rest ? top + 0.5 : top + 4 - s.pos * 0.5 - 1;
-  return `<g class="${s.id}"><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top)}</g>`;
+  return `<g class="${s.id}"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top)}</g>`;
 }
 function symInner(s, X, top){
   let o = '';
@@ -1976,7 +1974,6 @@ function render(){
   const widest = Math.max(0, ...[...pagesEl.children].map(c => c.offsetWidth || 0));
   viewerEl.style.width = framed && widest ? (widest + 24) + 'px' : '';
   $('#fsBtn').style.left = (viewerEl.offsetLeft + 6) + 'px';
-  wrapEl.classList.toggle('handmid', st.view === 'choir');
   if (typeof showSel === 'function' && (ed.sel || ed.ins)) showSel();
   applyMark();
   if (!play) { handTop = -1; $('#handBox').style.top = ''; $('#pendBox').style.top = ''; if (st.view === 'choir') handMid(null); }
@@ -3367,7 +3364,7 @@ function followHand(el){
   $('#handBox').style.top = y + 'px'; $('#pendBox').style.top = y + 'px';
 }
 
-/* Choirbook: the hand stands in the middle of the viewer (of the opening, where the pages are not framed) */
+/* Choirbook: the hand stands still at the edge, halfway down the viewer (the opening, where the pages are not framed) */
 function handMid(el){
   const hb = $('#handBox').getBoundingClientRect().height || $('#pendBox').getBoundingClientRect().height || 200;
   let y;
