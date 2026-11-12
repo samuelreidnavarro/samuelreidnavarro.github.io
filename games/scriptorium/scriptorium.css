@@ -663,3 +663,23 @@ html.playing #pages .caret{display:none}
 #pages .vnamehit{cursor:text}
 #pages .vnamehit:hover{fill:var(--accent)}
 .vrename{position:absolute;z-index:26;font:inherit;font-style:italic;font-size:17px;height:32px;padding:0 8px;border:1px solid var(--accent);border-radius:6px;background:var(--surface,#fff);color:var(--text);text-align:right}
+/* Sing: one button (press = microphone on), its menu on hover or from the arrow; Record and the recordings below */
+#popSing .singchev{display:inline-flex;align-items:center;margin:0 -4px 0 1px;padding:4px 2px;border-radius:6px}
+#popSing .singchev .chev{width:11px;height:11px}
+#popSing .singchev:hover{background:rgba(42,34,24,.08)}
+#popSing .popbody{min-width:15em}
+.recbox{border-top:1px solid var(--line);margin-top:6px;padding:6px 0 0}
+#recBtn{width:100%;justify-content:flex-start;gap:8px}
+#recBtn .recdot{width:10px;height:10px;border-radius:50%;background:var(--accent);flex:none}
+#recBtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+#recBtn[aria-pressed="true"] .recdot{background:var(--accent-ink);border-radius:2px;animation:recblink 1s steps(2) infinite}
+@keyframes recblink{50%{opacity:.35}}
+.reclist{max-height:13em;overflow-y:auto;font-size:15px}
+.reclist:empty{display:none}
+.recitem{display:flex;align-items:center;gap:2px;padding:2px 2px 2px 8px}
+.recitem .rn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:6px}
+.recitem .rn small{display:block;color:var(--muted);font-size:13px}
+.recitem button{min-width:30px;height:30px;min-height:30px;padding:0 6px;border:0;border-radius:7px;background:transparent;color:var(--text);cursor:pointer;font:inherit;font-size:14px;display:inline-flex;align-items:center;justify-content:center}
+.recitem button:hover{background:rgba(42,34,24,.08)}
+.recitem button svg{width:14px;height:14px;fill:currentColor}
+.recitem button.sure{background:var(--accent);color:var(--accent-ink);width:auto}

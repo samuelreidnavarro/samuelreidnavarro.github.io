@@ -1,6 +1,6 @@
 /* Scriptorium add-on: CantusFirmus. Runs inside the engine (see scriptorium.js).
-   One voice against one voice: each cantus firmus (window.CF_LIBRARY, cantus-firmi.js) opens as a score of two voices,
-   the cantus firmus and an empty Contrapunctus above it to write or sing (its Playback is off, so Sing follows it). */
+   Each cantus firmus (window.CF_LIBRARY, cantus-firmi.js) opens as a score of one voice; a counterpoint is sung
+   (Sing writes it as a voice of its own) or added in Voices. */
 (window.SCRIPTORIUM = window.SCRIPTORIUM || {}).addons = (window.SCRIPTORIUM.addons || []).concat([function(){
   const LIB = window.CF_LIBRARY || [];
   const CF_KERN = {treble8: 'Gv2', treble: 'G2', g1: 'G1', c1: 'C1', c2: 'C2', c3: 'C3', c4: 'C4', c5: 'C5', baritone: 'F3', bass: 'F4'};
@@ -24,27 +24,23 @@
     if (item.n) return parseTokens(item.n);
     return item.s.map((s, i) => ({d: i === item.s.length - 1 ? 'L' : 'B', r: false, s, a: (item.a && item.a[i]) || '', p: false}));
   }
-  /* the voice above a cantus firmus in this clef */
-  const counterClef = c => ['c4', 'c5', 'baritone', 'bass'].includes(c) ? 'Gv2' : 'G2';
   /* a cantus firmus {title, clef, bflat, notes: [{d, r, s, a, p}]} in its tempus, as **kern: the cantus firmus and an empty voice above */
   function cfKern(doc, tempus){
     const vals = Organ.readValues(doc.notes, tempus).v;     /* sounding values in minims */
     const title = doc.title || 'Cantus firmus';
-    const ck = CF_KERN[doc.clef] || 'Gv2', ok = counterClef(doc.clef);
-    const row = (a, b) => a + '\t' + b;
-    const lines = [`!!!OTL: ${title}`, row('**kern', '**kern'), row('*I"Cantus firmus', `*I"${COUNTER}`), row(`*clef${ck}`, `*clef${ok}`)];
-    if (doc.bflat) lines.push(row('*k[b-]', '*k[b-]'));
-    const met = `*met(${tempus === 'O' ? 'O' : 'C'})`;
-    lines.push(row(met, met), row('=1-', '=1-'));
+    const ck = CF_KERN[doc.clef] || 'Gv2';
+    const lines = [`!!!OTL: ${title}`, '**kern', '*I"Cantus firmus', `*clef${ck}`];
+    if (doc.bflat) lines.push('*k[b-]');
+    lines.push(`*met(${tempus === 'O' ? 'O' : 'C'})`, '=1-');
     doc.notes.forEach((n, i) => {
       const d = recipOf(vals[i] / 2);
-      if (n.r) { lines.push(row(d + 'r', d + 'r')); return; }
+      if (n.r) { lines.push(d + 'r'); return; }
       const B = ((n.s % 7) + 7) % 7 === 6;
       const alt = n.a === 'b' ? -1 : n.a === '#' ? 1 : n.a === 'n' ? 0 : (doc.bflat && B ? -1 : 0);
       const acc = alt < 0 ? '-' : alt > 0 ? '#' : (n.a === 'n' || (doc.bflat && B)) ? 'n' : '';
-      lines.push(row(d + pitchTok(n.s) + acc, d + 'r'));
+      lines.push(d + pitchTok(n.s) + acc);
     });
-    lines.push(row('==', '=='), row('*-', '*-'));
+    lines.push('==', '*-');
     const P = parseKern(lines.join('\n') + '\n');
     /* barlines at every perfection (every brevis), with ties where a note runs over */
     const per = tempus === 'O' ? 3 : 2;
@@ -119,29 +115,20 @@
 
   /* ---------------- a cantus firmus written anew, or coming from another app ---------------- */
   async function newCF(){
-    const id = mineAdd('New cantus firmus', kernOf('New cantus firmus', [[COUNTER, 'G2'], ['Cantus firmus', 'Gv2']]));
+    const id = mineAdd('New cantus firmus', kernOf('New cantus firmus', [['Cantus firmus', 'Gv2']]));
     await loadPiece(id);
     refreshMine();
-    ed.on = true; ed.sel = null; ed.ins = {vi: 1, ei: 0}; syncEdit(); showSel();
+    ed.on = true; ed.sel = null; ed.ins = {vi: 0, ei: 0}; syncEdit(); showSel();
     toast('A new cantus firmus. Click on its staff to write a note, or type the letters A to G.');
   }
-  /* one voice from ChoirBook or Canon Maker: the cantus firmus, with the Contrapunctus above */
+  /* one voice from ChoirBook or Canon Maker: the cantus firmus, alone (a second voice can be added in Voices) */
   async function fromHandoff(h){
     const P = parseKern(h.kern);
     if (!P.voices.length) return false;
     const id = mineAdd(h.title || 'Cantus firmus', h.kern);
     await loadPiece(id);
-    if (piece.voices.length === 1) {
-      const v0 = piece.voices[0], kc = v0.kclef || 'Gv2';
-      piece.voices.unshift(restVoice(COUNTER, ['F4', 'F3', 'C5', 'C4'].includes(kc) ? 'treble8' : 'treble', v0));
-      shiftVis(0, 1); vis(0).play = false; save();
-      const text = writeKern(piece);
-      piece = parseKern(text); piece.text = text;
-      try { localStorage.setItem(EKEY(id), text); } catch (e) {}
-      syncUI(); render();
-    }
     refreshMine();
-    toast(`${h.title || 'The voice'} came over from ${h.from || 'another app'}, with an empty ${COUNTER} above it.`);
+    toast(`${h.title || 'The voice'} came over from ${h.from || 'another app'}.`);
     return true;
   }
 

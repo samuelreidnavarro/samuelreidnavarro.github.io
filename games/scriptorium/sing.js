@@ -12,7 +12,6 @@
   if (st.micDia === undefined) st.micDia = false;
   if (st.micLag === undefined) st.micLag = 0;
   if (st.micCal === undefined) st.micCal = null;
-  if (st.singVoice === undefined) st.singVoice = '';
 
   const mic = {on: false, busy: false, stream: null, nodes: [], notch: [], an: null, raw: null, dec: null, yd: null,
                raf: 0, hist: [], shown: null, snap: null, pend: null, pendT: 0, seen: 0, peak: 0, lastT: 0, q: 1, drawn: '', pre: null, preRaw: null, pa: null, tilt: null, last: []};
@@ -20,22 +19,15 @@
   const freqOfMidi = m => st.ref * Math.pow(2, (m - 69) / 12);
 
   /* ---------------- which voice is sung ---------------- */
-  /* the voice named in the Sing menu; else the first shown voice whose Playback is off; else the voice being edited; else the top voice */
+  /* the first shown voice whose Playback is off; else the voice being edited; else the top voice */
   function singIdx(){
     if (!piece) return -1;
     const ok = (v, k) => v.abbr !== 'sung' && vis(k).on;
-    let i = st.singVoice ? piece.voices.findIndex((v, k) => ok(v, k) && v.name === st.singVoice) : -1;
-    if (i < 0) i = piece.voices.findIndex((v, k) => ok(v, k) && !vis(k).play);
+    let i = piece.voices.findIndex((v, k) => ok(v, k) && !vis(k).play);
     if (i < 0) { const v = anyVoice(); if (v && v.abbr !== 'sung') i = piece.voices.indexOf(v); }
     if (i < 0) i = piece.voices.findIndex(ok);
     return i;
   }
-  function voiceMenu(){
-    const sel = $('#singVoice'); if (!sel || !piece) return;
-    const names = piece.voices.filter(v => v.abbr !== 'sung').map(v => v.name);
-    sel.innerHTML = `<option value="">Automatic</option>` + names.map(n => `<option value="${esc(n)}"${n === st.singVoice ? ' selected' : ''}>${esc(n)}</option>`).join('');
-  }
-
   /* ---------------- the microphone ---------------- */
   function organPartials(freq){
     const amps = Organ.organAmps(), max = Math.max(...amps, 1e-9);
@@ -120,6 +112,7 @@
     if (mic.stream) mic.stream.getTracks().forEach(t => t.stop());
     mic.stream = null; mic.nodes = []; mic.notch = [];
     pressed($('#mic'), false);
+    takeKeep();
     takeClear();
     clearDot();
   }
@@ -317,6 +310,12 @@
      join into longer notes, and the result is written as a voice of its own, "Sung", under the music. */
   const take = {on: false, frames: [], sig: '', from: 0, done: 0, before: null, last: 0, timer: 0};
   const takeShown = () => take.on && mic.on && st.micNotate;
+  /* a take cut short (the microphone turned off while the music plays): what it already wrote stays, and Undo takes it away */
+  function takeKeep(){
+    if (!take.on || !take.sig || !take.before || !piece) return;
+    const text = writeKern(piece);
+    if (text !== take.before) { ed.undo.push(take.before); ed.redo = []; piece.text = text; syncEdit(); }
+  }
   function takeClear(){ take.on = false; take.frames = []; take.sig = ''; take.before = null; take.self = undefined; take.vi = undefined; take.ref = null; clearTimeout(take.timer); }
   function takeStart(fromU){
     takeClear();
@@ -523,22 +522,138 @@
   const syncSing = () => {
     pressed($('#micFlex'), st.micFlex); pressed($('#micPhones'), st.micPhones); pressed($('#micNotate'), st.micNotate); pressed($('#micDia'), st.micDia);
     $('#micLat').value = st.micCal === null ? '' : Math.round(st.micCal * 1000);
-    voiceMenu();
   };
-  $('#mic').addEventListener('click', () => { if (mic.on) micStop(); else micStart(); });
-  $('#popSing > button').addEventListener('click', syncSing);
+  /* one button: pressed, the microphone goes on or off; its arrow (or hovering) opens the options */
+  $('#mic').addEventListener('click', e => {
+    if (e.target.closest('.singchev')) {
+      const p = $('#popSing'), open = !p.classList.contains('open');
+      closePops(p); p.classList.toggle('open', open); syncSing(); return;
+    }
+    if (mic.on) micStop(); else micStart();
+  });
+  $('#popSing').addEventListener('mouseenter', syncSing);
+  /* Ctrl+Z / Ctrl+Shift+Z also outside Edit, so a take that replaced the one before can be undone */
+  document.addEventListener('keydown', e => {
+    if (ed.on || !(e.ctrlKey || e.metaKey) || (e.key !== 'z' && e.key !== 'Z')) return;
+    if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+    e.preventDefault();
+    if (e.shiftKey) { if (ed.redo.length) redo(); } else if (ed.undo.length) { undo(); toast('Undone.'); }
+  });
   $('#micFlex').addEventListener('click', () => { st.micFlex = !st.micFlex; mic.snap = null; mic.pend = null; save(); syncSing(); });
   $('#micPhones').addEventListener('click', () => { st.micPhones = !st.micPhones; save(); syncSing(); });
   $('#micNotate').addEventListener('click', () => { st.micNotate = !st.micNotate; if (!st.micNotate) takeClear(); save(); syncSing(); });
   $('#micDia').addEventListener('click', () => { st.micDia = !st.micDia; save(); syncSing(); });
   $('#micClap').addEventListener('click', clapTest);
-  $('#singVoice').addEventListener('change', e => { st.singVoice = e.target.value; save(); clearDot(); });
   $('#micLat').addEventListener('change', e => {
     const v = e.target.value.trim();
     st.micCal = v === '' || !(Number(v) >= 0) ? null : Math.min(600, Number(v)) / 1000;
     e.target.value = st.micCal === null ? '' : Math.round(st.micCal * 1000);
     save();
   });
+
+  /* ---------------- Record: yourself (and the organ, with headphones), kept in this browser ---------------- */
+  const rec = {on: false, busy: false, mr: null, stream: null, chunks: [], t0: 0, dest: null, src: null, audio: null, playing: null, url: null};
+  const DB_NAME = APP.store + ':recordings';
+  function db(){
+    return new Promise((ok, no) => {
+      if (!window.indexedDB) { no(new Error('no indexedDB')); return; }
+      const r = indexedDB.open(DB_NAME, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('rec', {keyPath: 'id', autoIncrement: true});
+      r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error);
+    });
+  }
+  async function dbDo(mode, fn){
+    const d = await db();
+    return new Promise((ok, no) => {
+      const tx = d.transaction('rec', mode), q = fn(tx.objectStore('rec'));
+      tx.oncomplete = () => { ok(q && q.result); d.close(); }; tx.onerror = () => { no(tx.error); d.close(); };
+    });
+  }
+  const recAll = () => dbDo('readonly', o => o.getAll()).catch(() => []);
+  const ICON = {
+    play: '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5 12.5 7 3 12.5Z"/></svg>',
+    stop: '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3h8v8H3Z"/></svg>',
+    down: '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M6 1.5h2v6.2l2.3-2.3 1.4 1.4L7 11.5 2.3 6.8l1.4-1.4L6 7.7ZM2 12h10v1.5H2Z"/></svg>'
+  };
+  const clock = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+  const when = t => { const d = new Date(t); return d.toLocaleDateString(undefined, {day: 'numeric', month: 'short'}) + ', ' + d.toLocaleTimeString(undefined, {hour: '2-digit', minute: '2-digit'}); };
+  async function recList(){
+    const el = $('#recList'); if (!el) return;
+    const all = (await recAll()).sort((a, b) => b.at - a.at);
+    el.innerHTML = all.map(r => `<div class="recitem" data-id="${r.id}"><span class="rn" title="${esc(r.name)}">${esc(r.name)}<small>${esc(when(r.at))} · ${clock(r.dur || 0)}</small></span>` +
+      `<button data-a="play" aria-label="Play" title="Listen">${rec.playing === r.id ? ICON.stop : ICON.play}</button>` +
+      `<button data-a="down" aria-label="Download" title="Download">${ICON.down}</button>` +
+      `<button data-a="del" aria-label="Delete" title="Delete">×</button></div>`).join('');
+  }
+  async function recStart(){
+    if (rec.on || rec.busy) return;
+    const ctx = Organ.ensureAudio();
+    if (!window.MediaRecorder || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('This browser cannot record here.'); return; }
+    rec.busy = true;
+    try { rec.stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false}}); }
+    catch (e) { rec.busy = false; toast(e && e.name === 'NotAllowedError' ? 'The microphone is blocked. Allow it for this site to record.' : 'No microphone could be opened.'); return; }
+    rec.busy = false;
+    let stream = rec.stream;
+    /* with headphones the microphone does not hear the organ, so the organ goes into the recording itself */
+    if (st.micPhones && ctx && audio.master) {
+      rec.dest = ctx.createMediaStreamDestination();
+      rec.src = ctx.createMediaStreamSource(rec.stream); rec.src.connect(rec.dest);
+      audio.master.connect(rec.dest);
+      stream = rec.dest.stream;
+    }
+    rec.chunks = [];
+    try { rec.mr = new MediaRecorder(stream); } catch (e) { recCleanup(); toast('This browser cannot record here.'); return; }
+    rec.mr.ondataavailable = e => { if (e.data && e.data.size) rec.chunks.push(e.data); };
+    rec.mr.onstop = async () => {
+      const mime = rec.mr.mimeType || (rec.chunks[0] && rec.chunks[0].type) || 'audio/webm';
+      const blob = new Blob(rec.chunks, {type: mime}), dur = (performance.now() - rec.t0) / 1000;
+      recCleanup();
+      if (!blob.size) return;
+      const name = (piece && piece.title) || APP.name;
+      try { await dbDo('readwrite', o => o.add({name, at: Date.now(), mime, dur, blob})); toast('Recorded. It is in the Sing menu.'); }
+      catch (e) { toast('The recording could not be kept in this browser.'); }
+      recList();
+    };
+    rec.mr.start(1000); rec.t0 = performance.now(); rec.on = true;
+    pressed($('#recBtn'), true); $('#recBtn').lastChild.textContent = 'Stop recording';
+  }
+  function recCleanup(){
+    if (rec.src) try { rec.src.disconnect(); } catch (e) {}
+    if (rec.dest && audio.master) try { audio.master.disconnect(rec.dest); } catch (e) {}
+    if (rec.stream) rec.stream.getTracks().forEach(t => t.stop());
+    rec.stream = rec.src = rec.dest = null; rec.on = false;
+    pressed($('#recBtn'), false); $('#recBtn').lastChild.textContent = 'Record';
+  }
+  function recStop(){ if (rec.mr && rec.mr.state !== 'inactive') rec.mr.stop(); else recCleanup(); }
+  function recPlayStop(){ if (rec.audio) { rec.audio.pause(); rec.audio = null; } if (rec.url) { URL.revokeObjectURL(rec.url); rec.url = null; } rec.playing = null; }
+  $('#recBtn').addEventListener('click', () => { if (rec.on) recStop(); else recStart(); });
+  $('#recList').addEventListener('click', async e => {
+    const b = e.target.closest('button'), row = e.target.closest('.recitem'); if (!b || !row) return;
+    e.stopPropagation();
+    const id = +row.dataset.id;
+    if (b.dataset.a === 'del') {
+      if (!b.classList.contains('sure')) { b.classList.add('sure'); b.textContent = 'Delete?'; setTimeout(() => { if (b.isConnected) { b.classList.remove('sure'); b.textContent = '×'; } }, 3000); return; }
+      if (rec.playing === id) recPlayStop();
+      await dbDo('readwrite', o => o.delete(id)).catch(() => {}); recList(); return;
+    }
+    const r = await dbDo('readonly', o => o.get(id)).catch(() => null); if (!r) return;
+    if (b.dataset.a === 'down') {
+      const ext = /mp4|m4a|aac/.test(r.mime) ? 'm4a' : /ogg/.test(r.mime) ? 'ogg' : 'webm';
+      const d = new Date(r.at), pad = n => String(n).padStart(2, '0');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(r.blob);
+      a.download = `${r.name.replace(/[\\/:*?"<>|]+/g, '').trim() || 'Recording'} ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}.${pad(d.getMinutes())}.${ext}`;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      return;
+    }
+    const was = rec.playing; recPlayStop();
+    if (was !== id) {
+      rec.url = URL.createObjectURL(r.blob); rec.audio = new Audio(rec.url); rec.playing = id;
+      rec.audio.onended = () => { recPlayStop(); recList(); };
+      rec.audio.play().catch(() => { recPlayStop(); recList(); });
+    }
+    recList();
+  });
+  recList();
   syncSing();
-  window.__sing = {mic, take, singIdx, sungVoice, takeNotes, spellMidi, drawDot};
+  window.__sing = {mic, take, rec, recAll, singIdx, sungVoice, takeNotes, spellMidi, drawDot};
 }]);

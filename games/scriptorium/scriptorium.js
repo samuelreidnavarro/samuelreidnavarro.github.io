@@ -116,20 +116,22 @@ ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
     <div class="tp-stack">
     <div class="podg" id="podModes">
     <button id="loop" aria-pressed="false" title="Repeat until stopped; adds a repeat sign at the end">Loop</button>
-    <button id="mic" aria-pressed="false" title="Sing along: the microphone shows the note you sing as a faint red dot on the staff of your voice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.6a3.4 3.4 0 0 0 3.4-3.4V5.4a3.4 3.4 0 0 0-6.8 0v5.8a3.4 3.4 0 0 0 3.4 3.4Zm6-3.5a6 6 0 0 1-12 0H4.3a7.7 7.7 0 0 0 6.8 7.6V22h1.8v-3.3a7.7 7.7 0 0 0 6.8-7.6Z"/></svg><span>Sing</span></button>
     <div class="pop" id="popSing">
-      <button class="tb popbtn singopts" aria-haspopup="true" aria-expanded="false" aria-label="Sing options" title="Sing options"><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+      <button id="mic" aria-pressed="false" aria-haspopup="true" title="Sing along: the microphone shows the note you sing as a faint red dot on the staff. Hover (or the arrow) for options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.6a3.4 3.4 0 0 0 3.4-3.4V5.4a3.4 3.4 0 0 0-6.8 0v5.8a3.4 3.4 0 0 0 3.4 3.4Zm6-3.5a6 6 0 0 1-12 0H4.3a7.7 7.7 0 0 0 6.8 7.6V22h1.8v-3.3a7.7 7.7 0 0 0 6.8-7.6Z"/></svg><span>Sing</span><span class="singchev" aria-label="Sing options"><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></span></button>
       <div class="popbody">
-        <div class="latrow singrow"><label for="singVoice">I sing</label><select id="singVoice" title="The voice you sing: the dot shows on its staff. Automatic: the first voice whose Playback is off (Voices), else the one you are editing, else the top voice"></select></div>
         <div class="btns col" role="group" aria-label="Sing options">
         <button class="tb" id="micFlex" data-keep aria-pressed="true" title="On: the dot follows your exact pitch, a little above or below its note when you are sharp or flat. Off: it sits on the nearest note">Flexible pitch</button>
         <button class="tb" id="micDia" data-keep aria-pressed="false" title="What you sing is written with the notes of the scale only (B or B flat as your voice has it), never a chromatic note">Diatonic</button>
-        <button class="tb" id="micNotate" data-keep aria-pressed="true" title="While the music plays, what you sing is written out as a voice of its own, Sung, under your voice">Notate what I sing</button>
+        <button class="tb" id="micNotate" data-keep aria-pressed="true" title="While the music plays, what you sing is written out as a voice of its own, Sung. Singing again replaces it; Ctrl+Z brings the earlier one back">Notate what I sing</button>
         <button class="tb" id="micPhones" data-keep aria-pressed="false" title="On: no filtering, so unisons and octaves with the organ show too. Off: the organ is filtered out of what the microphone hears, for singing along through speakers">Headphones</button>
         </div>
         <div class="latrow" title="The time from the organ sounding to your voice reaching the microphone, so what you sing is written in the right place. Empty: worked out by itself">
           <label for="micLat">Latency</label><input type="number" id="micLat" min="0" max="600" step="1" inputmode="numeric" placeholder="auto"><span>ms</span>
           <button class="tb" id="micClap" data-keep title="Eight clicks: clap with each one, and the latency is measured">Clap test</button>
+        </div>
+        <div class="recbox">
+          <button class="tb" id="recBtn" data-keep aria-pressed="false" title="Record yourself (with the organ too when Headphones is on). Press again to stop; the recording is kept below, in this browser"><span class="recdot"></span>Record</button>
+          <div id="recList" class="reclist"></div>
         </div>
       </div>
     </div>
@@ -1205,17 +1207,18 @@ function wrapText(text, size, width){
 }
 function footLines(G){
   const c = creditText(), fs = footFont(G), W = G.W - 2 * G.M;
-  return [...(c.about ? wrapText(c.about, fs, W) : []), c.made];
+  /* "Made with" only on real pages (A3 to A5), not on the Web page */
+  return [...(c.about ? wrapText(c.about, fs, W) : []), ...(G.web ? [] : [c.made])];
 }
 /* how far up the first page's credits reach, so the music stops above them */
 function footTop(G, first){
   const fs = footFont(G), lh = fs * 1.35, base = G.H - G.M * 0.42;
-  const n = first ? footLines(G).length : 1;
+  const n = first ? Math.max(1, footLines(G).length) : 1;
   return Math.min(G.H - G.M, base - (n - 1) * lh - fs * 1.2);
 }
 /* Web: the page ends just below the music */
 function webGeom(G, yEnd, first){
-  const fs = footFont(G), lh = fs * 1.35, n = first ? footLines(G).length : 1;
+  const fs = footFont(G), lh = fs * 1.35, n = first ? Math.max(1, footLines(G).length) : 1;
   const H = yEnd + 2.8 + (n - 1) * lh + fs * 1.2 + G.M * 0.42;
   return {...G, H, hmm: H * G.sp};
 }
@@ -1224,7 +1227,7 @@ function footSvg(G, first, num){
   let s = '';
   if (first) {
     const L = footLines(G);
-    L.forEach((t, i) => { s += `<text class="foot" x="${f(G.W / 2)}" y="${f(base - (L.length - 1 - i) * lh)}" font-size="${f(fs)}" text-anchor="middle"${i === L.length - 1 ? ' font-style="italic"' : ''}>${esc(t)}</text>`; });
+    L.forEach((t, i) => { s += `<text class="foot" x="${f(G.W / 2)}" y="${f(base - (L.length - 1 - i) * lh)}" font-size="${f(fs)}" text-anchor="middle"${t === creditText().made ? ' font-style="italic"' : ''}>${esc(t)}</text>`; });
   } else {
     const who = piece.composer ? `${piece.title}, ${piece.composer}` : piece.title;
     s += `<text class="foot" x="${f(G.M)}" y="${f(base)}" font-size="${f(fs)}" font-style="italic">${esc(who)}</text>`;
@@ -1247,7 +1250,7 @@ function visibleVoices(){ return piece.voices.filter(v => vis(v.idx).on); }
 function layoutScore(G){
   const vlist = visibleVoices();
   if (!vlist.length) return [];
-  const names = vlist.map(v => v.name);
+  const names = vlist.map(v => APP.voiceNames === false ? '' : v.name);   /* CantusFirmus: no names before the staves */
   const indent = Math.max(...names.map(n => textW(n, 1.8, true))) + 1.4;
   const W = G.W - 2 * G.M;
   const lines = buildLines(vlist, 0, piece.end + 1, W, {indent});
@@ -1357,7 +1360,7 @@ function layoutChoir(G){
       const H = (oi === 0 ? footTop(G, true) - 0.8 : footTop(G, false) - 0.8) - op.top, per = H / (side.length || 1);
       side.forEach((v, k) => {
         const y0 = G.web ? yc : op.top + per * k;
-        body += `<text class="vnamehit" data-v="${v.idx}" x="${f(G.M)}" y="${f(y0 + 1.6)}" font-size="1.8" font-style="italic">${esc(v.name)}</text>`;
+        if (APP.voiceNames !== false) body += `<text class="vnamehit" data-v="${v.idx}" x="${f(G.M)}" y="${f(y0 + 1.6)}" font-size="1.8" font-style="italic">${esc(v.name)}</text>`;
         const lines = buildLines([v], op.a, op.b, W, {raggedLast: true});
         let cy = y0 + 2.4;
         lines.forEach(line => {
@@ -1633,7 +1636,6 @@ async function loadPiece(file){
   if (H.afterParse) { H.afterParse(piece); piece.text = writeKern(piece); }
   pieceKey = file;
   if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; }
-  resetLook();
   st.piece = file; save();
   st.verse = 0;
   if (H.afterLoad) H.afterLoad();
@@ -1647,7 +1649,6 @@ function loadText(name, text){
     piece = parseKern(text);
     pieceKey = 'file:' + name;
     if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; }
-    resetLook();
     syncUI(); render();
   } catch (e) { pagesEl.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
@@ -2112,7 +2113,7 @@ libEl.addEventListener('click', e => {
 NoteInput.build($('#editBar'), {what: 'voice', whole: 'the whole voice'});
 /* pop-overs: hover, or click to keep open */
 function closePops(except){ document.querySelectorAll('.pop.open').forEach(p => { if (p !== except) { p.classList.remove('open'); p.querySelector('button').setAttribute('aria-expanded', 'false'); } }); }
-document.querySelectorAll('.pop > button').forEach(b => b.addEventListener('click', () => {
+document.querySelectorAll('.pop > button:not(#mic)').forEach(b => b.addEventListener('click', () => {
   const p = b.parentNode, open = !p.classList.contains('open');
   closePops(p); setLib(false); p.classList.toggle('open', open); b.setAttribute('aria-expanded', String(open));
   postHeight();
@@ -3014,8 +3015,8 @@ function unitMinims(){
 }
 /* where the music stands, in semibreves */
 const playPos = () => (Organ.position() || 0) / 2;
-function restartPlay(){ if (!play) return; startPlay(playPos()); }
-function startPlay(from){
+function restartPlay(){ if (!play) return; startPlay(playPos(), true); }
+function startPlay(from, again){
   if (!piece) return;
   /* Play starts at the selected note (or the beginning) */
   if (typeof from !== 'number') { const s = selSym(); from = s ? s.t : 0; }
@@ -3044,11 +3045,11 @@ function startPlay(from){
   const top = voices[0], u = unitMinims();
   const on = new Set();
   const spec = {
-    events, from: from * 2, count: st.countIn, unit: u, level: 1 / Math.sqrt(Math.max(1, voices.length)),
+    events, from: from * 2, count: again ? 0 : st.countIn, unit: u, level: 1 / Math.sqrt(Math.max(1, voices.length)),
     /* how many beats to the hand's pattern: three under a perfect sign */
     group: bi => { const T = mensInfo(metAt(top, bi * u / 2)).T; return T === 3 ? 3 : 2; },
     groupStart: bi => { let seg = 0; for (const m of top.mets) if (m.t <= bi * u / 2 + EPS) seg = m.t; return Math.round(seg * 2 / u); },
-    onLoop: () => startPlay(0),
+    onLoop: () => startPlay(0, true),     /* a repeat: no count-in again */
     onFrame: ids => {
       const now = new Set(ids);
       for (const id of [...on]) if (!now.has(id)) { on.delete(id); document.querySelectorAll('svg g.' + id).forEach(g => g.classList.remove('on')); }
