@@ -362,6 +362,7 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
   #clearPod{order:-2}
   #libPod .libwrap{position:static}
   #libPod .library{position:absolute;left:0;right:0;width:auto;max-height:60vh;top:50px;margin-top:0}
+  #popOpen .popbody{left:-6px;right:auto}
   #editPod{order:-1}
   #navPod{order:-1}
 }
@@ -567,7 +568,7 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 .voices .vexp{width:30px;padding:0;color:var(--muted)}
 .voices .vexp svg{width:17px;height:17px;fill:currentColor}
 .voices .vexp:hover{color:var(--text)}
-#popExport .popbody{left:auto;right:-6px}
+#popExport .popbody,#popOpen .popbody{left:auto;right:-6px}
 /* the clef on the staff opens a menu of clefs */
 #pages .clefhit{cursor:pointer}
 #pages .clefhit:hover use{fill:var(--hov)}
@@ -657,14 +658,37 @@ body.editing #pages .stafhit{cursor:crosshair}
           <span class="lab">Pages</span><div class="btns" id="flowSeg" role="group" aria-label="Pages"><button class="tb" data-v="vertical">Vertical</button><button class="tb" data-v="horizontal">Horizontal</button></div>
         </div></div>
       </div></div>
+      <div class="podg"><div class="pop" id="popLook">
+        <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Appearance<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <div class="popbody"><div class="staffset">
+          <span class="lab">Notation</span><div class="btns" id="notaSeg" role="group" aria-label="Notation"><button class="tb" data-v="real">Mensural</button><button class="tb" data-v="fake">Modern</button></div>
+          <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
+          <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Through the staff</button></div>
+          <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
+          <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
+          <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
+          <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0" max="1.2" step="0.01">
+          <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0" max="2" step="0.02">
+          <label class="ctl" for="ss">Space between systems</label><input type="range" id="ss" min="0" max="3" step="0.05">
+          <span class="lab">Syllable dashes</span><div class="btns" id="dashSeg" role="group" aria-label="Syllable dashes"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
+          <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
+          <label class="ctl" for="handOp">Hand opacity</label><input type="range" id="handOp" min="0.05" max="1" step="0.05">
+          <label class="ctl" for="handSize">Hand size</label><input type="range" id="handSize" min="0.4" max="2.5" step="0.05">
+          <span class="lab" id="verseLab">Verse</span><div class="btns" id="verseSeg" role="group" aria-label="Verse"></div>
+        </div></div>
+      </div></div>
       <div class="grow">
-        <div class="podg"><div class="libwrap">
-          <button id="libBtn" class="libbtn" aria-haspopup="true" aria-expanded="false" aria-controls="library">Pieces<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <div class="podg" id="libPod"><div class="libwrap"><div class="pop" id="popOpen">
+          <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Open<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+          <div class="popbody"><div class="btns col" id="openList">
+            <button class="tb" id="libBtn" aria-haspopup="true" aria-expanded="false" aria-controls="library">Pieces</button>
+            <button class="tb" id="newBtn" title="A new, empty score to write polyphony in">New score</button>
+            <button class="tb" id="openBtn" title="MusicXML, MuseScore, MIDI, LilyPond or **kern">Open file</button>
+          </div></div>
+        </div>
           <div id="library" class="library" role="dialog" aria-label="Pieces" hidden></div>
         </div></div>
         <div class="podg">
-          <button id="newBtn" title="A new, empty score to write polyphony in">New score</button>
-          <button id="openBtn">Open file</button>
           <div class="pop" id="popExport">
             <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Export<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
             <div class="popbody"><div class="btns col" id="exportList">
@@ -731,25 +755,6 @@ body.editing #pages .stafhit{cursor:crosshair}
         <label class="ctl hzctl" title="The pitch of a′ in Hz">a′<span class="eqs"> =</span><input type="number" id="ref" min="100" max="1000" step="any" inputmode="decimal" aria-label="Pitch of a′ in Hz">Hz</label>
         <button id="toggleSet" aria-expanded="false" aria-controls="tpSide" title="Show or hide all the sound settings">Sound<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
       </div>
-      <div class="podg"><div class="pop" id="popLook">
-        <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Appearance<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-        <div class="popbody"><div class="staffset">
-          <span class="lab">Notation</span><div class="btns" id="notaSeg" role="group" aria-label="Notation"><button class="tb" data-v="real">Mensural</button><button class="tb" data-v="fake">Modern</button></div>
-          <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
-          <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Through the staff</button></div>
-          <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
-          <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
-          <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
-          <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0" max="1.2" step="0.01">
-          <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0" max="2" step="0.02">
-          <label class="ctl" for="ss">Space between systems</label><input type="range" id="ss" min="0" max="3" step="0.05">
-          <span class="lab">Syllable dashes</span><div class="btns" id="dashSeg" role="group" aria-label="Syllable dashes"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
-          <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
-          <label class="ctl" for="handOp">Hand opacity</label><input type="range" id="handOp" min="0.05" max="1" step="0.05">
-          <label class="ctl" for="handSize">Hand size</label><input type="range" id="handSize" min="0.4" max="2.5" step="0.05">
-          <span class="lab" id="verseLab">Verse</span><div class="btns" id="verseSeg" role="group" aria-label="Verse"></div>
-        </div></div>
-      </div></div>
     </div>
   </section>
 
@@ -1491,7 +1496,8 @@ function extent(s){
   const flip = isFlipped(s);
   if (STEMMED[s.g]) { if (flip) hi = y + 3.6; else lo = y - 3.6; }
   if (TAILED[s.g]) { if (flip) lo = y - 3.6; else hi = y + 3.6; }
-  if (s.edAcc) lo = Math.min(lo, y - 2.6, -1.4);
+  if (s.acc) { lo = Math.min(lo, y - (s.acc === 'fl' ? 2.1 : 1.6)); hi = Math.max(hi, y + 1.6); }
+  if (s.edAcc) lo = Math.min(lo, Math.min(-0.9, y - (flip ? 1.6 : STEMMED[s.g] ? 4.3 : 1.7)) - 1.5);
   if (s.ferm) lo = Math.min(lo, y - 2.2, -1.6);
   return [lo, hi];
 }
@@ -1686,6 +1692,13 @@ function buildLines(vlist, a, b, W, opts = {}){
 function lineRoom(v, line){
   const m = Math.min(1, st.vs), pad = 0.05 + 0.35 * m;
   let lo = -(0.05 + 1.15 * m), hi = 4.05 + 1.15 * m;
+  /* the custos at the line end, pointing at the next note */
+  const tEnd = line.tEnd !== undefined ? line.tEnd : line.to < line.cols.length ? line.cols[line.to].t : null;
+  const nx = tEnd !== null && !line.endsPiece ? nextSym(v, tEnd) : null;
+  if (nx && !nx.rest && nx.pos !== null && nx.pos !== undefined) { const y = 4 - nx.pos * 0.5; lo = Math.min(lo, y - 1.9 - pad); hi = Math.max(hi, y + 1.9 + pad); }
+  /* the clef and the key signature at the line start */
+  lo = Math.min(lo, -1.3 - pad);
+  for (const k of keySig(v, line.cols[line.from].t, v.clef)) { const y = 4 - k.pos * 0.5; lo = Math.min(lo, y - (/fl/.test(k.g) ? 2.1 : 1.6) - pad); hi = Math.max(hi, y + 1.6 + pad); }
   for (let i = line.from; i < line.to; i++) {
     const s = line.cols[i].items.get(v);
     if (!s) continue;
@@ -1714,7 +1727,7 @@ function sectionLabels(line, top, W){
 /* draw one system (several voices stacked) at y; returns {svg, h} */
 function drawSystem(vlist, line, y, opts = {}){
   const rooms = vlist.map(v => lineRoom(v, line));
-  const gap = 1.2 * st.vs;
+  const gap = Math.max(1, 1.2 * st.vs);
   const tops = [];
   let yy = y;
   const secRoom = piece.sections.some(sec => sec.t >= line.t0 - EPS && sec.t < line.tEnd - EPS) ? 2.6 : 0;
@@ -1840,7 +1853,7 @@ function layoutScore(G){
 function paginate(G, lines, vlist, optsFor, sub){
   const pages = [];
   let body = '', y = G.M, first = true;
-  const sysGap = 2.2 * st.ss + Math.min(1, st.ss);
+  const sysGap = Math.max(1, 2.2 * st.ss + Math.min(1, st.ss));
   const newPage = () => { pages.push(body); body = ''; y = G.M; };
   if (first) { const tb = titleBlock(G, G.M, G.W - G.M, y, sub); body += tb.svg; y += tb.h; }
   const bottom1 = footTop(G, true) - 0.8, bottom = footTop(G, false) - 0.8;
@@ -1892,14 +1905,19 @@ function layoutChoir(G){
   cands.push(piece.end + 1);
   /* lines a voice needs for [a,b) */
   const hdr = new Map(vlist.map(v => [v, headerW(v)]));
-  const linesNeeded = (v, a, b) => {
+  /* the height a voice needs for [a,b): each line as tall as what is on it (notes, stems, lyrics), at least a space apart */
+  const gapC = Math.max(1, 1.6 * st.ss);
+  const heightNeeded = (v, a, b) => {
     const cols = vcols.get(v).filter(c => c.t >= a - EPS && c.t < b - EPS);
     if (!cols.length) return 0;
-    return breakLines(cols, W - hdr.get(v)).length;
-  };
-  const sysPitch = v => {
-    const lyr = vis(v.idx).lyr && v.syms.some(s => s.text);
-    return 4 + 0.6 + 1.8 * Math.min(1, st.vs) + (lyr ? 2.4 + 0.6 * Math.min(1, st.vs) : 0) + 1.6 * st.ss;
+    let h = 2.4;
+    breakLines(cols, W - hdr.get(v)).forEach((L, i) => {
+      const r = lineRoom(v, {cols, from: L.from, to: L.to});
+      const t0 = cols[L.from].t, t1 = L.to < cols.length ? cols[L.to].t : b;
+      const sec = piece.sections.some(q => q.t >= t0 - EPS && q.t < t1 - EPS) ? 2.6 : 0;
+      h += (i ? gapC : 0) + sec + r.above + 4 + r.below;
+    });
+    return h;
   };
   /* region heights per side; the first opening carries the title */
   const tb = titleBlock(G, G.M, G.W - G.M, G.M, null);
@@ -1907,7 +1925,7 @@ function layoutChoir(G){
     const H = (first ? footTop(G, true) - 0.8 : footTop(G, false) - 0.8) - top;
     const n = side.length || 1;
     const per = H / n;
-    return side.map(v => Math.max(1, Math.floor((per - 2.4) / sysPitch(v))));
+    return side.map(() => per - 0.6);
   };
   const openings = [];
   let a = 0, guard = 0;
@@ -1915,7 +1933,7 @@ function layoutChoir(G){
     const top = G.M + (openings.length === 0 ? tb.h : 0) + 0.4;
     const caps = new Map();
     sides.forEach(side => capacity(side, top, openings.length === 0).forEach((c, k) => caps.set(side[k], c)));
-    const fits = b => vlist.every(v => linesNeeded(v, a, b) <= caps.get(v));
+    const fits = b => vlist.every(v => heightNeeded(v, a, b) <= caps.get(v));
     let lo = cands.findIndex(t => t > a + EPS);
     if (lo < 0) break;
     let hi = cands.length - 1, best = lo;
@@ -1938,14 +1956,13 @@ function layoutChoir(G){
         const y0 = G.web ? yc : op.top + per * k;
         body += `<text x="${f(G.M)}" y="${f(y0 + 1.6)}" font-size="1.8" font-style="italic">${esc(v.name)}</text>`;
         const lines = buildLines([v], op.a, op.b, W, {raggedLast: true});
-        const pitch = sysPitch(v);
-        lines.forEach((line, li) => {
-          const room = lineRoom(v, line);
-          const ty = y0 + 2.4 + li * pitch + Math.max(1.2, Math.min(room.above, 2.4));
-          const sys = drawSystem([v], line, ty - Math.min(room.above, 2.4) - 0, {});
+        let cy = y0 + 2.4;
+        lines.forEach(line => {
+          const sys = drawSystem([v], line, cy, {});
           body += `<g transform="translate(${f(G.M)} 0)">${sys.svg}</g>`;
+          cy += sys.h + gapC;
         });
-        yc = y0 + 2.4 + lines.length * pitch + 2.4;
+        yc = cy + 1.4;
       });
       return {body, yEnd: yc};
     });
@@ -2591,6 +2608,8 @@ const libEl = $('#library'), libBtn = $('#libBtn');
 function setLib(open){ libEl.hidden = !open; libBtn.setAttribute('aria-expanded', String(open)); postHeight(); if (open) { const q = $('#libQ'); if (q) setTimeout(() => q.focus(), 0); } }
 $('#markClear').addEventListener('click', () => { mark = null; document.querySelectorAll('#pages g.mark').forEach(g => g.classList.remove('mark')); $('#markBar').hidden = true; setAddress(pieceKey); postHeight(); });
 libBtn.addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden); });
+/* the Open menu closes once a choice is made */
+$('#openList').addEventListener('click', e => { if (e.target.closest('button')) { closePops(); if (document.activeElement) document.activeElement.blur(); } });
 libEl.addEventListener('click', e => {
   const fv = e.target.closest('.fav');
   if (fv) { e.stopPropagation(); toggleFav(fv.dataset.fav); return; }
