@@ -675,7 +675,7 @@ body.editing #pages .stafhit{cursor:crosshair}
           </div>
         </div>
       </div>
-      <input type="file" id="fileIn" accept=".krn,.kern,.txt" hidden>
+      <input type="file" id="fileIn" accept=".krn,.kern,.txt,.musicxml,.xml,.mxl,.mscz,.mscx,.mid,.midi,.ly" hidden>
     </div>
     <div class="bar editbar" id="editBar" hidden></div>
   </section>
@@ -769,6 +769,7 @@ body.editing #pages .stafhit{cursor:crosshair}
 </main>
 <script src="shared/organ.js?v=2"></script>
 <script src="shared/note-input.js?v=1"></script>
+<script src="shared/score-import.js?v=1"></script>
 <script src="shared/frame-height.js?v=1"></script>
 <script>
 (function(){
@@ -2589,15 +2590,20 @@ document.addEventListener('keydown', e => {
 $('#openBtn').addEventListener('click', () => $('#fileIn').click());
 $('#fileIn').addEventListener('change', e => {
   const file = e.target.files[0]; if (!file) return;
-  file.text().then(t => loadText(file.name, t));
+  openFile(file);
   e.target.value = '';
 });
 document.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drop'); });
 document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drop'); });
 document.addEventListener('drop', e => {
   e.preventDefault(); document.body.classList.remove('drop');
-  const file = e.dataTransfer.files[0]; if (file) file.text().then(t => loadText(file.name, t));
+  const file = e.dataTransfer.files[0]; if (file) openFile(file);
 });
+/* **kern is read as it is; MusicXML, MuseScore, MIDI and LilyPond are turned into **kern first (shared/score-import.js) */
+function openFile(file){
+  if (window.ScoreImport && ScoreImport.accepts(file.name)) ScoreImport.toKern(file).then(k => loadText(file.name, k), err => { stopPlay(); pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; });
+  else file.text().then(t => loadText(file.name, t));
+}
 $('#printBtn').addEventListener('click', () => {
   if (EMBED && !pieceKey.startsWith('file:')) { window.open('choirbook.html?print=1', '_blank'); return; }
   window.print();
