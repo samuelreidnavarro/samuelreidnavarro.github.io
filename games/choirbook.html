@@ -3320,7 +3320,8 @@ function startPlay(from){
   voices.forEach(v => {
     for (let k = 0; k < v.syms.length; k++) {
       const s = v.syms[k];
-      if (s.rest) continue;
+      /* a rest sounds nothing but lights up while it lasts */
+      if (s.rest) { events.push({id: s.id, t: s.t * 2, d: s.d * 2, midi: null}); continue; }
       /* tied pieces sound as one note: struck once (where the playing starts, if it starts inside), held to the end */
       let j = k;
       while (v.syms[j].tieNext && v.syms[j + 1] && !v.syms[j + 1].rest && v.syms[j + 1].step === s.step) j++;
