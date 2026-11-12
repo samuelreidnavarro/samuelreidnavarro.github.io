@@ -41,10 +41,17 @@
       (function () {
         var f = document.getElementById("cb");
         var q = location.search ? location.search.slice(1) + "&" : "";
-        f.src = "games/choirbook.html?" + q + "v=11";
+        f.src = "games/choirbook.html?" + q + "v=12";
+        var full = false, lastH = 0;
         window.addEventListener("message", function (e) {
           if (e.source !== f.contentWindow || !e.data) return;
-          if (e.data.choirbookHeight) f.style.height = e.data.choirbookHeight + "px";
+          if (e.data.choirbookHeight) { lastH = e.data.choirbookHeight; if (!full) f.style.height = lastH + "px"; }
+          /* full screen where the browser has none (iPhone): the app covers the window */
+          if ("choirbookFull" in e.data) {
+            full = !!e.data.choirbookFull;
+            f.style.cssText = full ? "position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;max-width:none;margin:0;border:0;z-index:9999" : (lastH ? "height:" + lastH + "px" : "");
+            document.documentElement.style.overflow = full ? "hidden" : "";
+          }
           if (e.data.choirbookQuery) try { history.replaceState(null, "", "choirbook.html" + e.data.choirbookQuery); } catch (err) {}
         });
       })();

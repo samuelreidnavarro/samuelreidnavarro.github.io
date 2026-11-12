@@ -497,6 +497,8 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 .swatch.pick[aria-pressed="true"] i{background:var(--c)}
 #pages{display:flex;flex-direction:column;align-items:center;gap:30px}
 .opening{display:flex;justify-content:center;max-width:100%}
+.opening.stack{flex-direction:column;align-items:center;gap:30px}
+.opening.stack .page{border-radius:3px}
 .opening .page:first-child{border-radius:3px 0 0 3px}
 .opening .page:last-child{border-radius:0 3px 3px 0}
 .opening .page + .page{box-shadow:inset 18px 0 22px -18px rgba(70,46,10,.35),0 1px 1px rgba(60,40,10,.14),0 14px 32px -14px rgba(50,34,8,.42)}
@@ -522,7 +524,30 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 #pages .caret{fill:var(--accent);opacity:.75;pointer-events:none}
 #pages g[class^="n"]{cursor:pointer}
 #pages .hit{fill:transparent}
+/* the sounding (and the selected) note: a faint box around it, as a selection in CantusFirmus */
+#pages svg g.on .hit,#pages g.sel .hit{fill:var(--accent);fill-opacity:.1;stroke:var(--accent);stroke-opacity:.45;stroke-width:.09px;rx:.3px}
 .viewwrap{position:relative}
+/* Choirbook: the hand stands still in the middle */
+.viewwrap.handmid .handbox{right:auto;left:calc(50% - 125px * var(--hand-sc,1))}
+.viewwrap.handmid .pendbox.both{right:auto;left:calc(50% - 315px * var(--hand-sc,1))}
+/* full screen */
+.fsbtn{position:absolute;top:4px;left:6px;z-index:5;width:32px;height:32px;min-height:0;padding:0;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  background:rgba(42,34,24,.45);color:#FBF4E8;border:0;transition:opacity .4s}
+.fsbtn:hover{background:var(--accent);color:var(--accent-ink)}
+.fsbtn svg{width:18px;height:18px;fill:currentColor}
+.fsctl{display:none}
+.viewwrap.fs{position:fixed;inset:0;z-index:1000;background:var(--ground);overflow:hidden}
+.viewwrap.fs .viewer{width:auto !important;height:100% !important;max-width:none;margin:0;padding:24px 0 90px;overflow:auto;scrollbar-width:none}
+.viewwrap.fs .viewer::-webkit-scrollbar{display:none}
+.viewwrap.fs .viewer.horiz{padding:24px 64px}
+.viewwrap.fs .fsbtn{left:12px !important;top:12px}
+.viewwrap.fs .fsctl{display:flex;position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:6;gap:10px;transition:opacity .4s}
+.fsctl button{width:58px;height:58px;min-height:0;padding:0;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(42,34,24,.62);color:#FBF4E8;box-shadow:0 6px 16px -6px rgba(0,0,0,.5)}
+.fsctl button:hover{background:var(--accent);color:var(--accent-ink)}
+.fsctl svg{width:22px;height:22px;fill:currentColor}
+.viewwrap.fs.idle .fsbtn,.viewwrap.fs.idle .fsctl{opacity:0;pointer-events:none}
+.viewwrap.fs.idle{cursor:none}
 .viewwrap .handbox{top:10px;right:22px;z-index:3}
 .viewwrap .pendbox.both{right:calc(22px + 190px * var(--hand-sc,1))}
 .drop .viewer{outline:2px dashed var(--accent);outline-offset:4px}
@@ -598,7 +623,7 @@ body.editing #pages .stafhit{cursor:crosshair}
 @media print{
   html,body{background:#fff !important;overflow:visible !important;height:auto !important}
   .wrap{padding:0 !important}
-  header.top,.tools,.transport,.pnum,.msg,.handbox,.pendbox,#countBox,.pagenav,#toast,#clefPick,.markbar,.srcnote{display:none !important}
+  header.top,.tools,.transport,.pnum,.msg,.handbox,.pendbox,.fsbtn,.fsctl,#countBox,.pagenav,#toast,#clefPick,.markbar,.srcnote{display:none !important}
   .viewer{height:auto !important;width:auto !important;overflow:visible !important;padding:0 !important;background:none !important;box-shadow:none !important}
   #pages{display:block !important;gap:0;width:auto !important}
   .opening{display:block}
@@ -618,7 +643,7 @@ body.editing #pages .stafhit{cursor:crosshair}
       <div class="podg"><div class="pop" id="popView">
         <button class="tb popbtn" id="viewBtn" aria-haspopup="true" aria-expanded="false"><span id="viewName">Score</span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="btns col" id="viewList" role="group" aria-label="View">
-          <button class="tb" data-v="score">Score</button><button class="tb" data-v="parts">Parts</button><button class="tb" data-v="choir">Choir book</button>
+          <button class="tb" data-v="score">Score</button><button class="tb" data-v="parts">Parts</button><button class="tb" data-v="choir">Choirbook</button>
         </div></div>
       </div></div>
       <div class="podg"><div class="pop" id="popVoices">
@@ -628,7 +653,7 @@ body.editing #pages .stafhit{cursor:crosshair}
       <div class="podg"><div class="pop" id="popPage">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Page<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="staffset">
-          <span class="lab">Size</span><div class="btns" id="paperSeg" role="group" aria-label="Paper size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button></div>
+          <span class="lab">Size</span><div class="btns" id="paperSeg" role="group" aria-label="Paper size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button><button class="tb" data-v="web">Web</button></div>
           <span class="lab">Orientation</span><div class="btns" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
           <div class="pagemeta"><label class="lab" for="metaTitle">Title</label><input id="metaTitle" type="text" autocomplete="off"><label class="lab" for="metaComp">Composer</label><input id="metaComp" type="text" autocomplete="off"></div>
           <span class="lab">Pages</span><div class="btns" id="flowSeg" role="group" aria-label="Pages"><button class="tb" data-v="vertical">Vertical</button><button class="tb" data-v="horizontal">Horizontal</button></div>
@@ -660,6 +685,8 @@ body.editing #pages .stafhit{cursor:crosshair}
   <div class="markbar" id="markBar" hidden><span id="markTxt"></span><button id="markClear">Clear marking</button></div>
   <div class="viewwrap">
     <section class="viewer" id="viewer" aria-label="Music"><div id="pages"></div></section>
+    <button class="fsbtn" id="fsBtn" aria-label="Full screen" title="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="fsIcon" d="M3 3h7v2.4H5.4V10H3Zm11 0h7v7h-2.4V5.4H14ZM3 14h2.4v4.6H10V21H3Zm15.6 0H21v7h-7v-2.4h4.6Z"/></svg></button>
+    <div class="fsctl" id="fsCtl"><button id="fsPlay" aria-label="Play" title="Play"><svg viewBox="0 0 14 14" aria-hidden="true"><path id="fsPlayIcon" d="M3 1.5 12.5 7 3 12.5Z"/></svg></button></div>
     <button class="pagenav prev" id="pgPrev" aria-label="Previous page" title="Previous page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12 17 6.2Z"/></svg></button>
     <div id="countBox" aria-live="off" hidden></div>
     <ul id="clefPick" class="menu" role="menu" aria-label="Clef" hidden></ul>
@@ -1705,6 +1732,12 @@ function drawSystem(vlist, line, y, opts = {}){
 /* ------------------------------------------------------------------ */
 const PAPER = {A3: [297, 420], A4: [210, 297], A5: [148, 210]};
 function pageGeom(){
+  if (st.paper === 'web') {
+    const avail = Math.max(240, ($('.viewwrap').clientWidth || window.innerWidth) - 40);
+    /* the two pages of an opening side by side, or one below the other on a narrow screen */
+    const w = (st.view === 'choir' && avail >= 660 ? avail / 2 : avail) / (96 / 25.4), sp = st.size * 1.2, H = 100000;
+    return {web: true, wmm: w, hmm: H * sp, sp, W: w / sp, H, M: Math.min(w, 297) * 0.065 / sp};
+  }
   let [w, h] = PAPER[st.paper] || PAPER.A4;
   if (st.orient === 'landscape') [w, h] = [h, w];
   const sp = st.size * (st.paper === 'A5' ? 0.82 : st.paper === 'A3' ? 1.25 : 1);
@@ -1729,6 +1762,12 @@ function footTop(G, first){
   const fs = footFont(G), lh = fs * 1.35, base = G.H - G.M * 0.42;
   const n = first ? footLines(G).length : 1;
   return Math.min(G.H - G.M, base - (n - 1) * lh - fs * 1.2);
+}
+/* Web: the page ends just below the music */
+function webGeom(G, yEnd, first){
+  const fs = footFont(G), lh = fs * 1.35, n = first ? footLines(G).length : 1;
+  const H = yEnd + 2.8 + (n - 1) * lh + fs * 1.2 + G.M * 0.42;
+  return {...G, H, hmm: H * G.sp};
 }
 function footSvg(G, first, num){
   const fs = footFont(G), lh = fs * 1.35, base = G.H - G.M * 0.42;
@@ -1779,6 +1818,7 @@ function paginate(G, lines, vlist, optsFor, sub){
     y += sys.h + sysGap;
   });
   if (body) pages.push(body);
+  if (G.web) return pages.map((b, i) => { const G2 = webGeom(G, y - sysGap, i === 0); return pageSvg(G2, b + footSvg(G2, i === 0, i + 1)); });
   return pages.map((b, i) => pageSvg(G, b + footSvg(G, i === 0, i + 1)));
 }
 function layoutParts(G){
@@ -1856,12 +1896,12 @@ function layoutChoir(G){
   /* draw */
   const pages = [];
   openings.forEach((op, oi) => {
-    sides.forEach((side, si) => {
-      let body = '';
+    const made = sides.map((side, si) => {
+      let body = '', yc = op.top;
       if (oi === 0 && si === 0) body += titleBlock(G, G.M, G.W - G.M, G.M, null).svg;
       const H = (oi === 0 ? footTop(G, true) - 0.8 : footTop(G, false) - 0.8) - op.top, per = H / (side.length || 1);
       side.forEach((v, k) => {
-        const y0 = op.top + per * k;
+        const y0 = G.web ? yc : op.top + per * k;
         body += `<text x="${f(G.M)}" y="${f(y0 + 1.6)}" font-size="1.8" font-style="italic">${esc(v.name)}</text>`;
         const lines = buildLines([v], op.a, op.b, W, {raggedLast: true});
         const pitch = sysPitch(v);
@@ -1871,9 +1911,14 @@ function layoutChoir(G){
           const sys = drawSystem([v], line, ty - Math.min(room.above, 2.4) - 0, {});
           body += `<g transform="translate(${f(G.M)} 0)">${sys.svg}</g>`;
         });
+        yc = y0 + 2.4 + lines.length * pitch + 2.4;
       });
-      body += footSvg(G, oi === 0 && si === 0, pages.length + 1);
-      pages.push({svg: pageSvg(G, body), side: si, opening: oi});
+      return {body, yEnd: yc};
+    });
+    /* Web: both pages as long as the longer one */
+    const Gp = G.web ? made.map((m, si) => webGeom(G, m.yEnd, oi === 0 && si === 0)).reduce((a, b) => (b.H > a.H ? b : a)) : G;
+    made.forEach((m, si) => {
+      pages.push({svg: pageSvg(Gp, m.body + footSvg(Gp, oi === 0 && si === 0, pages.length + 1)), side: si, opening: oi});
     });
   });
   return pages;
@@ -1882,7 +1927,7 @@ function layoutChoir(G){
 /* ------------------------------------------------------------------ */
 /* Render                                                              */
 /* ------------------------------------------------------------------ */
-const pagesEl = $('#pages'), viewerEl = $('#viewer');
+const pagesEl = $('#pages'), viewerEl = $('#viewer'), wrapEl = $('.viewwrap');
 let defsDone = false;
 function defs(){
   if (defsDone) return;
@@ -1897,38 +1942,44 @@ function render(){
   defs();
   prepare();
   const G = pageGeom();
-  document.getElementById('pagerule').textContent = `@page{size:${st.paper} ${st.orient};margin:0}`;
+  document.getElementById('pagerule').textContent = `@page{size:${G.web ? 'A4' : st.paper} ${st.orient};margin:0}`;
   let html = '';
-  const horiz = st.flow === 'horizontal';
+  const fs = wrapEl.classList.contains('fs');
+  const horiz = st.flow === 'horizontal' && !G.web;
+  document.querySelectorAll('#orientSeg button,#flowSeg button').forEach(b => { b.disabled = !!G.web; });
   const avail = ($('.viewwrap').clientWidth || window.innerWidth) - (horiz ? (window.innerWidth <= 700 ? 60 : 140) : 40);
   const pxmm = 96 / 25.4;
   /* side by side, a page (or an opening) fits the height of the window */
-  const availH = Math.max(320, (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) || 700) - 60);
+  const availH = Math.max(320, (fs ? window.innerHeight : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) || 700) - 60);
   const fitH = horiz ? availH / (G.hmm * pxmm) : Infinity;
   if (st.view === 'choir') {
     const pages = layoutChoir(G);
-    const sc = Math.min(1.25, avail / (2 * G.wmm * pxmm), fitH);
+    const sc = G.web ? 1 : Math.min(1.25, avail / (2 * G.wmm * pxmm), fitH);
     for (let i = 0; i < pages.length; i += 2) {
-      html += `<div class="opening">`;
+      html += `<div class="opening${G.web && 2 * G.wmm * pxmm > avail + 1 ? ' stack' : ''}">`;
       for (const p of pages.slice(i, i + 2)) html += pageDiv(p.svg, G, sc, '');
       html += `</div>`;
     }
     if (!pages.length) html = '<p class="msg">No voices are shown.</p>';
   } else {
     const pages = st.view === 'parts' ? layoutParts(G) : layoutScore(G);
-    const sc = Math.min(1.25, avail / (G.wmm * pxmm), fitH);
+    const sc = G.web ? 1 : Math.min(1.25, avail / (G.wmm * pxmm), fitH);
     pages.forEach(p => { html += pageDiv(p, G, sc, ''); });
     if (!pages.length) html = '<p class="msg">No voices are shown.</p>';
   }
+  viewerEl.style.width = '';
   pagesEl.innerHTML = html;
-  /* the frame is as wide as one page (one opening in the choir book) */
+  /* the frame is as wide as one page (one opening in the choir book), measured afresh for every view */
   const framed = !horiz && window.innerWidth > 700;
   viewerEl.classList.toggle('frame', framed);
+  viewerEl.classList.toggle('horiz', horiz); wrapEl.classList.toggle('horiz', horiz);
   const widest = Math.max(0, ...[...pagesEl.children].map(c => c.offsetWidth || 0));
   viewerEl.style.width = framed && widest ? (widest + 24) + 'px' : '';
+  $('#fsBtn').style.left = (viewerEl.offsetLeft + 6) + 'px';
+  wrapEl.classList.toggle('handmid', st.view === 'choir');
   if (typeof showSel === 'function' && (ed.sel || ed.ins)) showSel();
   applyMark();
-  if (!play) { handTop = -1; $('#handBox').style.top = ''; $('#pendBox').style.top = ''; }
+  if (!play) { handTop = -1; $('#handBox').style.top = ''; $('#pendBox').style.top = ''; if (st.view === 'choir') handMid(null); }
   syncNav();
   postHeight();
 }
@@ -1946,7 +1997,7 @@ function goPage(dir){
   viewerEl.scrollTo({left: c.offsetLeft + c.offsetWidth / 2 - viewerEl.clientWidth / 2, behavior: 'smooth'});
 }
 function syncNav(){
-  const horiz = st.flow === 'horizontal';
+  const horiz = st.flow === 'horizontal' && st.paper !== 'web';
   const max = viewerEl.scrollWidth - viewerEl.clientWidth;
   $('#pgPrev').disabled = !horiz || viewerEl.scrollLeft <= 2;
   $('#pgNext').disabled = !horiz || viewerEl.scrollLeft >= max - 2;
@@ -1994,14 +2045,19 @@ function bringIntoView(el, force){
   return true;
 }
 function pageDiv(svg, G, sc, extra){
-  return `<div class="page" style="width:${f(G.wmm * 96 / 25.4 * sc)}px;height:${f(G.hmm * 96 / 25.4 * sc)}px" data-w="${G.wmm}" data-h="${G.hmm}">${svg}${extra}</div>`;
+  let hmm = G.hmm;
+  if (G.web) { const m = /viewBox="0 0 [-\d.]+ ([\d.]+)"/.exec(svg); if (m) hmm = +m[1] * G.sp; }
+  return `<div class="page" style="width:${f(G.wmm * 96 / 25.4 * sc)}px;height:${f(hmm * 96 / 25.4 * sc)}px" data-w="${G.wmm}" data-h="${hmm}">${svg}${extra}</div>`;
 }
 /* print at true paper size */
+let webPrint = false;
 window.addEventListener('beforeprint', () => {
+  if (st.paper === 'web') { webPrint = true; st.paper = 'A4'; render(); }
   document.querySelectorAll('.page').forEach(p => { p.dataset.sw = p.style.width; p.dataset.sh = p.style.height; p.style.width = p.dataset.w + 'mm'; p.style.height = p.dataset.h + 'mm'; });
 });
 window.addEventListener('afterprint', () => {
   document.querySelectorAll('.page').forEach(p => { p.style.width = p.dataset.sw; p.style.height = p.dataset.sh; });
+  if (webPrint) { webPrint = false; st.paper = 'web'; render(); }
 });
 
 /* ------------------------------------------------------------------ */
@@ -2254,7 +2310,7 @@ function applyPaper(){
   $('#paperPickL').setAttribute('aria-pressed', String(custom));
   if (custom) { $('#paperPickL').style.setProperty('--c', col); $('#paperPick').value = col; }
 }
-const VIEW_NAMES = {score: 'Score', parts: 'Parts', choir: 'Choir book'};
+const VIEW_NAMES = {score: 'Score', parts: 'Parts', choir: 'Choirbook'};
 function segInit(id, key, after){
   $(id).addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
@@ -2271,7 +2327,7 @@ function syncUI(){
   if ($('#audition')) $('#audition').checked = !!st.audition;
   document.documentElement.style.setProperty('--staff', (STAFF_COLORS.find(c => c[0] === st.staff) || STAFF_COLORS[0])[1]);
   applyPaper();
-  const horiz = st.flow === 'horizontal';
+  const horiz = st.flow === 'horizontal' && st.paper !== 'web';
   viewerEl.classList.toggle('horiz', horiz); $('.viewwrap').classList.toggle('horiz', horiz);
   /* verses */
   const nv = piece ? Math.max(1, ...piece.voices.map(v => v.verses)) : 1;
@@ -3241,6 +3297,8 @@ function midiOf(s){
 }
 function setPlayIcon(on){
   $('#playIcon').setAttribute('d', on ? 'M2 2h10v10H2Z' : 'M2 1 13 7 2 13Z');
+  $('#fsPlayIcon').setAttribute('d', on ? 'M3 2h3v10H3ZM8 2h3v10H8Z' : 'M3 1.5 12.5 7 3 12.5Z');
+  $('#fsPlay').setAttribute('aria-label', on ? 'Pause' : 'Play'); $('#fsPlay').title = on ? 'Pause' : 'Play';
   $('#play').setAttribute('aria-label', on ? 'Stop' : 'Play'); $('#play').title = on ? 'Stop (space bar)' : 'Play (space bar)';
 }
 function stopPlay(){ Organ.stop(); }
@@ -3280,7 +3338,6 @@ function startPlay(from){
     }
   });
   const top = voices[0], u = unitMinims();
-  let lastScroll = 0;
   const on = new Set();
   Organ.play({
     events, from: from * 2, count: st.countIn, unit: u, level: 1 / Math.sqrt(Math.max(1, voices.length)),
@@ -3294,13 +3351,13 @@ function startPlay(from){
       let first = null;
       for (const id of now) { const gs = document.querySelectorAll('svg g.' + id); if (!on.has(id)) { on.add(id); gs.forEach(g => g.classList.add('on')); } first = first || gs[0]; }
       if (first) followHand(first);
-      if (first && performance.now() - lastScroll > 900 && bringIntoView(first)) lastScroll = performance.now();
     }
   });
 }
 $('#play').addEventListener('click', () => { if (play) stopPlay(); else startPlay(); });
 /* the hand (and pendulum) stand beside the music that is sounding */
 function followHand(el){
+  if (st.view === 'choir') { handMid(el); return; }
   const wr = $('.viewwrap').getBoundingClientRect(), r = el.getBoundingClientRect();
   const hb = $('#handBox').getBoundingClientRect().height || 200;
   let y = Math.max(10, Math.round(r.top - wr.top + r.height / 2 - hb * 0.45));
@@ -3309,6 +3366,60 @@ function followHand(el){
   handTop = y;
   $('#handBox').style.top = y + 'px'; $('#pendBox').style.top = y + 'px';
 }
+
+/* Choirbook: the hand stands in the middle of the viewer (of the opening, where the pages are not framed) */
+function handMid(el){
+  const hb = $('#handBox').getBoundingClientRect().height || $('#pendBox').getBoundingClientRect().height || 200;
+  let y;
+  if (viewerEl.classList.contains('frame') || viewerEl.classList.contains('horiz') || wrapEl.classList.contains('fs')) y = viewerEl.offsetTop + viewerEl.offsetHeight / 2 - hb / 2;
+  else {
+    const o = (el && el.closest('.opening')) || pagesEl.querySelector('.opening'); if (!o) return;
+    const wr = wrapEl.getBoundingClientRect(), r = o.getBoundingClientRect();
+    y = r.top - wr.top + r.height / 2 - hb / 2;
+  }
+  y = Math.max(10, Math.round(y));
+  if (y === handTop) return;
+  handTop = y;
+  $('#handBox').style.top = y + 'px'; $('#pendBox').style.top = y + 'px';
+}
+
+/* full screen: the pages alone, with play and pause that show while the mouse moves */
+let fsFake = false, fsTimer = 0, fsPaused = null;
+const fsNative = () => (document.fullscreenElement || document.webkitFullscreenElement) === wrapEl;
+function fsSync(){
+  const on = fsNative() || fsFake;
+  wrapEl.classList.toggle('fs', on);
+  $('#fsBtn').setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen'); $('#fsBtn').title = on ? 'Leave full screen' : 'Full screen';
+  $('#fsIcon').setAttribute('d', on ? 'M8 3h2.4v7H3V7.6h5ZM13.6 3H16v4.6h5V10h-7.4ZM3 14h7.4v7H8v-4.6H3Zm10.6 0H21v2.4h-4.6V21h-2.8Z' : 'M3 3h7v2.4H5.4V10H3Zm11 0h7v7h-2.4V5.4H14ZM3 14h2.4v4.6H10V21H3Zm15.6 0H21v7h-7v-2.4h4.6Z');
+  if (!on) fsPaused = null;
+  fsWake(); render();
+}
+function fsFakeSet(on){
+  fsFake = on;
+  if (EMBED) try { window.parent.postMessage({choirbookFull: on}, '*'); } catch (e) {}
+  setTimeout(fsSync, 60);
+}
+$('#fsBtn').addEventListener('click', () => {
+  if (fsFake) return fsFakeSet(false);
+  if (fsNative()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+  const req = wrapEl.requestFullscreen || wrapEl.webkitRequestFullscreen;
+  if (req && (document.fullscreenEnabled || document.webkitFullscreenEnabled)) {
+    try { const pr = req.call(wrapEl); if (pr && pr.catch) pr.catch(() => fsFakeSet(true)); } catch (e) { fsFakeSet(true); }
+  } else fsFakeSet(true);
+});
+document.addEventListener('fullscreenchange', fsSync); document.addEventListener('webkitfullscreenchange', fsSync);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && fsFake) fsFakeSet(false); });
+function fsWake(){
+  wrapEl.classList.remove('idle'); clearTimeout(fsTimer);
+  if (wrapEl.classList.contains('fs')) fsTimer = setTimeout(() => { if (!$('#fsCtl').matches(':hover') && !$('#fsBtn').matches(':hover')) wrapEl.classList.add('idle'); }, 2200);
+}
+['pointermove', 'pointerdown', 'wheel'].forEach(t => wrapEl.addEventListener(t, fsWake, {passive: true}));
+viewerEl.addEventListener('scroll', fsWake, {passive: true});
+$('#fsPlay').addEventListener('click', () => {
+  if (play) { fsPaused = playPos(); stopPlay(); }
+  else { const at = fsPaused; fsPaused = null; startPlay(typeof at === 'number' ? at : undefined); }
+  fsWake();
+});
 
 /* tell the site page how tall the app is (shared/frame-height.js, as in CantusFirmus) */
 var postFrame = null;
