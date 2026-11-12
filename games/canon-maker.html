@@ -1685,7 +1685,7 @@ function headerW(v){
 function buildLines(vlist, a, b, W, opts = {}){
   const lyrOn = v => vis(v.idx).lyr;
   const cols = columns(vlist, a, b, lyrOn);
-  if (!cols.length) return [];
+  if (!cols.length) cols.push({t: 0, items: new Map(), bar: null, left: 0, right: 24, x: 0, clean: true});
   const hw = Math.max(...vlist.map(headerW));
   const indent = opts.indent || 0;
   const avail = W - hw;
