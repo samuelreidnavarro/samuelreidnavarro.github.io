@@ -1,0 +1,16 @@
+/* Scriptorium add-on: Canon Maker's Canon pop-over */
+/* the Canon pop-over */
+#canonBox{display:grid;gap:10px;min-width:min(560px,calc(100vw - 40px))}
+#canonBox .crow{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding-top:10px;border-top:1px solid var(--line)}
+#canonBox .crow:first-child{border-top:0;padding-top:0}
+#canonBox .role{min-width:5.2em;font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif;font-size:19px}
+#canonBox input[type=text],#canonBox input[type=number],#canonBox select{font:inherit;font-size:16px;min-height:32px;height:32px;padding:0 6px;border:1px solid var(--line);border-radius:6px;background:var(--ground);color:var(--text)}
+#canonBox input[type=text]{width:7.5em}
+#canonBox input[type=number]{width:3.6em}
+#canonBox .w{color:var(--muted);font-size:16px}
+#canonBox .check{display:inline-flex;gap:5px;align-items:center;font-size:16px}
+#canonBox .btns .tb{min-width:0;padding:0 11px}
+.voices td.part{text-align:left;font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif;font-size:18px;white-space:nowrap;padding-right:10px}
+.voices select.vclef{font:inherit;font-size:15px;min-height:32px;height:32px;border:1px solid var(--line);border-radius:6px;background:var(--ground);color:var(--text)}
+@media (max-width:700px){ #popCanon{position:static} #popCanon .popbody{left:0;right:0;width:auto} #canonBox{min-width:0} }
+@media (max-width:560px){ #canonBox .role{min-width:0} #canonBox label.check{width:100%} }
