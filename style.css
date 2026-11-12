@@ -217,6 +217,7 @@ main.home { max-width: 60rem; gap: 2.5rem; }
 .panel:hover { border-color: var(--mark); box-shadow: 0 6px 18px rgba(80, 60, 30, .12); transform: translateY(-2px); }
 .panel img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-bottom: 1px solid var(--line); }
 .panel h2 { margin: .9rem 1rem .1rem; font-size: 1.6rem; line-height: 1.2; }
+.panel h2:last-child { margin-bottom: 1.1rem; }
 .panel p { margin: 0 1rem 1.1rem; color: var(--soft); font-size: 1.1rem; }
 
 /* Nav: "Tools" opens a small dropdown on hover (or keyboard focus) */
