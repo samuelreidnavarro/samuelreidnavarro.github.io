@@ -35,13 +35,13 @@
   </nav>
   <main class="edge">
     <div class="embed edge">
-      <iframe class="game" id="cb" title="Canon Maker" scrolling="no" allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <iframe class="game" id="cb" title="Canon Maker" scrolling="no" allow="autoplay; fullscreen; microphone" allowfullscreen></iframe>
     </div>
     <script>
       /* the app tells the page how tall it is, and asks for the whole window where the browser has no full screen */
       (function () {
         var f = document.getElementById("cb");
-        f.src = "games/canon-maker.html?v=4";
+        f.src = "games/canon-maker.html?v=5";
         var full = false, lastH = 0;
         window.addEventListener("message", function (e) {
           if (e.source !== f.contentWindow || !e.data) return;

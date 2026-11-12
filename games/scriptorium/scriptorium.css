@@ -609,3 +609,23 @@ body.editing #pages .stafhit{cursor:crosshair}
   .page{background:#fff !important;box-shadow:none !important;border-radius:0 !important;break-after:page;page-break-after:always;margin:0}
   .page:last-child{break-after:auto}
 }
+#clefMenu li.asis{border-top:0;margin-top:0;border-radius:4px}
+#clefMenu li.asis svg{display:none}
+/* Sing (from CantusFirmus): the button, its options, the dot */
+#mic{display:inline-flex;align-items:center;gap:5px}
+#mic svg{width:17px;height:17px;fill:currentColor}
+#popSing .singopts{min-width:0;padding:0 6px;margin-left:-4px}
+.latrow{display:flex;align-items:center;gap:6px;padding:6px 6px 2px 10px;margin-top:4px;border-top:1px solid var(--line);color:var(--muted);font-size:16px}
+.latrow.singrow{border-top:0;margin-top:0;padding:2px 6px 6px 10px}
+.latrow input{width:4.2em;height:30px;min-height:30px;text-align:center}
+.latrow select{font:inherit;font-size:16px;height:30px;border:1px solid var(--line);border-radius:6px;background:var(--ground);color:var(--text);max-width:12em}
+.latrow #micClap{margin-left:auto}
+#pages .mic{opacity:.5;pointer-events:none}
+#pages .mic .micdot,#pages .mic use{fill:var(--pen)}
+#pages .mic .ledger{stroke:var(--pen)}
+/* the square with the arrow: open the score, or one voice, in another app */
+#popSend .sendbtn{min-width:0;padding:0 10px}
+#popSend .sendbtn svg{width:19px;height:19px;fill:currentColor}
+#popSend .popbody{right:0;left:auto}
+#sendList .sendh{font-size:14px;color:var(--muted);font-style:italic;padding:8px 10px 2px}
+#sendList .sendh:first-child{padding-top:2px}

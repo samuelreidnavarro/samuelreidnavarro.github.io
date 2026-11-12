@@ -239,7 +239,7 @@
     if (play) restartPlay();
   });
   /* the Canon pop-over: for each comes, the interval and the delay; and how the comes are transposed */
-  const CLEF_OPTS = [['treble', 'G clef'], ['treble8', 'G clef, octave lower'], ['f3', 'F clef on the third line'], ['bass', 'F clef on the fourth line']];
+  const CLEF_OPTS = CLEF_MENU.map(c => [c[0], c[2]]);
   function canonPanel(){
     voicesPanel();
     const box = $('#canonBox'); if (!box || !piece) return;
@@ -309,6 +309,7 @@
     start(){ (async () => {
       try { await document.fonts.load('100px "IM Fell English"'); await document.fonts.load('italic 100px "IM Fell English"'); } catch (e) {}
       syncUI(); sizeViewer();
+      if (await takeHandoff().catch(() => false)) { buildPieceList().then(syncUI); return; }
       const last = st.piece && mineAll()[st.piece] ? st.piece : null;
       if (last) {
         try { await loadPiece(last); startWriting(); } catch (e) { await newCanon(); }
@@ -316,6 +317,22 @@
       buildPieceList().then(syncUI);
       if (/[?&]print=1/.test(location.search)) setTimeout(() => window.print(), 600);
     })(); },
+    /* a voice from another app becomes the dux of a new canon */
+    async fromHandoff(h){
+      const P = parseKern(h.kern);
+      if (!P.voices.length) return false;
+      P.voices = [P.voices[0]];
+      const v = P.voices[0]; v.abbr = 'dux';
+      for (const e of v.events) e.syl = [];
+      v.verses = 0;
+      P.meta = {OTL: h.title || 'Canon', CANON: JSON.stringify(CANON0)};
+      canonize(P);
+      const id = mineAdd(h.title || 'Canon', writeKern(P));
+      await loadPiece(id); refreshMine();
+      startWriting();
+      toast(`${v.name} came over from ${h.from || 'another app'} as the dux. The Canon menu sets the comes.`);
+      return true;
+    },
     expose: () => ({canonize, canonOf, setCanon})
   });
 

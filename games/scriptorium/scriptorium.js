@@ -74,6 +74,12 @@ ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
           <div id="library" class="library" role="dialog" aria-label="Pieces" hidden></div>
         </div></div>
         <div class="podg">
+          <div class="pop" id="popSend">
+            <button class="tb popbtn ib sendbtn" aria-haspopup="true" aria-expanded="false" aria-label="Open in another app" title="Open this score in another app"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3.5h6.5V10h-2V6.9l-6.8 6.8-1.4-1.4 6.8-6.8H14ZM4.5 6.5h7v2h-5v9h9v-5h2v7h-13Z"/></svg></button>
+            <div class="popbody"><div class="btns col" id="sendList"></div></div>
+          </div>
+        </div>
+        <div class="podg">
           <div class="pop" id="popExport">
             <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Export<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
             <div class="popbody"><div class="btns col" id="exportList">
@@ -108,6 +114,23 @@ ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
     <div class="tp-stack">
     <div class="podg" id="podModes">
     <button id="loop" aria-pressed="false" title="Repeat until stopped; adds a repeat sign at the end">Loop</button>
+    <button id="mic" aria-pressed="false" title="Sing along: the microphone shows the note you sing as a faint red dot on the staff of your voice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.6a3.4 3.4 0 0 0 3.4-3.4V5.4a3.4 3.4 0 0 0-6.8 0v5.8a3.4 3.4 0 0 0 3.4 3.4Zm6-3.5a6 6 0 0 1-12 0H4.3a7.7 7.7 0 0 0 6.8 7.6V22h1.8v-3.3a7.7 7.7 0 0 0 6.8-7.6Z"/></svg><span>Sing</span></button>
+    <div class="pop" id="popSing">
+      <button class="tb popbtn singopts" aria-haspopup="true" aria-expanded="false" aria-label="Sing options" title="Sing options"><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+      <div class="popbody">
+        <div class="latrow singrow"><label for="singVoice">I sing</label><select id="singVoice" title="The voice you sing: the dot shows on its staff. Automatic: the first voice whose Playback is off (Voices), else the one you are editing, else the top voice"></select></div>
+        <div class="btns col" role="group" aria-label="Sing options">
+        <button class="tb" id="micFlex" data-keep aria-pressed="true" title="On: the dot follows your exact pitch, a little above or below its note when you are sharp or flat. Off: it sits on the nearest note">Flexible pitch</button>
+        <button class="tb" id="micDia" data-keep aria-pressed="false" title="What you sing is written with the notes of the scale only (B or B flat as your voice has it), never a chromatic note">Diatonic</button>
+        <button class="tb" id="micNotate" data-keep aria-pressed="true" title="While the music plays, what you sing is written out as a voice of its own, Sung, under your voice">Notate what I sing</button>
+        <button class="tb" id="micPhones" data-keep aria-pressed="false" title="On: no filtering, so unisons and octaves with the organ show too. Off: the organ is filtered out of what the microphone hears, for singing along through speakers">Headphones</button>
+        </div>
+        <div class="latrow" title="The time from the organ sounding to your voice reaching the microphone, so what you sing is written in the right place. Empty: worked out by itself">
+          <label for="micLat">Latency</label><input type="number" id="micLat" min="0" max="600" step="1" inputmode="numeric" placeholder="auto"><span>ms</span>
+          <button class="tb" id="micClap" data-keep title="Eight clicks: clap with each one, and the latency is measured">Clap test</button>
+        </div>
+      </div>
+    </div>
     <div class="pop" id="popMetro">
       <button class="tb popbtn" id="metro" aria-haspopup="true" title="How the beat is shown or heard">Metronome<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
       <div class="popbody"><div class="btns col" id="beatList" role="group" aria-label="Beat">
@@ -229,6 +252,7 @@ const $ = s => document.querySelector(s);
 const CLEFS = {
   treble8:  {bottom:23, g:'gP', pos:2, oct:true},
   treble:   {bottom:30, g:'gP', pos:2},
+  g1:       {bottom:32, g:'gP', pos:0},
   c1:       {bottom:28, g:'c1', pos:0},
   c2:       {bottom:26, g:'c2', pos:2},
   c3:       {bottom:24, g:'c3', pos:4},
@@ -238,7 +262,7 @@ const CLEFS = {
   bass:     {bottom:18, g:'fP', pos:6}
 };
 const MENS_CLEFS = ['c1','c2','c3','c4','f3','bass','treble'];
-const KERN_CLEF = {G2:'treble', Gv2:'treble8', G2v:'treble8', F4:'bass', F3:'f3', C1:'c1', C2:'c2', C3:'c3', C4:'c4', C5:'c5'};
+const KERN_CLEF = {G1:'g1', G2:'treble', Gv2:'treble8', G2v:'treble8', F4:'bass', F3:'f3', C1:'c1', C2:'c2', C3:'c3', C4:'c4', C5:'c5'};
 const LETTERS = 'cdefgab';
 const ACCG = {'-1':'fl', '0':'na', '1':'sh'};
 const SHAPE_REST = {Mx:'rL', L:'rL', B:'rB', S:'rS', M:'rM', Sm:'rSm', F:'rF'};
@@ -1784,8 +1808,12 @@ let rq = 0;
 const later = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); };
 for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).addEventListener('input', e => { st[k] = +e.target.value; save(); later(); });
 /* ---------------- Voices: name, clef, add, remove, open in CantusFirmus ---------------- */
-const VCLEFS = [['', 'As written'], ['treble', 'G clef'], ['treble8', 'G clef, octave lower'], ['f3', 'F clef on 3'], ['bass', 'F clef on 4']];
-const CLEF_KERN = {treble: 'G2', treble8: 'Gv2', bass: 'F4', f3: 'F3', c1: 'C1', c2: 'C2', c3: 'C3', c4: 'C4', c5: 'C5'};
+/* the clefs, as CantusFirmus offers them (Samuel prefers its clef menu): short name and full name */
+const CLEF_MENU = [['treble8', 'G2 8', 'G clef on line 2, octave lower (tenor)'], ['treble', 'G2', 'G clef on line 2'], ['g1', 'G1', 'G clef on line 1'],
+  ['c1', 'C1', 'C clef on line 1'], ['c2', 'C2', 'C clef on line 2'], ['c3', 'C3', 'C clef on line 3'], ['c4', 'C4', 'C clef on line 4'], ['c5', 'C5', 'C clef on line 5'],
+  ['f3', 'F3', 'F clef on line 3'], ['bass', 'F4', 'F clef on line 4']];
+const VCLEFS = [['', 'As written'], ...CLEF_MENU.map(c => [c[0], c[2]])];
+const CLEF_KERN = {g1: 'G1', treble: 'G2', treble8: 'Gv2', bass: 'F4', f3: 'F3', c1: 'C1', c2: 'C2', c3: 'C3', c4: 'C4', c5: 'C5'};
 /* a voice of rests as long as the piece, with the signs of the voice next to it */
 function restVoice(name, clef, like){
   const v = {name, abbr: '', kclef: CLEF_KERN[clef], events: [], mets: [], keys: [], clefs: [{t: 0, c: CLEF_KERN[clef], ei: 0}], verses: 0, t: 0};
@@ -1815,6 +1843,18 @@ const VOICE_OPS = {
     if (c && !writable(piece.voices[i])) { render(); return; }
     if (c) commit(() => { const v = piece.voices[i]; if (v.clefs.length && eq(v.clefs[0].t, 0)) v.clefs[0].c = CLEF_KERN[c]; else v.clefs.unshift({t: 0, c: CLEF_KERN[c], ei: 0}); });
     else render();
+  },
+  /* B flat in the signature of a voice, on or off (from its beginning) */
+  flat(i){
+    if (!writable(piece.voices[i])) { refuse(); return; }
+    commit(() => {
+      const v = piece.voices[i];
+      let k = v.keys.find(m => eq(m.t, 0));
+      if (!k) { k = {t: 0, alts: {}, ei: 0}; v.keys.unshift(k); }
+      const alts = Object.assign({}, k.alts);
+      if (alts.b === -1) delete alts.b; else alts.b = -1;
+      k.alts = alts; delete k.raw;
+    });
   },
   /* a voice moved from place `from` to just before place `to` (0 .. number of voices) */
   move(from, to){
@@ -1913,6 +1953,44 @@ async function newScore(){
 }
 $('#newBtn').addEventListener('click', () => { (H.newScore || newScore)().catch(err => toast(err.message)); });
 
+/* ---------------- between the apps: the square with the arrow opens the score (or one voice) in another one ---------------- */
+const APPS = [{id: 'choirbook', name: 'ChoirBook', page: 'choirbook.html', whole: true},
+  {id: 'cantus-firmus', name: 'CantusFirmus', page: 'cantus-firmus.html', whole: false},
+  {id: 'canon', name: 'Canon Maker', page: 'canon-maker.html', whole: false}];
+function sendList(){
+  const box = $('#sendList'); if (!box || !piece) return;
+  let h = '';
+  for (const a of APPS) {
+    if (a.id === APP.id) continue;
+    if (a.whole) { h += `<button class="tb" data-to="${a.id}">Open in ${esc(a.name)}</button>`; continue; }
+    h += `<div class="sendh">${a.id === 'canon' ? 'As the dux of a canon' : 'One voice in ' + esc(a.name)}</div>`;
+    h += piece.voices.map((v, i) => `<button class="tb" data-to="${a.id}" data-i="${i}" title="Open ${esc(v.name)} in ${esc(a.name)}">${esc(v.name)}</button>`).join('');
+  }
+  box.innerHTML = h;
+}
+function sendTo(to, i){
+  const a = APPS.find(x => x.id === to); if (!a || !piece) return;
+  if (to === 'cantus-firmus' && !APP.kernHandoff) { openInCantusFirmus(i); return; }
+  let kern, title = piece.title || 'Score';
+  if (i === undefined) kern = piece.text || writeKern(piece);
+  else {
+    const v = piece.voices[i]; if (!v) return;
+    if (!v.events.some(e => !e.rest)) { toast(`${v.name} has no notes yet.`); return; }
+    kern = writeKern(Object.assign({}, piece, {voices: [v], text: null}));
+    title = `${title}: ${v.name}`;
+  }
+  try { localStorage.setItem(HANDOFF, JSON.stringify({to, from: APP.name, title, kern, at: Date.now()})); }
+  catch (e) { toast('This browser would not pass the score on.'); return; }
+  stopPlay();
+  goTo(a.page);
+}
+$('#popSend > button').addEventListener('click', sendList);
+$('#popSend').addEventListener('pointerenter', sendList);
+$('#sendList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-to]'); if (!b) return;
+  closePops();
+  sendTo(b.dataset.to, b.dataset.i === undefined ? undefined : +b.dataset.i);
+});
 /* ---------------- between the two apps ---------------- */
 const HANDOFF = 'organ:handoff:v1';
 const CF_CLEF = {treble: 'treble', treble8: 'treble8', bass: 'bass', f3: 'baritone', c1: 'c1', c2: 'c2', c3: 'c3', c4: 'c4', c5: 'c5'};
@@ -1949,7 +2027,16 @@ function openInCantusFirmus(i){
 /* a melody from the CantusFirmus app becomes a score of one voice, ready for voices to be added */
 async function takeHandoff(){
   let h = null; try { h = JSON.parse(localStorage.getItem(HANDOFF) || 'null'); } catch (e) {}
-  if (!h || h.to !== 'choirbook' || !Array.isArray(h.items) || Date.now() - (h.at || 0) > 10 * 60 * 1000) return false;
+  if (!h || h.to !== APP.id || Date.now() - (h.at || 0) > 10 * 60 * 1000) return false;
+  if (typeof h.kern === 'string') {
+    try { localStorage.removeItem(HANDOFF); } catch (e) {}
+    if (H.fromHandoff) return H.fromHandoff(h);
+    const id = mineAdd(h.title || 'Score', h.kern);
+    await loadPiece(id); refreshMine();
+    toast(`${h.title || 'The score'} came over from ${h.from || 'another app'}. It is kept in ${L.mine}.`);
+    return true;
+  }
+  if (!Array.isArray(h.items)) return false;
   try { localStorage.removeItem(HANDOFF); } catch (e) {}
   const clef = ({treble: 'G2', treble8: 'Gv2', bass: 'F4', baritone: 'F3', g1: 'G1', c1: 'C1', c2: 'C2', c3: 'C3', c4: 'C4', c5: 'C5'})[h.clef] || 'Gv2';
   const title = h.title || 'Cantus firmus';
@@ -2384,23 +2471,56 @@ pagesEl.addEventListener('click', e => {
   showSel();
 });
 /* the clef menu, from a click on a clef in the score */
+/* The clef menu, opened by clicking a clef on the staff: CantusFirmus's grid of clefs, with "As written"
+   and the B flat in the signature. Arrow keys move, Enter chooses, Escape closes. */
 const clefPick = $('#clefPick');
-clefPick.innerHTML = [['treble', 'G clef'], ['treble8', 'G clef, octave lower'], ['f3', 'F clef on the third line'], ['bass', 'F clef on the fourth line'], ['', 'As the piece has it']]
-  .map(([k, n]) => `<li role="menuitem" data-c="${k}">${n}</li>`).join('');
+clefPick.id = 'clefMenu'; clefPick.setAttribute('role', 'listbox'); clefPick.tabIndex = -1;
+const CLEF_KEYS = [...CLEF_MENU.map(c => c[0]), '', 'flat'];
+let clefActive = 0;
+function clefIcon(k){
+  let lines = '';
+  for (let i = 0; i < 5; i++) lines += `<line x1="-0.3" x2="3.3" y1="${i}" y2="${i}" stroke="currentColor" stroke-opacity=".5" stroke-width="0.1"/>`;
+  if (k === 'flat') return `<svg viewBox="-0.3 0.4 3.6 4.2" aria-hidden="true">${lines}${use('fl', 1.3, 2)}</svg>`;
+  if (!k) return `<svg viewBox="-0.3 -1.9 3.6 8.8" aria-hidden="true">${lines}<text x="1.5" y="2.9" text-anchor="middle" font-size="2.6" font-style="italic" fill="currentColor" font-family="IM Fell English,Georgia,serif">?</text></svg>`;
+  return `<svg viewBox="-0.3 -1.9 3.6 8.8" aria-hidden="true">${lines}${clefSvg(k, 0.25, 0)}</svg>`;
+}
+clefPick.innerHTML = CLEF_KEYS.map(k => {
+  const c = CLEF_MENU.find(x => x[0] === k);
+  const short = k === 'flat' ? 'B♭ in the signature' : k ? c[1] : 'As written', label = k === 'flat' ? 'B flat in the signature' : k ? c[2] : 'The clef the piece has (or the old clef that fits, with Old clefs)';
+  return `<li role="option" id="clefopt-${k || 'asis'}" data-c="${k}" title="${esc(label)}"${k === 'flat' ? ' class="flatopt"' : !k ? ' class="flatopt asis"' : ''}>${clefIcon(k)}<span>${esc(short)}</span></li>`;
+}).join('');
+function markClef(){
+  const vi = +clefPick.dataset.v, v = piece && piece.voices[vi];
+  const cur = v ? vis(vi).clef || '' : '', fl = v && keyAt(v, 0).b === -1;
+  clefPick.querySelectorAll('li').forEach((li, i) => {
+    li.classList.toggle('active', i === clefActive);
+    li.setAttribute('aria-selected', String(li.dataset.c === 'flat' ? !!fl : li.dataset.c === cur));
+  });
+  clefPick.setAttribute('aria-activedescendant', clefPick.children[clefActive].id);
+}
 function openClefPick(vi, e){
   const wr = $('.viewwrap').getBoundingClientRect();
   clefPick.dataset.v = vi; clefPick.hidden = false;
-  clefPick.style.left = Math.max(4, Math.min(wr.width - 240, e.clientX - wr.left)) + 'px';
+  clefActive = Math.max(0, CLEF_KEYS.indexOf(vis(vi).clef || ''));
+  markClef();
+  clefPick.style.left = Math.max(4, Math.min(wr.width - clefPick.offsetWidth - 4, e.clientX - wr.left)) + 'px';
   clefPick.style.top = (e.clientY - wr.top + 10) + 'px';
-  const cur = vis(vi).clef || '';
-  clefPick.querySelectorAll('li').forEach(li => li.setAttribute('aria-selected', String(li.dataset.c === cur)));
+  clefPick.focus({preventScroll: true});
 }
-clefPick.addEventListener('click', e => {
-  const li = e.target.closest('li'); if (!li) return;
+function pickClef(k){
   clefPick.hidden = true;
-  VOICE_OPS.clef(+clefPick.dataset.v, li.dataset.c);
+  const vi = +clefPick.dataset.v;
+  if (k === 'flat') VOICE_OPS.flat(vi); else VOICE_OPS.clef(vi, k);
+}
+clefPick.addEventListener('click', e => { const li = e.target.closest('li'); if (li) pickClef(li.dataset.c); });
+clefPick.addEventListener('keydown', e => {
+  e.stopPropagation();
+  const mv = {ArrowDown: 5, ArrowUp: -5, ArrowRight: 1, ArrowLeft: -1}[e.key];
+  if (mv) { e.preventDefault(); clefActive = Math.max(0, Math.min(CLEF_KEYS.length - 1, clefActive + mv)); markClef(); }
+  else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickClef(CLEF_KEYS[clefActive]); }
+  else if (e.key === 'Escape' || e.key === 'Tab') clefPick.hidden = true;
 });
-document.addEventListener('pointerdown', e => { if (!clefPick.hidden && !e.target.closest('#clefPick') && !e.target.closest('.clefhit')) clefPick.hidden = true; });
+document.addEventListener('pointerdown', e => { if (!clefPick.hidden && !e.target.closest('#clefMenu') && !e.target.closest('.clefhit')) clefPick.hidden = true; });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') clefPick.hidden = true; });
 /* where a click on a staff would write: the pitch under the pointer, and the place among the voice's notes */
 function staffTarget(rect, e){
@@ -2798,7 +2918,7 @@ function startPlay(from){
   });
   const top = voices[0], u = unitMinims();
   const on = new Set();
-  Organ.play({
+  const spec = {
     events, from: from * 2, count: st.countIn, unit: u, level: 1 / Math.sqrt(Math.max(1, voices.length)),
     /* how many beats to the hand's pattern: three under a perfect sign */
     group: bi => { const T = mensInfo(metAt(top, bi * u / 2)).T; return T === 3 ? 3 : 2; },
@@ -2811,7 +2931,9 @@ function startPlay(from){
       for (const id of now) { const gs = document.querySelectorAll('svg g.' + id); if (!on.has(id)) { on.add(id); gs.forEach(g => g.classList.add('on')); } first = first || gs[0]; }
       if (first) followHand(first);
     }
-  });
+  };
+  if (H.playSpec) H.playSpec(spec);
+  Organ.play(spec);
 }
 $('#play').addEventListener('click', () => { if (play) stopPlay(); else startPlay(); });
 /* the hand (and pendulum) stand beside the music that is sounding */
