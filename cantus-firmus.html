@@ -13,7 +13,6 @@
     html.cf-dark { --bg: #15110d; --band: #1d1813; --text: #ece2d0; --soft: #a5957b; --line: #3a3027; --mark: #c98a55; color-scheme: dark; background: #15110d; }
   </style>
   <script>
-    try { if ((JSON.parse(localStorage.getItem("cantus-firmus:v1") || "null") || {}).prefs.dark) document.documentElement.classList.add("cf-dark"); } catch (e) {}
   </script>
 </head>
 <body>
@@ -42,15 +41,26 @@
   </nav>
   <main class="edge">
     <div class="embed edge">
-      <iframe class="game" id="cf" src="games/cantus-firmus.html?v=56" title="CantusFirmus" scrolling="no" allow="autoplay; clipboard-write; microphone; fullscreen" allowfullscreen></iframe>
+      <iframe class="game" id="cf" title="CantusFirmus" scrolling="no" allow="autoplay; clipboard-write; microphone; fullscreen" allowfullscreen></iframe>
     </div>
     <script>
-      window.addEventListener("message", function (e) {
+      /* pass ?piece=... (and an old shared link's #notes=...) on to the app; it tells the page how tall it is */
+      (function () {
         var f = document.getElementById("cf");
-        if (e.source !== f.contentWindow || !e.data) return;
-        if (typeof e.data.cantusFirmusDark === "boolean") document.documentElement.classList.toggle("cf-dark", e.data.cantusFirmusDark);
-        if (e.data.cantusFirmusHeight) f.style.height = e.data.cantusFirmusHeight + "px";
-      });
+        var q = location.search ? location.search.slice(1) + "&" : "";
+        f.src = "games/cantus-firmus.html?" + q + "v=57" + location.hash;
+        var full = false, lastH = 0;
+        window.addEventListener("message", function (e) {
+          if (e.source !== f.contentWindow || !e.data) return;
+          if (e.data.cantusFirmusHeight) { lastH = e.data.cantusFirmusHeight; if (!full) f.style.height = lastH + "px"; }
+          if ("cantusFirmusFull" in e.data) {
+            full = !!e.data.cantusFirmusFull;
+            f.style.cssText = full ? "position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;max-width:none;margin:0;border:0;z-index:9999" : (lastH ? "height:" + lastH + "px" : "");
+            document.documentElement.style.overflow = full ? "hidden" : "";
+          }
+          if (e.data.cantusFirmusQuery) try { history.replaceState(null, "", "cantus-firmus.html" + e.data.cantusFirmusQuery); } catch (err) {}
+        });
+      })();
     </script>
   </main>
 </body>

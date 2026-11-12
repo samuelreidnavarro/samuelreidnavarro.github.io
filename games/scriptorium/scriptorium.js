@@ -630,7 +630,8 @@ function chooseClef(v, mode){
 const KEY = APP.store + ':v1';
 const st = {
   piece: PIECES[0] || null, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on',
-  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}
+  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {},
+  ...(APP.defaults || {})
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
 /* the spacing sliders now cover only their tight end */
@@ -1519,7 +1520,7 @@ const SRC_FROM = {jrp: 'the Josquin Research Project, josquin.stanford.edu', '15
 function creditText(){
   const m = (piece && piece.meta) || {};
   const e = CATBY[pieceKey];
-  const s = e ? e.s : (m.jrpid || (pieceKey && PIECES.includes(pieceKey)) ? 'jrp' : null);
+  const s = e ? e.s : (m.jrpid || (APP.catalogue && pieceKey && PIECES.includes(pieceKey)) ? 'jrp' : null);
   const parts = [];
   const mine = pieceKey && pieceKey.startsWith('mine:');
   if (s && !mine) parts.push(`Score from ${SRC_FROM[s]}.`);
@@ -1624,6 +1625,7 @@ async function loadPiece(file){
   resetLook();
   st.piece = file; save();
   st.verse = 0;
+  if (H.afterLoad) H.afterLoad();
   showSource(file);
   syncUI();
   render();
@@ -1681,6 +1683,7 @@ function mineHtml(){
     ...Object.keys(all).map(id => ({at: all[id].at, html: `<div class="mine">${itemHtml(id, all[id].title || 'Untitled', L.mineSub + new Date(all[id].at).toLocaleDateString())}<button class="mdel" data-del="${esc(id)}" aria-label="Remove ${esc(all[id].title || 'this score')}" title="Remove from ${esc(L.mine)}">×</button></div>`})),
     ...Object.keys(favs).map(k => ({at: favs[k].at, html: `<div class="mine">${itemHtml(k, favs[k].t, favs[k].c)}${favBtn(k, true, favs[k].t)}</div>`}))
   ].sort((a, b) => b.at - a.at);
+  if (!rows.length && !L.mineHint) return '';
   return `<h2>${esc(L.mine)}</h2>` + (rows.length ? rows.map(r => r.html).join('')
     : L.mineHint ? `<p class="libhint">${esc(L.mineHint)}</p>` : '');
 }
@@ -1892,7 +1895,7 @@ $('#voiceTable').addEventListener('click', e => {
   const b = e.target.closest('button[data-op]'); if (!b) return;
   e.stopPropagation();
   const i = +b.dataset.i;
-  if (b.dataset.op === 'cf') openInCantusFirmus(i);
+  if (b.dataset.op === 'cf') sendTo('cantus-firmus', i);
   else if (b.dataset.op === 'del') VOICE_OPS.remove(i);
   else VOICE_OPS.add('above');
 });
@@ -1970,7 +1973,6 @@ function sendList(){
 }
 function sendTo(to, i){
   const a = APPS.find(x => x.id === to); if (!a || !piece) return;
-  if (to === 'cantus-firmus' && !APP.kernHandoff) { openInCantusFirmus(i); return; }
   let kern, title = piece.title || 'Score';
   if (i === undefined) kern = piece.text || writeKern(piece);
   else {

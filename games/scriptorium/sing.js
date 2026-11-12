@@ -317,7 +317,7 @@
      join into longer notes, and the result is written as a voice of its own, "Sung", under the music. */
   const take = {on: false, frames: [], sig: '', from: 0, done: 0, before: null, last: 0, timer: 0};
   const takeShown = () => take.on && mic.on && st.micNotate;
-  function takeClear(){ take.on = false; take.frames = []; take.sig = ''; take.before = null; clearTimeout(take.timer); }
+  function takeClear(){ take.on = false; take.frames = []; take.sig = ''; take.before = null; take.self = undefined; take.vi = undefined; take.ref = null; clearTimeout(take.timer); }
   function takeStart(fromU){
     takeClear();
     if (!mic.on || !st.micNotate || !piece) return;
@@ -482,21 +482,27 @@
     if (sig === take.sig && !last) return;
     take.sig = sig;
     const write = () => {
-      const vi = singIdx(); if (vi < 0) return;
+      const vi = take.vi !== undefined ? take.vi : singIdx(); if (vi < 0 || !piece.voices[vi]) return;
       const ref = piece.voices[vi];
-      const keepVis = {};
-      piece.voices.forEach((v, i) => { keepVis[i] = vis(i); });
-      let si = piece.voices.findIndex(v => v.abbr === 'sung');
-      const nv = sungVoice(ev, ref);
-      if (si < 0) { piece.voices.splice(vi + 1, 0, nv); si = vi + 1; shiftVis(si, 1); }
-      else piece.voices[si] = nv;
-      vis(si).play = false; save();
+      /* a voice with no notes yet (CantusFirmus's Contrapunctus, a new voice) is written into itself; otherwise into Sung */
+      if (take.self === undefined) { take.self = !ref.events.some(e => !e.rest); take.vi = vi; take.ref = ref; }
+      const nv = sungVoice(ev, take.ref);
+      let si;
+      if (take.self) {
+        nv.name = ref.name; nv.abbr = ref.abbr; nv.kclef = ref.kclef; nv.clefs = [{t: 0, c: ref.kclef || nv.kclef, ei: 0}];
+        piece.voices[vi] = nv; si = vi;
+      } else {
+        si = piece.voices.findIndex(v => v.abbr === 'sung');
+        if (si < 0) { piece.voices.splice(vi + 1, 0, nv); si = vi + 1; shiftVis(si, 1); vis(si).play = false; }
+        else piece.voices[si] = nv;
+      }
+      save();
       const text = writeKern(piece);
       if (last) {
         const before = take.before;
         if (before && before !== text) { ed.undo.push(before); ed.redo = []; }
         applyText(text);
-        toast('What you sang is written in the Sung voice. Undo takes it away.');
+        toast(`What you sang is written in ${take.self ? 'the ' + ref.name : 'the Sung voice'}. Undo takes it away.`);
       } else {
         const P = parseKern(text); P.text = text; piece = P;
         render();
