@@ -271,7 +271,7 @@
     return Math.max(0, (audio.ctx.currentTime - T.origin) / T.spm / 2);
   }
   function clearDot(){ document.querySelectorAll('#pages .mic').forEach(g => g.remove()); mic.drawn = ''; mic.el = null; }
-  /* the dot stands just after the note of the sung voice that sounds now (or the one selected, or its first note) */
+  /* the dot stands on the column of the note of the sung voice that sounds now (or the one selected, or its first note) */
   function drawDot(){
     const vi = singIdx(), v = vi >= 0 ? piece.voices[vi] : null;
     if (!v || !v.syms || !v.syms.length || mic.snap === null || mic.shown === null) { if (mic.drawn) clearDot(); return; }
@@ -293,7 +293,8 @@
     const sym = v.syms[k], sig = keyAt(v, sym.t)[LETTERS[sp.L]] || 0;
     const acc = sp.alt === sig ? '' : sp.alt < 0 ? 'fl' : sp.alt > 0 ? 'sh' : 'na';
     const rr = 0.5, aw = acc ? gw(acc) + 0.25 : 0;
-    const x = bb.x + bb.width + 0.5, cx = x + aw + rr;
+    /* on the note's own column: directly above or below it, at the height of the sung pitch */
+    const cx = sym.hw ? bb.x + sym.hw / 2 : bb.x + bb.width / 2, x = cx - rr - aw;
     const cents = st.micFlex ? Math.max(-50, Math.min(50, (mic.shown - m) * 100)) : 0;
     const y = top + 4 - pos * 0.5, yd = y - cents / 100 * 0.5;
     const s = ledgers(pos, cx - rr, 2 * rr, top) + (acc ? use(acc, x, y) : '') +
