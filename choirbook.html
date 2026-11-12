@@ -41,7 +41,7 @@
       (function () {
         var f = document.getElementById("cb");
         var q = location.search ? location.search.slice(1) + "&" : "";
-        f.src = "games/choirbook.html?" + q + "v=15";
+        f.src = "games/choirbook.html?" + q + "v=16";
         var full = false, lastH = 0;
         window.addEventListener("message", function (e) {
           if (e.source !== f.contentWindow || !e.data) return;
