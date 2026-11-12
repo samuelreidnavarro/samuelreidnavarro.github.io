@@ -638,10 +638,10 @@ body.editing #pages .stafhit{cursor:crosshair}
 #canonBox input[type=text]{width:7.5em}
 #canonBox input[type=number]{width:3.6em}
 #canonBox .w{color:var(--muted);font-size:16px}
-#canonBox .crow.off .cset > *{opacity:.45;pointer-events:none}
-#canonBox .cset{display:contents}
 #canonBox .check{display:inline-flex;gap:5px;align-items:center;font-size:16px}
 #canonBox .btns .tb{min-width:0;padding:0 11px}
+.voices td.part{text-align:left;font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif;font-size:18px;white-space:nowrap;padding-right:10px}
+.voices select.vclef{font:inherit;font-size:15px;min-height:32px;height:32px;border:1px solid var(--line);border-radius:6px;background:var(--ground);color:var(--text)}
 @media (max-width:700px){ #popCanon{position:static} #popCanon .popbody{left:0;right:0;width:auto} #canonBox{min-width:0} }
 @media (max-width:560px){ #canonBox .role{min-width:0} #canonBox label.check{width:100%} }
 </style>
@@ -662,7 +662,11 @@ body.editing #pages .stafhit{cursor:crosshair}
       </div></div>
       <div class="podg"><div class="pop" id="popCanon">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Canon<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-        <div class="popbody"><div id="canonBox"></div><table class="voices" id="voiceTable" hidden></table></div>
+        <div class="popbody"><div id="canonBox"></div></div>
+      </div></div>
+      <div class="podg"><div class="pop" id="popVoices">
+        <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Voices<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <div class="popbody"><table class="voices" id="voiceTable"></table></div>
       </div></div>
       <div class="podg"><div class="pop" id="popPage">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Page<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
@@ -2765,27 +2769,38 @@ const ivSemis = (n, q) => 12 * Math.floor(n / 7) + IVB[n % 7] + ({d: ivPerf(n) ?
 /* the delay's note values, in semibreves, as a note of that value is written in the app */
 const DELAY_U = {M: 0.5, S: 1, B: 2, L: 4};
 const DELAY_NAMES = {M: ['minima', 'minimae'], S: ['semibrevis', 'semibreves'], B: ['brevis', 'breves'], L: ['longa', 'longae']};
-const CANON0 = {mode: 'dia', c: [
-  {on: true, dir: 1, n: 4, q: 'P', dc: 1, du: 'B', name: 'Altus'},
-  {on: false, dir: -1, n: 7, q: 'P', dc: 2, du: 'B', name: 'Bassus'}
-]};
+/* each comes keeps its id (its part is 'comes' + id), so names and view switches stay with it when another is removed */
+const CANON0 = {mode: 'dia', c: [{id: 1, dir: 1, n: 4, q: 'P', dc: 1, du: 'B', name: 'Altus'}]};
+const MAX_COMES = 4;
+/* what a new comes is, in turn: the first of these not taken yet */
+const COMES_NEW = [{dir: 1, n: 4, dc: 1, name: 'Altus'}, {dir: -1, n: 7, dc: 2, name: 'Bassus'}, {dir: 1, n: 7, dc: 3, name: 'Cantus'}, {dir: -1, n: 3, dc: 4, name: 'Quintus'}, {dir: 1, n: 3, dc: 5, name: 'Sextus'}];
 const mod7 = s => ((s % 7) + 7) % 7;
 function canonOf(P){
   let C = null; try { C = JSON.parse((P.meta && P.meta.CANON) || 'null'); } catch (e) {}
-  const D = JSON.parse(JSON.stringify(CANON0));
-  if (!C || typeof C !== 'object') return D;
+  if (!C || typeof C !== 'object') return JSON.parse(JSON.stringify(CANON0));
   const out = {mode: C.mode === 'exact' ? 'exact' : 'dia', c: []};
-  for (let k = 0; k < 2; k++) {
-    const c = Object.assign({}, D.c[k], (Array.isArray(C.c) && C.c[k]) || {});
-    c.on = !!c.on; c.dir = c.dir < 0 ? -1 : 1;
+  const used = new Set();
+  (Array.isArray(C.c) ? C.c : []).forEach((x, k) => {
+    if (!x || x.on === false || out.c.length >= MAX_COMES) return;     /* on: false, from the first version */
+    const c = Object.assign({dir: 1, n: 4, q: 'P', dc: 1, du: 'B', name: 'Comes'}, x);
+    let id = Math.round(+c.id) || k + 1; while (used.has(id)) id++; used.add(id); c.id = id;
+    delete c.on;
+    c.dir = c.dir < 0 ? -1 : 1;
     c.n = Math.max(0, Math.min(14, Math.round(+c.n) || 0));
     if (!ivQuals(c.n).includes(c.q)) c.q = ivDefQ(c.n);
     c.dc = Math.max(0, Math.min(64, Math.round(+c.dc) || 0));
     if (!DELAY_U[c.du]) c.du = 'B';
-    c.name = String(c.name || D.c[k].name).slice(0, 40);
+    c.name = String(c.name || 'Comes').slice(0, 40);
     out.c.push(c);
-  }
+  });
   return out;
+}
+function addComes(C){
+  if (C.c.length >= MAX_COMES) return false;
+  const pick = COMES_NEW.find(x => !C.c.some(c => c.dir * c.n === x.dir * x.n)) || COMES_NEW[0];
+  const id = Math.max(0, ...C.c.map(c => c.id)) + 1;
+  C.c.push({id, dir: pick.dir, n: pick.n, q: ivDefQ(pick.n), dc: Math.max(pick.dc, ...C.c.map(c => c.dc + 1)), du: 'B', name: pick.name});
+  return true;
 }
 const duxIndex = () => { const i = piece ? piece.voices.findIndex(v => v.abbr === 'dux') : -1; return i < 0 ? 0 : i; };
 function comesToast(){ toast('The comes follows the dux: write in the dux.'); }
@@ -2848,8 +2863,7 @@ function canonize(P){
   const old = {}; P.voices.forEach(v => { if (v.abbr) old[v.abbr] = v; });
   const list = [{v: dux, lvl: 0, k: -1}];
   C.c.forEach((c, k) => {
-    if (!c.on) return;
-    const role = 'comes' + (k + 1), prev = old[role];
+    const role = 'comes' + c.id, prev = old[role];
     const v = {name: prev ? prev.name : c.name, abbr: role, kclef: null, events: [], mets: [], keys: [], clefs: [], verses: dux.verses, t: 0};
     c.name = v.name;
     if (mel.length) {
@@ -2936,29 +2950,65 @@ async function newCanon(){
   render(); refreshMine();
   startWriting();
 }
-/* the Canon pop-over */
-const CLEF_OPTS = [['treble', 'G clef'], ['treble8', 'G clef, octave lower'], ['f3', 'F clef on the third line'], ['bass', 'F clef on the fourth line']];
-const ROMAN = ['I', 'II'];
-function canonPanel(){
-  const box = $('#canonBox'); if (!box || !piece) return;
-  if (box.contains(document.activeElement) && /INPUT/.test(document.activeElement.tagName) && document.activeElement.type !== 'checkbox') return;
-  const C = canonOf(piece), di = duxIndex(), dux = piece.voices[di];
-  const dclef = vis(di).clef || KERN_CLEF[dux.kclef] || 'treble8';
+/* the comes in the order they come in: Comes I enters first */
+const byEntry = C => C.c.slice().sort((a, b) => a.dc * DELAY_U[a.du] - b.dc * DELAY_U[b.du] || a.id - b.id);
+/* the Voices pop-over: every voice, top to bottom, as in ChoirBook; comes are added and removed here */
+const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
+function partName(v, C){
+  if (v.abbr === 'dux') return 'Dux';
+  const k = byEntry(C).findIndex(c => 'comes' + c.id === v.abbr);
+  return 'Comes' + (C.c.length > 1 ? ' ' + ROMAN[k] : '');
+}
+function voicesPanel(){
+  const tb = $('#voiceTable'); if (!tb || !piece) return;
+  if (tb.contains(document.activeElement) && document.activeElement.classList.contains('vname')) return;
+  const C = canonOf(piece);
   const opt = (v, label, cur) => `<option value="${esc(v)}"${String(v) === String(cur) ? ' selected' : ''}>${esc(label)}</option>`;
-  let h = `<div class="crow"><span class="role">Dux</span><input type="text" class="cname" data-r="dux" value="${esc(dux.name)}" aria-label="Name of the dux" autocomplete="off">` +
-    `<select class="cclef" aria-label="Clef of the dux">${CLEF_OPTS.map(([k, n]) => opt(k, n, dclef)).join('')}</select></div>`;
-  C.c.forEach((c, k) => {
-    const v = piece.voices.find(x => x.abbr === 'comes' + (k + 1));
-    const name = v ? v.name : c.name;
-    h += `<div class="crow${c.on ? '' : ' off'}"><label class="check"><input type="checkbox" class="con" data-k="${k}"${c.on ? ' checked' : ''}><span class="role">Comes ${ROMAN[k]}</span></label><span class="cset">` +
-      `<input type="text" class="cname" data-k="${k}" value="${esc(name)}" aria-label="Name of comes ${ROMAN[k]}" autocomplete="off">` +
+  const rows = piece.voices.map((v, i) => {
+    v.idx = i;
+    const s = vis(i), dux = v.abbr === 'dux';
+    const cb = (k, label) => `<td><input type="checkbox" data-i="${i}" data-k="${k}" aria-label="${esc(v.name)}: ${label}"${s[k] ? ' checked' : ''}${k === 'notes' && !s.on ? ' disabled' : ''}></td>`;
+    const clef = dux ? (s.clef || KERN_CLEF[v.kclef] || 'treble8') : (s.clef || '');
+    const clefs = (dux ? [] : [['', 'Automatic']]).concat(CLEF_OPTS);
+    return `<tr data-i="${i}"><td class="part">${partName(v, C)}</td>` +
+      `<td><input class="vname" data-i="${i}" value="${esc(v.name)}" aria-label="Name of the voice" autocomplete="off"></td>` +
+      `<td><select class="vclef" data-i="${i}" aria-label="Clef of ${esc(v.name)}">${clefs.map(([k, n]) => opt(k, n, clef)).join('')}</select></td>` +
+      `${cb('on', 'shown')}${cb('notes', 'notes')}${cb('play', 'playback')}` +
+      `<td>${dux ? '' : `<button class="vbtn vdel" data-cop="del" data-r="${v.abbr}" aria-label="Remove ${esc(v.name)}" title="Remove this comes">×</button>`}</td></tr>`;
+  });
+  tb.innerHTML = `<thead><tr><th></th><th></th><th></th><th>Shown</th><th>Notes</th><th>Playback</th><th></th></tr></thead><tbody>${rows.join('')}</tbody>` +
+    `<tfoot><tr><td colspan="7"><button data-cop="add"${C.c.length >= MAX_COMES ? ' disabled' : ''}>+ New comes</button></td></tr></tfoot>`;
+}
+$('#voiceTable').addEventListener('click', e => {
+  const b = e.target.closest('button[data-cop]'); if (!b || !piece) return;
+  e.stopPropagation();
+  if (b.dataset.cop === 'add') setCanon(C => { addComes(C); });
+  else {
+    const r = b.dataset.r, v = piece.voices.find(x => x.abbr === r), name = v ? v.name : 'The comes';
+    setCanon(C => { C.c = C.c.filter(c => 'comes' + c.id !== r); });
+    toast(`${name} removed. Undo brings it back.`);
+  }
+  if (play) restartPlay();
+});
+/* the Canon pop-over: for each comes, the interval and the delay; and how the comes are transposed */
+const CLEF_OPTS = [['treble', 'G clef'], ['treble8', 'G clef, octave lower'], ['f3', 'F clef on the third line'], ['bass', 'F clef on the fourth line']];
+function canonPanel(){
+  voicesPanel();
+  const box = $('#canonBox'); if (!box || !piece) return;
+  if (box.contains(document.activeElement) && /INPUT/.test(document.activeElement.tagName)) return;
+  const C = canonOf(piece);
+  const opt = (v, label, cur) => `<option value="${esc(v)}"${String(v) === String(cur) ? ' selected' : ''}>${esc(label)}</option>`;
+  let h = '';
+  byEntry(C).forEach(c => {
+    const k = C.c.indexOf(c);
+    const v = piece.voices.find(x => x.abbr === 'comes' + c.id);
+    h += `<div class="crow"><span class="role">${esc(v ? v.name : c.name)}</span>` +
       `<span class="w">at the</span>` +
       (C.mode === 'exact' ? `<select class="cq" data-k="${k}" aria-label="Quality of the interval">${ivQuals(c.n).map(q => opt(q, IV_Q_NAMES[q], c.q)).join('')}</select>` : '') +
       `<select class="civ" data-k="${k}" aria-label="Interval of imitation">${IV_WORDS.map((w, i) => opt(i, w, c.n)).join('')}</select>` +
       `<select class="cdir" data-k="${k}" aria-label="Above or below the dux"${c.n === 0 ? ' disabled' : ''}>${opt(1, 'above', c.dir)}${opt(-1, 'below', c.dir)}</select>` +
       `<span class="w">after</span><input type="number" class="cdc" data-k="${k}" min="0" max="64" step="1" inputmode="numeric" value="${c.dc}" aria-label="How many note values later">` +
-      `<select class="cdu" data-k="${k}" aria-label="Note value of the delay">${Object.keys(DELAY_U).map(u => opt(u, DELAY_NAMES[u][c.dc === 1 ? 0 : 1], c.du)).join('')}</select>` +
-      `</span></div>`;
+      `<select class="cdu" data-k="${k}" aria-label="Note value of the delay">${Object.keys(DELAY_U).map(u => opt(u, DELAY_NAMES[u][c.dc === 1 ? 0 : 1], c.du)).join('')}</select></div>`;
   });
   h += `<div class="crow"><span class="role">Transposition</span><div class="btns" id="cmode" role="group" aria-label="Transposition">` +
     `<button class="tb" data-v="dia" aria-pressed="${C.mode !== 'exact'}" title="Every note moves the same number of steps along the scale, as a canon is sung from one part: the intervals follow the mode">Diatonic</button>` +
@@ -2968,20 +3018,10 @@ function canonPanel(){
 $('#canonBox').addEventListener('change', e => {
   const t = e.target; if (!piece) return;
   const k = t.dataset.k !== undefined ? +t.dataset.k : null;
-  if (t.classList.contains('cname')) {
-    const name = t.value.trim().slice(0, 40);
-    if (!name) { canonPanel(); return; }
-    const v = t.dataset.r === 'dux' ? piece.voices[duxIndex()] : piece.voices.find(x => x.abbr === 'comes' + (k + 1));
-    if (v) { if (v.name !== name) commit(() => { v.name = name; }); }
-    else setCanon(C => { C.c[k].name = name; });
-    return;
-  }
-  if (t.classList.contains('cclef')) { VOICE_OPS.clef(duxIndex(), t.value); return; }
   if (k === null) return;
   setCanon(C => {
-    const c = C.c[k];
-    if (t.classList.contains('con')) c.on = t.checked;
-    else if (t.classList.contains('civ')) { c.n = +t.value; if (!ivQuals(c.n).includes(c.q)) c.q = ivDefQ(c.n); }
+    const c = C.c[k]; if (!c) return;
+    if (t.classList.contains('civ')) { c.n = +t.value; if (!ivQuals(c.n).includes(c.q)) c.q = ivDefQ(c.n); }
     else if (t.classList.contains('cq')) c.q = t.value;
     else if (t.classList.contains('cdir')) c.dir = +t.value;
     else if (t.classList.contains('cdc')) c.dc = Math.max(0, Math.min(64, Math.round(+t.value) || 0));
