@@ -1,0 +1,74 @@
+{
+ "stgall": {
+  "name": "St Gall neumes"
+ },
+ "stgall?": {
+  "name": "St Gall neumes?"
+ },
+ "german": {
+  "name": "German neumes"
+ },
+ "german?": {
+  "name": "German neumes?"
+ },
+ "messine": {
+  "name": "Messine neumes"
+ },
+ "messine?": {
+  "name": "Messine neumes?"
+ },
+ "aquitanian": {
+  "name": "Aquitanian neumes"
+ },
+ "aquitanian?": {
+  "name": "Aquitanian neumes?"
+ },
+ "beneventan": {
+  "name": "Beneventan neumes"
+ },
+ "beneventan?": {
+  "name": "Beneventan neumes?"
+ },
+ "neumes": {
+  "name": "Neumes without staff"
+ },
+ "neumes?": {
+  "name": "Neumes without staff?"
+ },
+ "lines": {
+  "name": "Neumes on a staff"
+ },
+ "lines?": {
+  "name": "Neumes on a staff?"
+ },
+ "hufnagel": {
+  "name": "Hufnagel (Gothic) notation"
+ },
+ "hufnagel?": {
+  "name": "Hufnagel (Gothic) notation?"
+ },
+ "square": {
+  "name": "Square notation"
+ },
+ "square?": {
+  "name": "Square notation?"
+ },
+ "square5": {
+  "name": "Square notation, five lines"
+ },
+ "square5?": {
+  "name": "Square notation, five lines?"
+ },
+ "print": {
+  "name": "Printed"
+ },
+ "print?": {
+  "name": "Printed?"
+ },
+ "none": {
+  "name": "No notation"
+ },
+ "none?": {
+  "name": "No notation?"
+ }
+}

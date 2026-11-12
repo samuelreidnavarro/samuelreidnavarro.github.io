@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chant Sources</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+Double+Pica:ital@0;1&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap">
+  <link rel="stylesheet" href="style.css?v=19">
+  <link rel="stylesheet" href="chants/chants.css?v=1">
+</head>
+<body>
+  <header class="banner">
+    <a href="index.html"><p class="site-name">Samuel Reid Navarro</p></a>
+  </header>
+  <nav class="nav" aria-label="Main">
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="music.html">Timelines</a></li>
+      <li><a href="mensurator.html">Mensurator</a></li>
+      <li><a href="cantus-firmus.html">CantusFirmus</a></li>
+      <li><a href="choirbook.html">ChoirBook</a></li>
+      <li class="has-menu"><a href="canon.html" aria-current="page">More</a>
+        <ul class="menu">
+          <li><a href="canon.html">Canon Canonum</a></li>
+          <li><a href="redix-progressio.html">ReDiX Progressio</a></li>
+          <li><a href="compressor.html">Magic black and white PDF compressor</a></li>
+          <li><a href="chants.html">Chant Sources</a></li>
+        </ul>
+      </li>
+      <li><a href="contact.html">Contact</a></li>
+    </ul>
+  </nav>
+  <main class="chants">
+    <h1 class="page-title">Chant Sources</h1>
+
+    <form class="ch-search" id="search" role="search">
+      <input type="search" id="q" placeholder="Puer natus est" aria-label="Chant text or Cantus ID" autocomplete="off">
+      <button class="send" type="submit">Search</button>
+    </form>
+    <p class="ch-status" id="status"></p>
+
+    <section class="ch-chants" id="chants" hidden></section>
+
+    <section class="ch-sources" id="sources" hidden>
+      <div class="ch-head">
+        <button class="fs" type="button" id="back">&larr;</button>
+        <div>
+          <h2 id="chantTitle"></h2>
+          <p class="ch-sub" id="chantSub"></p>
+        </div>
+      </div>
+      <div class="ch-filters">
+        <label>Notation <select id="fNot"></select></label>
+        <label>Century <select id="fCen"></select></label>
+        <label><input type="checkbox" id="fImg"> With images</label>
+      </div>
+      <div class="ch-tablewrap">
+        <table class="ch-table">
+          <thead><tr><th>Notation</th><th>Source</th><th>Date</th><th>Origin</th><th>Folio</th><th>Feast</th><th>Mode</th><th>Image</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <aside class="ch-coll" id="coll">
+      <h2>Collection</h2>
+      <div class="ch-coll-bar">
+        <select id="cSel" aria-label="Collection"></select>
+        <button class="fs" type="button" id="cNew">New</button>
+        <button class="fs" type="button" id="cRen">Rename</button>
+        <button class="fs" type="button" id="cDel">Delete</button>
+      </div>
+      <ol class="ch-coll-list" id="cList"></ol>
+      <button class="send" type="button" id="cPdf">PDF</button>
+    </aside>
+  </main>
+
+  <div class="ch-pop" id="pop" hidden><img alt=""><span></span></div>
+  <div class="ch-print" id="print"></div>
+
+  <script src="chants/app.js?v=1"></script>
+</body>
+</html>

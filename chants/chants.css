@@ -1,0 +1,110 @@
+/* Chant Sources: search Cantus Database, see each manuscript's notation, collect chants, print a PDF */
+main.chants { max-width: 76rem; justify-items: stretch; gap: 1.6rem; }
+.ch-search { display: flex; gap: .6rem; justify-content: center; flex-wrap: wrap; }
+.ch-search input {
+  font: inherit; font-size: 1.2rem; color: var(--text); width: min(100%, 30rem);
+  background: #fffdf8; border: 1px solid var(--line); border-radius: 4px; padding: .45rem .8rem;
+}
+.ch-search input:focus { outline: none; border-color: var(--mark); box-shadow: 0 0 0 2px rgba(156, 107, 60, .18); }
+.ch-status { margin: -.6rem 0 0; text-align: center; color: var(--soft); font-size: 1.05rem; min-height: 1.4em; }
+.ch-status:empty { display: none; }
+[hidden] { display: none !important; }
+
+/* list of distinct chants */
+.ch-chants { display: grid; gap: .6rem; }
+.ch-chant {
+  display: grid; grid-template-columns: 1fr auto; gap: .2rem 1rem; align-items: baseline;
+  width: 100%; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  background: #fffdf8; border: 1px solid var(--line); border-radius: 6px; padding: .7rem 1rem;
+}
+.ch-chant:hover { border-color: var(--mark); }
+.ch-chant b { font-family: var(--display); font-weight: 400; font-size: 1.35rem; }
+.ch-chant small { grid-column: 1 / -1; color: var(--soft); font-size: 1rem; }
+.ch-chant .n { color: var(--soft); font-size: 1rem; white-space: nowrap; }
+
+/* one chant, all its manuscripts */
+.ch-head { display: flex; gap: 1rem; align-items: center; }
+.ch-head h2 { margin: 0; font-size: 1.7rem; line-height: 1.2; }
+.ch-sub { margin: .1rem 0 0; color: var(--soft); font-size: 1.05rem; }
+.ch-filters { display: flex; flex-wrap: wrap; gap: .6rem 1.8rem; font-size: 1.05rem; }
+.ch-filters label { display: flex; align-items: center; gap: .5rem; }
+.ch-filters select, .ch-coll select {
+  font: inherit; font-size: 1rem; color: var(--text); background: #fffdf8;
+  border: 1px solid var(--line); border-radius: 4px; padding: .2rem .4rem; max-width: 100%;
+}
+.ch-filters input { accent-color: var(--mark); }
+.ch-tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: #fffdf8; }
+.ch-table { width: 100%; border-collapse: collapse; font-size: 1.02rem; line-height: 1.35; }
+.ch-table th { text-align: left; font-weight: 400; color: var(--soft); background: var(--band); padding: .5rem .7rem; white-space: nowrap; }
+.ch-table td { padding: .5rem .7rem; border-top: 1px solid var(--line); vertical-align: middle; }
+.ch-table tr:hover td { background: #fbf4e6; }
+.ch-table a { text-decoration: none; }
+.ch-table a:hover { text-decoration: underline; }
+.ch-not { display: grid; gap: .15rem; min-width: 9rem; }
+.ch-not img { display: block; height: 2.6rem; width: auto; max-width: 11rem; object-fit: contain; object-position: left; border: 1px solid var(--line); border-radius: 3px; background: #fff; }
+.ch-not span { font-size: .85rem; color: var(--soft); }
+.ch-src b { font-weight: 400; white-space: nowrap; }
+.ch-src small { display: block; color: var(--soft); font-size: .88rem; }
+.ch-img { white-space: nowrap; }
+.ch-add {
+  font: inherit; font-size: 1.3rem; line-height: 1; width: 2rem; height: 2rem; cursor: pointer;
+  color: var(--mark); background: var(--bg); border: 1px solid var(--line); border-radius: 50%;
+}
+.ch-add:hover { border-color: var(--mark); }
+.ch-add.on { color: #fff; background: var(--mark); border-color: var(--mark); }
+
+/* collection */
+.ch-coll { display: grid; gap: .8rem; padding: 1.2rem 1.4rem; background: #fffdf8; border: 1px solid var(--line); border-radius: 6px; }
+.ch-coll h2 { margin: 0; font-size: 1.5rem; }
+.ch-coll-bar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.ch-coll-bar select { font-size: 1.1rem; min-width: 12rem; }
+.ch-coll-list { margin: 0; padding-left: 1.6rem; display: grid; gap: .35rem; }
+.ch-coll-list:empty { display: none; }
+.ch-coll-list li { font-size: 1.05rem; }
+.ch-coll-list li > span { display: inline-flex; flex-wrap: wrap; gap: .1rem .6rem; align-items: baseline; }
+.ch-coll-list small { color: var(--soft); font-size: .92rem; }
+.ch-coll-list button { font: inherit; font-size: .95rem; color: var(--soft); background: none; border: 0; cursor: pointer; padding: 0 .2rem; }
+.ch-coll-list button:hover { color: var(--mark); }
+.ch-coll .send { justify-self: start; }
+.ch-coll .send:disabled { opacity: .5; cursor: default; }
+
+/* hover preview of a manuscript page */
+.ch-pop {
+  position: fixed; z-index: 50; pointer-events: none; width: 26rem; max-width: 80vw;
+  background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: .4rem;
+  box-shadow: 0 10px 30px rgba(60, 45, 20, .22);
+}
+.ch-pop img { display: block; width: 100%; height: auto; max-height: 70vh; object-fit: contain; }
+.ch-pop span { display: block; text-align: center; color: var(--soft); font-size: .9rem; padding: .2rem; }
+.ch-pop span:empty { display: none; }
+
+@media (max-width: 760px) {
+  .ch-table th:nth-child(4), .ch-table td:nth-child(4), .ch-table th:nth-child(6), .ch-table td:nth-child(6) { display: none; }
+}
+
+/* PDF (print) view: one chant per page */
+.ch-print { display: none; }
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body > *:not(.ch-print) { display: none !important; }
+  body { background: #fff; font-size: 11pt; }
+  .ch-print { display: block; }
+  .pp { page-break-after: always; break-after: page; display: grid; gap: 4mm; }
+  .pp:last-child { page-break-after: auto; break-after: auto; }
+  .pp h1 { margin: 0; font-size: 22pt; line-height: 1.15; }
+  .pp .meta { display: grid; grid-template-columns: max-content 1fr; gap: 1mm 6mm; margin: 0; }
+  .pp .meta dt { color: #7a6a55; }
+  .pp .meta dd { margin: 0; }
+  .pp .text { margin: 0; font-style: italic; }
+  .pp .ex { height: 16mm; width: auto; align-self: start; border: 1px solid #ddd; }
+  .pp .page { max-width: 100%; max-height: 150mm; object-fit: contain; justify-self: center; border: 1px solid #ddd; }
+  .pp .link { font-size: 9pt; color: #7a6a55; overflow-wrap: anywhere; }
+}
+
+/* wide screens: collection beside the results */
+@media (min-width: 1100px) {
+  main.chants { grid-template-columns: minmax(0, 1fr) 19rem; column-gap: 1.6rem; align-items: start; }
+  main.chants > * { grid-column: 1; }
+  main.chants > .ch-coll { grid-column: 2; grid-row: 1 / span 8; position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; }
+  .ch-coll-bar select { min-width: 0; flex: 1 1 100%; }
+}
