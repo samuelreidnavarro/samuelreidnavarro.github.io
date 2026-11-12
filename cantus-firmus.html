@@ -12,8 +12,6 @@
     /* the app's dark mode darkens this page too */
     html.cf-dark { --bg: #15110d; --band: #1d1813; --text: #ece2d0; --soft: #a5957b; --line: #3a3027; --mark: #c98a55; color-scheme: dark; background: #15110d; }
   </style>
-  <script>
-  </script>
 </head>
 <body>
   <header class="banner">
@@ -48,7 +46,7 @@
       (function () {
         var f = document.getElementById("cf");
         var q = location.search ? location.search.slice(1) + "&" : "";
-        f.src = "games/cantus-firmus.html?" + q + "v=57" + location.hash;
+        f.src = "games/cantus-firmus.html?" + q + "v=58" + location.hash;
         var full = false, lastH = 0;
         window.addEventListener("message", function (e) {
           if (e.source !== f.contentWindow || !e.data) return;

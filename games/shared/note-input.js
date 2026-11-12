@@ -160,6 +160,16 @@ function fill(A, iconSVG){
   });
   $('#restBtn').innerHTML = iconSVG('rB', 1.4);
   const accBtns = $('#accBtns');
+  /* Ed.: the next accidental (or the selected note's accidental) becomes editorial, written above the staff */
+  if (A.toggleEd) {
+    const eb = document.createElement('button');
+    eb.className = 'ib edbtn'; eb.id = 'edBtn';
+    eb.title = 'Editorial accidental: the next accidental you enter, or the one on the selected note, goes above the staff';
+    eb.setAttribute('aria-label', 'Editorial accidental');
+    eb.innerHTML = '<span>Ed.</span>';
+    eb.addEventListener('click', () => A.toggleEd());
+    accBtns.appendChild(eb);
+  }
   Object.entries(ACC).forEach(([a, X]) => {
     const b = document.createElement('button');
     b.className = 'ib'; b.dataset.a = a;
@@ -255,6 +265,7 @@ function sync(A){
     b.disabled = !t || t.r;
   });
   setPressed($('#dotBtn'), !!t && !t.r && !!t.p);
+  if ($('#edBtn')) setPressed($('#edBtn'), !!S.edArm || (!!t && !t.r && !!t.a && !!t.ed));
   $('#dotBtn').disabled = !t || t.r;
   $('#stepUp').disabled = $('#stepDown').disabled = !t || t.r;
   $('#del').disabled = !t;

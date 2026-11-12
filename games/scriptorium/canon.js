@@ -309,6 +309,7 @@
     start(){ (async () => {
       try { await document.fonts.load('100px "IM Fell English"'); await document.fonts.load('italic 100px "IM Fell English"'); } catch (e) {}
       syncUI(); sizeViewer();
+      if (H.preStart) { try { await H.preStart(); } catch (e) {} }
       if (await takeHandoff().catch(() => false)) { buildPieceList().then(syncUI); return; }
       const last = st.piece && mineAll()[st.piece] ? st.piece : null;
       if (last) {

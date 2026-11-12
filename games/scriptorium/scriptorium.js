@@ -10,7 +10,7 @@ const APP = Object.assign({
   pieces: [], catalogue: false, openFile: true, keep: true, drop: true, emptyStaves: false, newFirst: false
 }, window.SCRIPTORIUM || {});
 const H = APP.hooks = APP.hooks || {};
-const L = Object.assign({lib: 'Pieces', newScore: 'New score', newTitle: 'A new, empty score to write polyphony in', mine: 'My scores',
+const L = Object.assign({lib: 'Repertoire', newScore: 'New score', newTitle: 'A new, empty score to write polyphony in', mine: 'My scores',
   mineHint: 'Star a piece in the library to keep it here. Scores you write with New score are kept here too.',
   mineSub: 'Your score, kept in this browser, '}, APP.labels || {});
 const escH = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -24,12 +24,6 @@ const escH = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>'
   <section class="tools" aria-label="View">
     <div class="bar">
       <div class="podg" id="editPod"><button class="ib" id="editBtn" aria-pressed="false" aria-label="Edit" title="Edit: change, add and remove notes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17.3 14.8 6l3.2 3.2L6.7 20.5 3 21Zm13.7-12.6 1.4-1.4a1.5 1.5 0 0 1 2.1 0l1.1 1.1a1.5 1.5 0 0 1 0 2.1l-1.4 1.4Z"/></svg></button></div>
-      <div class="podg"><div class="pop" id="popView">
-        <button class="tb popbtn" id="viewBtn" aria-haspopup="true" aria-expanded="false"><span id="viewName">Score</span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-        <div class="popbody"><div class="btns col" id="viewList" role="group" aria-label="View">
-          <button class="tb" data-v="score">Score</button><button class="tb" data-v="parts">Parts</button><button class="tb" data-v="choir">Choirbook</button>
-        </div></div>
-      </div></div>
 ${APP.popsBeforeVoices || ''}
       <div class="podg"><div class="pop" id="popVoices">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Voices<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
@@ -38,9 +32,9 @@ ${APP.popsBeforeVoices || ''}
       <div class="podg"><div class="pop" id="popPage">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Page<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="staffset">
+          <span class="lab">View</span><div class="btns" id="viewList" role="group" aria-label="View"><button class="tb" data-v="score">Score</button><button class="tb" data-v="parts">Parts</button><button class="tb" data-v="choir">Choirbook</button></div>
           <span class="lab">Size</span><div class="btns" id="paperSeg" role="group" aria-label="Paper size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button><button class="tb" data-v="web">Web</button></div>
           <span class="lab">Orientation</span><div class="btns" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
-          <div class="pagemeta"><label class="lab" for="metaTitle">Title</label><input id="metaTitle" type="text" autocomplete="off"><label class="lab" for="metaComp">Composer</label><input id="metaComp" type="text" autocomplete="off"></div>
           <span class="lab">Pages</span><div class="btns" id="flowSeg" role="group" aria-label="Pages"><button class="tb" data-v="vertical">Vertical</button><button class="tb" data-v="horizontal">Horizontal</button></div>
         </div></div>
       </div></div>
@@ -51,7 +45,9 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
           <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Through the staff</button></div>
           <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
+          <span class="lab">Staff lines</span><div class="btns" id="linesSeg" role="group" aria-label="Staff lines"><button class="tb" data-v="5">Five</button><button class="tb" data-v="4">Four</button></div>
           <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
+          <span class="lab">Dark room</span><div class="btns" id="darkSeg" role="group" aria-label="Dark room"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
           <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0" max="1.2" step="0.01">
           <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0" max="2" step="0.02">
@@ -64,6 +60,10 @@ ${APP.popsBeforeVoices || ''}
         </div></div>
       </div></div>
       <div class="grow">
+        <div class="podg"><div class="pop" id="popInfo">
+          <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Info<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+          <div class="popbody"><div class="pagemeta infobox"><label class="lab" for="metaTitle">Title</label><input id="metaTitle" type="text" autocomplete="off"><label class="lab" for="metaComp">Composer</label><input id="metaComp" type="text" autocomplete="off"><span class="lab">Source</span><div id="infoSrc"></div></div></div>
+        </div></div>
         <div class="podg" id="libPod"><div class="libwrap"><div class="pop" id="popOpen">
           <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Open<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
           <div class="popbody"><div class="btns col" id="openList">
@@ -83,9 +83,11 @@ ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
           <div class="pop" id="popExport">
             <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Export<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
             <div class="popbody"><div class="btns col" id="exportList">
-              <button class="tb" id="printBtn">Print</button>
+              <div class="btns duo"><button class="tb" id="printBtn" title="Print, or save as PDF in the print window">Download PDF</button><button class="tb" id="mxlBtn" title="MusicXML (.mxl), for MuseScore, Dorico, Sibelius, Finale: in modern notation">Download MXL</button></div>
               <button class="tb" id="saveBtn" title="Save this piece, with your changes, as a .krn file">Download .krn</button>
               <button class="tb" id="keepBtn" title="Keep a copy of this piece, with your changes, in ${esc(L.mine)}"${APP.keep === false ? ' hidden' : ''}>Save to ${esc(L.mine)}</button>
+              <div class="btns duo"><button class="tb" id="svgBtn" title="The page you see, as an SVG picture">Download SVG</button><button class="tb" id="pngBtn" title="The page you see, as a PNG picture">Download PNG</button></div>
+              <button class="tb" id="linkBtn" title="A link that opens this score, with your changes, for anyone">Copy link</button>
             </div></div>
           </div>
         </div>
@@ -306,6 +308,8 @@ function prettyName(s){
   const m = String(s || '').match(/^([^,]+),\s*(.+)$/);
   return m ? m[2] + ' ' + m[1] : (s || '');
 }
+/* HTML entities in the reference records (JRP titles: mari&eacute;e) */
+function decodeEnt(t){ const d = document.createElement('textarea'); d.innerHTML = t; return d.value; }
 function parseKern(text){
   const lines = text.split(/\r?\n/);
   const meta = {};
@@ -318,7 +322,7 @@ function parseKern(text){
     if (!L) continue;
     if (L.startsWith('!!')) {
       let m = L.match(/^!!!([^:]+):\s*(.*)$/);
-      if (m) { if (!(m[1] in meta)) meta[m[1]] = m[2]; continue; }
+      if (m) { if (!(m[1] in meta)) meta[m[1]] = m[2].includes('&') ? decodeEnt(m[2]) : m[2]; continue; }
       m = L.match(/^!!section:\s*(.*)$/);
       if (m) pendingSection = m[1];
       continue;
@@ -630,7 +634,7 @@ function chooseClef(v, mode){
 const KEY = APP.store + ':v1';
 const st = {
   piece: PIECES[0] || null, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on',
-  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {},
+  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off',
   ...(APP.defaults || {})
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
@@ -648,7 +652,7 @@ const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catc
 const UNIT_NAMES = {Mx: 'Maxima', L: 'Longa', B: 'Brevis', S: 'Semibrevis', M: 'Minima', Sm: 'Semiminima', F: 'Fusa'};
 let play = false;
 Organ.init(st, {
-  save: () => save(), replay: () => restartPlay(), toast: m => toast(m), playing: on => { play = on; setPlayIcon(on); },
+  save: () => save(), replay: () => restartPlay(), toast: m => toast(m), playing: on => { play = on; setPlayIcon(on); document.documentElement.classList.toggle('playing', on); },
   units: ['Mx', 'L', 'B', 'S', 'M', 'Sm', 'F'], unitIcon: k => glyphIcon(k, 0.25), unitName: k => UNIT_NAMES[k]
 });
 if (st.audition === undefined) st.audition = true;
@@ -869,7 +873,7 @@ function mensSvg(sign, x, top){
 function ledgers(pos, x, w, top){
   let s = '';
   for (let p = -2; p >= pos; p -= 2) s += hl(x - 0.4, x + w + 0.4, top + 4 - p * 0.5, 'ledger', 0.16);
-  for (let p = 10; p <= pos; p += 2) s += hl(x - 0.4, x + w + 0.4, top + 4 - p * 0.5, 'ledger', 0.16);
+  for (let p = st.lines === '4' ? 8 : 10; p <= pos; p += 2) s += hl(x - 0.4, x + w + 0.4, top + 4 - p * 0.5, 'ledger', 0.16);
   return s;
 }
 const rrect = (x, y1, y2) => `<rect class="ink" x="${f(x)}" y="${f(y1)}" width="0.42" height="${f(y2 - y1)}"/>`;
@@ -911,7 +915,7 @@ function symInner(s, X, top){
   let hx = X;
   if (s.mens) {
     const mx = X - s.left;
-    o += mensSvg(s.mens, mx, top);
+    o += `<g class="menshit" data-t="${s.t}"><rect x="${f(mx - 0.2)}" y="${f(top - 0.5)}" width="${f(s.left - 0.3)}" height="5" fill="transparent"/>${mensSvg(s.mens, mx, top)}</g>`;
   }
   if (s.rest) { o += restSvg(s, hx + s.hw / 2, top); return o; }
   const y = top + 4 - s.pos * 0.5;
@@ -942,7 +946,7 @@ function custosSvg(s, x, top){
 function staffLine(o){
   const {v, top, x0, x1} = o;
   let s = '';
-  for (let k = 0; k < 5; k++) s += hl(x0, x1, top + k, 'staff', 0.12);
+  for (let k = st.lines === '4' ? 1 : 0; k < 5; k++) s += hl(x0, x1, top + k, 'staff', 0.12);
   /* clef, key */
   const t0 = o.t0;
   const clef = v.clef;
@@ -1144,7 +1148,7 @@ function drawSystem(vlist, line, y, opts = {}){
     s += staffLine({v, k0, k1, cols: line.cols, from: line.from, to: line.to, xs: line.xs, top: tops[k], x0: line.x0, x1: line.x1,
       last: line.endsPiece, tail: line.last ? line.W : null, t0: line.t0, showNotes: sh.notes, showLyr: sh.lyr, lyrY: tops[k] + rooms[k].lyrY, lineEnd: line.x1,
       next: nextSym(v, line.tEnd)});
-    if (opts.names && opts.names[k]) s += `<text x="${f(line.x0 - 0.8)}" y="${f(tops[k] + 2.6)}" font-size="1.8" text-anchor="end" font-style="italic">${esc(opts.names[k])}</text>`;
+    if (opts.names && opts.names[k]) s += `<text class="vnamehit" data-v="${v.idx}" x="${f(line.x0 - 0.8)}" y="${f(tops[k] + 2.6)}" font-size="1.8" text-anchor="end" font-style="italic">${esc(opts.names[k])}</text>`;
   });
   /* barlines */
   const single = vlist.length === 1;
@@ -1190,7 +1194,8 @@ function pageGeom(){
   return {wmm: w, hmm: h, sp, W: w / sp, H: h / sp, M: m / sp};
 }
 /* the foot of a page: the credits on the first, the title and the page number on the others */
-function footFont(G){ return Math.min(G.wmm, G.hmm) * 0.0115 / G.sp; }
+/* on the Web page a fixed size, about that of the lyrics (the page has no paper size to go by) */
+function footFont(G){ return G.web ? 1.6 : Math.min(G.wmm, G.hmm) * 0.0115 / G.sp; }
 function wrapText(text, size, width){
   const words = text.split(/\s+/).filter(Boolean), lines = [];
   let cur = '';
@@ -1352,7 +1357,7 @@ function layoutChoir(G){
       const H = (oi === 0 ? footTop(G, true) - 0.8 : footTop(G, false) - 0.8) - op.top, per = H / (side.length || 1);
       side.forEach((v, k) => {
         const y0 = G.web ? yc : op.top + per * k;
-        body += `<text x="${f(G.M)}" y="${f(y0 + 1.6)}" font-size="1.8" font-style="italic">${esc(v.name)}</text>`;
+        body += `<text class="vnamehit" data-v="${v.idx}" x="${f(G.M)}" y="${f(y0 + 1.6)}" font-size="1.8" font-style="italic">${esc(v.name)}</text>`;
         const lines = buildLines([v], op.a, op.b, W, {raggedLast: true});
         let cy = y0 + 2.4;
         lines.forEach(line => {
@@ -1420,7 +1425,7 @@ function render(){
   pagesEl.innerHTML = html;
   /* the frame is as wide as one page (one opening in the choir book), measured afresh for every view */
   const framed = !horiz && window.innerWidth > 700;
-  viewerEl.classList.toggle('frame', framed);
+  viewerEl.classList.toggle('frame', framed); wrapEl.classList.toggle('framed', framed);
   viewerEl.classList.toggle('horiz', horiz); wrapEl.classList.toggle('horiz', horiz);
   const widest = Math.max(0, ...[...pagesEl.children].map(c => c.offsetWidth || 0));
   viewerEl.style.width = framed && widest ? (widest + 24) + 'px' : '';
@@ -1557,10 +1562,16 @@ async function pieceUrl(key){
 function showSource(key){
   const el = $('#srcNote'); if (!el) return;
   const e = CATBY[key];
+  const info = $('#infoSrc');
+  if (info) {
+    const c = creditText().about;
+    info.innerHTML = e ? '' : esc(c || (key && key.startsWith('mine:') ? `Your own, kept in this browser (${L.mine}).` : key && key.startsWith('file:') ? 'A file from your computer: ' + key.slice(5) : ''));
+  }
   if (!e) { el.textContent = ''; return; }
   const [n, href] = SRC_NAMES[e.s] || ['', '', ''];
   const lic = piece && piece.meta && piece.meta.YEC;
   el.innerHTML = `Score: <a href="${esc(href)}" target="_blank" rel="noopener">${esc(n)}</a>${lic ? '. ' + esc(lic) : ''} · <a href="${esc(catUrl(e))}" target="_blank" rel="noopener">source file</a>`;
+  if (info) info.innerHTML = el.innerHTML;
 }
 /* the address shows the open piece, so it can be bookmarked or shared */
 function setAddress(key, extra){
@@ -1770,9 +1781,8 @@ function segInit(id, key, after){
   });
 }
 function syncUI(){
-  const segs = {'#viewList': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed'};
+  const segs = {'#viewList': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark'};
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
-  $('#viewName').textContent = VIEW_NAMES[st.view] || 'Score';
   for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).value = st[k];
   Organ.sync();
   $('#handOp').value = st.handOp; $('#handSize').value = st.handSize;
@@ -1804,8 +1814,8 @@ function syncUI(){
   }
   document.querySelectorAll('#library .pc').forEach(b => b.setAttribute('aria-current', String(b.dataset.p === pieceKey)));
 }
-segInit('#viewList', 'view', closePops); segInit('#notaSeg', 'nota'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars');
-segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#edSeg', 'ed');
+segInit('#viewList', 'view'); segInit('#notaSeg', 'nota'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars');
+segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#edSeg', 'ed');
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
 let rq = 0;
 const later = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); };
@@ -1965,6 +1975,8 @@ function sendList(){
   let h = '';
   for (const a of APPS) {
     if (a.id === APP.id) continue;
+    /* Canon Maker is its own thing: nothing opens in it; what it makes can be opened in ChoirBook */
+    if (a.id === 'canon' || (APP.id === 'canon' && a.id !== 'choirbook')) continue;
     if (a.whole) { h += `<button class="tb" data-to="${a.id}">Open in ${esc(a.name)}</button>`; continue; }
     h += `<div class="sendh">${a.id === 'canon' ? 'As the dux of a canon' : 'One voice in ' + esc(a.name)}</div>`;
     h += piece.voices.map((v, i) => `<button class="tb" data-to="${a.id}" data-i="${i}" title="Open ${esc(v.name)} in ${esc(a.name)}">${esc(v.name)}</button>`).join('');
@@ -2585,6 +2597,89 @@ pagesEl.addEventListener('pointermove', e => {
 });
 pagesEl.addEventListener('pointerleave', clearGhost);
 
+/* a voice's name in the score: click it to rename the voice (the same name as in Voices) */
+function renameInPlace(el){
+  const vi = +el.dataset.v, v = piece && piece.voices[vi]; if (!v) return;
+  const wr = $('.viewwrap').getBoundingClientRect(), r = el.getBoundingClientRect();
+  const inp = document.createElement('input');
+  inp.className = 'vrename'; inp.value = v.name; inp.setAttribute('aria-label', 'Name of the voice');
+  inp.style.left = Math.max(2, r.right - wr.left - Math.max(140, r.width + 30)) + 'px';
+  inp.style.top = (r.top - wr.top - 6) + 'px';
+  inp.style.width = Math.max(140, r.width + 30) + 'px';
+  $('.viewwrap').appendChild(inp);
+  inp.focus(); inp.select();
+  let done = false;
+  const finish = keep => { if (done) return; done = true; const val = inp.value; inp.remove(); if (keep) VOICE_OPS.rename(vi, val); };
+  inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') finish(true); else if (e.key === 'Escape') finish(false); });
+  inp.addEventListener('blur', () => finish(true));
+}
+pagesEl.addEventListener('click', e => {
+  const t = e.target.closest && e.target.closest('.vnamehit');
+  if (!t || !piece) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  renameInPlace(t);
+}, true);
+
+/* The mensuration menu, opened by clicking a mensuration sign: the signs as a grid, like the clefs. The change goes to
+   every voice that has a sign there, or with "Different mensuration" ticked, to this voice only. */
+const MENS_MENU = [['O', 'Tempus perfectum'], ['C', 'Tempus imperfectum'], ['O.', 'Tempus perfectum, prolatio maior'], ['C.', 'Tempus imperfectum, prolatio maior'],
+  ['O|', 'Tempus perfectum diminutum'], ['C|', 'Tempus imperfectum diminutum (alla breve)'], ['Cr', 'Reversed C: half the values'], ['3', 'Proportio sesquialtera, 3'],
+  ['O3', 'O with 3'], ['C3', 'C with 3'], ['C|3', 'C with stroke and 3'], ['C2', 'C with 2: proportio dupla']];
+const mensMenu = document.createElement('ul');
+mensMenu.id = 'mensMenu'; mensMenu.className = 'menu'; mensMenu.setAttribute('role', 'listbox'); mensMenu.tabIndex = -1; mensMenu.hidden = true;
+mensMenu.setAttribute('aria-label', 'Mensuration');
+$('.viewwrap').appendChild(mensMenu);
+function mensIcon(sg){
+  let lines = '';
+  for (let i = 0; i < 5; i++) lines += `<line x1="-0.3" x2="4.6" y1="${i}" y2="${i}" stroke="currentColor" stroke-opacity=".5" stroke-width="0.1"/>`;
+  return `<svg viewBox="-0.3 -1.9 4.9 8.8" aria-hidden="true">${lines}<g fill="currentColor" stroke="currentColor">${mensSvg(sg, 0.2, 0)}</g></svg>`;
+}
+mensMenu.innerHTML = MENS_MENU.map(([sg, name]) => `<li role="option" data-m="${esc(sg)}" title="${esc(name)}">${mensIcon(sg)}<span>${esc(sg.replace('r', ' rev.'))}</span></li>`).join('') +
+  `<li class="flatopt mdiff" data-m="" role="option"><label class="check"><input type="checkbox" id="mensDiff"> Different mensuration <span class="mhint">(this voice only)</span></label></li>`;
+let mensAt = null;
+function openMensMenu(vi, t, e){
+  const wr = $('.viewwrap').getBoundingClientRect();
+  const v = piece.voices[vi]; if (!v) return;
+  mensAt = {vi, t};
+  const cur = metAt(v, t);
+  $('#mensDiff').checked = false;
+  mensMenu.querySelectorAll('li[data-m]').forEach(li => li.setAttribute('aria-selected', String(!!li.dataset.m && li.dataset.m === cur)));
+  mensMenu.hidden = false; clefPick.hidden = true;
+  mensMenu.style.left = Math.max(4, Math.min(wr.width - mensMenu.offsetWidth - 4, e.clientX - wr.left)) + 'px';
+  mensMenu.style.top = (e.clientY - wr.top + 10) + 'px';
+}
+function setMens(sign){
+  if (!mensAt || !piece) return;
+  const {vi, t} = mensAt, only = $('#mensDiff').checked;
+  mensMenu.hidden = true;
+  const targets = only ? [vi] : piece.voices.map((v, i) => i).filter(i => i === vi || piece.voices[i].mets.some(m => eq(m.t, t)) || piece.voices[i].events.some(e => eq(e.t, t)));
+  if (targets.some(i => !writable(piece.voices[i])) && only) { refuse(); return; }
+  commit(() => {
+    for (const i of targets) {
+      const v = piece.voices[i];
+      if (!writable(v)) continue;
+      const m = v.mets.find(x => eq(x.t, t));
+      if (m) { m.sign = sign; continue; }
+      const k = v.events.findIndex(e => eq(e.t, t));
+      if (k >= 0) { v.mets.push({t, sign, ei: k}); v.mets.sort((a, b) => a.t - b.t); }
+    }
+  });
+}
+mensMenu.addEventListener('click', e => {
+  if (e.target.closest('.mdiff')) return;
+  const li = e.target.closest('li[data-m]'); if (li && li.dataset.m) setMens(li.dataset.m);
+});
+document.addEventListener('pointerdown', e => { if (!mensMenu.hidden && !e.target.closest('#mensMenu') && !e.target.closest('.menshit')) mensMenu.hidden = true; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') mensMenu.hidden = true; });
+pagesEl.addEventListener('click', e => {
+  const mh = e.target.closest && e.target.closest('.menshit');
+  if (!mh || !piece) return;
+  const g = mh.closest('g[class^="n"]'); const m = g && g.classList[0].match(/^n(\d+)-(\d+)$/);
+  if (!m) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  openMensMenu(+m[1], +mh.dataset.t, e);
+}, true);
+
 pagesEl.addEventListener('click', e => {
   const ch = e.target.closest && e.target.closest('.clefhit');
   if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e); return; }
@@ -2650,7 +2745,7 @@ const CBA = {
   state(){
     const s = selSym(), t = targetSym(), v = curVoice();
     return {selected: !!s, dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
-      target: t && {r: t.rest, a: accOf(t), p: t.dot}, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
+      target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc}, edArm: !!ed.edArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
       hasNotes: !!(piece && piece.voices.length), durs: v && v.syms ? v.syms.map(valKey) : []};
   },
   setDur(k){
@@ -2667,8 +2762,20 @@ const CBA = {
     if (!CBA.guard()) return;
     const t = targetSym(), v = curVoice(); if (!t || t.rest) return;
     const off = accOf(t) === a;
-    commit(() => { for (const i of t.src) { const e = v.events[i]; e.alt = off ? implied(v, e.step, e.t) : ACC_ALT[a]; e.ed = false; } });
+    const edit = !!ed.edArm && !off; ed.edArm = false;
+    commit(() => { for (const i of t.src) { const e = v.events[i]; e.alt = off ? implied(v, e.step, e.t) : ACC_ALT[a]; e.ed = edit; } });
     const e = curVoice().events[t.src[0]]; if (e) hear(e.step, e.alt);
+  },
+  /* Ed.: the selected note's accidental becomes editorial (or written again); with none, the next accidental entered is editorial */
+  toggleEd(){
+    if (!CBA.guard()) return;
+    const t = targetSym(), v = curVoice();
+    if (t && !t.rest && v && accOf(t)) {
+      const e0 = v.events[t.src[0]], on = !e0.ed;
+      commit(() => { for (const i of t.src) v.events[i].ed = on; });
+      return;
+    }
+    ed.edArm = !ed.edArm; syncEdit();
   },
   toggleDot(){
     if (!CBA.guard()) return;
@@ -2864,7 +2971,23 @@ function sizeViewer(){
   let H = window.innerHeight;
   if (EMBED) { try { H = window.top.innerHeight; } catch (e) { H = Math.max(window.screen.availHeight - 160, 600); } }
   const used = ($('.tools').offsetHeight || 60) + ($('.transport').offsetHeight || 70) + (EMBED ? 40 : 120);
-  document.documentElement.style.setProperty('--vh', Math.max(380, H - used) + 'px');
+  document.documentElement.style.setProperty('--vh', (st.frameH ? Math.max(120, st.frameH) : Math.max(380, H - used)) + 'px');
+}
+/* the grip at the frame's corner: the frame as tall as you drag it; double-click gives it back to the window */
+{
+  const grip = document.createElement('button');
+  grip.className = 'framegrip'; grip.type = 'button'; grip.title = 'Drag to make the music frame taller or shorter. Double-click: as tall as the window';
+  grip.setAttribute('aria-label', 'Frame height');
+  grip.innerHTML = '<svg viewBox="0 0 22 22" aria-hidden="true"><path d="M20 8v2L10 20H8ZM20 14v2l-4 4h-2Z"/></svg>';
+  $('.viewwrap').appendChild(grip);
+  grip.addEventListener('pointerdown', e => {
+    e.preventDefault(); grip.setPointerCapture(e.pointerId);
+    const y0 = e.clientY, h0 = viewerEl.getBoundingClientRect().height;
+    const move = ev => { st.frameH = Math.max(120, Math.round(h0 + ev.clientY - y0)); sizeViewer(); postHeight(); };
+    const up = () => { grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); save(); render(); };
+    grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up);
+  });
+  grip.addEventListener('dblclick', () => { st.frameH = null; save(); sizeViewer(); render(); });
 }
 
 /* ------------------------------------------------------------------ */
@@ -3020,6 +3143,7 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
 /* start */
 if (H.start) H.start(); else (async () => {
   try { await document.fonts.load('100px "IM Fell English"'); await document.fonts.load('italic 100px "IM Fell English"'); } catch (e) {}
+  if (H.preStart) { try { await H.preStart(); } catch (e) {} }
   const qs = new URLSearchParams(location.search);
   const want = qs.get('piece');
   pieceKey = want || st.piece || PIECES[0];
