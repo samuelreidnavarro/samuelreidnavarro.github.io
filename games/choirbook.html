@@ -1262,10 +1262,12 @@ let handTop = -1;           /* where the hand stands beside the music, px */
 let pieceKey = null;
 const cache = {};
 
-/* per-voice switches: in the layout, notes, lyrics */
+/* per-voice switches: in the layout, notes, lyrics, playback (heard even when not shown) */
 function vis(i){
   const all = st.vis[pieceKey] || (st.vis[pieceKey] = {});
-  return all[i] || (all[i] = {on: true, notes: true, lyr: true});
+  const o = all[i] || (all[i] = {on: true, notes: true, lyr: true});
+  if (o.play === undefined) o.play = true;
+  return o;
 }
 
 /* ------------------------------------------------------------------ */
@@ -2368,14 +2370,14 @@ function syncUI(){
   if (piece) {
     const row = (v) => {
       const s = vis(v.idx);
-      const cb = (k, label) => `<td><input type="checkbox" data-i="${v.idx}" data-k="${k}" aria-label="${esc(v.name)}: ${label}"${s[k] ? ' checked' : ''}${k !== 'on' && !s.on ? ' disabled' : ''}></td>`;
+      const cb = (k, label) => `<td><input type="checkbox" data-i="${v.idx}" data-k="${k}" aria-label="${esc(v.name)}: ${label}"${s[k] ? ' checked' : ''}${(k === 'notes' || k === 'lyr') && !s.on ? ' disabled' : ''}></td>`;
       return `<tr data-i="${v.idx}"><td><span class="drag" data-i="${v.idx}" title="Drag to change the order" aria-hidden="true">⠿</span></td>` +
-        `<td><input class="vname" data-i="${v.idx}" value="${esc(v.name)}" aria-label="Name of the voice" title="Click to rename"></td>${cb('on', 'shown')}${cb('notes', 'notes')}${cb('lyr', 'lyrics')}` +
+        `<td><input class="vname" data-i="${v.idx}" value="${esc(v.name)}" aria-label="Name of the voice" title="Click to rename"></td>${cb('on', 'shown')}${cb('notes', 'notes')}${cb('lyr', 'lyrics')}${cb('play', 'playback')}` +
         `<td><button class="vbtn vexp" data-op="cf" data-i="${v.idx}" title="Open in CantusFirmus" aria-label="Open ${esc(v.name)} in CantusFirmus"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3.5h6.5V10h-2V6.9l-6.8 6.8-1.4-1.4 6.8-6.8H14ZM4.5 6.5h7v2h-5v9h9v-5h2v7h-13Z"/></svg></button></td>` +
         `<td><button class="vbtn vdel" data-op="del" data-i="${v.idx}" aria-label="Remove ${esc(v.name)}" title="Remove this voice">×</button></td></tr>`;
     };
-    $('#voiceTable').innerHTML = `<thead><tr><th></th><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th><th></th><th></th></tr></thead><tbody>` + piece.voices.map((v, i) => { v.idx = i; return row(v); }).join('') +
-      `</tbody><tfoot><tr><td colspan="7"><button data-op="add">+ New voice</button></td></tr></tfoot>`;
+    $('#voiceTable').innerHTML = `<thead><tr><th></th><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th><th>Playback</th><th></th><th></th></tr></thead><tbody>` + piece.voices.map((v, i) => { v.idx = i; return row(v); }).join('') +
+      `</tbody><tfoot><tr><td colspan="8"><button data-op="add">+ New voice</button></td></tr></tfoot>`;
     if (document.activeElement !== $('#metaTitle')) $('#metaTitle').value = (piece.meta.OTL || piece.title || '').replace(/\s*\.\.\.\s*/g, ' … ');
     if (document.activeElement !== $('#metaComp')) $('#metaComp').value = piece.meta.COM || piece.meta.COA || '';
   }
@@ -2582,7 +2584,7 @@ async function takeHandoff(){
 $('#voiceTable').addEventListener('change', e => {
   const c = e.target; if (!c.dataset.k) return;
   vis(+c.dataset.i)[c.dataset.k] = c.checked; save(); syncUI(); render();
-  if (play && c.dataset.k === 'on') restartPlay();
+  if (play && (c.dataset.k === 'on' || c.dataset.k === 'play')) restartPlay();
 });
 /* pieces */
 const libEl = $('#library'), libBtn = $('#libBtn');
@@ -3353,8 +3355,8 @@ function startPlay(from){
   /* Play starts at the selected note (or the beginning) */
   if (typeof from !== 'number') { const s = selSym(); from = s ? s.t : 0; }
   from = Math.max(0, Math.min(from, piece.end));
-  const voices = visibleVoices();
-  if (!voices.length) return;
+  const voices = piece.voices.filter(v => vis(v.idx).play);
+  if (!voices.length) { toast('No voice has Playback ticked (Voices).'); return; }
   const events = [];
   voices.forEach(v => {
     for (let k = 0; k < v.syms.length; k++) {
