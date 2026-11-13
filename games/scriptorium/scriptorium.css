@@ -763,10 +763,9 @@ html.dark .tools .podg,html.dark .transport .podg{box-shadow:0 1px 4px rgba(0,0,
   .viewwrap:not(.fs) .fsbtn{top:58px;transition:opacity .35s ease}
   html.ctl-top-idle .viewwrap:not(.fs) .fsbtn{opacity:0;pointer-events:none}
 }
-/* the bottom toolbar: nothing behind the buttons at all */
-@media (min-width:701px){
-  .transport .podg{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}
-  .transport .podg button:hover:not(:disabled){background:rgba(42,34,24,.08)}
-  html.dark .transport .podg button:hover:not(:disabled){background:rgba(255,238,210,.14)}
-  .cntin input[type=number]{background:transparent}
-}
+/* the hand stands at the very edge of the screen, past the page margin */
+.viewwrap .handbox{right:calc(-1 * clamp(14px,2.6vw,44px))}
+.viewwrap .pendbox.both{right:calc(190px * var(--hand-sc,1) - clamp(14px,2.6vw,44px))}
+@media (max-width:700px){ .viewwrap .handbox{right:-14px} .viewwrap .pendbox.both{right:calc(190px * var(--hand-sc,1) - 14px)} }
+.viewwrap.fs .handbox{right:0}
+.viewwrap.fs .pendbox.both{right:calc(190px * var(--hand-sc,1))}
