@@ -36,18 +36,19 @@
     if (!cuts.length) for (let t = 2; t < P.end - EPS; t += 2) cuts.push(rt(t));
     const bounds = [0, ...cuts, P.end];
     const staves = P.voices.map((v, vi) => {
-      let notes = '', lyr = [], lastLen = null, ei = 0, off = 0;
+      let notes = '', lyr = [], lastLen = null, lastMens = null, ei = 0, off = 0;
       const evs = v.events;
       const k0 = v.keys.find(m => eq(m.t, 0)), fifths = k0 ? fifthsOf(k0.alts) : 0;
       notes += `    \\clef ${CLEF[(v.clefs[0] && v.clefs[0].c) || v.kclef] || 'treble'}\n    \\key ${KEYS[Math.max(-7, Math.min(7, fifths))] || 'c'} \\major\n`;
       for (let mi = 0; mi + 1 < bounds.length; mi++) {
         const a = bounds[mi], b = bounds[mi + 1], len = ticks(b - a);
         if (len <= 0) continue;
+        { const ms = metAt(v, a); if (ms && ms !== lastMens) { notes += `    % mensuration sign: ${ms}\n`; lastMens = ms; } }
         let line = '    ';
         const trip = [];
         const flush = () => { if (trip.length) line += (trip.length === 3 ? `\\tuplet 3/2 { ${trip.join(' ')} }` : trip.map(x => `\\tuplet 3/2 { ${x} }`).join(' ')) + ' '; trip.length = 0; };
         if (len !== lastLen) {
-          line += len % DIV === 0 ? `\\time ${len / DIV}/4 ` : `\\time ${Math.max(1, Math.round(len / (DIV / 2)))}/8 `;
+          { const [tn, td] = len % 384 === 0 ? [len / 384, 1] : len % 192 === 0 ? [len / 192, 2] : len % 96 === 0 ? [len / 96, 4] : [Math.max(1, Math.round(len / 48)), 8]; line += `\\time ${tn}/${td} `; }
           lastLen = len;
         }
         let t = a;

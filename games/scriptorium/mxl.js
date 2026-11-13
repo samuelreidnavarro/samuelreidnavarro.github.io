@@ -42,7 +42,7 @@
           x += '<attributes>';
           if (mi === 0) x += `<divisions>${DIV}</divisions>`;
           if (mi === 0) { const k = v.keys.find(m => eq(m.t, 0)); x += `<key><fifths>${k ? fifthsOf(k.alts) : 0}</fifths></key>`; }
-          x += len % DIV === 0 ? `<time><beats>${len / DIV}</beats><beat-type>4</beat-type></time>` : `<time><beats>${Math.max(1, Math.round(len / (DIV / 2)))}</beats><beat-type>8</beat-type></time>`;
+          { const [tn, td] = len % 384 === 0 ? [len / 384, 1] : len % 192 === 0 ? [len / 192, 2] : len % 96 === 0 ? [len / 96, 4] : [Math.max(1, Math.round(len / 48)), 8]; x += `<time><beats>${tn}</beats><beat-type>${td}</beat-type></time>`; }
           if (mi === 0) x += clefXml((v.clefs[0] && v.clefs[0].c) || v.kclef);
           x += '</attributes>';
           lastLen = len;
@@ -126,5 +126,5 @@
     a.download = ((piece.title || '').replace(/[\\/:*?"<>|]+/g, '').trim() || APP.store) + '.mxl';
     document.body.appendChild(a); a.click(); a.remove();
   });
-  window.__mxl = {musicXml, values};
+  window.__mxl = {musicXml, values, zip};
 }]);
