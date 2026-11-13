@@ -1660,8 +1660,29 @@ function itemHtml(key, title, sub){
   return `<button class="pc" data-p="${esc(key)}" aria-current="${key === pieceKey}"><span class="t">${esc(title)}</span><span class="c">${esc(sub)}</span></button>`;
 }
 function fold(x){ return x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+/* composers first, then the kinds of music of the one you open, then its pieces. Searching or filtering goes straight to the pieces. */
+function libBrowse(box){
+  const comps = {};
+  CAT.pieces.forEach(e => { const o = comps[e.c] || (comps[e.c] = {n: 0, d: e.d || ''}); o.n++; if (!o.d && e.d) o.d = e.d; });
+  const names = Object.keys(comps).sort((a, b) => a.localeCompare(b));
+  box.innerHTML = `<p class="libhint">${names.length} composers</p>` + names.map(c => `<button class="pc cbtn" data-comp="${esc(c)}"><span class="t">${esc(nameOf(c))}</span><span class="c">${comps[c].d ? esc(comps[c].d.replace('-', '\u2013')) + ' \u00b7 ' : ''}${comps[c].n} piece${comps[c].n === 1 ? '' : 's'}</span></button>`).join('');
+}
+function libGenres(box){
+  const g = {};
+  CAT.pieces.forEach(e => { if (e.c === lib.comp) g[e.g] = (g[e.g] || 0) + 1; });
+  const keys = Object.keys(GENRES).filter(k => g[k]).concat(Object.keys(g).filter(k => !GENRES[k]));
+  box.innerHTML = `<div class="libnav"><button class="libback" type="button" data-back="comps"><svg class="chev l" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.8 2 3.6 6 7.8 10 8.9 8.9 5.9 6 8.9 3.1Z"/></svg>All composers</button></div>` +
+    `<h2>${esc(nameOf(lib.comp))}</h2>` + keys.map(k => `<button class="pc cbtn" data-genre="${esc(k)}"><span class="t">${esc(GENRES[k] || k)}</span><span class="c">${g[k]} piece${g[k] === 1 ? '' : 's'}</span></button>`).join('');
+}
 function libList(){
   const box = $('#libList'); if (!box || !CAT) return;
+  const filtering = !!(lib.q || lib.genre || lib.voices);
+  if (!filtering && !lib.comp) { libBrowse(box); return; }
+  if (!filtering && lib.comp) {
+    const gs = new Set(CAT.pieces.filter(e => e.c === lib.comp).map(e => e.g));
+    if (gs.size > 1) { libGenres(box); return; }
+    lib.genre = [...gs][0] || ''; const sel = $('#libGenre'); if (sel) sel.value = lib.genre;
+  }
   const words = fold(lib.q).split(/\s+/).filter(Boolean);
   let list = CAT.pieces.filter(e => {
     if (lib.comp && e.c !== lib.comp) return false;
@@ -1675,7 +1696,12 @@ function libList(){
     voices: (a, b) => a.v - b.v || a.c.localeCompare(b.c) || a.t.localeCompare(b.t)}[lib.sort];
   list.sort(by);
   const n = list.length, show = list.slice(0, lib.shown);
-  let html = `<p class="libhint">${n} piece${n === 1 ? '' : 's'}${n > show.length ? ` (showing ${show.length})` : ''}</p>`;
+  let html = '';
+  if (lib.comp && !lib.q) {
+    const multi = new Set(CAT.pieces.filter(e => e.c === lib.comp).map(e => e.g)).size > 1;
+    html += `<div class="libnav"><button class="libback" type="button" data-back="${multi ? 'genres' : 'comps'}"><svg class="chev l" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.8 2 3.6 6 7.8 10 8.9 8.9 5.9 6 8.9 3.1Z"/></svg>${multi ? esc(nameOf(lib.comp)) : 'All composers'}</button></div><h2>${esc(nameOf(lib.comp))}${lib.genre && multi ? ' \u00b7 ' + esc(GENRES[lib.genre] || lib.genre) : ''}</h2>`;
+  }
+  html += `<p class="libhint">${n} piece${n === 1 ? '' : 's'}${n > show.length ? ` (showing ${show.length})` : ''}</p>`;
   const favs = favAll();
   html += show.map(e => `<div class="lrow">${itemHtml(e.k, e.t, `${nameOf(e.c)}${e.a ? ' (attributed)' : ''}${e.d ? ', ' + e.d : ''} · ${e.v} voices · ${(GENRES[e.g] || e.g).replace(/s$/, '')}`)}${favBtn(e.k, !!favs[e.k], e.t)}</div>`).join('');
   if (n > show.length) html += `<button class="more" id="libMore">Show more</button>`;
@@ -2104,6 +2130,16 @@ libEl.addEventListener('click', e => {
     return;
   }
   e.stopPropagation();
+  const nav = e.target.closest('[data-comp],[data-genre],[data-back]');
+  if (nav) {
+    if (nav.dataset.comp !== undefined) { lib.comp = nav.dataset.comp; lib.genre = ''; }
+    else if (nav.dataset.genre !== undefined) lib.genre = nav.dataset.genre;
+    else if (nav.dataset.back === 'genres') lib.genre = '';
+    else { lib.comp = ''; lib.genre = ''; }
+    const sc = $('#libComp'), sg = $('#libGenre'); if (sc) sc.value = lib.comp; if (sg) sg.value = lib.genre;
+    lib.shown = 150; $('#libFeat').hidden = !!(lib.q || lib.comp || lib.genre || lib.voices); libList(); libEl.scrollTop = 0;
+    return;
+  }
   if (e.target.id === 'libMore') { lib.shown += 300; libList(); return; }
   const b = e.target.closest('.pc'); if (!b) return;
   setLib(false); mark = null;
