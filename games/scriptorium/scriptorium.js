@@ -854,6 +854,14 @@ function keySig(v, t, clef){
   }
   return out;
 }
+const NUMPATH = {
+  '2': 'M0.1 0.6C0.2 0 1.1 0 1.1 0.65C1.1 1.2 0.4 1.6 0 2.3L1.2 2.3',
+  '3': 'M0.1 0.55C0.2 0.1 1 0 1.05 0.6C1.1 1 0.7 1.1 0.5 1.15C0.9 1.2 1.2 1.5 1.1 1.85C1 2.4 0.2 2.5 0 1.9',
+  '4': 'M0.95 2.3L0.95 0L0 1.6L1.3 1.6',
+  '6': 'M1 0.2C0.3 0 0 1 0.1 1.7C0.15 2.6 1.1 2.5 1.1 1.7C1.1 1.1 0.3 1 0.1 1.7',
+  '9': 'M0.1 2.1C0.8 2.3 1.1 1.3 1 0.6C0.95 -0.2 0 -0.1 0 0.6C0 1.2 0.8 1.3 1 0.6',
+  '1': 'M0.2 0.5L0.7 0L0.7 2.3M0.2 2.3L1.2 2.3'
+};
 function mensSvg(sign, x, top){
   const s = sign || '';
   const hasC = /C/.test(s), hasO = /O/.test(s), stroke = /\|/.test(s), dot = /\./.test(s), rev = /r/.test(s);
@@ -870,7 +878,11 @@ function mensSvg(sign, x, top){
   if (dot) o += `<circle class="ink" cx="${f(cx)}" cy="${f(cy)}" r="0.2"/>`;
   if (num) {
     const nx = hasC || hasO ? x + 2.5 : x;
-    o += `<text x="${f(nx)}" y="${f(cy + 1.05)}" font-size="3">${num}</text>`;
+    /* numerals drawn as thin strokes, like the sign itself (the font's digits are too heavy at this size) */
+    [...num].forEach((ch, i) => {
+      const d = NUMPATH[ch];
+      o += d ? `<path d="${d}" transform="translate(${f(nx + i * 1.2)} ${f(cy - 1.1)}) scale(0.9)" ${a}/>` : `<text x="${f(nx + i * 1.2)}" y="${f(cy + 1.05)}" font-size="3">${ch}</text>`;
+    });
   }
   return o;
 }
@@ -1617,7 +1629,25 @@ function mineAdd(title, text){
   mineSave(all);
   return id;
 }
+/* a score in My scores with no notes in it (a new score never written in) is not kept */
+function mineEmpty(id, all){
+  const m = (all || mineAll())[id]; if (!m) return false;
+  let text = null; try { text = localStorage.getItem(EKEY(id)); } catch (e) {}
+  try { return !parseKern(text || m.text).voices.some(v => v.events.some(e => !e.rest)); } catch (e) { return false; }
+}
+function mineDrop(id){
+  const all = mineAll(); if (!all[id]) return;
+  delete all[id]; mineSave(all); try { localStorage.removeItem(EKEY(id)); } catch (e) {}
+  if (H.mineRemoved) H.mineRemoved(id);
+}
+/* empty scores go, except the one open now (it stays while it is being written in) */
+function minePrune(keep){
+  const all = mineAll();
+  for (const id of Object.keys(all)) if (id !== keep && mineEmpty(id, all)) mineDrop(id);
+}
+const whenEdited = at => { try { return new Date(at).toLocaleString([], {day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit'}); } catch (e) { return new Date(at).toLocaleDateString(); } };
 async function loadPiece(file){
+  if (pieceKey && pieceKey !== file && pieceKey.startsWith('mine:') && mineEmpty(pieceKey)) { mineDrop(pieceKey); if (typeof refreshMine === 'function') setTimeout(refreshMine); }
   let text = cache[file];
   if (!text && file.startsWith('mine:')) {
     const m = mineAll()[file];
@@ -1719,7 +1749,7 @@ function favBtn(key, on, title){
 function mineHtml(){
   const all = mineAll(), favs = favAll();
   const rows = [
-    ...Object.keys(all).map(id => ({at: all[id].at, html: `<div class="mine">${itemHtml(id, all[id].title || 'Untitled', L.mineSub + new Date(all[id].at).toLocaleDateString())}<button class="mdel" data-del="${esc(id)}" aria-label="Remove ${esc(all[id].title || 'this score')}" title="Remove from ${esc(L.mine)}">×</button></div>`})),
+    ...Object.keys(all).filter(id => !mineEmpty(id, all)).map(id => ({at: all[id].at, html: `<div class="mine">${itemHtml(id, all[id].title || 'Untitled', (L.mineSub ? L.mineSub + 'last edited ' : 'Last edited ') + whenEdited(all[id].at))}<button class="mdel" data-del="${esc(id)}" aria-label="Remove ${esc(all[id].title || 'this score')}" title="Remove from ${esc(L.mine)}">×</button></div>`})),
     ...Object.keys(favs).map(k => ({at: favs[k].at, html: `<div class="mine">${itemHtml(k, favs[k].t, favs[k].c)}${favBtn(k, true, favs[k].t)}</div>`}))
   ].sort((a, b) => b.at - a.at);
   if (!rows.length && !L.mineHint) return '';
@@ -3267,6 +3297,7 @@ if (H.start) H.start(); else (async () => {
     const from = parseInt(qs.get('bar'), 10), to = parseInt(qs.get('to') || qs.get('bar'), 10);
     if (from > 0) mark = {piece: want, from, to: Math.max(from, to || from)};
   }
+  try { minePrune(pieceKey); } catch (e) {}
   syncUI(); sizeViewer();
   if (await takeHandoff().catch(() => false)) { buildPieceList().then(syncUI); return; }
   try { await loadPiece(pieceKey); }

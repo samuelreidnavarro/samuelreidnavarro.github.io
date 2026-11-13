@@ -758,6 +758,8 @@ html.dark .tools .podg,html.dark .transport .podg{box-shadow:0 1px 4px rgba(0,0,
   html.ctl-top-idle .tools .editbar{opacity:0;pointer-events:none}
   html.ctl-top-idle .tools .editbar *{pointer-events:none}
   html.ctl-top-idle #editPod,html.ctl-top-idle .sendpod{opacity:.8}
+  html.ctl-bot-idle #play,html.ctl-bot-idle #podSound{opacity:.8;transition:opacity .35s ease}
+  html.ctl-bot-idle #play:hover,html.ctl-bot-idle #podSound:hover,html.ctl-bot-idle #podSound:focus-within{opacity:1}
   html.ctl-bot-idle .tp-stack{opacity:0;pointer-events:none;transform:translateX(-16px)}
   html.ctl-bot-idle .tp-stack *{pointer-events:none}
   html.ctl-bot-idle #podSound:not(:hover):not(:focus-within) .hzctl,html.ctl-bot-idle #podSound:not(:hover):not(:focus-within) #toggleSet{display:none}
