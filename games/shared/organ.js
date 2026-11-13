@@ -21,7 +21,7 @@ const pressed = (el, on) => { if (el) el.setAttribute('aria-pressed', on ? 'true
 const SHARED_KEY = 'organ:shared:v1';
 const SHARED = ['vol', 'reg', 'bright', 'room', 'atk', 'rel', 'chiff', 'ens', 'wind', 'scoop', 'draw', 'ref', 'temper', 'temperRoot', 'beatHand', 'beatPend', 'beatTick', 'handOp', 'handSize'];
 Organ.DEFAULTS = {tempo: 60, unit: 'S', loop: false, countIn: 0, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1,
-  ref: 440, temper: 'equal', temperRoot: 0, vol: 70, reg: 'rec-montre', bright: 50, room: 40, atk: 82, rel: 10, chiff: 7, ens: 0.3, wind: 10, scoop: 5,
+  ref: 440, temper: 'equal', temperRoot: 0, vol: 70, reg: 'rec-bordun', bright: 50, room: 40, atk: 82, rel: 10, chiff: 7, ens: 0.3, wind: 10, scoop: 5,
   draw: [100, 71, 55, 48, 37, 22, 12, 8, 0, 0, 0, 0], setOpen: false};
 Organ.init = function(settings, hooks){
   S = settings; Object.assign(H, hooks || {});
@@ -32,10 +32,10 @@ Organ.init = function(settings, hooks){
 Organ.loadShared = function(){
   let o = null; try { o = JSON.parse(localStorage.getItem(SHARED_KEY) || 'null'); } catch (e) {}
   /* Montre 8′ became the default sound (2026-11): a sound saved before then gives way to it once */
-  if (!o || o.regV !== 2) S.reg = Organ.DEFAULTS.reg;
+  if (!o || o.regV !== 3) S.reg = Organ.DEFAULTS.reg;
   if (!o) return;
   for (const k of SHARED) {
-    if (k === 'reg' && o.regV !== 2) continue;
+    if (k === 'reg' && o.regV !== 3) continue;
     if (k === 'temper') { if (TEMPER[o[k]]) S.temper = o[k]; continue; }
     const v = o[k];
     if (v === undefined || v === null) continue;
@@ -47,7 +47,7 @@ Organ.loadShared = function(){
 };
 Organ.saveShared = function(){
   if (!S) return;
-  const o = {regV: 2}; for (const k of SHARED) o[k] = S[k];
+  const o = {regV: 3}; for (const k of SHARED) o[k] = S[k];
   try { localStorage.setItem(SHARED_KEY, JSON.stringify(o)); } catch (e) {}
 };
 /* the other app may change the shared settings while this one is open in another tab */
