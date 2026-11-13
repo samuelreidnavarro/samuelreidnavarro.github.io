@@ -883,7 +883,7 @@ function mensSvg(sign, x, top){
     o += `<path d="M${f(cx + dx)} ${f(y1)}A${r} ${r} 0 1 ${rev ? 1 : 0} ${f(cx + dx)} ${f(y2)}" ${a}/>`;
   }
   if (stroke && (hasC || hasO)) o += vl(cx, cy - 1.75, cy + 1.75, 'ms', 0.2);
-  if (dot) o += `<circle class="ink" cx="${f(cx)}" cy="${f(cy)}" r="0.2"/>`;
+  if (dot) o += `<circle class="ink" cx="${f(cx)}" cy="${f(cy)}" r="0.15" stroke="none"/>`;
   if (num) {
     const nx = hasC || hasO ? x + 2.5 : x;
     /* numerals drawn as thin strokes, like the sign itself (the font's digits are too heavy at this size) */
@@ -3058,7 +3058,7 @@ $('.viewwrap').appendChild(mensMenu);
 function mensIcon(sg){
   let lines = '';
   for (let i = 0; i < 5; i++) lines += `<line x1="-0.3" x2="4.6" y1="${i}" y2="${i}" stroke="currentColor" stroke-opacity=".5" stroke-width="0.1"/>`;
-  return `<svg viewBox="-0.3 -1.9 4.9 8.8" aria-hidden="true">${lines}<g fill="currentColor" stroke="currentColor">${mensSvg(sg, 0.2, 0)}</g></svg>`;
+  return `<svg viewBox="-0.3 -1.9 4.9 8.8" aria-hidden="true">${lines}<g fill="currentColor" stroke="none">${mensSvg(sg, 0.2, 0)}</g></svg>`;
 }
 mensMenu.innerHTML = MENS_MENU.map(([sg, name]) => `<li role="option" data-m="${esc(sg)}" title="${esc(name)}">${mensIcon(sg)}<span>${esc(sg.replace('r', ' rev.'))}</span></li>`).join('') +
   `<li class="flatopt mdiff" data-m="" role="option"><label class="check"><input type="checkbox" id="mensDiff"> Different mensuration <span class="mhint">(this voice only)</span></label></li>`;
