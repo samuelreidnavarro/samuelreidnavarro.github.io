@@ -795,3 +795,11 @@ html.dark .tools .podg,html.dark .transport .podg{box-shadow:0 1px 4px rgba(0,0,
 #ghostClefs svg{display:block;overflow:visible}
 #ghostClefs .staff{stroke:var(--rule)}
 @media print{#ghostClefs{display:none !important}}
+/* Dark room: the page itself goes dark too, with light ink, so the floating controls stay readable over it */
+html.dark{--pagebg:#2B241B !important;--leaf-ink:#E9DEC6;--leaf-muted:#A99A80;--rule:#C25A47;--sel:#E0907C;--hov:#C9806A;--play:#E0907C;--del:#E0907C}
+html.dark .page,html.dark .leaf{background-image:none;background-color:#2B241B;color:var(--leaf-ink)}
+html.dark #pages svg .staff{stroke:var(--staff,#B24F3D)}
+html.dark #pages .caret{fill:#E0907C}
+html.dark #pages .ghost use{fill:#E0907C}
+html.dark #pages svg g.on .selbg,html.dark #pages g.sel .selbg{opacity:.18}
+html.dark .viewer .pnum{color:var(--muted)}
