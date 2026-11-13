@@ -1806,7 +1806,7 @@ async function loadPiece(file){
   if (!piece) piece = parseKern(text);
   if (H.afterParse) { H.afterParse(piece); piece.text = writeKern(piece); }
   pieceKey = file;
-  if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; ed.range = null; }
+  if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; ed.range = null; ed.picks = null; }
   st.piece = file; save();
   st.verse = 0;
   if (H.afterLoad) H.afterLoad();
@@ -1819,7 +1819,7 @@ function loadText(name, text){
     stopPlay();
     piece = parseKern(text);
     pieceKey = 'file:' + name;
-    if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; ed.range = null; }
+    if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; ed.range = null; ed.picks = null; }
     syncUI(); render();
   } catch (e) { pagesEl.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
@@ -2775,9 +2775,11 @@ function redo(){ if (!ed.redo.length) return; ed.undo.push(piece.text || writeKe
 function showSel(scroll){
   document.querySelectorAll('#pages g.sel').forEach(g => g.classList.remove('sel'));
   document.querySelectorAll('#pages .caret').forEach(c => c.remove());
-  if (ed.range && piece) {
+  if ((ed.range || ed.picks) && piece) {
     let first = null;
-    for (const v of rangeVoices()) for (const q of v.syms || []) if (q.src && inRange(q.t)) document.querySelectorAll('#pages g.' + q.id).forEach(g => { g.classList.add('sel'); first = first || g; });
+    const hit = ed.range ? (v, q) => inRange(q.t) : (v, q) => ed.picks.some(p => p.vi === v.idx && Math.abs(p.t - q.t) < EPS);
+    const vs = ed.range ? rangeVoices() : piece.voices;
+    for (const v of vs) for (const q of v.syms || []) if (q.src && hit(v, q)) document.querySelectorAll('#pages g.' + q.id).forEach(g => { g.classList.add('sel'); first = first || g; });
     if (scroll && first) bringIntoView(first);
     syncEdit(); return;
   }
@@ -2791,12 +2793,13 @@ function showSel(scroll){
 /* clicking a note selects it (in any view); with Edit off it only marks where Play starts */
 pagesEl.addEventListener('click', e => {
   const g = e.target.closest('g[class^="n"]');
-  if (!g || !piece) { if ((ed.sel || ed.range) && !ed.on) { ed.sel = null; ed.range = null; showSel(); } return; }
+  if (!g || !piece) { if ((ed.sel || ed.range || ed.picks) && !ed.on) { ed.sel = null; ed.range = null; ed.picks = null; showSel(); } return; }
   const id = g.classList[0], m = id.match(/^n(\d+)-(\d+)$/);
   if (!m) return;
   const s = piece.voices[+m[1]].syms[+m[2]];
-  if (e.shiftKey && (ed.sel || ed.range)) { extendRange(+m[1], s); return; }
-  ed.range = null;
+  if (e.shiftKey && (ed.sel || ed.range || ed.picks)) { extendRange(+m[1], s); return; }
+  if ((e.ctrlKey || e.metaKey) && (ed.sel || ed.range || ed.picks)) { togglePick(+m[1], s); return; }
+  ed.range = null; ed.picks = null;
   ed.sel = {vi: +m[1], ei: s.src[0]}; ed.ins = {vi: +m[1], ei: s.src[s.src.length - 1] + 1};
   if (!s.rest) hear(s.step, s.alt);
   showSel();
@@ -3037,10 +3040,13 @@ pagesEl.addEventListener('click', e => {
   if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e); return; }
   if (ed.on && typeof noteAt === 'function') {
     const n = noteAt(e);
-    if (n && e.shiftKey && (ed.sel || ed.range)) { e.stopImmediatePropagation(); extendRange(n.vi, n.s); return; }
+    if (n && e.shiftKey && (ed.sel || ed.range || ed.picks)) { e.stopImmediatePropagation(); extendRange(n.vi, n.s); return; }
+    if (n && (e.ctrlKey || e.metaKey) && (ed.sel || ed.range || ed.picks)) { e.stopImmediatePropagation(); togglePick(n.vi, n.s); return; }
+    /* Alt-click: what was copied is pasted there */
+    if (n && e.altKey) { e.stopImmediatePropagation(); ed.range = null; ed.picks = null; ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1}; rangePaste(); return; }
     if (n && (!n.s.rest || e.shiftKey)) {
       e.stopImmediatePropagation();
-      ed.range = null;
+      ed.range = null; ed.picks = null;
       ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1};
       if (!n.s.rest) hear(n.s.step, n.s.alt);
       showSel(); return;
@@ -3050,7 +3056,7 @@ pagesEl.addEventListener('click', e => {
   if (rect) {
     e.stopImmediatePropagation();
     const tg = staffTarget(rect, e); if (!tg) return;
-    clearGhost(); ed.range = null;
+    clearGhost(); ed.range = null; ed.picks = null;
     const tp = timePlace(rect, tg);
     if (tp) {
       const v = tg.v;
@@ -3108,41 +3114,140 @@ function rangeVoices(){ const R = ed.range; if (!R || !piece) return []; const o
 const inRange = (t) => t >= ed.range.t0 - EPS && t < ed.range.t1 - EPS;
 function rangeEvents(v){ return ed.range ? v.events.filter(e => inRange(e.t)) : []; }
 function extendRange(vi, s){
+  if (ed.picks) pickToRange();
   let a = ed.range ? ed.range.a : null;
   if (!a) { const q = selSym(); if (!q) return; a = {vi: ed.sel.vi, t: q.t, te: rt(q.t + q.d)}; }
-  ed.range = {a, v0: Math.min(a.vi, vi), v1: Math.max(a.vi, vi), t0: Math.min(a.t, s.t), t1: Math.max(a.te, rt(s.t + s.d))};
-  ed.sel = null; ed.ins = null;
+  ed.range = {a, v0: Math.min(a.vi, vi), v1: Math.max(a.vi, vi), t0: Math.min(a.t, s.t), t1: Math.max(a.te, rt(s.t + s.d)), f: {vi, t: s.t, te: rt(s.t + s.d)}};
+  ed.sel = null; ed.ins = null; ed.picks = null;
   showSel();
 }
+function inSel(vi, q){
+  if (ed.range) return vi >= ed.range.v0 && vi <= ed.range.v1 && inRange(q.t);
+  if (ed.picks) return ed.picks.some(p => p.vi === vi && Math.abs(p.t - q.t) < EPS);
+  return false;
+}
 function clearRange(){ if (ed.range) { ed.range = null; return true; } return false; }
+/* Ctrl/Cmd-click adds single notes to the selection (ed.picks [{vi, t}], not a range); copying or moving them takes
+   the passage from the first to the last */
+function selItems(){
+  if (!piece) return [];
+  if (ed.range) return rangeVoices().flatMap(v => rangeEvents(v).map(e => ({v, e})));
+  if (ed.picks) return ed.picks.map(p => { const v = piece.voices[p.vi]; const e = v && v.events.find(q => Math.abs(q.t - p.t) < EPS); return e ? {v, e} : null; }).filter(Boolean);
+  return [];
+}
+function pickToRange(){
+  if (!ed.picks || !piece) return;
+  const it = selItems(); ed.picks = null;
+  if (!it.length) return;
+  const vis = it.map(x => x.v.idx), t0 = Math.min(...it.map(x => x.e.t)), t1 = Math.max(...it.map(x => rt(x.e.t + x.e.d)));
+  ed.range = {a: {vi: Math.min(...vis), t: t0, te: t1}, v0: Math.min(...vis), v1: Math.max(...vis), t0, t1};
+}
+function togglePick(vi, s){
+  const cur = ed.picks ? ed.picks.slice() : ed.range ? selItems().filter(x => !x.e.rest).map(x => ({vi: x.v.idx, t: x.e.t})) : [];
+  if (!ed.picks && !ed.range && ed.sel) { const q = selSym(); if (q) cur.push({vi: ed.sel.vi, t: q.t}); }
+  const k = cur.findIndex(p => p.vi === vi && Math.abs(p.t - s.t) < EPS);
+  if (k >= 0) cur.splice(k, 1); else cur.push({vi, t: s.t});
+  ed.range = null; ed.sel = null; ed.ins = null;
+  ed.picks = cur.length ? cur : null;
+  if (!s.rest && k < 0) hear(s.step, s.alt);
+  showSel();
+}
+/* the selection as a span: a range, the picked notes' passage, or the one selected note */
+function selSpan(){
+  if (ed.range) return ed.range;
+  if (ed.picks) { pickToRange(); return ed.range; }
+  const q = selSym(); if (!q) return null;
+  return {a: {vi: ed.sel.vi, t: q.t, te: rt(q.t + q.d)}, v0: ed.sel.vi, v1: ed.sel.vi, t0: q.t, t1: rt(q.t + q.d), one: true};
+}
+/* Alt (or Ctrl/Cmd) with Left/Right: the selection moves on the grid of the chosen value; what it leaves becomes rest,
+   what it lands on is written over (as Dorico does) */
+function moveSelection(dir){
+  const R = selSpan(); if (!R) return;
+  const vs = []; for (let i = R.v0; i <= R.v1; i++) if (piece.voices[i]) vs.push(piece.voices[i]);
+  if (!vs.every(writable)) { refuse(); return; }
+  const g = rt(VALS.find(x => x[0] === ed.val)[1] / propAt(vs[0], R.t0));
+  const len = rt(R.t1 - R.t0), T = rt(R.t0 + dir * g);
+  if (T < -EPS) return;
+  const vi0 = R.one ? ed.sel.vi : null;
+  commit(() => {
+    for (const v of vs) {
+      const list = spanCopy(v, R.t0, R.t1);
+      overwriteSpan(v, R.t0, len, []);
+      overwriteSpan(v, T, len, list);
+    }
+  });
+  if (R.one) {
+    const v = piece.voices[vi0], ei = v.events.findIndex(e => Math.abs(e.t - T) < EPS);
+    if (ei >= 0) { ed.sel = {vi: vi0, ei}; ed.ins = {vi: vi0, ei: ei + 1}; }
+    ed.range = null;
+  } else ed.range = Object.assign({}, R, {a: {vi: R.a.vi, t: rt(R.a.t + dir * g), te: rt(R.a.te + dir * g)}, t0: T, t1: rt(T + len), f: R.f && {vi: R.f.vi, t: rt(R.f.t + dir * g), te: rt(R.f.te + dir * g)}});
+  showSel(true);
+  const q = selSym(); if (q && !q.rest) hear(q.step, q.alt);
+}
+/* Shift with the arrows: the selection grows (or shrinks) from its far end, by a note, or to the staff above or below */
+function extendBy(key){
+  if (!piece) return false;
+  pickToRange();
+  let f;
+  if (ed.range) f = ed.range.f || {vi: ed.range.a.vi === ed.range.v0 ? ed.range.v1 : ed.range.v0, t: ed.range.a.t <= ed.range.t0 + EPS ? ed.range.t1 : ed.range.t0, te: ed.range.t1};
+  else { const q = selSym(); if (!q) return false; f = {vi: ed.sel.vi, t: q.t, te: rt(q.t + q.d)}; }
+  const symsOf = vi => (piece.voices[vi] && piece.voices[vi].syms || []).filter(q => q.src);
+  let vi = f.vi, s = null;
+  if (key === 'ArrowRight') s = symsOf(vi).find(q => q.t >= f.te - EPS);
+  else if (key === 'ArrowLeft') s = symsOf(vi).filter(q => q.t < f.t - EPS).pop();
+  else {
+    vi += key === 'ArrowDown' ? 1 : -1;
+    if (vi < 0 || vi >= piece.voices.length) return true;
+    const L = symsOf(vi); s = L.find(q => f.t >= q.t - EPS && f.t < q.t + q.d - EPS) || L[L.length - 1];
+  }
+  if (!s) return true;
+  extendRange(vi, s);
+  return true;
+}
+/* Ctrl/Cmd with Up/Down and only the cursor: the cursor goes to the staff above or below, at the same time */
+function caretStaff(dir){
+  if (!piece || !ed.ins) return false;
+  const v = piece.voices[ed.ins.vi], w = piece.voices[ed.ins.vi + dir]; if (!v || !w) return true;
+  const T = caretTime(v);
+  let ei = w.events.length, off = 0;
+  for (let i = 0; i < w.events.length; i++) { const e = w.events[i]; if (T < e.t + e.d - EPS) { ei = i; off = rt(T - e.t); if (off < EPS) off = 0; break; } }
+  ed.ins = {vi: w.idx, ei, off};
+  showSel(true);
+  return true;
+}
 function rangeStep(d){
-  const vs = rangeVoices().filter(writable); if (!vs.length) { refuse(); return; }
-  if (vs.some(v => rangeEvents(v).some(e => !e.rest && (e.step + d < STEP_MIN || e.step + d > STEP_MAX)))) return;
-  commit(() => { for (const v of vs) for (const e of rangeEvents(v)) if (!e.rest) moveStep(v, e, e.step + d); });
+  const it = selItems().filter(x => writable(x.v) && !x.e.rest); if (!it.length) { if (selItems().length) refuse(); return; }
+  if (it.some(x => x.e.step + d < STEP_MIN || x.e.step + d > STEP_MAX)) return;
+  commit(() => { for (const x of it) moveStep(x.v, x.e, x.e.step + d); });
+  if (it.length && ed.picks) hear(it[0].e.step, it[0].e.alt);
 }
 /* Delete (and cut): the notes become rests, so the voices stay in step */
 function rangeClear(){
-  const vs = rangeVoices().filter(writable); if (!vs.length) { refuse(); return; }
-  commit(() => { for (const v of vs) for (const e of rangeEvents(v)) { e.rest = true; e.tieStart = e.tieEnd = e.tieMid = false; e.syl = []; e.lig = 0; e.alt = null; e.ed = false; e.long = false; } });
+  const it = selItems().filter(x => writable(x.v)); if (!it.length) { refuse(); return; }
+  commit(() => { for (const {e} of it) { e.rest = true; e.tieStart = e.tieEnd = e.tieMid = false; e.syl = []; e.lig = 0; e.alt = null; e.ed = false; e.long = false; } });
 }
 /* the clipboard: per voice, the events from the start of the range (times relative), kept in localStorage so a passage
    can be pasted into another score or another of the apps */
 const CLIP_KEY = 'scriptorium:clip';
-function rangeCopy(){
-  const R = ed.range; if (!R) return false;
-  const voices = rangeVoices().map(v => rangeEvents(v).map(e => {
-    const c = JSON.parse(JSON.stringify(e)); c.t = rt(e.t - R.t0);
-    /* a note that runs past the end of the range is cut there */
-    if (e.t + e.d > R.t1 + EPS) { c.d = rt(R.t1 - e.t); c.tieStart = c.tieMid = false; }
+/* the events of [t0, t1) of voice v, times from t0 */
+function spanCopy(v, t0, t1){
+  const list = v.events.filter(e => e.t >= t0 - EPS && e.t < t1 - EPS).map(e => {
+    const c = JSON.parse(JSON.stringify(e)); c.t = rt(e.t - t0);
+    /* a note that runs past the end of the span is cut there */
+    if (e.t + e.d > t1 + EPS) { c.d = rt(t1 - e.t); c.tieStart = c.tieMid = false; }
     c.kd = c.d; return c;
-  })).map(list => {
-    /* a voice whose note began before the range starts it with a rest; ties don't reach out of the passage */
-    if (list.length && list[0].t > EPS) list.unshift({d: list[0].t, kd: list[0].t, rest: true, alt: null, ed: false, syl: [], t: 0});
-    const a = list[0], z = list[list.length - 1];
-    if (a) { if (a.tieMid) { a.tieMid = false; a.tieStart = true; } a.tieEnd = false; }
-    if (z) { if (z.tieMid) { z.tieMid = false; z.tieEnd = true; } z.tieStart = false; }
-    return list;
   });
+  /* a voice whose note began before the span starts it with a rest; ties don't reach out of the passage */
+  if (list.length && list[0].t > EPS) list.unshift({d: list[0].t, kd: list[0].t, rest: true, alt: null, ed: false, syl: [], t: 0});
+  const a = list[0], z = list[list.length - 1];
+  if (a) { if (a.tieMid) { a.tieMid = false; a.tieStart = true; } a.tieEnd = false; }
+  if (z) { if (z.tieMid) { z.tieMid = false; z.tieEnd = true; } z.tieStart = false; }
+  return list;
+}
+function rangeCopy(){
+  pickToRange();
+  const R = ed.range; if (!R) return false;
+  const voices = rangeVoices().map(v => spanCopy(v, R.t0, R.t1));
   const clip = {voices, len: rt(R.t1 - R.t0)};
   try { localStorage.setItem(CLIP_KEY, JSON.stringify(clip)); } catch (e) {}
   ed.clip = clip;
@@ -3192,6 +3297,7 @@ function overwriteSpan(v, T, len, list){
   retime(v);
 }
 function rangePaste(){
+  pickToRange();
   let clip = ed.clip;
   try { const c = JSON.parse(localStorage.getItem(CLIP_KEY) || 'null'); if (c && c.voices) clip = c; } catch (e) {}
   if (!clip || !clip.voices || !clip.voices.length || !piece) { toast('Nothing copied yet: Shift-click to select a passage, then ' + (/Mac|iP/.test(navigator.platform) ? '⌘' : 'Ctrl') + '+C.'); return; }
@@ -3215,8 +3321,8 @@ document.addEventListener('keydown', e => {
   if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || t.isContentEditable || !piece) return;
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
   const k = e.key.toLowerCase();
-  if (k === 'c' && ed.range) { if (window.getSelection && String(window.getSelection())) return; e.preventDefault(); rangeCopy(); }
-  else if (k === 'x' && ed.range && ed.on) { e.preventDefault(); if (rangeCopy()) rangeClear(); }
+  if (k === 'c' && (ed.range || ed.picks)) { if (window.getSelection && String(window.getSelection())) return; e.preventDefault(); rangeCopy(); }
+  else if (k === 'x' && (ed.range || ed.picks) && ed.on) { e.preventDefault(); if (rangeCopy()) rangeClear(); }
   else if (k === 'v' && ed.on) { e.preventDefault(); rangePaste(); }
   else if (k === 'a' && ed.on) {
     /* select all: every voice, start to end */
@@ -3235,7 +3341,7 @@ const CBA = {
     return {selected: !!s, dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
       target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc, lig: !!t.lig}, edArm: !!ed.edArm, ovr: !!ed.ovr,
       col: s && !s.rest ? !!s.col : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
-      hasNotes: !!(piece && piece.voices.length), durs: ed.range ? [] : xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : []), range: !!ed.range};
+      hasNotes: !!(piece && piece.voices.length), durs: ed.range || ed.picks ? [] : xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : []), range: !!(ed.range || ed.picks)};
   },
   setDur(k){
     ed.val = k;
@@ -3335,13 +3441,14 @@ const CBA = {
   },
   stepPitch(d){
     if (!CBA.guard()) return;
-    if (ed.range) { rangeStep(d); return; }
+    if (ed.range || ed.picks) { rangeStep(d); return; }
     const t = targetSym(), v = curVoice(); if (!t || t.rest) return;
     commit(() => { for (const i of t.src) { const e = v.events[i]; moveStep(v, e, clampStep(e.step + d)); } });
     const e = curVoice().events[t.src[0]]; if (e) hear(e.step, e.alt);
   },
   moveSel(dir){
     if (!piece) return;
+    if (ed.picks) pickToRange();
     if (ed.range) {
       /* the arrows leave the range at its first (or last) note */
       const R = ed.range, v = piece.voices[R.v0], qs = (v.syms || []).filter(q => q.src && inRange(q.t));
@@ -3367,7 +3474,7 @@ const CBA = {
   },
   deleteTarget(){
     if (!CBA.guard()) return;
-    if (ed.range) { rangeClear(); return; }
+    if (ed.range || ed.picks) { rangeClear(); return; }
     const t = targetSym(), v = curVoice(); if (!t) return;
     const vi = v.idx, first = t.src[0];
     commit(() => { dropEvents(v, t.src); ed.sel = null; ed.ins = {vi, ei: first}; });
@@ -3392,18 +3499,29 @@ const CBA = {
     insertEvent(v.idx, idx, refStepBefore(v, idx), true);
   },
   undo: () => undo(), redo: () => redo(),
-  deselect(){ if (ed.sel || ed.range) { ed.sel = null; ed.range = null; showSel(); } },
+  deselect(){ if (ed.sel || ed.range || ed.picks) { ed.sel = null; ed.range = null; ed.picks = null; showSel(); } },
   togglePlay(){ if (play) stopPlay(); else startPlay(); },
-  scaleAll(dir){ if (!CBA.guard() || ed.range) return; const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) e.d = rt(dir < 0 ? e.d * 2 : e.d / 2); }); },
-  shiftOctave(dir){ if (!CBA.guard()) return; if (ed.range) { rangeStep(7 * dir); return; } const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) if (!e.rest) e.step = clampStep(e.step + 7 * dir); }); },
+  scaleAll(dir){ if (!CBA.guard() || ed.range || ed.picks) return; const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) e.d = rt(dir < 0 ? e.d * 2 : e.d / 2); }); },
+  shiftOctave(dir){ if (!CBA.guard()) return; if (ed.range || ed.picks) { rangeStep(7 * dir); return; } const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) if (!e.rest) e.step = clampStep(e.step + 7 * dir); }); },
   mutate: fn => { if (CBA.guard()) commit(fn); },
   pitched(){
     if (!CBA.guard()) return [];
-    if (ed.range) return rangeVoices().filter(writable).flatMap(v => rangeEvents(v).filter(e => !e.rest).map(e => ({e, v, s: e.step, alter: e.alt || 0})));
+    if (ed.range || ed.picks) return selItems().filter(x => writable(x.v) && !x.e.rest).map(({e, v}) => ({e, v, s: e.step, alter: e.alt || 0}));
     return xfVoices().flatMap(v => v.events.filter(e => !e.rest).map(e => ({e, v, s: e.step, alter: e.alt || 0})));
   },
   /* Transform acts on all the voices (that can be written), or on the one chosen in its menu */
-  xform: () => ({names: piece ? piece.voices.map((v, i) => v.name || 'Voice ' + (i + 1)) : [], target: xfTarget(), range: !!ed.range}),
+  xform: () => ({names: piece ? piece.voices.map((v, i) => v.name || 'Voice ' + (i + 1)) : [], target: xfTarget(), range: !!(ed.range || ed.picks)}),
+  /* Dorico's keys for the selection and the cursor; true when handled */
+  key(e){
+    if (!ed.on || !piece) return false;
+    const k = e.key, mod = e.ctrlKey || e.metaKey, has = !!(ed.sel || ed.range || ed.picks);
+    if (!/^Arrow/.test(k)) return false;
+    if (e.shiftKey && !e.altKey && !mod && has) return extendBy(k);
+    if ((k === 'ArrowLeft' || k === 'ArrowRight') && (e.altKey || mod) && has) { if (CBA.guard()) moveSelection(k === 'ArrowLeft' ? -1 : 1); return true; }
+    if ((k === 'ArrowUp' || k === 'ArrowDown') && mod && !e.altKey && !has && ed.ins) return caretStaff(k === 'ArrowUp' ? -1 : 1);
+    if ((k === 'ArrowLeft' || k === 'ArrowRight') && !e.shiftKey && !e.altKey && !mod && !has && ed.ins) { moveCaret(k === 'ArrowLeft' ? -1 : 1); return true; }
+    return false;
+  },
   setXform(t){ ed.xf = t; },
   setPitch(h, s, alter){
     const e = h.e, imp = implied(h.v, s, e.t);
@@ -3463,6 +3581,8 @@ pagesEl.addEventListener('contextmenu', e => {
   if (!ed.on) return;
   const n = noteAt(e); if (!n) return;
   e.preventDefault(); clearGhost();
+  /* on a Mac, Ctrl-click arrives as a right-click: it adds to the selection, as Ctrl/Cmd-click does */
+  if (e.ctrlKey && e.button === 0) { if (ed.sel || ed.range || ed.picks) togglePick(n.vi, n.s); return; }
   if (!writable(piece.voices[n.vi])) { refuse(); return; }
   toRestOrRemove(n.vi, n.s);
 });
@@ -3480,8 +3600,8 @@ pagesEl.addEventListener('pointermove', e => {
   const y = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse()).y, steps = Math.round((noteDrag.y0 - y) / 0.5);
   if (steps === noteDrag.steps) return;
   noteDrag.steps = steps; noteDrag.moved = true; clearGhost();
-  const ids = ed.range && noteDrag.n.vi >= ed.range.v0 && noteDrag.n.vi <= ed.range.v1 && inRange(noteDrag.n.s.t)
-    ? rangeVoices().flatMap(v => (v.syms || []).filter(q => q.src && !q.rest && inRange(q.t)).map(q => q.id)) : [noteDrag.n.s.id];
+  const ids = inSel(noteDrag.n.vi, noteDrag.n.s)
+    ? piece.voices.flatMap(v => (v.syms || []).filter(q => q.src && !q.rest && inSel(v.idx, q)).map(q => q.id)) : [noteDrag.n.s.id];
   for (const id of ids) document.querySelectorAll('#pages g.' + id).forEach(g => g.setAttribute('transform', `translate(0 ${f(-steps * 0.5)})`));
   hear(clampStep(noteDrag.n.s.step + steps), noteDrag.n.s.alt);
 });
@@ -3490,8 +3610,8 @@ pagesEl.addEventListener('pointerup', () => {
   const d = noteDrag; noteDrag = null;
   if (!d.moved || !d.steps) return;           /* a plain click: the click handler selects */
   const {vi, s} = d.n, v = piece.voices[vi];
-  if (ed.range && vi >= ed.range.v0 && vi <= ed.range.v1 && inRange(s.t)) { rangeStep(d.steps); return; }
-  ed.range = null;
+  if (inSel(vi, s)) { rangeStep(d.steps); return; }
+  ed.range = null; ed.picks = null;
   ed.sel = {vi, ei: s.src[0]}; ed.ins = {vi, ei: s.src[s.src.length - 1] + 1};
   commit(() => { for (const i of s.src) { const ev = v.events[i]; moveStep(v, ev, clampStep(ev.step + d.steps)); } });
 });
@@ -3528,12 +3648,7 @@ $('#keepBtn').addEventListener('click', () => {
   try { localStorage.setItem(EKEY(id), text); } catch (e) {}
   loadPiece(id).then(() => { ed.undo = undo; ed.redo = redo; syncEdit(); refreshMine(); toast('Saved to My scores. Changes to this copy are kept.'); });
 });
-/* Ctrl+Left / Ctrl+Right move the selection a minim (the other keys are the shared tools') */
-document.addEventListener('keydown', e => {
-  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
-  const mod = e.ctrlKey || e.metaKey;
-  if (mod && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && ed.on && ed.sel) { e.preventDefault(); OPS.shift(e.key === 'ArrowRight' ? 1 : -1); }
-});
+/* Ctrl/Cmd or Alt with Left/Right move the selection: CBA.key (moveSelection) */
 syncEdit();
 
 /* the hand's look (the hand itself, the pendulum and the beat menu are the shared engine's) */

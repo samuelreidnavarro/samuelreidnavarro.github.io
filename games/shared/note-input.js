@@ -279,6 +279,7 @@ function wire(A){
     const t = e.target, tag = t.tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || t.isContentEditable) return;
     const mod = e.ctrlKey || e.metaKey, k = e.key, edit = A.edit();
+    if (A.key && A.key(e)) { e.preventDefault(); return; }
     if (edit && mod && (k === 'z' || k === 'Z')) { e.preventDefault(); e.shiftKey ? A.redo() : A.undo(); return; }
     if (edit && mod && (k === 'y' || k === 'Y')) { e.preventDefault(); A.redo(); return; }
     if (edit && (k === 'ArrowUp' || k === 'ArrowDown')) {

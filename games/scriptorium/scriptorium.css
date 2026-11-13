@@ -247,7 +247,7 @@ details.help summary{cursor:pointer;color:var(--text);font-size:17px}
 kbd{font:inherit;font-size:14.5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 6px;background:var(--surface)}
 footer{margin-top:30px;color:var(--muted);font-size:14.5px}
 
-#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(8px);background:var(--text);color:var(--ground);
+#toast{position:fixed;z-index:2147483000;left:50%;bottom:84px;text-align:center;transform:translateX(-50%) translateY(8px);background:var(--text);color:var(--ground);
   padding:10px 16px;border-radius:6px;font-size:16px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;max-width:calc(100vw - 32px)}
 #toast.on{opacity:1;transform:translateX(-50%)}
 @media (prefers-reduced-motion: reduce){ #toast{transition:none} }
