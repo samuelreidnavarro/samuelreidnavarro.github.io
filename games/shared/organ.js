@@ -207,9 +207,91 @@ const Sampler = {
       .then(m => fetch(this.base + m.stops[slug].file))
       .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
       .then(ab => this.decode(ab))
+      .then(b => this.build(slug, b))
       .then(b => (this.bufs[slug] = b))
       .catch(e => { delete this.loads[slug]; throw e; });
     return this.loads[slug];
+  },
+  /* The loops in the recording are short (0.02 to 0.6 s) and their loudness wavers inside them, so a
+     held note pulsed at the loop rate. Each zone's sustain is therefore rebuilt as a long loop (about
+     3 s) from overlapping grains of the original loop, each placed where its waves line up with the
+     grain before it (and the last with the first, so the long loop closes without a seam). The
+     wavering becomes irregular instead of periodic, and the loop is too slow to be heard as a rhythm. */
+  async build(slug, buf){
+    const st = this.man.stops[slug], sr = this.man.sr, src = buf.getChannelData(0);
+    for (const z of st.zones) {
+      this.buildZone(z, src, sr, buf);
+      await new Promise(r => setTimeout(r, 0));     /* a breath between zones: the page stays responsive */
+    }
+    return buf;
+  },
+  buildZone(z, src, sr, buf){
+    const n = z.le - z.ls, a0 = z.off, ls = z.ls;
+    const f0 = 440 * Math.pow(2, (z.root + (z.tune || 0) / 100 - 69) / 12);
+    const P = Math.max(16, Math.min(1500, Math.round(sr / f0)));
+    const T = Math.round(3 * sr), G = Math.min(Math.round(0.24 * sr), Math.max(4 * P, Math.round(0.12 * sr))), O = G >> 1;
+    const seg = i => src[a0 + ls + (((i % n) + n) % n)];
+    const out = new Float32Array(T + G);
+    /* a deterministic pseudo-random sequence, so a note is the same every time */
+    let seed = (z.root * 7919 + z.off) >>> 0;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    const win = new Float32Array(O); for (let i = 0; i < O; i++) win[i] = Math.pow(Math.sin(Math.PI / 2 * (i + 0.5) / O), 2);
+    /* the offset (near base) at which the source lines up best with target[0..O) */
+    const align = (base, tgt) => {
+      let best = -1e30, bo = base;
+      for (let d = -P; d <= P; d++) {
+        let c = 0;
+        for (let i = 0; i < O; i += 3) c += tgt(i) * seg(base + d + i);
+        if (c > best) { best = c; bo = base + d; }
+      }
+      return bo;
+    };
+    let pos = 0, so = 0;                 /* the first grain begins where the loop begins */
+    for (let i = 0; i < G; i++) out[i] = seg(i);
+    while (pos + G < T) {
+      pos += G - O;
+      so = align(Math.floor(rnd() * n), i => out[pos + i]);
+      for (let i = 0; i < O; i++) out[pos + i] = out[pos + i] * (1 - win[i]) + seg(so + i) * win[i];
+      for (let i = O; i < G && pos + i < out.length; i++) out[pos + i] = seg(so + i);
+    }
+    /* The loop is closed by fading the end into a piece of the source that lines up with the end
+       (found first) and then flows into the beginning: if it does not yet, the loop is made a few
+       samples longer or shorter, whatever it takes for the waves to meet. */
+    let sc = 0, best = -1e30; const cb = Math.floor(rnd() * n);
+    for (let d = -P; d <= P; d++) {
+      let c = 0;
+      for (let i = 0; i < O; i += 3) c += out[T - O + i] * seg(cb + d + i);
+      if (c > best) { best = c; sc = cb + d; }
+    }
+    let kk = 0; best = -1e30;
+    for (let k = -P; k <= P; k++) {
+      let c = 0;
+      for (let i = 0; i < O; i += 3) c += seg(i) * seg(sc + O + k + i);
+      if (c > best) { best = c; kk = k; }
+    }
+    const T2 = T + kk;
+    for (let i = 0; i < O; i++) out[T2 - O + i] = out[T2 - O + i] * (1 - win[i]) + seg(sc + kk + i) * win[i];
+    const loop = out.slice(0, T2);
+    /* a steady loudness: what still wavers slower than about 15 Hz is smoothed out (circularly, so the seam stays shut) */
+    const TL = loop.length, W = Math.round(sr / 40), cum = new Float64Array(TL + W + 1);
+    for (let i = 0; i < TL + W; i++) cum[i + 1] = cum[i] + loop[i % TL] * loop[i % TL];
+    const env = new Float32Array(TL); let tot = 0;
+    for (let i = 0; i < TL; i++) { env[i] = Math.sqrt((cum[i + W] - cum[i]) / W) + 1e-9; tot += env[i]; }
+    const mean = tot / TL, g = new Float32Array(TL);
+    for (let i = 0; i < TL; i++) g[i] = Math.max(0.6, Math.min(1.6, mean / env[((i + (W >> 1)) % TL)]));
+    for (let i = 0; i < TL; i++) loop[i] *= g[((i - (W >> 1)) % TL + TL) % TL];
+    const data = new Float32Array(ls + TL + 32);
+    data.set(src.subarray(a0, a0 + ls), 0); data.set(loop, ls);
+    /* the gain eases in over the last tenth of a second of the attack, so there is no step where the loop begins */
+    const R = Math.min(ls, Math.round(sr / 10)), g0 = g[((-(W >> 1)) % TL + TL) % TL];
+    for (let i = 0; i < R; i++) data[ls - R + i] *= 1 + (g0 - 1) * (i + 1) / R;
+    z.lsN = ls; z.leN = ls + TL;
+    z.ab = this.ctxBuf(data, sr);
+  },
+  ctxBuf(data, sr){
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const ab = new OAC(1, 1, sr).createBuffer(1, data.length, sr);
+    ab.copyToChannel(data, 0); return ab;
   },
   /* the size still to download for a registration, in MB */
   pendingMB(reg){
@@ -248,12 +330,13 @@ const Sampler = {
         if (key < lo.lo) { if (lo.lo > 48) return; z = lo; } else z = hi;   /* a treble stop (Cornet) is silent below its compass */
       }
       const sr = m.sr, src = ctx.createBufferSource();
-      src.buffer = buf; src.loop = true;
-      src.loopStart = (z.off + z.ls) / sr; src.loopEnd = (z.off + z.le) / sr;
+      src.loop = true;
+      if (z.ab && !this.legacy) { src.buffer = z.ab; src.loopStart = z.lsN / sr; src.loopEnd = z.leN / sr; }
+      else { src.buffer = buf; src.loopStart = (z.off + z.ls) / sr; src.loopEnd = (z.off + z.le) / sr; }
       /* the organ stands about 5 cents below a′ = 440; tuned up to the chosen a′ */
       src.playbackRate.value = Math.pow(2, (midi - z.root) / 12 + (z.tune + 5) / 1200);
       src.connect(out);
-      src.start(t0, z.off / sr); src.stop(t1 + rel + 0.05); parts.push(src);
+      src.start(t0, z.ab && !this.legacy ? 0 : z.off / sr); src.stop(t1 + rel + 0.05); parts.push(src);
     });
     out.connect(dest);
     return {osc: {stop(t){ parts.forEach(p => { try { p.stop(t); } catch (e) {} }); }}, g: out, t1: t1 + rel};
