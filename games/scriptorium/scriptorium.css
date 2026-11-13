@@ -788,3 +788,10 @@ html.dark .tools .podg,html.dark .transport .podg{box-shadow:0 1px 4px rgba(0,0,
 #openList .openfile .of-t{font-size:1.05em}
 #openList .openfile .of-f{font-size:.82em;opacity:.72;line-height:1.3}
 #libBtn.openfile{flex-direction:column;align-items:flex-start;gap:3px;padding-top:10px;padding-bottom:10px;height:auto;min-height:56px;white-space:normal;text-align:left}
+/* ghost clefs at the left edge of the horizontal Web line */
+#ghostClefs{position:absolute;z-index:2;pointer-events:none;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--pagebg,#EFE3C7) 96%,transparent) 0,color-mix(in srgb,var(--pagebg,#EFE3C7) 90%,transparent) 62%,transparent 100%)}
+#ghostClefs[hidden]{display:none}
+#ghostClefs svg{display:block;overflow:visible}
+#ghostClefs .staff{stroke:var(--rule)}
+@media print{#ghostClefs{display:none !important}}

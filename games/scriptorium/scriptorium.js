@@ -1591,7 +1591,7 @@ function render(){
   if (typeof showSel === 'function' && (ed.sel || ed.ins || ed.range || ed.picks)) showSel();
   applyMark();
   if (!play) { handTop = -1; $('#handBox').style.top = ''; $('#pendBox').style.top = ''; if (st.view === 'choir') handMid(null); }
-  syncNav();
+  syncNav(); ghostClefs();
   postHeight();
 }
 /* pages side by side: the arrows move one page (one opening in the choir book) left or right */
@@ -1615,7 +1615,38 @@ function syncNav(){
 }
 $('#pgPrev').addEventListener('click', () => goPage(-1));
 $('#pgNext').addEventListener('click', () => goPage(1));
-viewerEl.addEventListener('scroll', () => syncNav(), {passive: true});
+viewerEl.addEventListener('scroll', () => { syncNav(); ghostLater(); }, {passive: true});
+window.addEventListener('resize', () => ghostLater());
+/* Horizontal Web: the clefs stay at the left edge as faded reminders once the real ones have scrolled away (like Dorico's
+   sticky clefs); they carry no musical meaning, the clef does not change along the line */
+let ghostRq = 0;
+function ghostLater(){ if (!ghostRq) ghostRq = requestAnimationFrame(() => { ghostRq = 0; ghostClefs(); }); }
+function ghostClefs(){
+  let el = document.getElementById('ghostClefs');
+  const on = piece && viewerEl.classList.contains('wide') && st.paper === 'web';
+  const rects = on ? [...pagesEl.querySelectorAll('rect.stafhit')] : [];
+  const real = on ? pagesEl.querySelector('.clefhit') : null;
+  if (!rects.length || !real) { if (el) el.hidden = true; return; }
+  if (!el) { el = document.createElement('div'); el.id = 'ghostClefs'; el.setAttribute('aria-hidden', 'true'); el.innerHTML = '<svg></svg>'; wrapEl.appendChild(el); }
+  const wr = wrapEl.getBoundingClientRect(), vr = viewerEl.getBoundingClientRect();
+  /* appears as the real clef leaves the left edge */
+  const o = Math.max(0, Math.min(1, (vr.left + 60 - real.getBoundingClientRect().right) / 50));
+  if (o <= 0) { el.hidden = true; return; }
+  el.hidden = false; el.style.opacity = String(o * 0.6);
+  const W = 64;
+  el.style.left = (vr.left - wr.left) + 'px'; el.style.top = (vr.top - wr.top) + 'px'; el.style.width = W + 'px'; el.style.height = vr.height + 'px';
+  let g = '';
+  for (const r of rects) {
+    const v = piece.voices[+r.dataset.v]; if (!v || !CLEFS[v.clef]) continue;
+    const b = r.getBoundingClientRect(), sc = b.height / 9.2, y = b.top - vr.top + 2.6 * sc;
+    if (y < -40 || y > vr.height + 40) continue;
+    let lines = '';
+    for (let k = st.lines === '4' ? 1 : 0; k < 5; k++) lines += hl(-3, 7, k, 'staff', 0.12);
+    g += `<g transform="translate(14 ${f(y)}) scale(${f(sc)})">${lines}${clefSvg(v.clef, 0.2, 0)}</g>`;
+  }
+  el.firstChild.setAttribute('width', W); el.firstChild.setAttribute('height', vr.height);
+  el.firstChild.innerHTML = g;
+}
 viewerEl.addEventListener('wheel', e => {
   if (st.flow !== 'horizontal' || e.ctrlKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
   if (!e.target.closest('.page')) return;
