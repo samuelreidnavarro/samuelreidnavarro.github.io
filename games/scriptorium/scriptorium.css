@@ -787,3 +787,4 @@ html.dark .tools .podg,html.dark .transport .podg{box-shadow:0 1px 4px rgba(0,0,
 #openList .tb.openfile{flex-direction:column;align-items:flex-start;gap:3px;padding-top:10px;padding-bottom:10px;height:auto;min-height:56px;white-space:normal;text-align:left}
 #openList .openfile .of-t{font-size:1.05em}
 #openList .openfile .of-f{font-size:.82em;opacity:.72;line-height:1.3}
+#libBtn.openfile{flex-direction:column;align-items:flex-start;gap:3px;padding-top:10px;padding-bottom:10px;height:auto;min-height:56px;white-space:normal;text-align:left}

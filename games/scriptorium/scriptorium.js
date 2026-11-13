@@ -16,7 +16,10 @@ const L = Object.assign({lib: 'Repertoire', newScore: 'New score', newTitle: 'A 
 const escH = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 {
   const esc = escH;
-  const LIBBTN = `<button class="tb" id="libBtn" aria-haspopup="true" aria-expanded="false" aria-controls="library">${esc(L.lib)}</button>`;
+  const LIBSUB = L.libSub !== undefined ? L.libSub : L.lib === 'Repertoire' ? 'Saved scores and digitized corpus' : '';
+  const LIBBTN = LIBSUB
+    ? `<button class="tb openfile" id="libBtn" aria-haspopup="true" aria-expanded="false" aria-controls="library"><span class="of-t">${esc(L.lib)}</span><span class="of-f">${esc(LIBSUB)}</span></button>`
+    : `<button class="tb" id="libBtn" aria-haspopup="true" aria-expanded="false" aria-controls="library">${esc(L.lib)}</button>`;
   const NEWBTN = `<button class="tb" id="newBtn" title="${esc(L.newTitle)}">${esc(L.newScore)}</button>`;
   document.body.insertAdjacentHTML('afterbegin', `<main class="wrap">
   <header class="top"><h1>${esc(APP.name)}</h1></header>
@@ -3752,13 +3755,51 @@ function startPlay(from, again){
       for (const id of [...on]) if (!now.has(id)) { on.delete(id); document.querySelectorAll('svg g.' + id).forEach(g => g.classList.remove('on')); }
       let first = null;
       for (const id of now) { const gs = document.querySelectorAll('svg g.' + id); if (!on.has(id)) { on.add(id); gs.forEach(g => g.classList.add('on')); } first = first || gs[0]; }
-      if (first) followHand(first);
-    }
+      if (first) { followHand(first); followPlay(first); }
+    },
+    onStop: () => { followT = 0; }
   };
   if (H.playSpec) H.playSpec(spec);
   Organ.play(spec);
 }
 $('#play').addEventListener('click', () => { if (play) stopPlay(); else startPlay(); });
+/* While playing, the view follows the music (Samuel 2026-11-13, now that the frame is the whole window):
+   horizontal Web: the sounding note stays in the middle, eased every frame so it never jerks;
+   vertical: when the note leaves the view, quickly to its system; pages side by side: to its page.
+   Touching the wheel or the screen hands the view back to the reader for a few seconds. */
+let followT = 0, followHold = 0, followJump = 0;
+const holdFollow = () => { followHold = performance.now() + 2500; };
+viewerEl.addEventListener('wheel', holdFollow, {passive: true});
+viewerEl.addEventListener('touchstart', holdFollow, {passive: true});
+viewerEl.addEventListener('pointerdown', holdFollow, {passive: true});
+function followPlay(el){
+  const now = performance.now(), dt = followT ? Math.min(0.1, (now - followT) / 1000) : 0.016;
+  followT = now;
+  if (now < followHold || !el) return;
+  const vr = viewerEl.getBoundingClientRect(), r = el.getBoundingClientRect();
+  if (viewerEl.classList.contains('wide')) {
+    const off = (r.left + r.width / 2) - (vr.left + vr.width / 2);
+    if (Math.abs(off) < 0.5) return;
+    /* the first frame after a start or a seek: closer at once */
+    const k = 1 - Math.exp(-dt / (Math.abs(off) > vr.width ? 0.05 : 0.3));
+    viewerEl.scrollLeft += off * k;
+    return;
+  }
+  if (viewerEl.classList.contains('horiz')) {
+    const c = navItems().find(c => c.contains(el));
+    if (c && c !== navItems()[navIndex()] && now > followJump) { followJump = now + 500; viewerEl.scrollTo({left: c.offsetLeft + c.offsetWidth / 2 - viewerEl.clientWidth / 2, behavior: 'smooth'}); }
+    return;
+  }
+  if (viewerEl.classList.contains('frame')) {
+    if (now < followJump) return;
+    if (r.top < vr.top + 8 || r.bottom > vr.bottom - vr.height * 0.12) {
+      followJump = now + 450;
+      viewerEl.scrollTo({top: viewerEl.scrollTop + r.top - vr.top - vr.height * 0.22, behavior: 'smooth'});
+    }
+    return;
+  }
+  if (now > followJump) { followJump = now + 450; bringIntoView(el); }
+}
 /* the hand (and pendulum) stand beside the music that is sounding */
 function followHand(el){
   if (st.view === 'choir') { handMid(el); return; }
