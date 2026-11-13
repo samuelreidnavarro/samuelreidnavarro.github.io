@@ -928,6 +928,7 @@ const isFlipped = s => (STEMMED[s.g] && s.pos >= 7) || (TAILED[s.g] && s.pos <= 
 function symSvg(s, X, top, showNotes){
   /* with the notes hidden, the mensuration sign stays, like the clef */
   if (!showNotes) return s.mens ? mensSvg(s.mens, X - s.left, top) : '';
+  if (s.ligSvg && s.ligX != null) X = s.ligX;   /* a note of a drawn ligature stands where the ligature puts it */
   const hy = s.rest ? top + 0.5 : top + 4 - s.pos * 0.5 - 1;
   return `<g class="${s.id}"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top)}</g>`;
 }
@@ -964,13 +965,14 @@ function custosSvg(s, x, top){
   return `<use href="#g-${s.pos >= 5 ? 'cd' : 'cu'}" transform="translate(${f(x)} ${f(y + 0.4)}) scale(0.8)"/>`;
 }
 
-/* Ligatures. With Ligatures on (and mensural notation) a ligature is drawn as one: square notes joined at their sides,
-   stretched with thin lines where the notes stand apart, the values shown by the old rules (Apel):
+/* Ligatures. With Ligatures on (and mensural notation) a ligature is drawn as one, compact, as in the sources: square
+   notes joined at their sides, every falling step that the rules allow drawn as an oblique (one slanted body for two
+   notes), the values shown by the old rules (Apel):
      first note: up-stem on the left = two semibreves (cum opposita proprietate); descending: stem down on the left = brevis,
        none = longa; ascending: none = brevis, stem down on the right = longa
-     middle notes: brevis, or longa with a stem down on the right; a maxima is twice as wide
-     last note: descending: square = longa, oblique (drawn together with the note before) = brevis;
-       ascending: none = brevis, stem down on the right = longa
+     middle notes: brevis (square or in an oblique), or longa with a stem down on the right; a maxima is twice as wide
+     last note: descending: square = longa, oblique = brevis; ascending: none = brevis, stem down on the right = longa
+   The notes stand side by side from the first note's place, whatever the spacing of the other voices.
    Anything these rules cannot show (a dot, a minima, a semibrevis elsewhere, a repeated note, a ligature that runs over
    the line), and every ligature with Ligatures off, is written as single notes under a bracket. */
 const LIG_W = {B: 1.3, L: 1.3, S: 1.3, Mx: 2.5};
@@ -989,43 +991,57 @@ function ligShape(G, top){
   for (let i = 1; i < n; i++) if (G[i][0].step === G[i - 1][0].step) return false;
   const cop = gs[0] === 'S' && gs[1] === 'S';
   if (gs.some((g, i) => g === 'S' && !(cop && i < 2))) return false;
-  const Y = G.map(([q]) => top + 4 - q.pos * 0.5), X = G.map(([, x]) => x);
+  const Y = G.map(([q]) => top + 4 - q.pos * 0.5);
   const down = i => G[i][0].step < G[i - 1][0].step;          /* note i lower than the one before */
-  const obl = gs[n - 1] === 'B' && down(n - 1);           /* a descending final brevis: oblique, with the note before */
+  /* the first note's value must be one its shape can show */
+  if (!cop && !(gs[0] === 'Mx' || (gs[0] === 'B') || (gs[0] === 'L'))) return false;
+  /* obliques: a falling step from note i to i+1, i+1 a brevis (or the second semibrevis of c.o.p.), i a brevis, the
+     first note (B or L) or the first semibrevis; a falling final brevis must be one */
+  const can = i => down(i + 1) && (cop && i === 0 || (gs[i + 1] === 'B' && (gs[i] === 'B' || (i === 0 && gs[i] === 'L'))));
+  const pairAt = new Array(n).fill(false);
+  const finalObl = gs[n - 1] === 'B' && down(n - 1) && !(cop && n === 2);
+  if (finalObl && !can(n - 2)) return false;
+  if (finalObl) pairAt[n - 2] = true;
+  for (let i = 0; i < n - 1; i++) {
+    if (pairAt[i]) break;
+    if (finalObl && i + 1 >= n - 2) break;
+    if (can(i)) { pairAt[i] = true; i++; }
+  }
+  /* units: a square note, or an oblique for two notes; each note gets its place */
+  const units = [];
+  for (let i = 0; i < n; i++) { if (pairAt[i]) { units.push([i, i + 1]); i++; } else units.push([i]); }
+  const X = new Array(n);
+  let x = G[0][1];
+  for (const u of units) {
+    if (u.length === 2) { X[u[0]] = x; X[u[1]] = x + 1.3; x += 2.6; }
+    else { X[u[0]] = x; x += LIG_W[gs[u[0]]]; }
+  }
   const parts = G.map(() => '');
   const TL = 3.548;
-  /* bodies and the thin lines that stretch them to the next note */
-  for (let i = 0; i < n; i++) {
-    const q = G[i][0], y = Y[i], w = LIG_W[q.g], col = !!q.col;
-    if (obl && i === n - 2) {
-      const xa = X[i], xb = X[i + 1] + LIG_W[gs[i + 1]];
-      parts[i] += ligBand(xa, y, xb, Y[i + 1], col || !!G[i + 1][0].col) + ligV(xb - 0.12, Y[i + 1] - 0.686, Y[i + 1] + 0.686);
-      break;
-    }
-    const last = i === n - 1;
-    const xr = last ? X[i] + w : Math.min(X[i] + w, X[i + 1]);
-    parts[i] += ligBand(X[i], y, xr, y, col);
-    if (!last && X[i + 1] > xr + 0.01) parts[i] += `<rect class="ink" x="${f(xr)}" y="${f(y - 0.544)}" width="${f(X[i + 1] - xr)}" height="0.1"/><rect class="ink" x="${f(xr)}" y="${f(y + 0.44)}" width="${f(X[i + 1] - xr)}" height="0.1"/>`;
-    if (last) parts[i] += ligV(xr - 0.12, y - 0.686, y + 0.686);
-  }
-  /* sides: the first note's left side, and a joint where each note meets the one before */
-  parts[0] += ligV(X[0], Y[0] - 0.686, Y[0] + 0.686);
-  for (let i = 1; i < n; i++) if (!(obl && i === n - 1)) parts[i] += ligV(X[i], Math.min(Y[i], Y[i - 1]) - 0.686, Math.max(Y[i], Y[i - 1]) + 0.686);
+  units.forEach((u, k) => {
+    const i = u[0], j = u[u.length - 1], xa = X[i], xb = j === n - 1 || k === units.length - 1 ? x : X[units[k + 1][0]];
+    const col = u.some(q => G[q][0].col);
+    parts[i] += ligBand(xa, Y[i], xb, Y[j], col);
+    /* the left side: the first note's, or the joint with the note before (both pitches) */
+    if (i === 0) parts[i] += ligV(xa, Y[0] - 0.686, Y[0] + 0.686);
+    else parts[i] += ligV(xa, Math.min(Y[i], Y[i - 1]) - 0.686, Math.max(Y[i], Y[i - 1]) + 0.686);
+    if (j === n - 1) parts[j] += ligV(xb - 0.12, Y[j] - 0.686, Y[j] + 0.686);
+  });
   /* stems */
   if (cop) parts[0] += ligV(X[0], Y[0] - TL, Y[0]);
   else if (gs[0] === 'B' && down(1)) parts[0] += ligV(X[0], Y[0], Y[0] + TL);
-  else if (gs[0] === 'L' && !down(1)) parts[0] += ligV(X[1], Y[0], Y[0] + TL);
-  else if (gs[0] !== 'Mx' && !(gs[0] === 'L' && down(1)) && !(gs[0] === 'B' && !down(1))) return false;
+  else if (gs[0] === 'L' && !down(1)) parts[0] += ligV(X[0] + LIG_W.L - 0.12, Y[0], Y[0] + TL);
+  else if (!(gs[0] === 'Mx' || (gs[0] === 'L' && down(1)) || (gs[0] === 'B' && !down(1)))) return false;
   for (let i = 1; i < n - 1; i++) {
     if (cop && i === 1) continue;
-    if (gs[i] === 'L') parts[i] += ligV(X[i + 1] - 0.12, Y[i], Y[i] + TL);
+    if (gs[i] === 'L') parts[i] += ligV(X[i] + LIG_W.L - 0.12, Y[i], Y[i] + TL);
   }
   const L = n - 1;
   if (!(cop && L === 1)) {
     if (gs[L] === 'L' && !down(L)) parts[L] += ligV(X[L] + LIG_W.L - 0.12, Y[L], Y[L] + TL);
-    if (gs[L] === 'B' && down(L) && !obl) return false;
+    if (gs[L] === 'B' && down(L) && !finalObl) return false;
   }
-  G.forEach(([q], i) => { q.ligSvg = parts[i] || '<g/>'; });
+  G.forEach(([q], i) => { q.ligSvg = parts[i] || '<g/>'; q.ligX = X[i]; });
   return true;
 }
 function ligBracket(G, top, open0, open1){
@@ -1038,7 +1054,7 @@ function ligBracket(G, top, open0, open1){
   return o;
 }
 function ligatures(v, list, top){
-  for (const [q] of list) q.ligSvg = null;
+  for (const [q] of list) { q.ligSvg = null; q.ligX = null; }
   let out = '';
   for (let i = 0; i < list.length; ) {
     const q = list[i][0];
@@ -1050,7 +1066,7 @@ function ligatures(v, list, top){
     const open0 = k0 > 0 && v.syms[k0 - 1].lig === q.lig && !v.syms[k0 - 1].rest;
     const open1 = k1 >= 0 && k1 + 1 < v.syms.length && v.syms[k1 + 1].lig === q.lig && !v.syms[k1 + 1].rest;
     const drawn = st.lig !== 'off' && st.nota === 'real' && !open0 && !open1 && ligShape(G, top);
-    if (!drawn) { for (const [s2] of G) s2.ligSvg = null; out += ligBracket(G, top, open0, open1); }
+    if (!drawn) { for (const [s2] of G) { s2.ligSvg = null; s2.ligX = null; } out += ligBracket(G, top, open0, open1); }
     i = j;
   }
   return out;
@@ -1066,7 +1082,10 @@ function staffLine(o){
   const clef = v.clef;
   /* where the mouse writes notes; on the last line it reaches on to the margin, for adding at the end */
   const hx1 = o.tail ? Math.max(x1, o.tail) : x1;
-  s += `<rect class="stafhit" data-v="${v.idx}" data-top="${f(top)}" data-end="${f(x1)}" data-k0="${o.k0 ?? ''}" data-k1="${o.k1 ?? ''}" x="${f(x0)}" y="${f(top - 2.6)}" width="${f(hx1 - x0)}" height="9.2" fill="transparent"/>`;
+  /* the times of the line's columns and where they stand, so a click can be turned into a time */
+  const tx = []; for (let i = o.from; i < o.to; i++) tx.push(o.cols[i].t + ':' + f(o.xs[i]));
+  if (o.tEnd !== undefined && o.tEnd !== null) tx.push(o.tEnd + ':' + f(x1));
+  s += `<rect class="stafhit" data-v="${v.idx}" data-tx="${tx.join(',')}" data-top="${f(top)}" data-end="${f(x1)}" data-k0="${o.k0 ?? ''}" data-k1="${o.k1 ?? ''}" x="${f(x0)}" y="${f(top - 2.6)}" width="${f(hx1 - x0)}" height="9.2" fill="transparent"/>`;
   s += `<g class="clefhit" data-v="${v.idx}"><rect x="${f(x0 + 0.2)}" y="${f(top - 1.5)}" width="${f(clefW(clef) + 0.6)}" height="7" fill="transparent"/>${clefSvg(clef, x0 + 0.5, top)}</g>`;
   let x = x0 + 0.5 + clefW(clef) + 0.5;
   for (const k of keySig(v, t0, clef)) { s += use(k.g, x, top + 4 - k.pos * 0.5); x += gw(k.g) + 0.15; }
@@ -1268,7 +1287,7 @@ function drawSystem(vlist, line, y, opts = {}){
     for (let ci = line.from; ci < line.to; ci++) { const q = line.cols[ci].items.get(v); if (q) { const kk = +q.id.split('-')[1]; if (k0 === null) k0 = kk; k1 = kk; } }
     s += staffLine({v, k0, k1, cols: line.cols, from: line.from, to: line.to, xs: line.xs, top: tops[k], x0: line.x0, x1: line.x1,
       last: line.endsPiece, tail: line.last ? line.W : null, t0: line.t0, showNotes: sh.notes, showLyr: sh.lyr, lyrY: tops[k] + rooms[k].lyrY, lineEnd: line.x1,
-      next: nextSym(v, line.tEnd)});
+      next: nextSym(v, line.tEnd), tEnd: line.tEnd});
     if (opts.names && opts.names[k]) s += `<text class="vnamehit" data-v="${v.idx}" x="${f(line.x0 - 0.8)}" y="${f(tops[k] + 2.6)}" font-size="1.8" text-anchor="end" font-style="italic">${esc(opts.names[k])}</text>`;
   });
   /* barlines */
@@ -1787,7 +1806,7 @@ async function loadPiece(file){
   if (!piece) piece = parseKern(text);
   if (H.afterParse) { H.afterParse(piece); piece.text = writeKern(piece); }
   pieceKey = file;
-  if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; }
+  if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; }
   st.piece = file; save();
   st.verse = 0;
   if (H.afterLoad) H.afterLoad();
@@ -1800,7 +1819,7 @@ function loadText(name, text){
     stopPlay();
     piece = parseKern(text);
     pieceKey = 'file:' + name;
-    if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; }
+    if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; }
     syncUI(); render();
   } catch (e) { pagesEl.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
@@ -2516,6 +2535,13 @@ function implied(v, step, t){
   return k[L] ? k[L] : null;
 }
 function anyVoice(){ return !piece ? null : ed.sel ? piece.voices[ed.sel.vi] : ed.ins ? piece.voices[ed.ins.vi] || null : null; }
+function xfTarget(){ return piece && typeof ed.xf === 'number' && ed.xf < piece.voices.length && piece.voices.length > 1 ? ed.xf : 'all'; }
+function xfVoices(){
+  if (!piece) return [];
+  if (piece.voices.length < 2) { const v = curVoice(); return v ? [v] : []; }
+  const t = xfTarget();
+  return (t === 'all' ? piece.voices : [piece.voices[t]]).filter(v => v && writable(v));
+}
 function curVoice(){ const v = anyVoice(); return v && writable(v) ? v : null; }
 function srcOf(){ const s = selSym(); return s ? s.src : ed.sel ? [ed.sel.ei] : []; }
 /* written value of the selection under its sign, for the value buttons */
@@ -2529,17 +2555,19 @@ const refuse = () => { if (H.refuse) H.refuse(); };
    Overwrite: the new note takes the place of what stood there for its length; a note it covers only partly keeps
    what is left as a rest, so the other voices stay where they are. */
 function shiftMarks(v, from, by){ for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > from || (by > 0 && m.ei === from && from > 0)) m.ei += by; }
-function insertEvent(vi, at, step, isRest){
+function insertEvent(vi, at, step, isRest, pad = 0){
   const v = piece.voices[vi]; if (!v) return;
   if (!writable(v)) { refuse(); return; }
   const val = VALS.find(x => x[0] === ed.val)[1];
   let off = 0;
   if (!ed.sel && ed.ins && ed.ins.vi === vi && ed.ins.ei === at && at < v.events.length && ed.ins.off > EPS && ed.ins.off < v.events[at].d - EPS) off = ed.ins.off;
-  const t = at < v.events.length ? rt(v.events[at].t + off) : v.end;
+  const t = at < v.events.length ? rt(v.events[at].t + off) : rt(v.end + (pad > EPS ? pad : 0));
   const alt0 = isRest ? null : implied(v, step, t);
   const d = rt(val / propAt(v, t) * (ed.colArm ? 2 / 3 : 1));
   commit(() => {
     const e = {d, rest: !!isRest, step, alt: alt0, ed: false, syl: [], t};
+    /* past the end: a rest up to the place clicked */
+    if (pad > EPS && at >= v.events.length) { v.events.push({d: rt(pad), rest: true, alt: null, ed: false, syl: [], t: v.end}); at = v.events.length; }
     let k = at;
     if (off > EPS) {
       /* the note the caret is in is cut in two at the caret */
@@ -2859,6 +2887,40 @@ function eventIndexFor(tg){
   if (tg.mode === 'before') return {at: s.src[0], onRest: false};
   return {at: tg.v.events.length, onRest: false};
 }
+/* Over a rest, or past the end of the voice, a click writes at the time under the pointer (on the grid of the chosen
+   value), not after the last note: the time comes from where the line's columns stand. Over notes it goes between
+   them, as before. Returns {T, x} or null. */
+const slotW = () => (ed.inRest ? 0.42 : gw(ed.val)) + 1.6;
+const slotT = (v, t) => VALS.find(q => q[0] === ed.val)[1] / propAt(v, t);
+function timePlace(rect, tg){
+  const pairs = (rect.dataset.tx || '').split(',').filter(Boolean).map(p => p.split(':').map(Number));
+  if (pairs.length < 1) return null;
+  const v = tg.v, x = tg.x - 0.6;
+  let T;
+  if (x <= pairs[0][1]) T = pairs[0][0];
+  else {
+    let i = 0; while (i + 1 < pairs.length && pairs[i + 1][1] < x) i++;
+    if (i + 1 < pairs.length) { const [ta, xa] = pairs[i], [tb, xb] = pairs[i + 1]; T = ta + (xb > xa ? (x - xa) / (xb - xa) : 0) * (tb - ta); }
+    else {
+      /* past the last column: on at the pace of the line */
+      /* past the last column: one step of the chosen value for each note's width, so a click a little past the end
+         stays near the end (rests are packed tight, their pace would throw the note far ahead) */
+      const [tb, xb] = pairs[pairs.length - 1];
+      T = tb + Math.floor((x - xb) / slotW()) * slotT(v, tb);
+    }
+  }
+  const g = VALS.find(q => q[0] === ed.val)[1] / propAt(v, Math.min(T, v.end));
+  T = rt(Math.max(0, Math.round(T / g) * g));
+  /* only over rests or past the end */
+  const ei = v.events.findIndex(e => T >= e.t - EPS && T < e.t + e.d - EPS);
+  if (ei >= 0 && !v.events[ei].rest) return null;
+  if (ei < 0 && T < v.end - EPS) return null;
+  /* where that time stands on the line, for the ghost note */
+  let gx = null;
+  for (let i = 0; i + 1 < pairs.length; i++) { const [ta, xa] = pairs[i], [tb, xb] = pairs[i + 1]; if (T >= ta - EPS && T <= tb + EPS && tb > ta) { gx = xa + (T - ta) / (tb - ta) * (xb - xa); break; } }
+  if (gx === null) { const [tb, xb] = pairs[pairs.length - 1]; gx = T <= pairs[0][0] ? pairs[0][1] : xb + (T - tb) / slotT(v, tb) * slotW() + 0.6; }
+  return {T, ei, x: gx + 0.6};
+}
 let ghostEl = null;
 function clearGhost(){ if (ghostEl) { ghostEl.remove(); ghostEl = null; } }
 pagesEl.addEventListener('pointermove', e => {
@@ -2868,6 +2930,7 @@ pagesEl.addEventListener('pointermove', e => {
   const rect = stafFor(e.target);
   if (!rect) { clearGhost(); return; }
   const tg = staffTarget(rect, e); if (!tg) { clearGhost(); return; }
+  const tp = timePlace(rect, tg); if (tp) tg.x = tp.x;
   const g = ed.val, w = ed.inRest ? 0.42 : gw(g), x = tg.x - w / 2, y = tg.top + 4 - tg.pos * 0.5;
   const flip = (STEMMED[g] && tg.pos >= 7) || (TAILED[g] && tg.pos <= -1);
   let html = ed.inRest ? restSvg({g, glyph: SHAPE_REST[g]}, tg.x, tg.top) : ledgers(tg.pos, x, w, tg.top) + (flip ? useT(g, x, y, 1, -1) : use(g, x, y));
@@ -2977,8 +3040,15 @@ pagesEl.addEventListener('click', e => {
   if (rect) {
     e.stopImmediatePropagation();
     const tg = staffTarget(rect, e); if (!tg) return;
-    const {at} = eventIndexFor(tg);
     clearGhost();
+    const tp = timePlace(rect, tg);
+    if (tp) {
+      const v = tg.v;
+      if (tp.ei >= 0) { ed.sel = null; ed.ins = {vi: tg.vi, ei: tp.ei, off: rt(tp.T - v.events[tp.ei].t)}; insertEvent(tg.vi, tp.ei, tg.step, ed.inRest); }
+      else insertEvent(tg.vi, v.events.length, tg.step, ed.inRest, rt(tp.T - v.end));
+      return;
+    }
+    const {at} = eventIndexFor(tg);
     insertEvent(tg.vi, at, tg.step, ed.inRest);
   }
 }, true);
@@ -3030,7 +3100,7 @@ const CBA = {
     return {selected: !!s, dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
       target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc, lig: !!t.lig}, edArm: !!ed.edArm, ovr: !!ed.ovr,
       col: s && !s.rest ? !!s.col : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
-      hasNotes: !!(piece && piece.voices.length), durs: v && v.syms ? v.syms.map(valKey) : []};
+      hasNotes: !!(piece && piece.voices.length), durs: xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : [])};
   },
   setDur(k){
     ed.val = k;
@@ -3181,14 +3251,16 @@ const CBA = {
   undo: () => undo(), redo: () => redo(),
   deselect(){ if (ed.sel) { ed.sel = null; showSel(); } },
   togglePlay(){ if (play) stopPlay(); else startPlay(); },
-  scaleAll(dir){ if (!CBA.guard()) return; const v = curVoice(); if (v) commit(() => { for (const e of v.events) e.d = rt(dir < 0 ? e.d * 2 : e.d / 2); }); },
-  shiftOctave(dir){ if (!CBA.guard()) return; const v = curVoice(); if (v) commit(() => { for (const e of v.events) if (!e.rest) e.step = clampStep(e.step + 7 * dir); }); },
+  scaleAll(dir){ if (!CBA.guard()) return; const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) e.d = rt(dir < 0 ? e.d * 2 : e.d / 2); }); },
+  shiftOctave(dir){ if (!CBA.guard()) return; const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) if (!e.rest) e.step = clampStep(e.step + 7 * dir); }); },
   mutate: fn => { if (CBA.guard()) commit(fn); },
   pitched(){
     if (!CBA.guard()) return [];
-    const v = curVoice();
-    return v ? v.events.filter(e => !e.rest).map(e => ({e, v, s: e.step, alter: e.alt || 0})) : [];
+    return xfVoices().flatMap(v => v.events.filter(e => !e.rest).map(e => ({e, v, s: e.step, alter: e.alt || 0})));
   },
+  /* Transform acts on all the voices (that can be written), or on the one chosen in its menu */
+  xform: () => ({names: piece ? piece.voices.map((v, i) => v.name || 'Voice ' + (i + 1)) : [], target: xfTarget()}),
+  setXform(t){ ed.xf = t; },
   setPitch(h, s, alter){
     const e = h.e, imp = implied(h.v, s, e.t);
     e.step = s; e.ed = false;

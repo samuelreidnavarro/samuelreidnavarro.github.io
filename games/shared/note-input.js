@@ -52,9 +52,11 @@ function markup(o){
       </div>
       <div class="podg"><div class="btns" id="accBtns" role="group" aria-label="Accidental"></div></div>
       <div class="podg"><div class="pop" id="popXform">
-        <button class="tb popbtn" aria-haspopup="true">Transform ${o.what}${CHEV}</button>
+        <button class="tb popbtn" id="xfSum" aria-haspopup="true">Transform ${o.what}${CHEV}</button>
         <div class="popbody">
           <div class="btns col">
+            <button class="tb" id="xfWho" data-keep aria-expanded="false" aria-controls="xfList" title="Which voices the changes below act on" hidden>All voices${CHEV}</button>
+            <div id="xfList" class="advt xflist" role="group" aria-label="Voices to transform" hidden></div>
             <button class="tb" id="octup" title="Move ${o.whole} up an octave">Octave up</button>
             <button class="tb" id="octdn" title="Move ${o.whole} down an octave">Octave down</button>
             <button class="tb" id="tonup" title="Move ${o.whole} up to the next key on C D E F G A B♭, adding sharps and flats to the notes where needed">Tone up</button>
@@ -240,6 +242,24 @@ function wire(A){
   $('#advQ').addEventListener('change', e => { adv.q = e.target.value; });
   $('#advExact').addEventListener('change', e => { adv.exact = e.target.checked; fillAdvIntervals(); });
   $('#advGo').addEventListener('click', () => advTranspose(A));
+  /* which voices Transform acts on: all of them, or one (only with more than one voice; A.xform() / A.setXform(v)) */
+  if (A.xform) {
+    $('#xfWho').addEventListener('click', () => {
+      const L = $('#xfList'), open = L.hidden;
+      if (open) {
+        const X = A.xform();
+        L.innerHTML = [['all', 'All voices']].concat(X.names.map((n, i) => [String(i), n])).map(([v, n]) =>
+          `<button class="tb" data-xf="${v}" data-keep aria-pressed="${String(X.target) === v ? 'true' : 'false'}">${n.replace(/[&<>"]/g, c => '&#' + c.charCodeAt(0) + ';')}</button>`).join('');
+      }
+      L.hidden = !open; $('#xfWho').setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    $('#xfList').addEventListener('click', e => {
+      const b = e.target.closest('[data-xf]'); if (!b) return;
+      A.setXform(b.dataset.xf === 'all' ? 'all' : +b.dataset.xf);
+      $('#xfList').hidden = true; $('#xfWho').setAttribute('aria-expanded', 'false');
+      sync(A);
+    });
+  }
   /* a choice in the value or Transform menu closes it (not the buttons marked data-keep) */
   document.querySelectorAll('#popDur .popbody, #popXform .popbody').forEach(body => body.addEventListener('click', e => {
     if (!e.target.closest('button') || e.target.closest('[data-keep]')) return;
@@ -314,6 +334,13 @@ function sync(A){
   hlv.disabled = !d.length || d.includes('F');
   dbl.title = d.includes('Mx') ? 'A maxima has no larger value, so nothing can be doubled' : 'Doubles every note and rest: brevis becomes longa, and so on';
   hlv.title = d.includes('F') ? 'A fusa is the smallest value here, so nothing can be halved' : 'Halves every note and rest: brevis becomes semibrevis, and so on';
+  if (A.xform) {
+    const X = A.xform(), many = X.names.length > 1, who = X.target === 'all' ? null : X.names[X.target];
+    $('#xfWho').hidden = !many;
+    if (!many) $('#xfList').hidden = true;
+    $('#xfWho').innerHTML = (who || 'All voices').replace(/[&<>"]/g, c => '&#' + c.charCodeAt(0) + ';') + CHEV;
+    $('#xfSum').innerHTML = (!many ? 'Transform voice' : who ? 'Transform ' + who.replace(/[&<>"]/g, c => '&#' + c.charCodeAt(0) + ';') : 'Transform all voices') + CHEV;
+  }
   const pn = A.pitched();
   $('#octdn').disabled = !pn.length || pn.some(x => x.s - 7 < A.range[0]);
   $('#octup').disabled = !pn.length || pn.some(x => x.s + 7 > A.range[1]);
