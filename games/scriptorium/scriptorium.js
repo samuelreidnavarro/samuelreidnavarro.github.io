@@ -79,7 +79,7 @@ ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
             <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Export<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
             <div class="popbody"><div class="btns col" id="exportList">
               <div class="btns duo"><button class="tb" id="printBtn" title="Print, or save as PDF in the print window">Download PDF</button><button class="tb" id="mxlBtn" title="MusicXML (.mxl), for MuseScore, Dorico, Sibelius, Finale: in modern notation">Download MXL</button></div>
-              <button class="tb" id="saveBtn" title="Save this piece, with your changes, as a .krn file">Download .krn</button>
+              <div class="btns duo"><button class="tb" id="saveBtn" title="Save this piece, with your changes, as a .krn file">Download .krn</button><button class="tb" id="lyBtn" title="LilyPond (.ly), in modern notation: one staff per voice, with the lyrics">Download LilyPond</button></div>
               <button class="tb" id="keepBtn" title="Keep a copy of this piece, with your changes, in ${esc(L.mine)}"${APP.keep === false ? ' hidden' : ''}>Save to ${esc(L.mine)}</button>
               <div class="btns duo"><button class="tb" id="svgBtn" title="The page you see, as an SVG picture">Download SVG</button><button class="tb" id="pngBtn" title="The page you see, as a PNG picture">Download PNG</button></div>
               <button class="tb" id="linkBtn" title="A link that opens this score, with your changes, for anyone">Copy link</button>
