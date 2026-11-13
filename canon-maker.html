@@ -45,17 +45,21 @@
       /* the app tells the page how tall it is, and asks for the whole window where the browser has no full screen */
       (function () {
         var f = document.getElementById("cb");
-        f.src = "games/canon-maker.html?v=7" + location.hash;
+        f.src = "games/canon-maker.html?v=8" + location.hash;
         var full = false, lastH = 0;
+        /* tell the app where the bottom of the window is, so its playback row can stay there */
+        var dq = 0;
+        function dock() { if (dq) return; dq = requestAnimationFrame(function () { dq = 0; var r = f.getBoundingClientRect(); try { f.contentWindow.postMessage({ scriptoriumDock: { top: r.top, vh: window.innerHeight } }, "*"); } catch (err) {} }); }
+        window.addEventListener("scroll", dock, { passive: true }); window.addEventListener("resize", dock); f.addEventListener("load", dock);
         window.addEventListener("message", function (e) {
           if (e.source !== f.contentWindow || !e.data) return;
           if (typeof e.data.canonDark === "boolean") document.documentElement.classList.toggle("cf-dark", e.data.canonDark);
-          if (e.data.canonHeight) { lastH = e.data.canonHeight; if (!full) f.style.height = lastH + "px"; }
+          if (e.data.canonHeight) { lastH = e.data.canonHeight; if (!full) f.style.height = lastH + "px";  dock(); }
           /* full screen where the browser has none (iPhone): the app covers the window */
           if ("canonFull" in e.data) {
             full = !!e.data.canonFull;
             f.style.cssText = full ? "position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;max-width:none;margin:0;border:0;z-index:9999" : (lastH ? "height:" + lastH + "px" : "");
-            document.documentElement.style.overflow = full ? "hidden" : "";
+            document.documentElement.style.overflow = full ? "hidden" : ""; dock();
           }
         });
       })();

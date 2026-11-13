@@ -683,3 +683,44 @@ html.playing #pages .caret{display:none}
 .recitem button:hover{background:rgba(42,34,24,.08)}
 .recitem button svg{width:14px;height:14px;fill:currentColor}
 .recitem button.sure{background:var(--accent);color:var(--accent-ink);width:auto}
+
+/* ================= The playback row: slim, one height, docked to the bottom of the window ================= */
+:root{--pod:40px}
+.transport{position:fixed;left:0;right:0;bottom:0;z-index:30;margin:0;padding:6px clamp(14px,2.6vw,44px);box-sizing:border-box;
+  background:var(--ground);border-top:1px solid var(--line);gap:6px 10px;align-items:center}
+html.embedded .transport{position:absolute;bottom:auto;top:var(--tpTop,auto)}
+.wrap{padding-bottom:calc(var(--tph,56px) + 22px)}
+.transport .podg,#podCount{height:var(--pod);min-height:var(--pod);box-sizing:border-box;padding:3px;align-items:center}
+.transport .podg>*{max-height:calc(var(--pod) - 6px)}
+.transport button:not(#play),.transport select{height:calc(var(--pod) - 6px);min-height:calc(var(--pod) - 6px)}
+.transport .stepper button,.transport .stepper input{height:calc(var(--pod) - 6px);min-height:calc(var(--pod) - 6px)}
+.transport .unitbtn{padding:0 6px}
+#play,#play:hover:not(:disabled){width:var(--pod);height:var(--pod);min-height:var(--pod)}
+#play svg{width:18px;height:18px}
+.tp-main,.tp-stack,.tp-tools{gap:6px 10px}
+.transport .popbody{max-height:calc(var(--win,100vh) - var(--tph,56px) - 24px);overflow-y:auto;scrollbar-width:thin}
+.cntin input[type=number]{height:calc(var(--pod) - 12px);min-height:calc(var(--pod) - 12px)}
+@media (max-width:700px){
+  .transport{padding:6px 10px}
+  #play,#play:hover:not(:disabled){width:var(--pod);height:var(--pod)}
+  .tp-main{gap:8px}
+  .tp-stack{gap:6px}
+}
+/* full screen: the frame fills the screen, and the play button goes after 3 s without movement */
+.viewwrap.fs .viewer,.viewwrap.fs .viewer.frame{max-height:none !important;min-height:100% !important;height:100% !important}
+/* Sound: opens upwards from the playback row, over the notes */
+.tp-side{position:fixed;left:clamp(14px,2.6vw,44px);right:clamp(14px,2.6vw,44px);bottom:calc(var(--tph,56px) + 8px);margin:0;z-index:29;
+  max-height:calc(var(--win,100vh) - var(--tph,56px) - 24px);overflow-y:auto;box-sizing:border-box;box-shadow:0 -10px 30px -12px rgba(42,34,24,.35)}
+.tp-side[hidden]{display:none}
+html.embedded .tp-side{position:absolute;bottom:auto;top:var(--spTop,auto)}
+html.dark .tp-side{box-shadow:0 -10px 30px -12px rgba(0,0,0,.85)}
+/* phones: one slim row that scrolls sideways, so the music keeps the screen */
+@media (max-width:700px){
+  .transport,.tp-main,.tp-stack,.tp-tools{flex-wrap:nowrap !important;flex-direction:row !important;align-items:center;width:auto;margin-left:0;gap:8px}
+  .transport{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .transport::-webkit-scrollbar{display:none}
+  .transport>*,.tp-main>*,.tp-stack>*,.tp-tools>*{flex:none !important}
+  #podSound{flex:none !important;min-width:0}
+  .transport .popbody{position:fixed;bottom:calc(var(--tph,56px) + 6px);top:auto;left:10px;right:10px;width:auto}
+  .vol input[type=range]{width:70px;flex:none}
+}

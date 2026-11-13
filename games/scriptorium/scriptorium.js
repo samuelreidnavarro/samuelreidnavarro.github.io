@@ -3118,7 +3118,7 @@ document.addEventListener('fullscreenchange', fsSync); document.addEventListener
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && fsFake) fsFakeSet(false); });
 function fsWake(){
   wrapEl.classList.remove('idle'); clearTimeout(fsTimer);
-  if (wrapEl.classList.contains('fs')) fsTimer = setTimeout(() => { if (!$('#fsCtl').matches(':hover') && !$('#fsBtn').matches(':hover')) wrapEl.classList.add('idle'); }, 2200);
+  if (wrapEl.classList.contains('fs')) fsTimer = setTimeout(() => { if (!$('#fsCtl').matches(':hover') && !$('#fsBtn').matches(':hover')) wrapEl.classList.add('idle'); }, 3000);
 }
 ['pointermove', 'pointerdown', 'wheel'].forEach(t => wrapEl.addEventListener(t, fsWake, {passive: true}));
 viewerEl.addEventListener('scroll', fsWake, {passive: true});
@@ -3127,6 +3127,34 @@ $('#fsPlay').addEventListener('click', () => {
   else { const at = fsPaused; fsPaused = null; startPlay(typeof at === 'number' ? at : undefined); }
   fsWake();
 });
+
+/* the playback row stays at the bottom of the browser window. Alone it is simply fixed there; in the site's frame (which is as
+   tall as the whole app) the page tells where the window's bottom is, and the row is put there */
+{
+  const tp = $('.transport'), root = document.documentElement;
+  let dock = null;
+  const place = () => {
+    root.style.setProperty('--tph', tp.offsetHeight + 'px');
+    let win = window.innerHeight; if (EMBED && dock) win = dock.vh;
+    root.style.setProperty('--win', win + 'px');
+    if (!EMBED || !dock) return;
+    const h = tp.offsetHeight, main = document.querySelector('main.wrap'), docH = main.offsetHeight;
+    const lo = ($('.viewwrap').offsetTop || 0) + 80;
+    const top = Math.max(Math.min(lo, docH - h), Math.min(docH - h, dock.vh - dock.top - h));
+    root.style.setProperty('--tpTop', Math.round(top) + 'px');
+    const sp = $('#tpSide'), sh = sp && !sp.hidden ? sp.offsetHeight : 0;
+    root.style.setProperty('--spTop', Math.max(0, Math.round(top - sh - 8)) + 'px');
+  };
+  window.addEventListener('message', e => {
+    const d = e.data && e.data.scriptoriumDock; if (!d || typeof d.top !== 'number') return;
+    dock = {top: d.top, vh: d.vh}; place();
+  });
+  if (window.ResizeObserver) { new ResizeObserver(place).observe(tp); new ResizeObserver(place).observe($('#tpSide')); }
+  $('#toggleSet').addEventListener('click', () => setTimeout(place, 0));
+  window.addEventListener('resize', place);
+  place();
+  window.__dockPlace = place;
+}
 
 /* tell the site page how tall the app is (shared/frame-height.js, as in CantusFirmus) */
 var postFrame = null;

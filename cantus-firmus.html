@@ -46,15 +46,19 @@
       (function () {
         var f = document.getElementById("cf");
         var q = location.search ? location.search.slice(1) + "&" : "";
-        f.src = "games/cantus-firmus.html?" + q + "v=58" + location.hash;
+        f.src = "games/cantus-firmus.html?" + q + "v=59" + location.hash;
         var full = false, lastH = 0;
+        /* tell the app where the bottom of the window is, so its playback row can stay there */
+        var dq = 0;
+        function dock() { if (dq) return; dq = requestAnimationFrame(function () { dq = 0; var r = f.getBoundingClientRect(); try { f.contentWindow.postMessage({ scriptoriumDock: { top: r.top, vh: window.innerHeight } }, "*"); } catch (err) {} }); }
+        window.addEventListener("scroll", dock, { passive: true }); window.addEventListener("resize", dock); f.addEventListener("load", dock);
         window.addEventListener("message", function (e) {
           if (e.source !== f.contentWindow || !e.data) return;
-          if (e.data.cantusFirmusHeight) { lastH = e.data.cantusFirmusHeight; if (!full) f.style.height = lastH + "px"; }
+          if (e.data.cantusFirmusHeight) { lastH = e.data.cantusFirmusHeight; if (!full) f.style.height = lastH + "px";  dock(); }
           if ("cantusFirmusFull" in e.data) {
             full = !!e.data.cantusFirmusFull;
             f.style.cssText = full ? "position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;max-width:none;margin:0;border:0;z-index:9999" : (lastH ? "height:" + lastH + "px" : "");
-            document.documentElement.style.overflow = full ? "hidden" : "";
+            document.documentElement.style.overflow = full ? "hidden" : ""; dock();
           }
           if (e.data.cantusFirmusQuery) try { history.replaceState(null, "", "cantus-firmus.html" + e.data.cantusFirmusQuery); } catch (err) {}
         });
