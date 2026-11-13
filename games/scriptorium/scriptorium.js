@@ -1585,7 +1585,7 @@ function render(){
   /* the frame is the whole window: as wide as the page area and as tall as the window, the music centred in it */
   viewerEl.style.width = '';
   { const pg = pagesEl.firstElementChild, x = pg ? pg.getBoundingClientRect().left - viewerEl.getBoundingClientRect().left : 0; $('#fsBtn').style.left = (viewerEl.offsetLeft + Math.max(0, x) + 6) + 'px'; }
-  if (typeof showSel === 'function' && (ed.sel || ed.ins)) showSel();
+  if (typeof showSel === 'function' && (ed.sel || ed.ins || ed.range || ed.picks)) showSel();
   applyMark();
   if (!play) { handTop = -1; $('#handBox').style.top = ''; $('#pendBox').style.top = ''; if (st.view === 'choir') handMid(null); }
   syncNav();
