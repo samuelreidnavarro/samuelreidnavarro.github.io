@@ -33,17 +33,21 @@ ${APP.popsBeforeVoices || ''}
         <div class="popbody"><table class="voices" id="voiceTable"></table></div>
       </div></div>
       <div class="podg"><div class="pop" id="popPage">
-        <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Page<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">View<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="staffset">
-          <span class="lab">View</span><div class="btns" id="viewList" role="group" aria-label="View"><button class="tb" data-v="score">Score</button><button class="tb" data-v="parts">Parts</button><button class="tb" data-v="choir">Choirbook</button></div>
+          <span class="lab">Layout</span><div class="btns" id="viewList" role="group" aria-label="View"><button class="tb" data-v="score">Score</button><button class="tb" data-v="parts">Parts</button><button class="tb" data-v="choir">Choirbook</button></div>
           <span class="lab">Size</span><div class="btns" id="paperSeg" role="group" aria-label="Paper size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button><button class="tb" data-v="web">Web</button></div>
           <span class="lab">Orientation</span><div class="btns" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
           <span class="lab">Pages</span><div class="btns" id="flowSeg" role="group" aria-label="Pages"><button class="tb" data-v="vertical">Vertical</button><button class="tb" data-v="horizontal">Horizontal</button></div>
           <span class="lab" id="scrollLab">Scroll</span><div class="btns" id="scrollSeg" role="group" aria-label="Scroll"><button class="tb" data-v="vertical" title="Systems below each other">Vertical</button><button class="tb" data-v="horizontal" title="The score as one long line, scrolling sideways">Horizontal</button></div>
+          <span class="lab">Controls</span><div class="btns" id="ctlSeg" role="group" aria-label="When the controls show"><button class="tb" data-v="move">On movement</button><button class="tb" data-v="edge">At the edges</button></div>
+          <span class="lab">Dark room</span><div class="btns" id="darkSeg" role="group" aria-label="Dark room"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
+          <label class="ctl" for="handOp">Hand opacity</label><input type="range" id="handOp" min="0.05" max="1" step="0.05">
+          <label class="ctl" for="handSize">Hand size</label><input type="range" id="handSize" min="0.4" max="2.5" step="0.05">
         </div></div>
       </div></div>
       <div class="podg"><div class="pop" id="popLook">
-        <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Appearance<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Engraving<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="staffset">
           <span class="lab">Notation</span><div class="btns" id="notaSeg" role="group" aria-label="Notation"><button class="tb" data-v="real">Mensural</button><button class="tb" data-v="fake">Modern</button></div>
           <span class="lab">Ligatures</span><div class="btns" id="ligSeg" role="group" aria-label="Ligatures"><button class="tb" data-v="on" title="Ligatures drawn as ligatures (in mensural notation)">On</button><button class="tb" data-v="off" title="The notes of a ligature written one by one, under a bracket">Off</button></div>
@@ -52,16 +56,12 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
           <span class="lab">Staff lines</span><div class="btns" id="linesSeg" role="group" aria-label="Staff lines"><button class="tb" data-v="5">Five</button><button class="tb" data-v="4">Four</button></div>
           <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
-          <span class="lab">Controls</span><div class="btns" id="ctlSeg" role="group" aria-label="When the controls show"><button class="tb" data-v="move">On movement</button><button class="tb" data-v="edge">At the edges</button></div>
-          <span class="lab">Dark room</span><div class="btns" id="darkSeg" role="group" aria-label="Dark room"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
           <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0" max="1.2" step="0.01">
           <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0" max="2" step="0.02">
           <label class="ctl" for="ss">Space between systems</label><input type="range" id="ss" min="0" max="3" step="0.05">
           <span class="lab">Syllable dashes</span><div class="btns" id="dashSeg" role="group" aria-label="Syllable dashes"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
-          <label class="ctl" for="handOp">Hand opacity</label><input type="range" id="handOp" min="0.05" max="1" step="0.05">
-          <label class="ctl" for="handSize">Hand size</label><input type="range" id="handSize" min="0.4" max="2.5" step="0.05">
           <span class="lab" id="verseLab">Verse</span><div class="btns" id="verseSeg" role="group" aria-label="Verse"></div>
         </div></div>
       </div></div>
@@ -2013,6 +2013,12 @@ function segInit(id, key, after){
   });
 }
 function syncUI(){
+  /* the Choirbook is paper: no Web there (Samuel 2026-11-13); Web comes back when leaving it */
+  { const was = st.paper + '|' + st.webWas;
+    if (st.view === 'choir' && st.paper === 'web') { st.webWas = true; st.paper = 'A4'; }
+    else if (st.view !== 'choir' && st.webWas) { st.paper = 'web'; st.webWas = false; }
+    if (was !== st.paper + '|' + st.webWas) save(); }
+  { const wb = document.querySelector('#paperSeg [data-v="web"]'); if (wb) wb.hidden = st.view === 'choir'; }
   const segs = {'#viewList': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ctlSeg': 'ctlMode', '#ligSeg': 'lig', '#scrollSeg': 'webScroll'};
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
   for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).value = st[k];
