@@ -323,8 +323,8 @@ function sync(A){
   const cb = $('#colBtn'); if (cb) setPressed(cb, !!S.col);
   const lb = $('#ligBtn'); if (lb) { setPressed(lb, !!t && !t.r && !!t.lig); lb.disabled = !t || t.r; }
   const ob = $('#ovrBtn'); if (ob) { ob.textContent = S.ovr ? 'Overwrite' : 'Insert'; setPressed(ob, !!S.ovr); }
-  $('#stepUp').disabled = $('#stepDown').disabled = !t || t.r;
-  $('#del').disabled = !t;
+  $('#stepUp').disabled = $('#stepDown').disabled = (!t || t.r) && !S.range;
+  $('#del').disabled = !t && !S.range;
   $('#selPrev').disabled = $('#selNext').disabled = !S.hasNotes;
   $('#undo').disabled = !S.canUndo;
   $('#redo').disabled = !S.canRedo;
@@ -336,10 +336,10 @@ function sync(A){
   hlv.title = d.includes('F') ? 'A fusa is the smallest value here, so nothing can be halved' : 'Halves every note and rest: brevis becomes semibrevis, and so on';
   if (A.xform) {
     const X = A.xform(), many = X.names.length > 1, who = X.target === 'all' ? null : X.names[X.target];
-    $('#xfWho').hidden = !many;
+    $('#xfWho').hidden = !many || !!X.range;
     if (!many) $('#xfList').hidden = true;
     $('#xfWho').innerHTML = (who || 'All voices').replace(/[&<>"]/g, c => '&#' + c.charCodeAt(0) + ';') + CHEV;
-    $('#xfSum').innerHTML = (!many ? 'Transform voice' : who ? 'Transform ' + who.replace(/[&<>"]/g, c => '&#' + c.charCodeAt(0) + ';') : 'Transform all voices') + CHEV;
+    $('#xfSum').innerHTML = (X.range ? 'Transform selection' : !many ? 'Transform voice' : who ? 'Transform ' + who.replace(/[&<>"]/g, c => '&#' + c.charCodeAt(0) + ';') : 'Transform all voices') + CHEV;
   }
   const pn = A.pitched();
   $('#octdn').disabled = !pn.length || pn.some(x => x.s - 7 < A.range[0]);

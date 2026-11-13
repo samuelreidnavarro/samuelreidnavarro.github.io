@@ -1806,7 +1806,7 @@ async function loadPiece(file){
   if (!piece) piece = parseKern(text);
   if (H.afterParse) { H.afterParse(piece); piece.text = writeKern(piece); }
   pieceKey = file;
-  if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; }
+  if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; ed.range = null; }
   st.piece = file; save();
   st.verse = 0;
   if (H.afterLoad) H.afterLoad();
@@ -1819,7 +1819,7 @@ function loadText(name, text){
     stopPlay();
     piece = parseKern(text);
     pieceKey = 'file:' + name;
-    if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; }
+    if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; ed.range = null; }
     syncUI(); render();
   } catch (e) { pagesEl.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
@@ -2775,6 +2775,12 @@ function redo(){ if (!ed.redo.length) return; ed.undo.push(piece.text || writeKe
 function showSel(scroll){
   document.querySelectorAll('#pages g.sel').forEach(g => g.classList.remove('sel'));
   document.querySelectorAll('#pages .caret').forEach(c => c.remove());
+  if (ed.range && piece) {
+    let first = null;
+    for (const v of rangeVoices()) for (const q of v.syms || []) if (q.src && inRange(q.t)) document.querySelectorAll('#pages g.' + q.id).forEach(g => { g.classList.add('sel'); first = first || g; });
+    if (scroll && first) bringIntoView(first);
+    syncEdit(); return;
+  }
   const s = selSym();
   if (!s) { if (ed.on && ed.ins) drawCaret(scroll); syncEdit(); return; }
   let first = null;
@@ -2785,10 +2791,12 @@ function showSel(scroll){
 /* clicking a note selects it (in any view); with Edit off it only marks where Play starts */
 pagesEl.addEventListener('click', e => {
   const g = e.target.closest('g[class^="n"]');
-  if (!g || !piece) { if (ed.sel && !ed.on) { ed.sel = null; showSel(); } return; }
+  if (!g || !piece) { if ((ed.sel || ed.range) && !ed.on) { ed.sel = null; ed.range = null; showSel(); } return; }
   const id = g.classList[0], m = id.match(/^n(\d+)-(\d+)$/);
   if (!m) return;
   const s = piece.voices[+m[1]].syms[+m[2]];
+  if (e.shiftKey && (ed.sel || ed.range)) { extendRange(+m[1], s); return; }
+  ed.range = null;
   ed.sel = {vi: +m[1], ei: s.src[0]}; ed.ins = {vi: +m[1], ei: s.src[s.src.length - 1] + 1};
   if (!s.rest) hear(s.step, s.alt);
   showSel();
@@ -3029,8 +3037,10 @@ pagesEl.addEventListener('click', e => {
   if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e); return; }
   if (ed.on && typeof noteAt === 'function') {
     const n = noteAt(e);
+    if (n && e.shiftKey && (ed.sel || ed.range)) { e.stopImmediatePropagation(); extendRange(n.vi, n.s); return; }
     if (n && (!n.s.rest || e.shiftKey)) {
       e.stopImmediatePropagation();
+      ed.range = null;
       ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1};
       if (!n.s.rest) hear(n.s.step, n.s.alt);
       showSel(); return;
@@ -3040,7 +3050,7 @@ pagesEl.addEventListener('click', e => {
   if (rect) {
     e.stopImmediatePropagation();
     const tg = staffTarget(rect, e); if (!tg) return;
-    clearGhost();
+    clearGhost(); ed.range = null;
     const tp = timePlace(rect, tg);
     if (tp) {
       const v = tg.v;
@@ -3091,6 +3101,131 @@ function toRestOrRemove(vi, s){
   if (s.rest) commit(() => { dropEvents(v, s.src); ed.sel = null; ed.ins = {vi, ei: s.src[0]}; });
   else commit(() => { for (const i of s.src) { const e = v.events[i]; e.rest = true; e.tieStart = e.tieEnd = e.tieMid = false; } ed.sel = null; ed.ins = {vi, ei: s.src[s.src.length - 1] + 1}; });
 }
+/* A range: Shift-click a second note while one is selected and everything between the two is selected, in all the
+   voices between them, from the earlier start to the later end (ed.range {v0, v1, t0, t1, a: the anchor}). The
+   arrows, Delete, Transform, dragging and copy/cut/paste then act on the whole range. */
+function rangeVoices(){ const R = ed.range; if (!R || !piece) return []; const o = []; for (let i = R.v0; i <= R.v1; i++) if (piece.voices[i]) o.push(piece.voices[i]); return o; }
+const inRange = (t) => t >= ed.range.t0 - EPS && t < ed.range.t1 - EPS;
+function rangeEvents(v){ return ed.range ? v.events.filter(e => inRange(e.t)) : []; }
+function extendRange(vi, s){
+  let a = ed.range ? ed.range.a : null;
+  if (!a) { const q = selSym(); if (!q) return; a = {vi: ed.sel.vi, t: q.t, te: rt(q.t + q.d)}; }
+  ed.range = {a, v0: Math.min(a.vi, vi), v1: Math.max(a.vi, vi), t0: Math.min(a.t, s.t), t1: Math.max(a.te, rt(s.t + s.d))};
+  ed.sel = null; ed.ins = null;
+  showSel();
+}
+function clearRange(){ if (ed.range) { ed.range = null; return true; } return false; }
+function rangeStep(d){
+  const vs = rangeVoices().filter(writable); if (!vs.length) { refuse(); return; }
+  if (vs.some(v => rangeEvents(v).some(e => !e.rest && (e.step + d < STEP_MIN || e.step + d > STEP_MAX)))) return;
+  commit(() => { for (const v of vs) for (const e of rangeEvents(v)) if (!e.rest) moveStep(v, e, e.step + d); });
+}
+/* Delete (and cut): the notes become rests, so the voices stay in step */
+function rangeClear(){
+  const vs = rangeVoices().filter(writable); if (!vs.length) { refuse(); return; }
+  commit(() => { for (const v of vs) for (const e of rangeEvents(v)) { e.rest = true; e.tieStart = e.tieEnd = e.tieMid = false; e.syl = []; e.lig = 0; e.alt = null; e.ed = false; e.long = false; } });
+}
+/* the clipboard: per voice, the events from the start of the range (times relative), kept in localStorage so a passage
+   can be pasted into another score or another of the apps */
+const CLIP_KEY = 'scriptorium:clip';
+function rangeCopy(){
+  const R = ed.range; if (!R) return false;
+  const voices = rangeVoices().map(v => rangeEvents(v).map(e => {
+    const c = JSON.parse(JSON.stringify(e)); c.t = rt(e.t - R.t0);
+    /* a note that runs past the end of the range is cut there */
+    if (e.t + e.d > R.t1 + EPS) { c.d = rt(R.t1 - e.t); c.tieStart = c.tieMid = false; }
+    c.kd = c.d; return c;
+  })).map(list => {
+    /* a voice whose note began before the range starts it with a rest; ties don't reach out of the passage */
+    if (list.length && list[0].t > EPS) list.unshift({d: list[0].t, kd: list[0].t, rest: true, alt: null, ed: false, syl: [], t: 0});
+    const a = list[0], z = list[list.length - 1];
+    if (a) { if (a.tieMid) { a.tieMid = false; a.tieStart = true; } a.tieEnd = false; }
+    if (z) { if (z.tieMid) { z.tieMid = false; z.tieEnd = true; } z.tieStart = false; }
+    return list;
+  });
+  const clip = {voices, len: rt(R.t1 - R.t0)};
+  try { localStorage.setItem(CLIP_KEY, JSON.stringify(clip)); } catch (e) {}
+  ed.clip = clip;
+  toast('Copied ' + (voices.length > 1 ? voices.length + ' voices' : 'the passage') + '. Select a note (or put the cursor) where it should go and press ' + (/Mac|iP/.test(navigator.platform) ? '⌘' : 'Ctrl') + '+V.');
+  return true;
+}
+/* write the events `list` (times from 0, length len) over [T, T + len) of voice v: what stood there goes; a note that
+   began before T is cut at T, the part of a note after T + len becomes a rest */
+function overwriteSpan(v, T, len, list){
+  const T2 = rt(T + len);
+  const fix = arr => { for (const m of arr) m.ei = Math.min(m.ei, v.events.length); };
+  /* pad the voice with rests up to T */
+  if (v.end < T - EPS) { v.events.push({d: rt(T - v.end), kd: rt(T - v.end), rest: true, alt: null, ed: false, syl: [], t: v.end}); retime(v); }
+  const split = (at) => {
+    const i = v.events.findIndex(e => at > e.t + EPS && at < e.t + e.d - EPS);
+    if (i < 0) return null;
+    const a = v.events[i], off = rt(at - a.t);
+    const b = Object.assign({}, a, {d: rt(a.d - off), kd: rt(a.d - off), t: rt(at), syl: [], ferm: false});
+    b.tieEnd = b.tieMid = false; b.tieStart = !!(a.tieStart || a.tieMid);
+    a.d = rt(off); a.kd = a.d; a.long = false; a.ferm = false;
+    if (a.tieMid) { a.tieMid = false; a.tieEnd = true; } else a.tieStart = false;
+    v.events.splice(i + 1, 0, b);
+    for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > i) m.ei++;
+    return b;
+  };
+  split(T);
+  const cut = split(T2);
+  let i0 = v.events.findIndex(e => e.t >= T - EPS); if (i0 < 0) i0 = v.events.length;
+  let i1 = i0; while (i1 < v.events.length && v.events[i1].t < T2 - EPS) i1++;
+  /* after the span: the rest of a note cut at its end becomes a rest; a tie coming in from the span is gone */
+  const after = v.events[i1];
+  if (after && after === cut && !after.rest) {
+    const nx = v.events[i1 + 1];
+    if (after.tieStart && nx) { if (nx.tieMid) { nx.tieMid = false; nx.tieStart = true; } nx.tieEnd = false; }
+    after.rest = true; after.tieStart = after.tieEnd = after.tieMid = false; after.alt = null; after.ed = false; after.lig = 0; }
+  else if (after) { if (after.tieMid) { after.tieMid = false; after.tieStart = true; } after.tieEnd = false; }
+  if (i0 > 0) { const p = v.events[i0 - 1]; if (p.tieStart || p.tieMid) { if (p.tieMid) { p.tieMid = false; p.tieEnd = true; } else p.tieStart = false; } }
+  /* ligature numbers of the pasted notes: new ones, so they don't join this voice's */
+  const base = Math.max(0, ...v.events.map(e => e.lig || 0)), map = {};
+  const ins = list.map(e => { const c = JSON.parse(JSON.stringify(e)); if (c.lig) c.lig = map[c.lig] || (map[c.lig] = base + Object.keys(map).length + 1); return c; });
+  const covered = ins.reduce((a, e) => rt(a + e.d), 0);
+  if (covered < len - EPS) ins.push({d: rt(len - covered), kd: rt(len - covered), rest: true, alt: null, ed: false, syl: []});
+  v.events.splice(i0, i1 - i0, ...ins);
+  const dn = ins.length - (i1 - i0);
+  for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei >= i1) m.ei += dn; else if (m.ei > i0) m.ei = i0;
+  fix(v.mets); fix(v.keys); fix(v.clefs);
+  retime(v);
+}
+function rangePaste(){
+  let clip = ed.clip;
+  try { const c = JSON.parse(localStorage.getItem(CLIP_KEY) || 'null'); if (c && c.voices) clip = c; } catch (e) {}
+  if (!clip || !clip.voices || !clip.voices.length || !piece) { toast('Nothing copied yet: Shift-click to select a passage, then ' + (/Mac|iP/.test(navigator.platform) ? '⌘' : 'Ctrl') + '+C.'); return; }
+  /* where: the start of the range, the selected note, or the cursor */
+  let vi, T;
+  if (ed.range) { vi = ed.range.v0; T = ed.range.t0; }
+  else if (ed.sel) { const q = selSym(); if (!q) return; vi = ed.sel.vi; T = q.t; }
+  else if (ed.ins) { vi = ed.ins.vi; T = caretTime(piece.voices[vi]); }
+  else { toast('Select a note, or put the cursor, where the passage should go.'); return; }
+  const targets = clip.voices.map((list, j) => [piece.voices[vi + j], list]).filter(([v]) => v && writable(v));
+  if (!targets.length) { refuse(); return; }
+  commit(() => { for (const [v, list] of targets) overwriteSpan(v, T, clip.len, list); });
+  const n = targets.length;
+  ed.range = {a: {vi, t: T, te: rt(T + clip.len)}, v0: vi, v1: vi + n - 1, t0: T, t1: rt(T + clip.len)};
+  ed.sel = null; ed.ins = null;
+  showSel();
+  if (clip.voices.length > n) toast('There were not enough voices below for all of it: ' + n + ' of ' + clip.voices.length + ' pasted.');
+}
+document.addEventListener('keydown', e => {
+  const t = e.target, tag = t.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || t.isContentEditable || !piece) return;
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 'c' && ed.range) { if (window.getSelection && String(window.getSelection())) return; e.preventDefault(); rangeCopy(); }
+  else if (k === 'x' && ed.range && ed.on) { e.preventDefault(); if (rangeCopy()) rangeClear(); }
+  else if (k === 'v' && ed.on) { e.preventDefault(); rangePaste(); }
+  else if (k === 'a' && ed.on) {
+    /* select all: every voice, start to end */
+    e.preventDefault();
+    const end = Math.max(...piece.voices.map(v => v.end)); if (!(end > 0)) return;
+    ed.range = {a: {vi: 0, t: 0, te: end}, v0: 0, v1: piece.voices.length - 1, t0: 0, t1: end}; ed.sel = null; ed.ins = null; showSel();
+  }
+});
+
 /* what the shared note-input tools (shared/note-input.js) need from this app */
 const CBA = {
   edit: () => ed.on,
@@ -3100,7 +3235,7 @@ const CBA = {
     return {selected: !!s, dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
       target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc, lig: !!t.lig}, edArm: !!ed.edArm, ovr: !!ed.ovr,
       col: s && !s.rest ? !!s.col : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
-      hasNotes: !!(piece && piece.voices.length), durs: xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : [])};
+      hasNotes: !!(piece && piece.voices.length), durs: ed.range ? [] : xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : []), range: !!ed.range};
   },
   setDur(k){
     ed.val = k;
@@ -3200,12 +3335,19 @@ const CBA = {
   },
   stepPitch(d){
     if (!CBA.guard()) return;
+    if (ed.range) { rangeStep(d); return; }
     const t = targetSym(), v = curVoice(); if (!t || t.rest) return;
     commit(() => { for (const i of t.src) { const e = v.events[i]; moveStep(v, e, clampStep(e.step + d)); } });
     const e = curVoice().events[t.src[0]]; if (e) hear(e.step, e.alt);
   },
   moveSel(dir){
     if (!piece) return;
+    if (ed.range) {
+      /* the arrows leave the range at its first (or last) note */
+      const R = ed.range, v = piece.voices[R.v0], qs = (v.syms || []).filter(q => q.src && inRange(q.t));
+      ed.range = null;
+      if (qs.length) { const q = dir < 0 ? qs[0] : qs[qs.length - 1]; ed.sel = {vi: v.idx, ei: q.src[0]}; ed.ins = {vi: v.idx, ei: q.src[q.src.length - 1] + 1}; showSel(true); return; }
+    }
     let vi = ed.sel ? ed.sel.vi : ed.ins ? ed.ins.vi : null;
     if (vi === null) { const vs = visibleVoices(); if (!vs.length) return; vi = vs[0].idx; }
     const v = piece.voices[vi], syms = v.syms || [];
@@ -3225,6 +3367,7 @@ const CBA = {
   },
   deleteTarget(){
     if (!CBA.guard()) return;
+    if (ed.range) { rangeClear(); return; }
     const t = targetSym(), v = curVoice(); if (!t) return;
     const vi = v.idx, first = t.src[0];
     commit(() => { dropEvents(v, t.src); ed.sel = null; ed.ins = {vi, ei: first}; });
@@ -3249,17 +3392,18 @@ const CBA = {
     insertEvent(v.idx, idx, refStepBefore(v, idx), true);
   },
   undo: () => undo(), redo: () => redo(),
-  deselect(){ if (ed.sel) { ed.sel = null; showSel(); } },
+  deselect(){ if (ed.sel || ed.range) { ed.sel = null; ed.range = null; showSel(); } },
   togglePlay(){ if (play) stopPlay(); else startPlay(); },
-  scaleAll(dir){ if (!CBA.guard()) return; const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) e.d = rt(dir < 0 ? e.d * 2 : e.d / 2); }); },
-  shiftOctave(dir){ if (!CBA.guard()) return; const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) if (!e.rest) e.step = clampStep(e.step + 7 * dir); }); },
+  scaleAll(dir){ if (!CBA.guard() || ed.range) return; const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) e.d = rt(dir < 0 ? e.d * 2 : e.d / 2); }); },
+  shiftOctave(dir){ if (!CBA.guard()) return; if (ed.range) { rangeStep(7 * dir); return; } const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) if (!e.rest) e.step = clampStep(e.step + 7 * dir); }); },
   mutate: fn => { if (CBA.guard()) commit(fn); },
   pitched(){
     if (!CBA.guard()) return [];
+    if (ed.range) return rangeVoices().filter(writable).flatMap(v => rangeEvents(v).filter(e => !e.rest).map(e => ({e, v, s: e.step, alter: e.alt || 0})));
     return xfVoices().flatMap(v => v.events.filter(e => !e.rest).map(e => ({e, v, s: e.step, alter: e.alt || 0})));
   },
   /* Transform acts on all the voices (that can be written), or on the one chosen in its menu */
-  xform: () => ({names: piece ? piece.voices.map((v, i) => v.name || 'Voice ' + (i + 1)) : [], target: xfTarget()}),
+  xform: () => ({names: piece ? piece.voices.map((v, i) => v.name || 'Voice ' + (i + 1)) : [], target: xfTarget(), range: !!ed.range}),
   setXform(t){ ed.xf = t; },
   setPitch(h, s, alter){
     const e = h.e, imp = implied(h.v, s, e.t);
@@ -3336,7 +3480,9 @@ pagesEl.addEventListener('pointermove', e => {
   const y = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse()).y, steps = Math.round((noteDrag.y0 - y) / 0.5);
   if (steps === noteDrag.steps) return;
   noteDrag.steps = steps; noteDrag.moved = true; clearGhost();
-  document.querySelectorAll('#pages g.' + noteDrag.n.s.id).forEach(g => g.setAttribute('transform', `translate(0 ${f(-steps * 0.5)})`));
+  const ids = ed.range && noteDrag.n.vi >= ed.range.v0 && noteDrag.n.vi <= ed.range.v1 && inRange(noteDrag.n.s.t)
+    ? rangeVoices().flatMap(v => (v.syms || []).filter(q => q.src && !q.rest && inRange(q.t)).map(q => q.id)) : [noteDrag.n.s.id];
+  for (const id of ids) document.querySelectorAll('#pages g.' + id).forEach(g => g.setAttribute('transform', `translate(0 ${f(-steps * 0.5)})`));
   hear(clampStep(noteDrag.n.s.step + steps), noteDrag.n.s.alt);
 });
 pagesEl.addEventListener('pointerup', () => {
@@ -3344,6 +3490,8 @@ pagesEl.addEventListener('pointerup', () => {
   const d = noteDrag; noteDrag = null;
   if (!d.moved || !d.steps) return;           /* a plain click: the click handler selects */
   const {vi, s} = d.n, v = piece.voices[vi];
+  if (ed.range && vi >= ed.range.v0 && vi <= ed.range.v1 && inRange(s.t)) { rangeStep(d.steps); return; }
+  ed.range = null;
   ed.sel = {vi, ei: s.src[0]}; ed.ins = {vi, ei: s.src[s.src.length - 1] + 1};
   commit(() => { for (const i of s.src) { const ev = v.events[i]; moveStep(v, ev, clampStep(ev.step + d.steps)); } });
 });
