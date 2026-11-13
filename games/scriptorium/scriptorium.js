@@ -1337,7 +1337,20 @@ function drawSystem(vlist, line, y, opts = {}){
 /* Pages                                                               */
 /* ------------------------------------------------------------------ */
 const PAPER = {A3: [297, 420], A4: [210, 297], A5: [148, 210]};
+/* Choirbook on the Web: every page is as big as the frame (half of it, an opening being two pages) and the music is cut to fit; the arrows turn the page */
+const webFit = () => st.paper === 'web' && st.view === 'choir';
+const isHoriz = () => webFit() || (st.flow === 'horizontal' && st.paper !== 'web');
+function frameSize(){
+  const w = ($('.viewwrap').clientWidth || window.innerWidth) - (window.innerWidth <= 700 ? 60 : 140);
+  const h = Math.max(320, (wrapEl.classList.contains('fs') ? window.innerHeight : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) || 700) - 60);
+  return [Math.max(240, w), h];
+}
 function pageGeom(){
+  if (webFit()) {
+    const [fw, fh] = frameSize(), pw = fw >= 660 ? fw / 2 : fw, mm = 96 / 25.4;
+    const w = pw / mm, h = fh / mm, sp = st.size * 1.2;
+    return {fit: true, wmm: w, hmm: h, sp, W: w / sp, H: h / sp, M: Math.min(w, 297) * 0.065 / sp};
+  }
   if (st.paper === 'web') {
     const avail = Math.max(240, ($('.viewwrap').clientWidth || window.innerWidth) - 40);
     /* the two pages of an opening side by side, or one below the other on a narrow screen */
@@ -1352,7 +1365,7 @@ function pageGeom(){
 }
 /* the foot of a page: the credits on the first, the title and the page number on the others */
 /* on the Web page a fixed size, about that of the lyrics (the page has no paper size to go by) */
-function footFont(G){ return G.web ? 1.6 : Math.min(G.wmm, G.hmm) * 0.0115 / G.sp; }
+function footFont(G){ return G.web || G.fit ? 1.6 : Math.min(G.wmm, G.hmm) * 0.0115 / G.sp; }
 function wrapText(text, size, width){
   const words = text.split(/\s+/).filter(Boolean), lines = [];
   let cur = '';
@@ -1568,12 +1581,12 @@ function render(){
   document.getElementById('pagerule').textContent = `@page{size:${G.web ? 'A4' : st.paper} ${st.orient};margin:0}`;
   let html = '';
   const fs = wrapEl.classList.contains('fs');
-  const horiz = st.flow === 'horizontal' && !G.web;
-  document.querySelectorAll('#orientSeg button,#flowSeg button').forEach(b => { b.disabled = !!G.web; });
+  const horiz = isHoriz();
+  document.querySelectorAll('#orientSeg button,#flowSeg button').forEach(b => { b.disabled = !!(G.web || G.fit); });
   $('#scrollLab').hidden = $('#scrollSeg').hidden = !G.web;
   document.querySelectorAll('#scrollSeg button').forEach(b => { b.disabled = st.view !== 'score'; b.title = st.view !== 'score' ? 'Only in Score' : b.title; });
   const wide = !!G.web && st.webScroll === 'horizontal' && st.view === 'score';
-  const Z = G.web ? 1 : Math.max(0.5, Math.min(3, st.zoom || 1));
+  const Z = G.web || G.fit ? 1 : Math.max(0.5, Math.min(3, st.zoom || 1));
   const avail = ($('.viewwrap').clientWidth || window.innerWidth) - (horiz ? (window.innerWidth <= 700 ? 60 : 140) : 40);
   const pxmm = 96 / 25.4;
   /* side by side, a page (or an opening) fits the height of the window */
@@ -1581,7 +1594,7 @@ function render(){
   const fitH = horiz ? availH / (G.hmm * pxmm) : Infinity;
   if (st.view === 'choir') {
     const pages = layoutChoir(G);
-    const sc = G.web ? 1 : Math.min(1.25, avail / (2 * G.wmm * pxmm), fitH) * Z;
+    const sc = G.web || G.fit ? 1 : Math.min(1.25, avail / (2 * G.wmm * pxmm), fitH) * Z;
     for (let i = 0; i < pages.length; i += 2) {
       html += `<div class="opening${G.web && 2 * G.wmm * pxmm > avail + 1 ? ' stack' : ''}">`;
       for (const p of pages.slice(i, i + 2)) html += pageDiv(p.svg, G, sc, '');
@@ -1623,7 +1636,7 @@ function goPage(dir){
   viewerEl.scrollTo({left: c.offsetLeft + c.offsetWidth / 2 - viewerEl.clientWidth / 2, behavior: 'smooth'});
 }
 function syncNav(){
-  const horiz = st.flow === 'horizontal' && st.paper !== 'web';
+  const horiz = isHoriz();
   const max = viewerEl.scrollWidth - viewerEl.clientWidth;
   $('#pgPrev').disabled = !horiz || viewerEl.scrollLeft <= 2;
   $('#pgNext').disabled = !horiz || viewerEl.scrollLeft >= max - 2;
@@ -2028,12 +2041,7 @@ function segInit(id, key, after){
   });
 }
 function syncUI(){
-  /* the Choirbook is paper: no Web there (Samuel 2026-11-13); Web comes back when leaving it */
-  { const was = st.paper + '|' + st.webWas;
-    if (st.view === 'choir' && st.paper === 'web') { st.webWas = true; st.paper = 'A4'; }
-    else if (st.view !== 'choir' && st.webWas) { st.paper = 'web'; st.webWas = false; }
-    if (was !== st.paper + '|' + st.webWas) save(); }
-  { const wb = document.querySelector('#paperSeg [data-v="web"]'); if (wb) wb.hidden = st.view === 'choir'; }
+  if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
   const segs = {'#viewList': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ctlSeg': 'ctlMode', '#ligSeg': 'lig', '#scrollSeg': 'webScroll'};
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
   for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).value = st[k];
@@ -2042,7 +2050,7 @@ function syncUI(){
   if ($('#audition')) $('#audition').checked = !!st.audition;
   document.documentElement.style.setProperty('--staff', (STAFF_COLORS.find(c => c[0] === st.staff) || STAFF_COLORS[0])[1]);
   applyPaper();
-  const horiz = st.flow === 'horizontal' && st.paper !== 'web';
+  const horiz = isHoriz();
   viewerEl.classList.toggle('horiz', horiz); $('.viewwrap').classList.toggle('horiz', horiz);
   /* verses */
   const nv = piece ? Math.max(1, ...piece.voices.map(v => v.verses)) : 1;
@@ -4055,7 +4063,8 @@ var postFrame = null;
 function postHeight(){ if (EMBED && postFrame) requestAnimationFrame(postFrame); }
 postFrame = frameHeight(APP.msg + 'Height');
 let rw = 0, lastW = window.innerWidth;
-window.addEventListener('resize', () => { if (window.innerWidth === lastW) return; lastW = window.innerWidth; clearTimeout(rw); rw = setTimeout(() => { sizeViewer(); render(); }, 150); });
+let lastH = window.innerHeight;
+window.addEventListener('resize', () => { if (window.innerWidth === lastW && !(webFit() && window.innerHeight !== lastH)) return; lastW = window.innerWidth; lastH = window.innerHeight; clearTimeout(rw); rw = setTimeout(() => { sizeViewer(); render(); }, 150); });
 if (EMBED) try { window.top.addEventListener('resize', () => { clearTimeout(rw); rw = setTimeout(() => { sizeViewer(); postHeight(); }, 150); }); } catch (e) {}
 
 Organ.wire();
