@@ -290,20 +290,21 @@ main.contact-page { max-width: 36rem; justify-items: stretch; gap: 1.6rem; }
 .contact-page .email { justify-self: center; }
 @media (max-width: 480px) { .contact-form { padding: 1.2rem; } }
 
-/* App and tool pages: the name is a brown box at the left of the navigation, and the top band is gone */
+/* App and tool pages: the name is a box in the banner's beige at the left of the navigation, the links centred on the screen */
 .nav .brand { display: none; }
 body.compact .banner { display: none; }
-body.compact .nav { display: flex; align-items: stretch; flex-wrap: wrap; border-top: 0; }
+body.compact .nav { position: relative; border-top: 0; }
 body.compact .nav .brand {
+  position: absolute; left: 0; top: 0; bottom: 0; z-index: 1;
   display: flex; align-items: center;
-  padding: .45rem 1.15rem .4rem;
-  background: #7b4f2b; color: #f6ecd9; text-decoration: none; white-space: nowrap;
+  padding: 0 1.15rem;
+  background: var(--band); color: var(--text); text-decoration: none; white-space: nowrap;
   font-family: var(--display); font-size: 1.28rem; line-height: 1.2; border-bottom: 0;
 }
-body.compact .nav .brand:hover { background: #6b4322; color: #fbf3e2; }
-body.compact .nav ul { flex: 1; padding-top: 0; padding-bottom: 0; gap: .1rem 2rem; }
+body.compact .nav .brand:hover { background: #eadfcb; color: var(--text); }
+body.compact .nav ul { padding-top: 0; padding-bottom: 0; gap: .1rem 2rem; }
 body.compact .nav a:not(.brand) { padding: .55rem 0 .45rem; }
-@media (max-width: 760px) {
-  body.compact .nav .brand { width: 100%; justify-content: center; padding: .4rem 1rem; }
-  body.compact .nav ul { justify-content: center; }
+/* too narrow to share the line: the name sits above the links */
+@media (max-width: 1290px) {
+  body.compact .nav .brand { position: static; justify-content: center; padding: .4rem 1rem; }
 }
