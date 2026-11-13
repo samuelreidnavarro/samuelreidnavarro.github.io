@@ -1558,8 +1558,10 @@ function defs(){
   document.body.appendChild(d);
   defsDone = true;
 }
+let wideFx = null, wideLast = 0, wideCache = null;   /* Horizontal Web follow-along (see wideFollow) */
 function render(){
   if (!piece) return;
+  wideCache = null;
   defs();
   prepare();
   const G = pageGeom();
@@ -3834,14 +3836,14 @@ function startPlay(from, again){
     group: bi => { const T = mensInfo(metAt(top, bi * u / 2)).T; return T === 3 ? 3 : 2; },
     groupStart: bi => { let seg = 0; for (const m of top.mets) if (m.t <= bi * u / 2 + EPS) seg = m.t; return Math.round(seg * 2 / u); },
     onLoop: () => startPlay(0, true),     /* a repeat: no count-in again */
-    onFrame: ids => {
+    onFrame: (ids, tNow, T) => {
       const now = new Set(ids);
       for (const id of [...on]) if (!now.has(id)) { on.delete(id); document.querySelectorAll('svg g.' + id).forEach(g => g.classList.remove('on')); }
       let first = null;
       for (const id of now) { const gs = document.querySelectorAll('svg g.' + id); if (!on.has(id)) { on.add(id); gs.forEach(g => g.classList.add('on')); } first = first || gs[0]; }
-      if (first) { followHand(first); followPlay(first); }
+      if (first) { followHand(first); followPlay(first, tNow, T); }
     },
-    onStop: () => { followT = 0; }
+    onStop: () => { followT = 0; wideStop(); }
   };
   if (H.playSpec) H.playSpec(spec);
   Organ.play(spec);
@@ -3852,19 +3854,50 @@ $('#play').addEventListener('click', () => { if (play) stopPlay(); else startPla
    vertical: when the note leaves the view, quickly to its system; pages side by side: to its page.
    Touching the wheel or the screen hands the view back to the reader for a few seconds. */
 let followT = 0, followHold = 0, followJump = 0;
-const holdFollow = () => { followHold = performance.now() + 2500; };
+const holdFollow = () => { followHold = performance.now() + 2500; wideStop(); };
 viewerEl.addEventListener('wheel', holdFollow, {passive: true});
 viewerEl.addEventListener('touchstart', holdFollow, {passive: true});
 viewerEl.addEventListener('pointerdown', holdFollow, {passive: true});
-function followPlay(el){
+/* Horizontal Web: the view is driven by the music's own time, not by the note being lit. Playing time is turned into a
+   place on the line (between the columns, so it moves evenly through a note's width), led a little ahead and smoothed
+   with a low-pass filter, and drawn in steps of whole pixels for the scroll plus the remaining fraction as a transform,
+   so the motion has no stepping at any pixel ratio. */
+function wideStop(){ wideFx = null; wideCache = null; pagesEl.style.transform = ''; }
+function wideBuild(){
+  const rect = pagesEl.querySelector('rect.stafhit'); if (!rect) return null;
+  const pairs = (rect.dataset.tx || '').split(',').filter(Boolean).map(q => q.split(':').map(Number));
+  if (pairs.length < 2) return null;
+  const rr = rect.getBoundingClientRect(), vr = viewerEl.getBoundingClientRect();
+  const sx = rr.width / (+rect.getAttribute('width') || 1), rx = +rect.getAttribute('x');
+  return {pairs, sx, rx, A: rr.left - vr.left + viewerEl.scrollLeft};
+}
+function wideFollow(tNow, T, dt){
+  const c = wideCache || (wideCache = wideBuild()); if (!c || !T) return;
+  const tau = 0.5;
+  const ts = (tNow - T.origin) / T.spm / 2 + tau / T.spm / 2;          /* in semibreves, a little ahead */
+  const P = c.pairs; let x;
+  if (ts <= P[0][0]) x = P[0][1];
+  else if (ts >= P[P.length - 1][0]) x = P[P.length - 1][1];
+  else { let i = 0; while (i + 2 < P.length && P[i + 1][0] < ts) i++; const [ta, xa] = P[i], [tb, xb] = P[i + 1]; x = tb > ta ? xa + (ts - ta) / (tb - ta) * (xb - xa) : xa; }
+  const max = Math.max(0, viewerEl.scrollWidth - viewerEl.clientWidth);
+  const target = Math.max(0, Math.min(max, c.A + (x - c.rx) * c.sx - viewerEl.clientWidth / 2));
+  if (wideFx === null || Math.abs(viewerEl.scrollLeft - wideLast) > 2) wideFx = viewerEl.scrollLeft;
+  const k = 1 - Math.exp(-dt / (Math.abs(target - wideFx) > viewerEl.clientWidth ? 0.04 : tau));
+  wideFx += (target - wideFx) * k;
+  const iv = Math.floor(wideFx);
+  if (viewerEl.scrollLeft !== iv) viewerEl.scrollLeft = iv;
+  wideLast = viewerEl.scrollLeft;
+  pagesEl.style.transform = `translate3d(${(iv - wideFx).toFixed(3)}px,0,0)`;
+}
+function followPlay(el, tNow, T){
   const now = performance.now(), dt = followT ? Math.min(0.1, (now - followT) / 1000) : 0.016;
   followT = now;
   if (now < followHold || !el) return;
   const vr = viewerEl.getBoundingClientRect(), r = el.getBoundingClientRect();
+  if (viewerEl.classList.contains('wide') && st.paper === 'web') { wideFollow(tNow, T, dt); return; }
   if (viewerEl.classList.contains('wide')) {
     const off = (r.left + r.width / 2) - (vr.left + vr.width / 2);
     if (Math.abs(off) < 0.5) return;
-    /* the first frame after a start or a seek: closer at once */
     const k = 1 - Math.exp(-dt / (Math.abs(off) > vr.width ? 0.05 : 0.3));
     viewerEl.scrollLeft += off * k;
     return;
