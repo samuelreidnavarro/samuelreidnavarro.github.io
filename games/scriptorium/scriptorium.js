@@ -109,7 +109,6 @@ ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
     <div class="handbox" id="handBox" title="The tactus: the hand drops on one beat and lifts on the next" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="handRot"></g></svg></div><div class="handbox pendbox" id="pendBox" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="pendG"><path d="M66 158 H130 L120 142 H76Z" fill="currentColor"/><g id="pendRot"><line x1="98" y1="150" x2="98" y2="-16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="84" y="14" width="28" height="34" rx="4" fill="currentColor"/></g></g></svg></div>
   </div>
 
-  <p class="srcnote" id="srcNote"></p>
   <section class="transport" aria-label="Playback and sound">
     <div class="tp-main">
     <button id="play" aria-label="Play" title="Play (space bar)"><svg viewBox="0 0 14 14" aria-hidden="true"><path id="playIcon" d="M2 1 13 7 2 13Z"/></svg><span>Play</span></button>
@@ -1563,18 +1562,17 @@ async function pieceUrl(key){
   return catUrl(e);
 }
 function showSource(key){
-  const el = $('#srcNote'); if (!el) return;
   const e = CATBY[key];
   const info = $('#infoSrc');
   if (info) {
     const c = creditText().about;
     info.innerHTML = e ? '' : esc(c || (key && key.startsWith('mine:') ? `Your own, kept in this browser (${L.mine}).` : key && key.startsWith('file:') ? 'A file from your computer: ' + key.slice(5) : ''));
   }
-  if (!e) { el.textContent = ''; return; }
+  if (!e) return;
   const [n, href] = SRC_NAMES[e.s] || ['', '', ''];
   const lic = piece && piece.meta && piece.meta.YEC;
-  el.innerHTML = `Score: <a href="${esc(href)}" target="_blank" rel="noopener">${esc(n)}</a>${lic ? '. ' + esc(lic) : ''} · <a href="${esc(catUrl(e))}" target="_blank" rel="noopener">source file</a>`;
-  if (info) info.innerHTML = el.innerHTML;
+  const html = `Score: <a href="${esc(href)}" target="_blank" rel="noopener">${esc(n)}</a>${lic ? '. ' + esc(lic) : ''} · <a href="${esc(catUrl(e))}" target="_blank" rel="noopener">source file</a>`;
+  if (info) info.innerHTML = html;
 }
 /* the address shows the open piece, so it can be bookmarked or shared */
 function setAddress(key, extra){
@@ -3138,7 +3136,7 @@ $('#fsPlay').addEventListener('click', () => {
     let win = window.innerHeight; if (EMBED && dock) win = dock.vh;
     root.style.setProperty('--win', win + 'px');
     if (!EMBED || !dock) return;
-    const h = tp.offsetHeight, main = document.querySelector('main.wrap'), docH = main.offsetHeight;
+    const h = tp.offsetHeight, main = document.querySelector('main.wrap'), docH = Math.max(main.offsetHeight, window.innerHeight);
     const lo = ($('.viewwrap').offsetTop || 0) + 80;
     const top = Math.max(Math.min(lo, docH - h), Math.min(docH - h, dock.vh - dock.top - h));
     root.style.setProperty('--tpTop', Math.round(top) + 'px');

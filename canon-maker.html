@@ -7,17 +7,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+Double+Pica:ital@0;1&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap">
-  <link rel="stylesheet" href="style.css?v=19">
+  <link rel="stylesheet" href="style.css?v=20">
   <style>
     /* the app's dark room darkens this page too */
     html.cf-dark { --bg: #15110d; --band: #1d1813; --text: #ece2d0; --soft: #a5957b; --line: #3a3027; --mark: #c98a55; color-scheme: dark; background: #15110d; }
   </style>
 </head>
-<body>
+<body class="compact">
   <header class="banner">
     <a href="index.html"><p class="site-name">Samuel Reid Navarro</p></a>
   </header>
   <nav class="nav" aria-label="Main">
+    <a class="brand" href="index.html">Samuel Reid Navarro</a>
     <ul>
       <li><a href="index.html">Home</a></li>
       <li><a href="about.html">About</a></li>
@@ -45,21 +46,24 @@
       /* the app tells the page how tall it is, and asks for the whole window where the browser has no full screen */
       (function () {
         var f = document.getElementById("cb");
-        f.src = "games/canon-maker.html?v=9" + location.hash;
+        f.src = "games/canon-maker.html?v=10" + location.hash;
         var full = false, lastH = 0;
         /* tell the app where the bottom of the window is, so its playback row can stay there */
+        /* the frame is at least as tall as the window below it, so the app can keep its playback row at the window's bottom */
+        function setH() { if (full) return; var r = f.getBoundingClientRect(); f.style.height = Math.max(lastH, Math.ceil(window.innerHeight - (r.top + window.scrollY))) + "px"; dock(); }
+        window.addEventListener("resize", function () { setH(); });
         var dq = 0;
         function dock() { if (dq) return; dq = requestAnimationFrame(function () { dq = 0; var r = f.getBoundingClientRect(); try { f.contentWindow.postMessage({ scriptoriumDock: { top: r.top, vh: window.innerHeight } }, "*"); } catch (err) {} }); }
         window.addEventListener("scroll", dock, { passive: true }); window.addEventListener("resize", dock); f.addEventListener("load", dock);
         window.addEventListener("message", function (e) {
           if (e.source !== f.contentWindow || !e.data) return;
           if (typeof e.data.canonDark === "boolean") document.documentElement.classList.toggle("cf-dark", e.data.canonDark);
-          if (e.data.canonHeight) { lastH = e.data.canonHeight; if (!full) f.style.height = lastH + "px";  dock(); }
+          if (e.data.canonHeight) { lastH = e.data.canonHeight; setH(); }
           /* full screen where the browser has none (iPhone): the app covers the window */
           if ("canonFull" in e.data) {
             full = !!e.data.canonFull;
-            f.style.cssText = full ? "position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;max-width:none;margin:0;border:0;z-index:9999" : (lastH ? "height:" + lastH + "px" : "");
-            document.documentElement.style.overflow = full ? "hidden" : ""; dock();
+            f.style.cssText = full ? "position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;max-width:none;margin:0;border:0;z-index:9999" : "";
+            document.documentElement.style.overflow = full ? "hidden" : ""; if (!full) setH(); else dock();
           }
         });
       })();

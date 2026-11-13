@@ -289,3 +289,21 @@ main.contact-page { max-width: 36rem; justify-items: stretch; gap: 1.6rem; }
 .form-status.err { color: #a2412f; }
 .contact-page .email { justify-self: center; }
 @media (max-width: 480px) { .contact-form { padding: 1.2rem; } }
+
+/* App and tool pages: the name is a brown box at the left of the navigation, and the top band is gone */
+.nav .brand { display: none; }
+body.compact .banner { display: none; }
+body.compact .nav { display: flex; align-items: stretch; flex-wrap: wrap; border-top: 0; }
+body.compact .nav .brand {
+  display: flex; align-items: center;
+  padding: .45rem 1.15rem .4rem;
+  background: #7b4f2b; color: #f6ecd9; text-decoration: none; white-space: nowrap;
+  font-family: var(--display); font-size: 1.28rem; line-height: 1.2; border-bottom: 0;
+}
+body.compact .nav .brand:hover { background: #6b4322; color: #fbf3e2; }
+body.compact .nav ul { flex: 1; padding-top: 0; padding-bottom: 0; gap: .1rem 2rem; }
+body.compact .nav a:not(.brand) { padding: .55rem 0 .45rem; }
+@media (max-width: 760px) {
+  body.compact .nav .brand { width: 100%; justify-content: center; padding: .4rem 1rem; }
+  body.compact .nav ul { justify-content: center; }
+}

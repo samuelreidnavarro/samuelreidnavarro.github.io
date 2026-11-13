@@ -5,7 +5,8 @@ window.frameHeight = function(key){
     if (window.parent === window) return () => {};
     let last = 0;
     const post = () => {
-      let h = Math.max(document.documentElement.scrollHeight, document.body.getBoundingClientRect().bottom + window.scrollY);
+      /* the app's own bottom (not the frame's: the page may make the frame taller than the app) */
+      let h = document.body.getBoundingClientRect().bottom + window.scrollY;
       /* a menu that opens below the end of the page */
       document.querySelectorAll('.popbody, .library').forEach(p => {
         const r = p.getBoundingClientRect();
