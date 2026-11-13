@@ -800,3 +800,6 @@ html.dark .podg{background:rgba(34,28,21,.93)}
 html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backdrop-filter:blur(6px)}
 #pages .texthit{cursor:text}
 #pages .texthit:hover{fill:var(--accent)}
+.tcol[hidden],.tcol [hidden]{display:none!important}
+.tcol select#temper,.tcol select#temperRoot{grid-column:2/-1}
+#tnCredit a{color:inherit}

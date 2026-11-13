@@ -19,9 +19,9 @@ const pressed = (el, on) => { if (el) el.setAttribute('aria-pressed', on ? 'true
 
 /* settings both apps share (kept under one key, so the organ sounds the same in both) */
 const SHARED_KEY = 'organ:shared:v1';
-const SHARED = ['vol', 'reg', 'bright', 'room', 'atk', 'rel', 'chiff', 'ens', 'wind', 'scoop', 'draw', 'ref', 'beatHand', 'beatPend', 'beatTick', 'handOp', 'handSize'];
+const SHARED = ['vol', 'reg', 'bright', 'room', 'atk', 'rel', 'chiff', 'ens', 'wind', 'scoop', 'draw', 'ref', 'temper', 'temperRoot', 'beatHand', 'beatPend', 'beatTick', 'handOp', 'handSize'];
 Organ.DEFAULTS = {tempo: 60, unit: 'S', loop: false, countIn: 0, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1,
-  ref: 440, vol: 70, reg: 'custom', bright: 50, room: 40, atk: 82, rel: 10, chiff: 7, ens: 0.3, wind: 10, scoop: 5,
+  ref: 440, temper: 'equal', temperRoot: 0, vol: 70, reg: 'rec-montre', bright: 50, room: 40, atk: 82, rel: 10, chiff: 7, ens: 0.3, wind: 10, scoop: 5,
   draw: [100, 71, 55, 48, 37, 22, 12, 8, 0, 0, 0, 0], setOpen: false};
 Organ.init = function(settings, hooks){
   S = settings; Object.assign(H, hooks || {});
@@ -31,8 +31,12 @@ Organ.init = function(settings, hooks){
 };
 Organ.loadShared = function(){
   let o = null; try { o = JSON.parse(localStorage.getItem(SHARED_KEY) || 'null'); } catch (e) {}
+  /* Montre 8′ became the default sound (2026-11): a sound saved before then gives way to it once */
+  if (!o || o.regV !== 2) S.reg = Organ.DEFAULTS.reg;
   if (!o) return;
   for (const k of SHARED) {
+    if (k === 'reg' && o.regV !== 2) continue;
+    if (k === 'temper') { if (TEMPER[o[k]]) S.temper = o[k]; continue; }
     const v = o[k];
     if (v === undefined || v === null) continue;
     if (k === 'draw') { if (Array.isArray(v) && v.length === 12 && v.every(x => x >= 0 && x <= 100)) S.draw = v.slice(); continue; }
@@ -43,7 +47,7 @@ Organ.loadShared = function(){
 };
 Organ.saveShared = function(){
   if (!S) return;
-  const o = {}; for (const k of SHARED) o[k] = S[k];
+  const o = {regV: 2}; for (const k of SHARED) o[k] = S[k];
   try { localStorage.setItem(SHARED_KEY, JSON.stringify(o)); } catch (e) {}
 };
 /* the other app may change the shared settings while this one is open in another tab */
@@ -117,7 +121,7 @@ const SAMPLED = {
   'rec-trompette': {name: 'Trompette 8′',                    sf: ['i-trompette-8']},
   'rec-grandjeu':  {name: 'Grand jeu (Cornet, Trompette)',   sf: ['i-cornett', 'i-trompette-8']}
 };
-for (const [k, v] of Object.entries(SAMPLED)) REGISTERS[k] = {name: v.name + ' (recorded)', sf: v.sf, h: REGISTERS.principal.h};
+for (const [k, v] of Object.entries(SAMPLED)) REGISTERS[k] = {name: v.name + " (Jeux d'orgues)", sf: v.sf, h: REGISTERS.principal.h};
 const isSampled = r => !!(REGISTERS[r] && REGISTERS[r].sf);
 /* the room's treble: the synthesised organ is dulled a little; the recorded one follows Brightness */
 const lpFreq = () => isSampled(S.reg) ? 4000 * Math.pow(2, S.bright / 100 * 2.3) : 7500;
@@ -281,10 +285,13 @@ const TUNE = [
 ];
 function buildTune(){
   const box = $('#tune');
-  let html = '<div class="tcol"><div class="tg">Pipe speech</div>';
+  let html = '<div class="tcol" id="tnSpeech"><div class="tg">Pipe speech</div>';
   TUNE.forEach(t => { html += `<label for="tn-${t.k}">${t.label}</label><input type="range" id="tn-${t.k}" min="${t.min}" max="${t.max}" step="${t.step}"><output id="to-${t.k}"></output>`; });
-  html += '</div><div class="tcol"><div class="tg">Harmonics, as organ drawbars</div>';
+  html += '</div><div class="tcol" id="tnDraw"><div class="tg">Harmonics, as organ drawbars</div>';
   FEET.forEach((f, i) => { html += `<label for="db-${i}">${f}</label><input type="range" id="db-${i}" min="0" max="100" step="1"><output id="do-${i}"></output>`; });
+  html += '</div><div class="tcol" id="tnCredit"><div class="tg">Organ samples</div>'
+    + '<p style="grid-column:1/-1;margin:0;max-width:22em;line-height:1.4">Jeux d’orgues © Joseph Basquin, recorded at Romanswiller (Alsace). '
+    + '<a href="https://www.jeuxdorgues.com/" target="_blank" rel="noopener">jeuxdorgues.com</a></p>';
   box.innerHTML = html + '</div>';
   TUNE.forEach(t => {
     $('#tn-' + t.k).addEventListener('input', e => { S[t.k] = Number(e.target.value); syncTune(); H.save(); });
@@ -304,10 +311,34 @@ function syncTune(){
   const d = S.reg === 'custom' || isSampled(S.reg) ? S.draw : padDraw(REGISTERS[S.reg].h);
   FEET.forEach((f, i) => { $('#db-' + i).value = d[i]; $('#do-' + i).textContent = d[i]; });
   $('#reg').value = S.reg;
+  /* the recorded organ: only Release shapes it; the drawbars give way to the credit */
+  const rec = isSampled(S.reg);
+  $('#tnDraw').hidden = rec; $('#tnCredit').hidden = !rec;
+  TUNE.forEach(t => { if (t.k !== 'rel') ['#tn-', '#to-'].forEach(p => { $(p + t.k).hidden = rec; }); const l = document.querySelector(`label[for="tn-${t.k}"]`); if (l && t.k !== 'rel') l.hidden = rec; });
 }
 
 /* a′ = S.ref Hz, equal temperament */
-const freq = midi => S.ref * Math.pow(2, (midi - 69) / 12);
+/* Temperaments: the cents of each of the twelve steps above the chosen root (S.temperRoot, 0 = C).
+   Pythagorean and meantone: a chain of fifths from the minor third below to the augmented fifth above
+   the root (E♭ to G♯ on C), the wolf between them. a′ stays at S.ref Hz whatever the temperament. */
+const chain = fifth => { const c = []; for (let k = -3; k <= 8; k++) c[((7 * k) % 12 + 12) % 12] = ((k * fifth) % 1200 + 1200) % 1200; return c; };
+const TEMPER = {
+  equal:       {name: 'Equal',                    c: Array.from({length: 12}, (_, i) => 100 * i)},
+  pythagorean: {name: 'Pythagorean',              c: chain(1200 * Math.log2(3 / 2))},
+  meantone:    {name: 'Meantone (¼ comma)',       c: chain(1200 * Math.log2(3 / 2) - 1200 * Math.log2(81 / 80) / 4)},
+  just:        {name: 'Just intonation',          c: [1, 16/15, 9/8, 6/5, 5/4, 4/3, 45/32, 3/2, 8/5, 5/3, 9/5, 15/8].map(r => 1200 * Math.log2(r))}
+};
+const ROOTS = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'B♭', 'B'];
+/* how far a pitch class stands from equal temperament, in cents */
+function tempDev(pc){
+  const t = TEMPER[S.temper] || TEMPER.equal, r = S.temperRoot | 0;
+  const step = ((pc - r) % 12 + 12) % 12;
+  return t.c[step] - 100 * step;
+}
+const freq = midi => {
+  const pc = ((Math.round(midi) % 12) + 12) % 12;
+  return S.ref * Math.pow(2, (midi - 69) / 12 + (tempDev(pc) - tempDev(9)) / 1200);
+};
 function testTone(){
   const ctx = ensureAudio();
   if (!ctx || audio.timeline) return;
@@ -340,7 +371,7 @@ function metroClick(ctx, dest, t){
   return {osc: o, g, t1: t + 0.08};
 }
 
-Object.assign(Organ, {Sampler, voice, isSampled, ensureAudio, roomLevel, masterLevel, REGISTERS, FEET, padDraw, organAmps, Synth, silence, TUNE, buildTune, syncTune, testTone, audition, metroClick, freq});
+Object.assign(Organ, {Sampler, voice, isSampled, TEMPER, tempDev, syncTemper, ensureAudio, roomLevel, masterLevel, REGISTERS, FEET, padDraw, organAmps, Synth, silence, TUNE, buildTune, syncTune, testTone, audition, metroClick, freq});
 
 /* ------------------------------------------------------------------ */
 /* Mensural reading (the same in both apps)                            */
@@ -689,7 +720,7 @@ function sync(){
   if ($('#vol')) $('#vol').value = S.vol;
   if ($('#countIn')) $('#countIn').value = S.countIn ? String(S.countIn) : '';
   if ($('#reg')) { $('#reg').value = S.reg; }
-  syncLp();
+  syncLp(); syncTemper();
   if ($('#bright')) $('#bright').value = S.bright;
   if ($('#room')) $('#room').value = S.room;
   syncOut();
@@ -705,10 +736,29 @@ function addSampledOptions(){
   if (!sel || sel.querySelector('optgroup')) return;
   const synth = document.createElement('optgroup'); synth.label = 'Synthesised organ';
   [...sel.children].forEach(o => synth.appendChild(o));
-  const rec = document.createElement('optgroup'); rec.label = 'Recorded pipe organ';
+  const rec = document.createElement('optgroup'); rec.label = "Jeux d'orgues";
   for (const [k, v] of Object.entries(SAMPLED)) { const o = document.createElement('option'); o.value = k; o.textContent = v.name; rec.appendChild(o); }
-  sel.appendChild(synth); sel.appendChild(rec);
+  sel.appendChild(rec); sel.appendChild(synth);
   sel.value = S.reg;
+  /* temperament and its root, under the sound */
+  const mk = (id, label, opts) => {
+    const l = document.createElement('label'); l.htmlFor = id; l.textContent = label; l.id = id + 'L';
+    const s = document.createElement('select'); s.id = id;
+    opts.forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; s.appendChild(o); });
+    return [l, s];
+  };
+  const [tl, ts] = mk('temper', 'Temperament', Object.entries(TEMPER).map(([k, v]) => [k, v.name]));
+  const [rl, rs] = mk('temperRoot', 'On', ROOTS.map((n, i) => [i, n]));
+  sel.after(tl, ts, rl, rs);
+  ts.addEventListener('change', () => { S.temper = ts.value; syncTemper(); H.save(); testTone(); });
+  rs.addEventListener('change', () => { S.temperRoot = +rs.value; H.save(); testTone(); });
+  syncTemper();
+}
+function syncTemper(){
+  if (!$('#temper')) return;
+  $('#temper').value = S.temper; $('#temperRoot').value = String(S.temperRoot | 0);
+  const eq = S.temper === 'equal';
+  $('#temperRoot').hidden = eq; $('#temperRootL').hidden = eq;
 }
 function wire(){
   initHand();
@@ -805,7 +855,7 @@ function wire(){
   /* the recorded organ chosen earlier: fetched now, quietly, so it is there when Play is pressed */
   if (isSampled(S.reg)) Sampler.prepare(S.reg, true);
   if ($('#copySound')) $('#copySound').addEventListener('click', () => {
-    const t = `Sound: ${REGISTERS[S.reg].name}; brightness ${S.bright}; room ${S.room}; attack ${S.atk} ms; release ${S.rel} ms; chiff ${S.chiff}; wind ${S.wind}; scoop ${S.scoop} cents; ensemble ${S.ens} cents; drawbars ${S.draw.join(' ')}; a′ ${S.ref} Hz.`;
+    const t = `Sound: ${REGISTERS[S.reg].name}; brightness ${S.bright}; room ${S.room}; attack ${S.atk} ms; release ${S.rel} ms; chiff ${S.chiff}; wind ${S.wind}; scoop ${S.scoop} cents; ensemble ${S.ens} cents; drawbars ${S.draw.join(' ')}; a′ ${S.ref} Hz; temperament ${TEMPER[S.temper].name}${S.temper === 'equal' ? '' : ' on ' + ROOTS[S.temperRoot | 0]}.`;
     const done = () => { $('#copySound').textContent = 'Copied'; setTimeout(() => { $('#copySound').textContent = 'Copy sound settings'; }, 1500); };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, () => window.prompt('Copy this:', t));
     else window.prompt('Copy this:', t);
