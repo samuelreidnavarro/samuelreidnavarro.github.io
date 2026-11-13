@@ -46,14 +46,14 @@
       /* the app tells the page how tall it is, and asks for the whole window where the browser has no full screen */
       (function () {
         var f = document.getElementById("cb");
-        f.src = "games/canon-maker.html?v=10" + location.hash;
+        f.src = "games/canon-maker.html?v=11" + location.hash;
         var full = false, lastH = 0;
         /* tell the app where the bottom of the window is, so its playback row can stay there */
         /* the frame is at least as tall as the window below it, so the app can keep its playback row at the window's bottom */
         function setH() { if (full) return; var r = f.getBoundingClientRect(); f.style.height = Math.max(lastH, Math.ceil(window.innerHeight - (r.top + window.scrollY))) + "px"; dock(); }
         window.addEventListener("resize", function () { setH(); });
         var dq = 0;
-        function dock() { if (dq) return; dq = requestAnimationFrame(function () { dq = 0; var r = f.getBoundingClientRect(); try { f.contentWindow.postMessage({ scriptoriumDock: { top: r.top, vh: window.innerHeight } }, "*"); } catch (err) {} }); }
+        function dock() { if (dq) return; dq = requestAnimationFrame(function () { dq = 0; var r = f.getBoundingClientRect(); try { f.contentWindow.postMessage({ scriptoriumDock: { top: r.top, vh: window.innerHeight, pageTop: r.top + window.scrollY } }, "*"); } catch (err) {} }); }
         window.addEventListener("scroll", dock, { passive: true }); window.addEventListener("resize", dock); f.addEventListener("load", dock);
         window.addEventListener("message", function (e) {
           if (e.source !== f.contentWindow || !e.data) return;

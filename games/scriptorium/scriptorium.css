@@ -725,3 +725,41 @@ html.dark .tp-side{box-shadow:0 -10px 30px -12px rgba(0,0,0,.85)}
   .transport .popbody{position:fixed;bottom:calc(var(--tph,56px) + 6px);top:auto;left:10px;right:10px;width:auto}
   .vol input[type=range]{width:70px;flex:none}
 }
+
+/* ================= The controls float over the page, and rest when the mouse does ================= */
+:root{--play:46px}
+.tools .podg,.transport .podg{background:color-mix(in srgb,var(--ground) 86%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 1px 4px rgba(42,34,24,.14)}
+html.dark .tools .podg,html.dark .transport .podg{box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.tools .podg{height:var(--pod);min-height:var(--pod);box-sizing:border-box;padding:3px;align-items:center}
+.tools .podg button.popbtn,.tools .podg .ib{height:calc(var(--pod) - 6px);min-height:calc(var(--pod) - 6px)}
+.tools .podg .tb{padding:0 10px;font-size:16px}
+#play,#play:hover:not(:disabled){width:var(--play);height:var(--play);min-height:var(--play)}
+#play svg{width:19px;height:19px}
+@media (min-width:701px){
+  .wrap{padding-bottom:0}
+  .tools{position:relative;height:0;padding:0;margin:0;background:transparent;z-index:40;overflow:visible}
+  .tools .bar{position:absolute;left:0;right:0;top:8px;padding:0 4px;pointer-events:none}
+  .tools .bar.editbar{top:56px}
+  .tools .podg,.tools .podg *{pointer-events:auto}
+  .tools .grow{pointer-events:none}
+  .transport{background:transparent;border-top:0;pointer-events:none;padding-top:0;padding-bottom:8px}
+  .transport .podg,#play,.tp-side{pointer-events:auto}
+  .viewer,.viewer.frame{padding-top:58px;padding-bottom:74px}
+  .viewer.horiz{padding-top:58px;padding-bottom:74px}
+  .tools .podg,.tp-stack,#podSound .hzctl,#podSound #toggleSet,.tools .editbar{transition:opacity .35s ease,transform .35s ease}
+  /* resting: the top keeps Edit and the arrow icon, the bottom Play and the volume */
+  html.ctl-top-idle .tools .bar>.podg:not(#editPod){opacity:0;pointer-events:none;transform:translateX(-16px)}
+  html.ctl-top-idle .tools .bar>.podg:not(#editPod) *{pointer-events:none}
+  html.ctl-top-idle .tools .grow>.podg:not(.sendpod){opacity:0;pointer-events:none;transform:translateX(18px)}
+  html.ctl-top-idle .tools .grow>.podg:not(.sendpod) *{pointer-events:none}
+  html.ctl-top-idle .tools .editbar{opacity:0;pointer-events:none}
+  html.ctl-top-idle .tools .editbar *{pointer-events:none}
+  html.ctl-top-idle #editPod,html.ctl-top-idle .sendpod{opacity:.8}
+  html.ctl-bot-idle .tp-stack{opacity:0;pointer-events:none;transform:translateX(-16px)}
+  html.ctl-bot-idle .tp-stack *{pointer-events:none}
+  html.ctl-bot-idle #podSound:not(:hover):not(:focus-within) .hzctl,html.ctl-bot-idle #podSound:not(:hover):not(:focus-within) #toggleSet{display:none}
+}
+@media (min-width:701px){
+  .viewwrap:not(.fs) .fsbtn{top:58px;transition:opacity .35s ease}
+  html.ctl-top-idle .viewwrap:not(.fs) .fsbtn{opacity:0;pointer-events:none}
+}

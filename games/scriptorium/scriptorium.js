@@ -47,6 +47,7 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
           <span class="lab">Staff lines</span><div class="btns" id="linesSeg" role="group" aria-label="Staff lines"><button class="tb" data-v="5">Five</button><button class="tb" data-v="4">Four</button></div>
           <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
+          <span class="lab">Controls</span><div class="btns" id="ctlSeg" role="group" aria-label="When the controls show"><button class="tb" data-v="move">On movement</button><button class="tb" data-v="edge">At the edges</button></div>
           <span class="lab">Dark room</span><div class="btns" id="darkSeg" role="group" aria-label="Dark room"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
           <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0" max="1.2" step="0.01">
@@ -74,12 +75,6 @@ ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
           <div id="library" class="library" role="dialog" aria-label="Pieces" hidden></div>
         </div></div>
         <div class="podg">
-          <div class="pop" id="popSend">
-            <button class="tb popbtn ib sendbtn" aria-haspopup="true" aria-expanded="false" aria-label="Open in another app" title="Open this score in another app"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3.5h6.5V10h-2V6.9l-6.8 6.8-1.4-1.4 6.8-6.8H14ZM4.5 6.5h7v2h-5v9h9v-5h2v7h-13Z"/></svg></button>
-            <div class="popbody"><div class="btns col" id="sendList"></div></div>
-          </div>
-        </div>
-        <div class="podg">
           <div class="pop" id="popExport">
             <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Export<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
             <div class="popbody"><div class="btns col" id="exportList">
@@ -89,6 +84,12 @@ ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
               <div class="btns duo"><button class="tb" id="svgBtn" title="The page you see, as an SVG picture">Download SVG</button><button class="tb" id="pngBtn" title="The page you see, as a PNG picture">Download PNG</button></div>
               <button class="tb" id="linkBtn" title="A link that opens this score, with your changes, for anyone">Copy link</button>
             </div></div>
+          </div>
+        </div>
+        <div class="podg sendpod">
+          <div class="pop" id="popSend">
+            <button class="tb popbtn ib sendbtn" aria-haspopup="true" aria-expanded="false" aria-label="Open in another app" title="Open this score in another app"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3.5h6.5V10h-2V6.9l-6.8 6.8-1.4-1.4 6.8-6.8H14ZM4.5 6.5h7v2h-5v9h9v-5h2v7h-13Z"/></svg></button>
+            <div class="popbody"><div class="btns col" id="sendList"></div></div>
           </div>
         </div>
       </div>
@@ -632,10 +633,11 @@ function chooseClef(v, mode){
 /* ------------------------------------------------------------------ */
 /* State                                                               */
 /* ------------------------------------------------------------------ */
+let DOCK = null;     /* where the site page says the browser window is, when embedded: {top, vh, pageTop} */
 const KEY = APP.store + ':v1';
 const st = {
   piece: PIECES[0] || null, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on',
-  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off',
+  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', ctlMode: 'move',
   ...(APP.defaults || {})
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
@@ -1780,7 +1782,7 @@ function segInit(id, key, after){
   });
 }
 function syncUI(){
-  const segs = {'#viewList': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark'};
+  const segs = {'#viewList': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ctlSeg': 'ctlMode'};
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
   for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).value = st[k];
   Organ.sync();
@@ -1814,7 +1816,7 @@ function syncUI(){
   document.querySelectorAll('#library .pc').forEach(b => b.setAttribute('aria-current', String(b.dataset.p === pieceKey)));
 }
 segInit('#viewList', 'view'); segInit('#notaSeg', 'nota'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars');
-segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#edSeg', 'ed');
+segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#ctlSeg', 'ctlMode', () => { if (window.__ctlWake) window.__ctlWake(); }); segInit('#edSeg', 'ed');
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
 let rq = 0;
 const later = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); };
@@ -2967,10 +2969,11 @@ if ($('#audition')) $('#audition').addEventListener('change', e => { st.audition
 
 /* the music box fills the window (or the visitor's window, when embedded), with the controls above and below it */
 function sizeViewer(){
-  let H = window.innerHeight;
-  if (EMBED) { try { H = window.top.innerHeight; } catch (e) { H = Math.max(window.screen.availHeight - 160, 600); } }
-  const used = ($('.tools').offsetHeight || 60) + ($('.transport').offsetHeight || 70) + (EMBED ? 40 : 120);
-  document.documentElement.style.setProperty('--vh', (st.frameH ? Math.max(120, st.frameH) : Math.max(380, H - used)) + 'px');
+  /* the music fills the window from its own top to the window's bottom; the controls float over it */
+  let win = window.innerHeight;
+  if (EMBED) { if (DOCK) win = DOCK.vh - DOCK.pageTop; else { try { win = window.top.innerHeight - 200; } catch (e) { win = Math.max(window.screen.availHeight - 360, 600); } } }
+  const top = wrapEl.getBoundingClientRect().top + window.scrollY;
+  document.documentElement.style.setProperty('--vh', (st.frameH ? Math.max(120, st.frameH) : Math.max(380, Math.round(win - top - 2))) + 'px');
 }
 /* the grip at the frame's corner: the frame as tall as you drag it; double-click gives it back to the window */
 {
@@ -3126,26 +3129,65 @@ $('#fsPlay').addEventListener('click', () => {
   fsWake();
 });
 
+/* the controls rest: after 3 s without the mouse moving, the top collapses into the Edit button and the arrow icon, and the
+   bottom into Play and the volume; moving the mouse brings them back. "At the edges": they show only near the top or the bottom. */
+{
+  const root = document.documentElement;
+  let timer = 0, lastY = null, topOn = true, botOn = true;
+  const wide = () => window.innerWidth > 700;
+  const hold = () => {
+    if (document.querySelector('.pop.open') || !libEl.hidden || !$('#tpSide').hidden) return true;
+    const a = document.activeElement;
+    return !!(a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && a.closest('.tools,.transport'));
+  };
+  const apply = (t, b) => {
+    if (t === topOn && b === botOn) return;
+    topOn = t; botOn = b;
+    root.classList.toggle('ctl-top-idle', !t); root.classList.toggle('ctl-bot-idle', !b);
+  };
+  const zone = () => {
+    const vh = EMBED && DOCK ? DOCK.vh : window.innerHeight, y = (lastY === null ? vh / 2 : lastY) + (EMBED && DOCK ? DOCK.top : 0);
+    return [y < vh * 0.25, y > vh * 0.75];
+  };
+  const rest = () => {
+    if (!wide() || root.classList.contains('focus')) return;
+    if (hold()) { timer = setTimeout(rest, 1000); return; }
+    if (st.ctlMode === 'edge') { const z = zone(); apply(z[0], z[1]); } else apply(false, false);
+  };
+  const wake = e => {
+    if (e && typeof e.clientY === 'number') lastY = e.clientY;
+    clearTimeout(timer);
+    if (!wide()) { apply(true, true); return; }
+    if (st.ctlMode === 'edge') { const z = zone(), h = hold(); apply(z[0] || h, z[1] || h); }
+    else apply(true, true);
+    timer = setTimeout(rest, 3000);
+  };
+  ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(t => document.addEventListener(t, wake, {passive: true}));
+  window.addEventListener('resize', () => wake());
+  document.addEventListener('click', () => { if (st.ctlMode === 'edge') wake(); });
+  window.__ctlWake = () => wake();
+  timer = setTimeout(rest, 3000);
+}
+
 /* the playback row stays at the bottom of the browser window. Alone it is simply fixed there; in the site's frame (which is as
    tall as the whole app) the page tells where the window's bottom is, and the row is put there */
 {
   const tp = $('.transport'), root = document.documentElement;
-  let dock = null;
   const place = () => {
     root.style.setProperty('--tph', tp.offsetHeight + 'px');
-    let win = window.innerHeight; if (EMBED && dock) win = dock.vh;
+    let win = window.innerHeight; if (EMBED && DOCK) win = DOCK.vh;
     root.style.setProperty('--win', win + 'px');
-    if (!EMBED || !dock) return;
+    if (!EMBED || !DOCK) return;
     const h = tp.offsetHeight, main = document.querySelector('main.wrap'), docH = Math.max(main.offsetHeight, window.innerHeight);
     const lo = ($('.viewwrap').offsetTop || 0) + 80;
-    const top = Math.max(Math.min(lo, docH - h), Math.min(docH - h, dock.vh - dock.top - h));
+    const top = Math.max(Math.min(lo, docH - h), Math.min(docH - h, DOCK.vh - DOCK.top - h));
     root.style.setProperty('--tpTop', Math.round(top) + 'px');
     const sp = $('#tpSide'), sh = sp && !sp.hidden ? sp.offsetHeight : 0;
     root.style.setProperty('--spTop', Math.max(0, Math.round(top - sh - 8)) + 'px');
   };
   window.addEventListener('message', e => {
     const d = e.data && e.data.scriptoriumDock; if (!d || typeof d.top !== 'number') return;
-    dock = {top: d.top, vh: d.vh}; place();
+    DOCK = {top: d.top, vh: d.vh, pageTop: typeof d.pageTop === 'number' ? d.pageTop : d.top}; place(); sizeViewer();
   });
   if (window.ResizeObserver) { new ResizeObserver(place).observe(tp); new ResizeObserver(place).observe($('#tpSide')); }
   $('#toggleSet').addEventListener('click', () => setTimeout(place, 0));
