@@ -1017,7 +1017,7 @@ function ligShape(G, top){
   for (let i = 0; i < n; i++) { if (pairAt[i]) { units.push([i, i + 1]); i++; } else units.push([i]); }
   const X = new Array(n);
   let x = G[0][1];
-  const dotW = i => G[i][0].dot ? 0.75 : 0;
+  const dotW = () => 0;   /* a dot in a ligature stands over or under its note, it does not widen the ligature */
   for (const u of units) {
     if (u.length === 2) { X[u[0]] = x; X[u[1]] = x + 1.3; x += 2.6 + dotW(u[1]); }
     else { X[u[0]] = x; x += LIG_W[gs[u[0]]] + dotW(u[0]); }
@@ -1036,11 +1036,13 @@ function ligShape(G, top){
     else parts[i] += ligV(xa, Math.min(Y[i], Y[i - 1]) - 0.686, Math.max(Y[i], Y[i - 1]) + 0.686);
     if (j === n - 1) parts[j] += ligV(xb - 0.12, Y[j] - 0.686, Y[j] + 0.686);
   });
-  /* dots, after their notes */
+  /* dots: over or under the body of their note (on the side away from the neighbouring note), not between the notes */
   G.forEach(([q], i) => {
     if (!q.dot) return;
-    const dy = Y[i] - (q.pos % 2 === 0 ? 0.5 : 0), dx = X[i] + 1.3 + 0.4;
-    parts[i] += `<circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.19"/>`;
+    const other = i === 0 ? Y[1] : Y[i - 1];
+    const above = !(other < Y[i]);           /* the neighbour is not higher on the staff: the dot goes above */
+    const dy = above ? Y[i] - 1.05 : Y[i] + 1.05, dx = X[i] + (G[i][0].dot && pairAt[i - 1] ? 0.65 : 0.65);
+    parts[i] += `<circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.2"/>`;
   });
   /* stems */
   if (cop) parts[0] += ligV(X[0], Y[0] - TL, Y[0]);
