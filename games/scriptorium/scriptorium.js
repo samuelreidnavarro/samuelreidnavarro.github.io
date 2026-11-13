@@ -2149,7 +2149,17 @@ libEl.addEventListener('click', e => {
 NoteInput.build($('#editBar'), {what: 'voice', whole: 'the whole voice'});
 /* pop-overs: hover, or click to keep open */
 function closePops(except){ document.querySelectorAll('.pop.open').forEach(p => { if (p !== except) { p.classList.remove('open'); p.querySelector('button').setAttribute('aria-expanded', 'false'); } }); }
+/* with a mouse a menu follows the pointer: nothing is pinned open by a click. Touch screens tap to open and close. */
+const canHover = () => window.matchMedia && matchMedia('(hover:hover)').matches;
+function shutPop(p){
+  if (!canHover() || !p) return;
+  p.classList.add('shut');
+  p.addEventListener('mouseleave', () => p.classList.remove('shut'), {once: true});
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+document.querySelectorAll('#openList, #exportList, #sendList').forEach(l => l.addEventListener('click', e => { if (e.target.closest('button') && !e.target.closest('[data-keep]')) shutPop(l.closest('.pop')); }));
 document.querySelectorAll('.pop > button:not(#mic)').forEach(b => b.addEventListener('click', () => {
+  if (canHover()) return;
   const p = b.parentNode, open = !p.classList.contains('open');
   closePops(p); setLib(false); p.classList.toggle('open', open); b.setAttribute('aria-expanded', String(open));
   postHeight();
@@ -3172,7 +3182,7 @@ $('#fsPlay').addEventListener('click', () => {
   let timer = 0, lastY = null, topOn = true, botOn = true;
   const wide = () => window.innerWidth > 700;
   const hold = () => {
-    if (document.querySelector('.pop.open') || !libEl.hidden || !$('#tpSide').hidden) return true;
+    if (document.querySelector('.pop.open, .pop:hover') || document.querySelector('.pop:has(:focus-visible)') || !libEl.hidden || !$('#tpSide').hidden) return true;
     const a = document.activeElement;
     return !!(a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && a.closest('.tools,.transport'));
   };

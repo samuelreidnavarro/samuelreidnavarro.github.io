@@ -527,6 +527,7 @@
   /* one button: pressed, the microphone goes on or off; its arrow (or hovering) opens the options */
   $('#mic').addEventListener('click', e => {
     if (e.target.closest('.singchev')) {
+      if (window.matchMedia && matchMedia('(hover:hover)').matches) return;   /* with a mouse the menu follows the pointer */
       const p = $('#popSing'), open = !p.classList.contains('open');
       closePops(p); p.classList.toggle('open', open); syncSing(); return;
     }

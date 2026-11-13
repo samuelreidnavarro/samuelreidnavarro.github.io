@@ -217,6 +217,7 @@ function wire(A){
     if (!e.target.closest('button') || e.target.closest('[data-keep]')) return;
     setTimeout(() => {
       const p = body.parentNode; p.classList.remove('open');
+      if (window.matchMedia && matchMedia('(hover:hover)').matches) { p.classList.add('shut'); p.addEventListener('mouseleave', () => p.classList.remove('shut'), {once: true}); }
       const pb = p.querySelector('.popbtn'); if (pb) pb.setAttribute('aria-expanded', 'false');
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     }, 0);
