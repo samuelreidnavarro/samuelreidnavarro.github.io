@@ -458,7 +458,7 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
 /* pages below each other: an invisible frame, as wide as a page and as tall as the window, that scrolls through
    the pages when the pointer is on the music; beside it, the website scrolls (to the controls below) */
 @media (min-width:701px){
-  .viewer.frame{height:auto;max-height:var(--vh,calc(100vh - 220px));min-height:120px;overflow-y:auto;overflow-x:hidden;margin:0 auto;padding:14px 0 26px;scrollbar-width:none}
+  .viewer.frame{height:var(--vh,calc(100vh - 220px));max-height:var(--vh,calc(100vh - 220px));min-height:120px;overflow-y:auto;overflow-x:hidden;margin:0 auto;padding:14px 0 26px;scrollbar-width:none}
   .viewer.frame::-webkit-scrollbar{display:none}
 }
 /* pages side by side: the row scrolls sideways, the page itself still scrolls up and down */
@@ -779,3 +779,7 @@ html.dark .tools .podg,html.dark .transport .podg{box-shadow:0 1px 4px rgba(0,0,
 .podg{position:relative}
 .podg:hover,.podg:has(:focus-visible){z-index:60}
 .tools:has(.pop:hover),.tools:has(.pop :focus-visible),.transport:has(.pop:hover),.transport:has(.pop :focus-visible){z-index:70}
+
+/* the music wider than the frame (Web scrolling sideways, or magnified pages): the frame scrolls sideways too */
+@media (min-width:701px){ .viewer.frame.wide{overflow-x:auto} }
+.viewer.wide #pages{align-items:safe center;width:max-content;min-width:100%}

@@ -1,4 +1,4 @@
-/* Reading scores from other programs: MusicXML (.musicxml, .xml, .mxl), MuseScore (.mscz, .mscx) and MIDI (.mid).
+/* Reading scores from other programs: MusicXML (.musicxml, .xml, .mxl), MuseScore (.mscz, .mscx), MIDI (.mid), LilyPond (.ly) and GABC (.gabc).
    Each is read into a plain list of voices and written out as **kern, which the app already reads.
    ScoreImport.toKern(file) -> Promise<string>; ScoreImport.accepts(name) -> true for the types read here.
    One line per voice: of chords only the first note, of several voices on one staff only the first. */
@@ -517,6 +517,66 @@
       prevHy = s.hy;
     }
   }
+  /* ---------------- GABC (Gregorio chant) ----------------
+     Each note a semibrevis (a mora vocis, the dot, doubles it); flats, naturals and sharps hold to the end of the word
+     or the next bar; the syllables go to the first note of their neume; ; : and :: are barlines. The C clef's line is
+     middle C, the F clef's the F below. */
+  function fromGabc(text){
+    const cut = text.search(/^%%\s*$/m);
+    const head = cut >= 0 ? text.slice(0, cut) : '', body = (cut >= 0 ? text.slice(cut).replace(/^%%\s*/, '') : text).replace(/%[^\n]*/g, '');
+    const meta = {};
+    head.replace(/%[^\n]*/g, '').split(';').forEach(l => { const m = l.match(/^\s*([\w-]+)\s*:\s*([\s\S]*)$/); if (m) meta[m[1].toLowerCase()] = m[2].trim(); });
+    const groups = [];
+    const re = /([^()]*)\(([^)]*)\)/g;
+    let m;
+    while ((m = re.exec(body))) {
+      const raw = m[1];
+      const txt = raw.replace(/<[^>]*>/g, '').replace(/[{}]/g, '').replace(/\[[^\]]*\]/g, '').trim();
+      groups.push({newWord: !groups.length || /^\s/.test(raw) || raw === '', txt, notes: m[2].replace(/\[[^\]]*\]/g, '')});
+    }
+    if (!groups.length) throw new Error('No GABC notes found in this file.');
+    /* syllables: their place in the word */
+    let word = [];
+    const flush = () => { const w = word.filter(g => g.txt); w.forEach((g, k) => { g.syl = (k ? '-' : '') + g.txt + (k < w.length - 1 ? '-' : ''); }); word = []; };
+    groups.forEach(g => { if (g.newWord) flush(); word.push(g); });
+    flush();
+    let clef = {c: true, line: 4, flatB: false}, t = 0, acc = {};
+    const evs = [], bars = [];
+    const stepOf = ch => {
+      const L0 = 3 + 2 * (clef.line - 1), base = clef.c ? 28 : 24;
+      return base + (ch.toLowerCase().charCodeAt(0) - 97 - L0);
+    };
+    for (const g of groups) {
+      if (g.newWord) acc = {};
+      const n = g.notes.trim();
+      const cm = n.match(/^([cf])(b?)([1-5])$/);
+      if (cm) { clef = {c: cm[1] === 'c', line: +cm[3], flatB: !!cm[2]}; continue; }
+      let first = true;
+      for (let i = 0; i < n.length; i++) {
+        const ch = n[i];
+        if (/[;:]/.test(ch)) { if (t > 0 && bars[bars.length - 1] !== t) bars.push(t); acc = {}; continue; }
+        if (!/[a-mA-M]/.test(ch)) continue;
+        const nx = n[i + 1] || '';
+        if (nx === '+') { i++; continue; }                                 /* custos */
+        const step = stepOf(ch), li = ((step % 7) + 7) % 7;
+        if (nx === 'x' || nx === 'y' || nx === '#') { acc[step] = nx === 'x' ? -1 : nx === '#' ? 1 : 0; i++; if (n[i + 1] === '?') i++; continue; }
+        let alt = step in acc ? acc[step] : (clef.flatB && li === 6 ? -1 : 0);
+        let d = W;
+        let j = i + 1;
+        while (j < n.length && /[~<>owWvVsr'_0-9\/!-]/.test(n[j]) && !/[a-mA-M]/.test(n[j])) j++;
+        if (n[j] === '.') { d = 2 * W; j++; if (n[j] === '.') j++; }
+        i = j - 1;
+        const e = {t, d, step, alt};
+        if (first && g.syl) e.syl = g.syl;
+        first = false;
+        evs.push(e); t += d;
+      }
+    }
+    if (!evs.length) throw new Error('No GABC notes found in this file.');
+    const v = {name: meta['name'] ? 'Chant' : 'Chant', clef: null, key: clef.flatB ? -1 : 0, mets: [], events: evs};
+    return {title: meta['name'] || '', composer: meta['author'] || '', voices: [v], bars};
+  }
+
   /* ---------------- **kern ---------------- */
   function recip(ticks){
     const g = gcd(ticks, W), n = ticks / g, d = W / g;
@@ -597,13 +657,14 @@
     return out.join('\n') + '\n';
   }
 
-  const EXT = /\.(musicxml|xml|mxl|mscz|mscx|mid|midi|kar|ly)$/i;
+  const EXT = /\.(musicxml|xml|mxl|mscz|mscx|mid|midi|kar|ly|gabc)$/i;
   async function read(file){
     const name = file.name || '', buf = await file.arrayBuffer();
     const ext = (name.match(/\.([^.]+)$/) || [, ''])[1].toLowerCase();
     let S;
     if (ext === 'mid' || ext === 'midi' || ext === 'kar') S = fromMidi(buf);
     else if (ext === 'ly') S = fromLilyPond(decodeText(buf));
+    else if (ext === 'gabc') S = fromGabc(decodeText(buf));
     else if (ext === 'mxl' || ext === 'mscz') {
       const files = await unzip(buf);
       let pick = null;
@@ -622,5 +683,5 @@
     }
     return toKern(S, name);
   }
-  window.ScoreImport = {accepts: name => EXT.test(name || ''), toKern: read, _: {fromMusicXML, fromMuseScore, fromMidi, fromLilyPond, toKern}};
+  window.ScoreImport = {accepts: name => EXT.test(name || ''), toKern: read, _: {fromMusicXML, fromMuseScore, fromMidi, fromLilyPond, fromGabc, toKern}};
 })();

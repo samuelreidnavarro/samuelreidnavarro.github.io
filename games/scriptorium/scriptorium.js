@@ -36,12 +36,14 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Size</span><div class="btns" id="paperSeg" role="group" aria-label="Paper size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button><button class="tb" data-v="web">Web</button></div>
           <span class="lab">Orientation</span><div class="btns" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
           <span class="lab">Pages</span><div class="btns" id="flowSeg" role="group" aria-label="Pages"><button class="tb" data-v="vertical">Vertical</button><button class="tb" data-v="horizontal">Horizontal</button></div>
+          <span class="lab" id="scrollLab">Scroll</span><div class="btns" id="scrollSeg" role="group" aria-label="Scroll"><button class="tb" data-v="vertical" title="Systems below each other">Vertical</button><button class="tb" data-v="horizontal" title="The score as one long line, scrolling sideways">Horizontal</button></div>
         </div></div>
       </div></div>
       <div class="podg"><div class="pop" id="popLook">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Appearance<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="staffset">
           <span class="lab">Notation</span><div class="btns" id="notaSeg" role="group" aria-label="Notation"><button class="tb" data-v="real">Mensural</button><button class="tb" data-v="fake">Modern</button></div>
+          <span class="lab">Ligatures</span><div class="btns" id="ligSeg" role="group" aria-label="Ligatures"><button class="tb" data-v="on" title="Ligatures drawn as ligatures (in mensural notation)">On</button><button class="tb" data-v="off" title="The notes of a ligature written one by one, under a bracket">Off</button></div>
           <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
           <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Through the staff</button></div>
           <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
@@ -80,10 +82,10 @@ ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
             <div class="popbody"><div class="btns col" id="exportList">
               <div class="btns duo"><button class="tb" id="saveBtn" title="Save this piece, with your changes, as a .krn file">Download .krn</button><button class="tb" id="mxlBtn" title="MusicXML (.mxl), for MuseScore, Dorico, Sibelius, Finale: in modern notation">Download MXL</button></div>
               <div class="btns duo"><button class="tb" id="lyBtn" title="LilyPond (.ly), in modern notation: one staff per voice, with the lyrics">Download LilyPond</button><button class="tb" id="mscBtn" title="MuseScore (.mscz), in modern notation, one staff per voice, with the lyrics">Download MuseScore</button></div>
-              <div class="btns duo"><button class="tb" id="midBtn" title="MIDI (.mid), one track per voice, with the lyrics">Download MIDI</button><button class="tb" id="printBtn" title="Print, or save as PDF in the print window">Download PDF</button></div>
+              <div class="btns duo"><button class="tb" id="midBtn" title="MIDI (.mid), one track per voice, with the lyrics">Download MIDI</button><button class="tb" id="gabcBtn" title="GABC (.gabc), chant for Gregorio: one voice, the one you are editing (else the top one), with its syllables">Download GABC</button></div>
               <button class="tb" id="keepBtn" title="Keep a copy of this piece, with your changes, in ${esc(L.mine)}"${APP.keep === false ? ' hidden' : ''}>Save to ${esc(L.mine)}</button>
-              <div class="btns duo"><button class="tb" id="svgBtn" title="The page you see, as an SVG picture">Download SVG</button><button class="tb" id="pngBtn" title="The page you see, as a PNG picture">Download PNG</button></div>
-              <button class="tb" id="linkBtn" title="A link that opens this score, with your changes, for anyone">Copy link</button>
+              <div class="btns duo"><button class="tb" id="printBtn" title="Print, or save as PDF in the print window">Download PDF</button><button class="tb" id="svgBtn" title="The page you see, as an SVG picture">Download SVG</button></div>
+              <div class="btns duo"><button class="tb" id="pngBtn" title="The page you see, as a PNG picture">Download PNG</button><button class="tb" id="linkBtn" title="A link that opens this score, with your changes, for anyone">Copy link</button></div>
             </div></div>
           </div>
         </div>
@@ -94,7 +96,7 @@ ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
           </div>
         </div>
       </div>
-      <input type="file" id="fileIn" accept=".krn,.kern,.txt,.musicxml,.xml,.mxl,.mscz,.mscx,.mid,.midi,.ly" hidden>
+      <input type="file" id="fileIn" accept=".krn,.kern,.txt,.musicxml,.xml,.mxl,.mscz,.mscx,.mid,.midi,.ly,.gabc" hidden>
     </div>
     <div class="bar editbar" id="editBar" hidden></div>
   </section>
@@ -378,6 +380,8 @@ function parseKern(text){
         }
         else if ((m = s.match(/^\*met\((.*)\)$/))) v.mets.push({t: v.t, sign: m[1], ei: v.events.length});
         else if ((m = s.match(/^\*M(\d+)\/(\d+)$/))) v.lastM = +m[1] / +m[2];
+        else if (s === '*lig') { v.ligN = (v.ligN || 0) + 1; v.ligOn = v.ligN; }
+        else if (s === '*Xlig') v.ligOn = 0;
       });
       continue;
     }
@@ -397,6 +401,7 @@ function parseKern(text){
       if (!ev) return;
       const v = c.v;
       ev.t = rt(v.t); ev.syl = [];
+      if (v.ligOn && !ev.rest) ev.lig = v.ligOn;
       if (pendingSection !== null) { sections.push({t: ev.t, label: pendingSection}); pendingSection = null; }
       v.events.push(ev); v.t = rt(v.t + ev.d);
       started.set(v, ev);
@@ -535,7 +540,7 @@ function notate(piece, v, mode){
       curSign = sign; segStart = e.t;
     }
     const mi = mensInfo(sign);
-    const base = {t: e.t, d: e.d, rest: !!e.rest, step: e.step, alt: e.alt, ed: e.ed, syl: e.syl, ferm: e.ferm, mens, sign, src: e.src};
+    const base = {t: e.t, d: e.d, rest: !!e.rest, step: e.step, alt: e.alt, ed: e.ed, syl: e.syl, ferm: e.ferm, mens, sign, src: e.src, lig: e.rest ? 0 : (e.lig || 0)};
     if (e.tupS) inTup = true;
     if (mode === 'fake') {
       const wd = rt(e.d * mi.p);
@@ -638,7 +643,7 @@ let DOCK = null;     /* where the site page says the browser window is, when emb
 const KEY = APP.store + ':v1';
 const st = {
   piece: PIECES[0] || null, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on',
-  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', ctlMode: 'move',
+  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', ctlMode: 'move', lig: 'on', webScroll: 'vertical', zoom: 1,
   ...(APP.defaults || {})
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
@@ -937,8 +942,9 @@ function symInner(s, X, top){
   const y = top + 4 - s.pos * 0.5;
   o += ledgers(s.pos, hx, s.hw, top);
   if (s.acc) o += use(s.acc, hx - gw(s.acc) - 0.3, y);
-  o += isFlipped(s) ? useT(s.glyph, hx, y, 1, -1) : use(s.glyph, hx, y);
-  if (s.dot) {
+  if (s.ligSvg) { o += s.ligSvg; }
+  else o += isFlipped(s) ? useT(s.glyph, hx, y, 1, -1) : use(s.glyph, hx, y);
+  if (s.dot && !s.ligSvg) {
     const dy = top + 4 - (s.pos % 2 === 0 ? s.pos + 1 : s.pos) * 0.5;
     o += `<circle class="ink" cx="${f(hx + s.hw + 0.4)}" cy="${f(dy)}" r="0.19"/>`;
   }
@@ -958,6 +964,98 @@ function custosSvg(s, x, top){
   return `<use href="#g-${s.pos >= 5 ? 'cd' : 'cu'}" transform="translate(${f(x)} ${f(y + 0.4)}) scale(0.8)"/>`;
 }
 
+/* Ligatures. With Ligatures on (and mensural notation) a ligature is drawn as one: square notes joined at their sides,
+   stretched with thin lines where the notes stand apart, the values shown by the old rules (Apel):
+     first note: up-stem on the left = two semibreves (cum opposita proprietate); descending: stem down on the left = brevis,
+       none = longa; ascending: none = brevis, stem down on the right = longa
+     middle notes: brevis, or longa with a stem down on the right; a maxima is twice as wide
+     last note: descending: square = longa, oblique (drawn together with the note before) = brevis;
+       ascending: none = brevis, stem down on the right = longa
+   Anything these rules cannot show (a dot, a minima, a semibrevis elsewhere, a repeated note, a ligature that runs over
+   the line), and every ligature with Ligatures off, is written as single notes under a bracket. */
+const LIG_W = {B: 1.3, L: 1.3, S: 1.3, Mx: 2.5};
+function ligBand(xa, ya, xb, yb, filled){
+  const P = (pts) => `<path class="ink" d="M${pts.map(p => f(p[0]) + ' ' + f(p[1])).join('L')}Z"/>`;
+  if (filled) return P([[xa, ya - 0.544], [xb, yb - 0.544], [xb, yb + 0.54], [xa, ya + 0.54]]);
+  return P([[xa, ya - 0.544], [xb, yb - 0.544], [xb, yb - 0.296], [xa, ya - 0.296]]) + P([[xa, ya + 0.296], [xb, yb + 0.296], [xb, yb + 0.54], [xa, ya + 0.54]]);
+}
+const ligV = (x, y1, y2) => `<rect class="ink" x="${f(x)}" y="${f(Math.min(y1, y2))}" width="0.12" height="${f(Math.abs(y2 - y1))}"/>`;
+function ligShape(G, top){
+  /* G: [[sym, X]], all in one line; returns false when the rules can't show it */
+  const n = G.length;
+  if (n < 2) return false;
+  const gs = G.map(([q]) => q.g);
+  if (G.some(([q]) => q.rest || q.dot || q.tieNext || !LIG_W[q.g])) return false;
+  for (let i = 1; i < n; i++) if (G[i][0].step === G[i - 1][0].step) return false;
+  const cop = gs[0] === 'S' && gs[1] === 'S';
+  if (gs.some((g, i) => g === 'S' && !(cop && i < 2))) return false;
+  const Y = G.map(([q]) => top + 4 - q.pos * 0.5), X = G.map(([, x]) => x);
+  const down = i => G[i][0].step < G[i - 1][0].step;          /* note i lower than the one before */
+  const obl = gs[n - 1] === 'B' && down(n - 1);           /* a descending final brevis: oblique, with the note before */
+  const parts = G.map(() => '');
+  const TL = 3.548;
+  /* bodies and the thin lines that stretch them to the next note */
+  for (let i = 0; i < n; i++) {
+    const q = G[i][0], y = Y[i], w = LIG_W[q.g], col = !!q.col;
+    if (obl && i === n - 2) {
+      const xa = X[i], xb = X[i + 1] + LIG_W[gs[i + 1]];
+      parts[i] += ligBand(xa, y, xb, Y[i + 1], col || !!G[i + 1][0].col) + ligV(xb - 0.12, Y[i + 1] - 0.686, Y[i + 1] + 0.686);
+      break;
+    }
+    const last = i === n - 1;
+    const xr = last ? X[i] + w : Math.min(X[i] + w, X[i + 1]);
+    parts[i] += ligBand(X[i], y, xr, y, col);
+    if (!last && X[i + 1] > xr + 0.01) parts[i] += `<rect class="ink" x="${f(xr)}" y="${f(y - 0.544)}" width="${f(X[i + 1] - xr)}" height="0.1"/><rect class="ink" x="${f(xr)}" y="${f(y + 0.44)}" width="${f(X[i + 1] - xr)}" height="0.1"/>`;
+    if (last) parts[i] += ligV(xr - 0.12, y - 0.686, y + 0.686);
+  }
+  /* sides: the first note's left side, and a joint where each note meets the one before */
+  parts[0] += ligV(X[0], Y[0] - 0.686, Y[0] + 0.686);
+  for (let i = 1; i < n; i++) if (!(obl && i === n - 1)) parts[i] += ligV(X[i], Math.min(Y[i], Y[i - 1]) - 0.686, Math.max(Y[i], Y[i - 1]) + 0.686);
+  /* stems */
+  if (cop) parts[0] += ligV(X[0], Y[0] - TL, Y[0]);
+  else if (gs[0] === 'B' && down(1)) parts[0] += ligV(X[0], Y[0], Y[0] + TL);
+  else if (gs[0] === 'L' && !down(1)) parts[0] += ligV(X[1], Y[0], Y[0] + TL);
+  else if (gs[0] !== 'Mx' && !(gs[0] === 'L' && down(1)) && !(gs[0] === 'B' && !down(1))) return false;
+  for (let i = 1; i < n - 1; i++) {
+    if (cop && i === 1) continue;
+    if (gs[i] === 'L') parts[i] += ligV(X[i + 1] - 0.12, Y[i], Y[i] + TL);
+  }
+  const L = n - 1;
+  if (!(cop && L === 1)) {
+    if (gs[L] === 'L' && !down(L)) parts[L] += ligV(X[L] + LIG_W.L - 0.12, Y[L], Y[L] + TL);
+    if (gs[L] === 'B' && down(L) && !obl) return false;
+  }
+  G.forEach(([q], i) => { q.ligSvg = parts[i] || '<g/>'; });
+  return true;
+}
+function ligBracket(G, top, open0, open1){
+  let lo = top - 1.1;
+  for (const [q] of G) lo = Math.min(lo, top + extent(q)[0] - 0.5);
+  const xa = G[0][1] - 0.25, xb = G[G.length - 1][1] + G[G.length - 1][0].hw + 0.25;
+  let o = `<rect class="ink" x="${f(xa)}" y="${f(lo)}" width="${f(xb - xa)}" height="0.12"/>`;
+  if (!open0) o += `<rect class="ink" x="${f(xa)}" y="${f(lo)}" width="0.12" height="0.7"/>`;
+  if (!open1) o += `<rect class="ink" x="${f(xb - 0.12)}" y="${f(lo)}" width="0.12" height="0.7"/>`;
+  return o;
+}
+function ligatures(v, list, top){
+  for (const [q] of list) q.ligSvg = null;
+  let out = '';
+  for (let i = 0; i < list.length; ) {
+    const q = list[i][0];
+    if (!q.lig) { i++; continue; }
+    let j = i + 1;
+    while (j < list.length && list[j][0].lig === q.lig && !list[j][0].rest) j++;
+    const G = list.slice(i, j);
+    const k0 = v.syms.indexOf(q), k1 = v.syms.indexOf(list[j - 1][0]);
+    const open0 = k0 > 0 && v.syms[k0 - 1].lig === q.lig && !v.syms[k0 - 1].rest;
+    const open1 = k1 >= 0 && k1 + 1 < v.syms.length && v.syms[k1 + 1].lig === q.lig && !v.syms[k1 + 1].rest;
+    const drawn = st.lig !== 'off' && st.nota === 'real' && !open0 && !open1 && ligShape(G, top);
+    if (!drawn) { for (const [s2] of G) s2.ligSvg = null; out += ligBracket(G, top, open0, open1); }
+    i = j;
+  }
+  return out;
+}
+
 /* One line of one voice's staff. ctx: {v, cols(from..to), xs, top, x0, x1, last, showNotes, showLyr, first} */
 function staffLine(o){
   const {v, top, x0, x1} = o;
@@ -974,6 +1072,12 @@ function staffLine(o){
   for (const k of keySig(v, t0, clef)) { s += use(k.g, x, top + 4 - k.pos * 0.5); x += gw(k.g) + 0.15; }
   /* notes */
   const show = o.showNotes;
+  let ligOut = '';
+  if (show) {
+    const list = [];
+    for (let i = o.from; i < o.to; i++) { const sym = o.cols[i].items.get(v); if (sym) list.push([sym, o.xs[i]]); }
+    ligOut = ligatures(v, list, top);
+  }
   for (let i = o.from; i < o.to; i++) {
     const c = o.cols[i], sym = c.items.get(v);
     if (!sym) continue;
@@ -1043,6 +1147,7 @@ function staffLine(o){
       }
     }
   }
+  s += ligOut;
   /* custos at the end of the line */
   if (!o.last && show && o.next) s += custosSvg(o.next, x1 - 2.0, top);
   return s;
@@ -1241,7 +1346,7 @@ function footSvg(G, first, num){
   let s = '';
   if (first) {
     const L = footLines(G);
-    L.forEach((t, i) => { s += `<text class="foot" x="${f(G.W / 2)}" y="${f(base - (L.length - 1 - i) * lh)}" font-size="${f(fs)}" text-anchor="middle"${t === creditText().made ? ' font-style="italic"' : ''}>${esc(t)}</text>`; });
+    L.forEach((t, i) => { s += `<text class="foot" x="${f((G.titleW || G.W) / 2)}" y="${f(base - (L.length - 1 - i) * lh)}" font-size="${f(fs)}" text-anchor="middle"${t === creditText().made ? ' font-style="italic"' : ''}>${esc(t)}</text>`; });
   } else {
     const who = piece.composer ? `${piece.title}, ${piece.composer}` : piece.title;
     s += `<text class="foot" x="${f(G.M)}" y="${f(base)}" font-size="${f(fs)}" font-style="italic">${esc(who)}</text>`;
@@ -1266,6 +1371,15 @@ function layoutScore(G){
   if (!vlist.length) return [];
   const names = vlist.map(v => APP.voiceNames === false ? '' : v.name);   /* CantusFirmus: no names before the staves */
   const indent = Math.max(...names.map(n => textW(n, 1.8, true))) + 1.4;
+  /* Web, scrolling sideways: the whole score as one line, as long as the music */
+  if (G.web && st.webScroll === 'horizontal') {
+    const lines = buildLines(vlist, 0, piece.end + 1, 1e6, {indent, ragged: true});
+    if (lines.length) {
+      const need = Math.max(G.W, lines[0].x1 + 2 * G.M + 1);
+      const G2 = {...G, W: need, wmm: need * G.sp, titleW: G.W};
+      return paginate(G2, lines, vlist, (line, li) => li === 0 ? {names, join: true} : {join: true}, null);
+    }
+  }
   const W = G.W - 2 * G.M;
   const lines = buildLines(vlist, 0, piece.end + 1, W, {indent});
   return paginate(G, lines, vlist, (line, li) => li === 0 ? {names, join: true} : {join: true}, null);
@@ -1275,7 +1389,7 @@ function paginate(G, lines, vlist, optsFor, sub){
   let body = '', y = G.M, first = true;
   const sysGap = Math.max(1, 2.2 * st.ss + Math.min(1, st.ss));
   const newPage = () => { pages.push(body); body = ''; y = G.M; };
-  if (first) { const tb = titleBlock(G, G.M, G.W - G.M, y, sub); body += tb.svg; y += tb.h; }
+  if (first) { const tb = titleBlock(G, G.M, (G.titleW || G.W) - G.M, y, sub); body += tb.svg; y += tb.h; }
   const bottom1 = footTop(G, true) - 0.8, bottom = footTop(G, false) - 0.8;
   lines.forEach((line, li) => {
     const probe = drawSystem(vlist, line, 0, optsFor(line, li));
@@ -1418,6 +1532,10 @@ function render(){
   const fs = wrapEl.classList.contains('fs');
   const horiz = st.flow === 'horizontal' && !G.web;
   document.querySelectorAll('#orientSeg button,#flowSeg button').forEach(b => { b.disabled = !!G.web; });
+  $('#scrollLab').hidden = $('#scrollSeg').hidden = !G.web;
+  document.querySelectorAll('#scrollSeg button').forEach(b => { b.disabled = st.view !== 'score'; b.title = st.view !== 'score' ? 'Only in Score' : b.title; });
+  const wide = !!G.web && st.webScroll === 'horizontal' && st.view === 'score';
+  const Z = G.web ? 1 : Math.max(0.5, Math.min(3, st.zoom || 1));
   const avail = ($('.viewwrap').clientWidth || window.innerWidth) - (horiz ? (window.innerWidth <= 700 ? 60 : 140) : 40);
   const pxmm = 96 / 25.4;
   /* side by side, a page (or an opening) fits the height of the window */
@@ -1425,7 +1543,7 @@ function render(){
   const fitH = horiz ? availH / (G.hmm * pxmm) : Infinity;
   if (st.view === 'choir') {
     const pages = layoutChoir(G);
-    const sc = G.web ? 1 : Math.min(1.25, avail / (2 * G.wmm * pxmm), fitH);
+    const sc = G.web ? 1 : Math.min(1.25, avail / (2 * G.wmm * pxmm), fitH) * Z;
     for (let i = 0; i < pages.length; i += 2) {
       html += `<div class="opening${G.web && 2 * G.wmm * pxmm > avail + 1 ? ' stack' : ''}">`;
       for (const p of pages.slice(i, i + 2)) html += pageDiv(p.svg, G, sc, '');
@@ -1434,7 +1552,7 @@ function render(){
     if (!pages.length) html = '<p class="msg">No voices are shown.</p>';
   } else {
     const pages = st.view === 'parts' ? layoutParts(G) : layoutScore(G);
-    const sc = G.web ? 1 : Math.min(1.25, avail / (G.wmm * pxmm), fitH);
+    const sc = G.web ? 1 : Math.min(1.25, avail / (G.wmm * pxmm), fitH) * Z;
     pages.forEach(p => { html += pageDiv(p, G, sc, ''); });
     if (!pages.length) html = '<p class="msg">No voices are shown.</p>';
   }
@@ -1444,9 +1562,10 @@ function render(){
   const framed = !horiz && window.innerWidth > 700;
   viewerEl.classList.toggle('frame', framed); wrapEl.classList.toggle('framed', framed);
   viewerEl.classList.toggle('horiz', horiz); wrapEl.classList.toggle('horiz', horiz);
-  const widest = Math.max(0, ...[...pagesEl.children].map(c => c.offsetWidth || 0));
-  viewerEl.style.width = framed && widest ? (widest + 24) + 'px' : '';
-  $('#fsBtn').style.left = (viewerEl.offsetLeft + 6) + 'px';
+  viewerEl.classList.toggle('wide', wide || Z > 1.001);
+  /* the frame is the whole window: as wide as the page area and as tall as the window, the music centred in it */
+  viewerEl.style.width = '';
+  { const pg = pagesEl.firstElementChild, x = pg ? pg.getBoundingClientRect().left - viewerEl.getBoundingClientRect().left : 0; $('#fsBtn').style.left = (viewerEl.offsetLeft + Math.max(0, x) + 6) + 'px'; }
   if (typeof showSel === 'function' && (ed.sel || ed.ins)) showSel();
   applyMark();
   if (!play) { handTop = -1; $('#handBox').style.top = ''; $('#pendBox').style.top = ''; if (st.view === 'choir') handMid(null); }
@@ -1493,6 +1612,7 @@ function bringIntoView(el, force){
     catch (e) { top = 0; bottom = window.innerHeight; }
   }
   let vr = viewerEl.getBoundingClientRect();
+  if (viewerEl.classList.contains('wide') && (r.left < vr.left + 40 || r.right > vr.right - 40)) viewerEl.scrollTo({left: viewerEl.scrollLeft + r.left - vr.left - vr.width / 3, behavior: force ? 'auto' : 'smooth'});
   if (viewerEl.classList.contains('frame') && (r.top < vr.top + 20 || r.bottom > vr.bottom - 20)) {
     viewerEl.scrollTo({top: viewerEl.scrollTop + r.top - vr.top - vr.height / 3, behavior: force ? 'auto' : 'smooth'});
     if (r.top >= Math.max(top, vr.top) - 2 && vr.bottom <= bottom + 2) return true;
@@ -1516,8 +1636,9 @@ function bringIntoView(el, force){
 }
 function pageDiv(svg, G, sc, extra){
   let hmm = G.hmm;
-  if (G.web) { const m = /viewBox="0 0 [-\d.]+ ([\d.]+)"/.exec(svg); if (m) hmm = +m[1] * G.sp; }
-  return `<div class="page" style="width:${f(G.wmm * 96 / 25.4 * sc)}px;height:${f(hmm * 96 / 25.4 * sc)}px" data-w="${G.wmm}" data-h="${hmm}">${svg}${extra}</div>`;
+  let wmm = G.wmm;
+  if (G.web) { const m = /viewBox="0 0 ([-\d.]+) ([\d.]+)"/.exec(svg); if (m) { hmm = +m[2] * G.sp; wmm = +m[1] * G.sp; } }
+  return `<div class="page" style="width:${f(wmm * 96 / 25.4 * sc)}px;height:${f(hmm * 96 / 25.4 * sc)}px" data-w="${wmm}" data-h="${hmm}">${svg}${extra}</div>`;
 }
 /* print at true paper size */
 let webPrint = false;
@@ -1666,7 +1787,7 @@ async function loadPiece(file){
   if (!piece) piece = parseKern(text);
   if (H.afterParse) { H.afterParse(piece); piece.text = writeKern(piece); }
   pieceKey = file;
-  if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; }
+  if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; }
   st.piece = file; save();
   st.verse = 0;
   if (H.afterLoad) H.afterLoad();
@@ -1679,7 +1800,7 @@ function loadText(name, text){
     stopPlay();
     piece = parseKern(text);
     pieceKey = 'file:' + name;
-    if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; }
+    if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; }
     syncUI(); render();
   } catch (e) { pagesEl.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
@@ -1839,7 +1960,7 @@ function segInit(id, key, after){
   });
 }
 function syncUI(){
-  const segs = {'#viewList': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ctlSeg': 'ctlMode'};
+  const segs = {'#viewList': 'view', '#notaSeg': 'nota', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ctlSeg': 'ctlMode', '#ligSeg': 'lig', '#scrollSeg': 'webScroll'};
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
   for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).value = st[k];
   Organ.sync();
@@ -1873,7 +1994,7 @@ function syncUI(){
   document.querySelectorAll('#library .pc').forEach(b => b.setAttribute('aria-current', String(b.dataset.p === pieceKey)));
 }
 segInit('#viewList', 'view'); segInit('#notaSeg', 'nota'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars');
-segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#ctlSeg', 'ctlMode', () => { if (window.__ctlWake) window.__ctlWake(); }); segInit('#edSeg', 'ed');
+segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#ctlSeg', 'ctlMode', () => { if (window.__ctlWake) window.__ctlWake(); }); segInit('#edSeg', 'ed'); segInit('#ligSeg', 'lig'); segInit('#scrollSeg', 'webScroll', () => { viewerEl.scrollLeft = 0; });
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
 let rq = 0;
 const later = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); };
@@ -2214,7 +2335,7 @@ document.addEventListener('drop', e => {
   const file = e.dataTransfer.files[0]; if (file) openFile(file);
 });
 }
-/* **kern is read as it is; MusicXML, MuseScore, MIDI and LilyPond are turned into **kern first (shared/score-import.js) */
+/* **kern is read as it is; MusicXML, MuseScore, MIDI, LilyPond and GABC are turned into **kern first (shared/score-import.js) */
 function openFile(file){
   if (window.ScoreImport && ScoreImport.accepts(file.name)) ScoreImport.toKern(file).then(k => loadText(file.name, k), err => { stopPlay(); pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; });
   else file.text().then(t => loadText(file.name, t));
@@ -2304,10 +2425,22 @@ function writeKern(P){
   vs.forEach(v => pieces.get(v).forEach(p => times.add(p.t)));
   barT.forEach(t => times.add(t));
   vs.forEach(v => [...v.mets, ...v.keys, ...v.clefs].forEach(m => times.add(rt(m.t))));
+  /* ligatures: *lig before a ligature's first note, *Xlig after its last */
+  const ligS = new Map(), ligE = new Map();
+  vs.forEach(v => {
+    const S = new Set(), E = new Set(), ev = v.events;
+    ev.forEach((e, i) => {
+      if (!e.lig || e.rest) return;
+      if (!i || ev[i - 1].lig !== e.lig || ev[i - 1].rest) S.add(rt(e.t));
+      if (i === ev.length - 1 || ev[i + 1].lig !== e.lig || ev[i + 1].rest) { const te = rt(e.t + e.d); E.add(te); times.add(te); }
+    });
+    ligS.set(v, S); ligE.set(v, E);
+  });
   const sorted = [...times].sort((a, b) => a - b);
   const ptr = new Map(vs.map(v => [v, 0]));
   out.push(line(() => '=1-'));
   for (const t of sorted) {
+    if (vs.some(v => [...ligE.get(v)].some(x => eq(x, t)))) out.push(line(c => c.text < 0 && [...ligE.get(c.v)].some(x => eq(x, t)) ? '*Xlig' : '*'));
     const bar = P.bars.find(b => eq(b.t, t) && !eq(t, P.end));
     if (bar) out.push(line(() => bar.type === 'double' ? '=||' : '='));
     for (const kind of ['clef', 'key', 'met']) {
@@ -2322,6 +2455,7 @@ function writeKern(P){
     }
     const sec = P.sections.find(x => eq(x.t, t));
     if (sec) out.push('!!section: ' + sec.label);
+    if (vs.some(v => [...ligS.get(v)].some(x => eq(x, t)))) out.push(line(c => c.text < 0 && [...ligS.get(c.v)].some(x => eq(x, t)) ? '*lig' : '*'));
     const row = new Map();
     vs.forEach(v => { const L = pieces.get(v); let i = ptr.get(v); if (i < L.length && eq(L[i].t, t)) { row.set(v, L[i]); ptr.set(v, i + 1); } });
     if (!row.size) continue;
@@ -2345,6 +2479,8 @@ function writeKern(P){
    note goes, and the arrows, accidentals, dot and Delete act on the selected note or else on the note just entered. */
 const ed = {on: false, sel: null, ins: null, inRest: false, undo: [], redo: [], val: 'S'};   /* sel, ins: {vi, ei}; val: the value to enter */
 const EKEY = k => APP.store + ':edit:' + k;
+/* Insert or Overwrite, kept per app */
+try { ed.ovr = localStorage.getItem(APP.store + ':ovr') === '1'; } catch (e) { ed.ovr = false; }
 const VALS = [['Mx', 8], ['L', 4], ['B', 2], ['S', 1], ['M', 0.5], ['Sm', 0.25], ['F', 0.125]];
 function selSym(){
   if (!ed.sel || !piece) return null;
@@ -2387,30 +2523,97 @@ function propAt(v, t){ return mensInfo(metAt(v, t)).p; }
 /* a note (or rest) of the chosen value written into voice vi before event `at`; written into rests, it takes their time */
 const writable = v => !H.writable || H.writable(v);
 const refuse = () => { if (H.refuse) H.refuse(); };
+/* A note (or rest) goes in at the caret. The caret stands between two notes, or inside one (ed.ins.off, moved there on
+   the grid with Alt and the arrows): that note is then cut where the caret is.
+   Insert: the music after the new note moves along (rests right after a new note still make room for it, as before).
+   Overwrite: the new note takes the place of what stood there for its length; a note it covers only partly keeps
+   what is left as a rest, so the other voices stay where they are. */
+function shiftMarks(v, from, by){ for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > from || (by > 0 && m.ei === from && from > 0)) m.ei += by; }
 function insertEvent(vi, at, step, isRest){
   const v = piece.voices[vi]; if (!v) return;
   if (!writable(v)) { refuse(); return; }
   const val = VALS.find(x => x[0] === ed.val)[1];
-  const t = at < v.events.length ? v.events[at].t : v.end;
+  let off = 0;
+  if (!ed.sel && ed.ins && ed.ins.vi === vi && ed.ins.ei === at && at < v.events.length && ed.ins.off > EPS && ed.ins.off < v.events[at].d - EPS) off = ed.ins.off;
+  const t = at < v.events.length ? rt(v.events[at].t + off) : v.end;
   const alt0 = isRest ? null : implied(v, step, t);
+  const d = rt(val / propAt(v, t) * (ed.colArm ? 2 / 3 : 1));
   commit(() => {
-    const e = {d: rt(val / propAt(v, t)), rest: !!isRest, step, alt: alt0, ed: false, syl: [], t};
-    v.events.splice(at, 0, e);
-    for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > at || (m.ei === at && at > 0)) m.ei++;
-    if (!e.rest) {
-      let need = e.d, k = at + 1;
-      while (need > EPS && v.events[k] && v.events[k].rest) {
-        const r = v.events[k];
+    const e = {d, rest: !!isRest, step, alt: alt0, ed: false, syl: [], t};
+    let k = at;
+    if (off > EPS) {
+      /* the note the caret is in is cut in two at the caret */
+      const a = v.events[at];
+      const b = Object.assign({}, a, {d: rt(a.d - off), t: rt(a.t + off), syl: [], ferm: false});
+      b.tieEnd = false; b.tieMid = false; b.tieStart = !!(a.tieStart || a.tieMid);
+      a.d = rt(off); a.long = false; a.ferm = false;
+      if (a.tieMid) { a.tieMid = false; a.tieEnd = true; } else a.tieStart = false;
+      if (b.tieStart && !a.rest) b.tieMid = false;
+      v.events.splice(at + 1, 0, b);
+      for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > at) m.ei++;
+      k = at + 1;
+    }
+    /* a note put between two notes of a ligature belongs to it */
+    const pv = v.events[k - 1], nx = v.events[k];
+    if (!e.rest && pv && nx && pv.lig && pv.lig === nx.lig && !pv.rest && !nx.rest) e.lig = pv.lig;
+    v.events.splice(k, 0, e);
+    shiftMarks(v, k, 1);
+    if (ed.ovr) {
+      let need = e.d, j = k + 1;
+      while (need > EPS && v.events[j]) {
+        const r = v.events[j];
+        if (j === k + 1 && off < EPS && !e.rest && r.syl && r.syl.some(Boolean)) e.syl = r.syl;
+        /* a sign, clef or key where the new note starts stays with the new note */
+        if (j === k + 1 && off < EPS) for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei === j) m.ei = k;
         if (r.d <= need + EPS) {
-          need = rt(need - r.d); v.events.splice(k, 1);
-          for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > k) m.ei--;
+          need = rt(need - r.d); v.events.splice(j, 1);
+          for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > j) m.ei--;
+        } else {
+          r.d = rt(r.d - need); r.kd = r.d; need = 0;
+          if (!r.rest) { r.rest = true; r.tieStart = r.tieEnd = r.tieMid = false; r.syl = []; r.lig = 0; r.alt = null; r.ed = false; r.long = false; }
+        }
+      }
+    } else if (!e.rest) {
+      let need = e.d, j = k + 1;
+      while (need > EPS && v.events[j] && v.events[j].rest) {
+        const r = v.events[j];
+        if (r.d <= need + EPS) {
+          need = rt(need - r.d); v.events.splice(j, 1);
+          for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > j) m.ei--;
         } else { r.d = rt(r.d - need); r.kd = r.d; need = 0; }
       }
     }
-    ed.sel = null; ed.ins = {vi, ei: at + 1};
+    ed.sel = null; ed.ins = {vi, ei: k + 1};
   });
   render(); syncEdit();
   if (!isRest) hear(step, alt0);
+}
+/* the time of the caret, in its voice */
+function caretTime(v){
+  const s = selSym();
+  if (s) return v.events[s.src[0]].t;
+  if (!ed.ins) return v.end;
+  const ei = Math.min(ed.ins.ei, v.events.length);
+  return ei < v.events.length ? rt(v.events[ei].t + (ed.ins.off || 0)) : v.end;
+}
+/* Alt with the arrows: the caret moves on a grid of the value chosen for entering, also into the middle of a note */
+function moveCaret(dir){
+  if (!piece) return;
+  let vi = ed.sel ? ed.sel.vi : ed.ins ? ed.ins.vi : null;
+  if (vi === null) { const vs = visibleVoices(); if (!vs.length) return; vi = vs[0].idx; }
+  const v = piece.voices[vi]; if (!v) return;
+  const T = caretTime(v);
+  const g = VALS.find(x => x[0] === ed.val)[1] / propAt(v, T);
+  const q = T / g;
+  let nt = dir > 0 ? (Math.floor(q + 1e-6) + 1) * g : (Math.ceil(q - 1e-6) - 1) * g;
+  nt = rt(Math.max(0, Math.min(v.end, nt)));
+  let ei = v.events.length, off = 0;
+  for (let i = 0; i < v.events.length; i++) {
+    const e = v.events[i];
+    if (nt < e.t + e.d - EPS) { ei = i; off = rt(nt - e.t); if (off < EPS) off = 0; break; }
+  }
+  ed.sel = null; ed.ins = {vi, ei, off};
+  showSel(true); syncEdit();
 }
 const OPS = {
   step(dir){
@@ -2792,12 +2995,14 @@ function symAt(vi, ei){
 /* the note the arrows, accidentals, dot and Delete act on: the selected one, or else the one just entered */
 function targetSym(){
   if (ed.sel) return selSym();
+  if (ed.ins && ed.ins.off > EPS) return symAt(ed.ins.vi, ed.ins.ei);
   if (ed.ins && ed.ins.ei > 0) return symAt(ed.ins.vi, ed.ins.ei - 1);
   return null;
 }
 function insertionIndex(v){
   const s = selSym();
-  if (s) return s.src[s.src.length - 1] + 1;
+  /* Overwrite starts on the selected note, Insert after it */
+  if (s) return ed.ovr ? s.src[0] : s.src[s.src.length - 1] + 1;
   return ed.ins ? Math.min(ed.ins.ei, v.events.length) : v.events.length;
 }
 function refStepBefore(v, idx){
@@ -2823,7 +3028,8 @@ const CBA = {
   state(){
     const s = selSym(), t = targetSym(), v = curVoice();
     return {selected: !!s, dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
-      target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc}, edArm: !!ed.edArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
+      target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc, lig: !!t.lig}, edArm: !!ed.edArm, ovr: !!ed.ovr,
+      col: s && !s.rest ? !!s.col : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
       hasNotes: !!(piece && piece.voices.length), durs: v && v.syms ? v.syms.map(valKey) : []};
   },
   setDur(k){
@@ -2855,6 +3061,63 @@ const CBA = {
     }
     ed.edArm = !ed.edArm; syncEdit();
   },
+  toggleOverwrite(){
+    ed.ovr = !ed.ovr;
+    try { localStorage.setItem(APP.store + ':ovr', ed.ovr ? '1' : '0'); } catch (e) {}
+    syncEdit();
+    toast(ed.ovr ? 'Overwrite: a new note takes the place of what stands there, so the other voices stay in step.' : 'Insert: a new note pushes the music after it along.');
+  },
+  moveCaret: dir => moveCaret(dir),
+  /* coloration: the selected note turns black (two thirds of its value) or white again; with nothing selected,
+     the notes entered from now on are coloured, until it is pressed again */
+  toggleCol(){
+    if (!CBA.guard()) return;
+    const s = selSym(), v = curVoice();
+    if (!s || s.rest) { ed.colArm = !ed.colArm; syncEdit(); toast(ed.colArm ? 'Coloration: the notes you enter now are black, two thirds of their value.' : 'Coloration off.'); return; }
+    if (!v) return;
+    const on = !s.col, first = s.src[0];
+    commit(() => {
+      const e = v.events[first];
+      const total = s.src.reduce((a, i) => a + v.events[i].d, 0);
+      e.d = rt(on ? total * 2 / 3 : total * 1.5); e.tieStart = e.tieEnd = e.tieMid = false;
+      dropEvents(v, s.src.slice(1));
+    });
+    if (st.nota === 'real') {
+      const q = symAt(v.idx, first);
+      if (!q || !!q.col !== on || q.tieNext || q.dot) { undo(); ed.redo.pop(); syncEdit(); toast(on ? 'This note cannot be coloured here.' : 'This note cannot be made white here.'); }
+    }
+  },
+  /* ligature: a note joins the ligature just before it, or starts one with the next note; on a note already in a
+     ligature it takes the last note out (or undoes the ligature) */
+  toggleLig(){
+    if (!CBA.guard()) return;
+    const s = targetSym(), v = curVoice();
+    if (!s || s.rest || !v) return;
+    const syms = v.syms, k = syms.indexOf(s), id = v.events[s.src[0]].lig;
+    const lastOf = q => q.src[q.src.length - 1];
+    if (id) {
+      let a = k, b = k;
+      while (a > 0 && syms[a - 1].lig === id && !syms[a - 1].rest) a--;
+      while (b + 1 < syms.length && syms[b + 1].lig === id && !syms[b + 1].rest) b++;
+      const only = k === b && b - a >= 2 ? [s] : syms.slice(a, b + 1);
+      commit(() => { for (const q of only) for (const i of q.src) v.events[i].lig = 0; });
+      return;
+    }
+    let p = k - 1; while (p >= 0 && syms[p].src[0] === s.src[0]) p--;
+    const prev = p >= 0 ? syms[p] : null;
+    if (prev && !prev.rest && prev.lig && lastOf(prev) === s.src[0] - 1) {
+      commit(() => { for (const i of s.src) v.events[i].lig = prev.lig; });
+      return;
+    }
+    const next = syms.find(q => q.src[0] > lastOf(s));
+    if (!next || next.rest || next.src[0] !== lastOf(s) + 1) { toast('A ligature joins notes that follow each other: this one has no note right after it.'); return; }
+    const nid = Math.max(0, ...v.events.map(e => e.lig || 0)) + 1, old = v.events[next.src[0]].lig;
+    commit(() => {
+      for (const i of s.src) v.events[i].lig = nid;
+      for (const i of next.src) v.events[i].lig = nid;
+      if (old) v.events.forEach(e => { if (e.lig === old) e.lig = nid; });
+    });
+  },
   toggleDot(){
     if (!CBA.guard()) return;
     const t = targetSym(), v = curVoice(); if (!t || t.rest) return;
@@ -2881,7 +3144,7 @@ const CBA = {
     let k;
     if (s) k = syms.indexOf(s) + dir;
     else if (ed.ins) {
-      const c = ed.ins.ei;
+      const c = ed.ins.ei + (ed.ins.off > EPS ? 1 : 0);
       k = dir < 0 ? syms.findIndex(q => q.src.includes(c - 1)) : syms.findIndex(q => q.src[0] >= c);
       if (k < 0) k = dir < 0 ? 0 : syms.length - 1;
     } else k = 0;
@@ -2899,7 +3162,7 @@ const CBA = {
   typeNote(L){
     if (!CBA.guard()) return;
     const v = curVoice(); if (!v) return;
-    const idx = insertionIndex(v), ref = refStepBefore(v, idx), li = 'CDEFGAB'.indexOf(L);
+    const idx = insertionIndex(v), ref = refStepBefore(v, idx + (!ed.sel && ed.ins && ed.ins.off > EPS ? 1 : 0)), li = 'CDEFGAB'.indexOf(L);
     let best = null;
     for (let o = 0; o <= 8; o++) {
       const s = 7 * o + li;
@@ -2939,8 +3202,17 @@ function drawCaret(scroll){
   if (!piece) return;
   const {vi, ei} = ed.ins, v = piece.voices[vi];
   if (!v || !v.syms) return;
-  let k = v.syms.findIndex(q => q.src && q.src.includes(ei - 1)), after = true;
-  if (k < 0) { k = v.syms.findIndex(q => q.src && q.src[0] >= ei); after = false; }
+  let k = -1, after = true, frac = -1;
+  /* inside a note (moved there on the grid): between the note's start and the next note, in proportion */
+  if (ed.ins.off > EPS && ei < v.events.length) {
+    const T = rt(v.events[ei].t + ed.ins.off);
+    k = v.syms.findIndex(q => q.src && q.src.includes(ei) && T > q.t - EPS && T < q.t + q.d - EPS);
+    if (k >= 0) { frac = (T - v.syms[k].t) / v.syms[k].d; if (frac < EPS) { frac = -1; after = false; } }
+  }
+  if (k < 0) {
+    k = v.syms.findIndex(q => q.src && q.src.includes(ei - 1));
+    if (k < 0) { k = v.syms.findIndex(q => q.src && q.src[0] >= ei); after = false; }
+  }
   if (k < 0) return;
   document.querySelectorAll('#pages g.n' + vi + '-' + k).forEach((el, n) => {
     const par = el.parentNode;
@@ -2948,7 +3220,12 @@ function drawCaret(scroll){
     for (const r2 of par.querySelectorAll('rect.stafhit[data-v="' + vi + '"]')) if (r2.dataset.k0 !== '' && +r2.dataset.k0 <= k && k <= +r2.dataset.k1) r = r2;
     if (!r) return;
     const bb = el.getBBox(), top = +r.dataset.top;
-    const x = after ? bb.x + bb.width + 0.35 : bb.x - 0.45;
+    let x = after ? bb.x + bb.width + 0.35 : bb.x - 0.45;
+    if (frac > 0) {
+      const nx = par.querySelector('g.n' + vi + '-' + (k + 1));
+      const x0 = bb.x + 0.5, x1 = nx ? nx.getBBox().x + 0.5 : bb.x + bb.width + 2;
+      x = x0 + frac * Math.max(1, x1 - x0);
+    }
     const c = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     c.setAttribute('class', 'caret'); c.setAttribute('x', f(x - 0.07)); c.setAttribute('y', f(top - 1));
     c.setAttribute('width', '0.14'); c.setAttribute('height', '6');
@@ -3050,24 +3327,31 @@ function sizeViewer(){
   let win = window.innerHeight;
   if (EMBED) { if (DOCK) win = DOCK.vh - DOCK.pageTop; else { try { win = window.top.innerHeight - 200; } catch (e) { win = Math.max(window.screen.availHeight - 360, 600); } } }
   const top = wrapEl.getBoundingClientRect().top + window.scrollY;
-  document.documentElement.style.setProperty('--vh', (st.frameH ? Math.max(120, st.frameH) : Math.max(380, Math.round(win - top - 2))) + 'px');
+  document.documentElement.style.setProperty('--vh', Math.max(380, Math.round(win - top - 2)) + 'px');
 }
-/* the grip at the frame's corner: the frame as tall as you drag it; double-click gives it back to the window */
+/* Pinching on a trackpad (Ctrl with the wheel; gesture events in Safari) makes the music bigger, not the website:
+   pages are magnified; on Web, where the music fills the width, the staves grow instead */
 {
-  const grip = document.createElement('button');
-  grip.className = 'framegrip'; grip.type = 'button'; grip.title = 'Drag to make the music frame taller or shorter. Double-click: as tall as the window';
-  grip.setAttribute('aria-label', 'Frame height');
-  grip.innerHTML = '<svg viewBox="0 0 22 22" aria-hidden="true"><path d="M20 8v2L10 20H8ZM20 14v2l-4 4h-2Z"/></svg>';
-  $('.viewwrap').appendChild(grip);
-  grip.addEventListener('pointerdown', e => {
-    e.preventDefault(); grip.setPointerCapture(e.pointerId);
-    const y0 = e.clientY, h0 = viewerEl.getBoundingClientRect().height;
-    const move = ev => { st.frameH = Math.max(120, Math.round(h0 + ev.clientY - y0)); sizeViewer(); postHeight(); };
-    const up = () => { grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); save(); render(); };
-    grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up);
-  });
-  grip.addEventListener('dblclick', () => { st.frameH = null; save(); sizeViewer(); render(); });
+  const zoomBy = k => {
+    if (!piece || !isFinite(k) || k <= 0) return;
+    if (st.paper === 'web') { st.size = Math.max(1, Math.min(4, Math.round(st.size * k * 100) / 100)); $('#size').value = st.size; }
+    else st.zoom = Math.max(0.5, Math.min(3, (st.zoom || 1) * k));
+    save(); later();
+  };
+  document.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); zoomBy(Math.exp(-Math.max(-25, Math.min(25, e.deltaY)) * 0.006)); }, {passive: false});
+  let g0 = 1;
+  document.addEventListener('gesturestart', e => { e.preventDefault(); g0 = e.scale || 1; });
+  document.addEventListener('gesturechange', e => { e.preventDefault(); const sc = e.scale || 1; zoomBy(sc / g0); g0 = sc; });
+  document.addEventListener('gestureend', e => e.preventDefault());
+  /* scrolling sideways with an ordinary mouse wheel, when the music is one long line */
+  viewerEl.addEventListener('wheel', e => {
+    if (e.ctrlKey || !viewerEl.classList.contains('wide') || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    if (viewerEl.scrollHeight > viewerEl.clientHeight + 4) return;
+    viewerEl.scrollLeft += e.deltaY; e.preventDefault();
+  }, {passive: false});
 }
+/* the frame is always as tall as the window (the old drag grip is gone) */
+delete st.frameH;
 
 /* ------------------------------------------------------------------ */
 /* Playback: the shared organ (shared/organ.js), every shown voice      */

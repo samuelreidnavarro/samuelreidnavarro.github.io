@@ -1,4 +1,4 @@
-/* Scriptorium add-on: Download MIDI (.mid) and Download MuseScore (.mscz). Both are written from the same parsed piece as the
+/* Scriptorium add-on: Download MIDI (.mid), Download MuseScore (.mscz) and Download GABC (.gabc, one voice). Both are written from the same parsed piece as the
    MusicXML and LilyPond exports (one part per voice, modern notation). Runs inside the engine (see scriptorium.js). */
 (window.SCRIPTORIUM = window.SCRIPTORIUM || {}).addons = (window.SCRIPTORIUM.addons || []).concat([function(){
   const DIV = 96;                                      /* a quarter; a semibrevis (whole note) is 384 */
@@ -154,6 +154,55 @@
       `<metaTag name="workTitle">${xesc(P.title || '')}</metaTag><metaTag name="composer">${xesc(P.composer || '')}</metaTag>` + parts + staves + '</Score></museScore>';
   }
 
+  /* ---------------- GABC (Gregorio) ----------------
+     One voice (the one being edited, else the top one): the notes as letters on a clef chosen to fit them, the
+     syllables before their notes, notes without a syllable joined to the neume before; a note longer than most gets
+     a dot (mora); rests become a half bar, the end a double bar. */
+  function gabc(P, vi){
+    const v = P.voices[vi] || P.voices[0];
+    const notes = v.events.filter(e => !e.rest);
+    if (!notes.length) return null;
+    const lo = Math.min(...notes.map(e => e.step)), hi = Math.max(...notes.map(e => e.step));
+    let best = null;
+    for (const [c, line] of [['c', 4], ['c', 3], ['f', 3], ['c', 2], ['f', 4], ['c', 1], ['f', 2]]) {
+      const L0 = 3 + 2 * (line - 1), base = c === 'c' ? 28 : 24;
+      for (const oct of [0, 7, -7, 14, -14]) {
+        const a = lo - base - oct + L0, b = hi - base - oct + L0;
+        if (a < 0 || b > 12) continue;
+        const cost = Math.abs((a + b) / 2 - 6.5) + (oct ? 0.5 : 0);
+        if (!best || cost < best.cost) best = {c, line, L0, base: base + oct, cost};
+      }
+    }
+    if (!best) best = {c: 'c', line: 4, L0: 9, base: 28 + 7 * Math.round((((lo + hi) / 2) - 31.5) / 7)};
+    const letter = s => String.fromCharCode(97 + Math.max(0, Math.min(12, s - best.base + best.L0)));
+    const durs = notes.map(e => e.d).sort((a, b) => a - b), typical = durs[Math.floor(durs.length / 2)];
+    let out = `name: ${(P.title || 'Chant').replace(/;/g, ',')};\n` + (P.composer ? `author: ${P.composer.replace(/;/g, ',')};\n` : '') + '%%\n' + `(${best.c}${best.line}) `;
+    let cur = null, said = {};
+    const close = () => { if (cur) { out += cur.text + '(' + cur.notes + ') '; cur = null; } };
+    v.events.forEach((e, i) => {
+      if (e.rest) { close(); out += '(;) '; said = {}; return; }
+      if (e.tieEnd || e.tieMid) return;                      /* counted with the note it is tied from */
+      const sy = e.syl && e.syl[0];
+      const L = letter(e.step);
+      const alt = e.alt !== null && e.alt !== undefined ? e.alt : (keyAt(v, e.t)['cdefgab'[((e.step % 7) + 7) % 7]] || 0);
+      let tok = '';
+      if ((said[L] || 0) !== alt) { tok += L + (alt < 0 ? 'x' : alt > 0 ? '#' : 'y'); said[L] = alt; }
+      let total = e.d, j = i;
+      while ((v.events[j].tieStart || v.events[j].tieMid) && v.events[j + 1]) { j++; total += v.events[j].d; }
+      tok += L + (total > typical + EPS ? '.' : '');
+      if (sy || !cur) {
+        close();
+        const word = sy ? sy.replace(/^-|-$/g, '') : '';
+        const startsWord = !sy || !sy.startsWith('-');
+        if (startsWord) said = {};
+        out = out.replace(/ $/, startsWord ? ' ' : '');
+        cur = {text: word.replace(/[()]/g, ''), notes: tok};
+      } else cur.notes += tok;
+    });
+    close();
+    return out + '(::)\n';
+  }
+
   $('#midBtn').addEventListener('click', () => {
     if (!piece) return;
     closePops();
@@ -166,5 +215,14 @@
     const z = window.__mxl.zip([['META-INF/container.xml', `<?xml version="1.0" encoding="UTF-8"?><container><rootfiles><rootfile full-path="${xesc(nm)}"/></rootfiles></container>`], [nm, xml]]);
     save(new Blob([z], {type: 'application/x-musescore'}), base() + '.mscz');
   });
-  window.__export2 = {midi, mscx, tsig};
+  $('#gabcBtn').addEventListener('click', () => {
+    if (!piece) return;
+    closePops();
+    const vi = ed.sel ? ed.sel.vi : ed.ins ? ed.ins.vi : 0;
+    const txt = gabc(parseKern(piece.text || writeKern(piece)), vi);
+    if (!txt) { toast('There are no notes to write as GABC.'); return; }
+    save(new Blob([txt], {type: 'text/plain;charset=utf-8'}), base() + '.gabc');
+    if (piece.voices.length > 1) toast('GABC holds one voice: ' + (piece.voices[vi] || piece.voices[0]).name + '.');
+  });
+  window.__export2 = {midi, mscx, tsig, gabc};
 }]);

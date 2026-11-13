@@ -186,6 +186,34 @@ function fill(A, iconSVG){
   db.innerHTML = '<svg viewBox="-1 -1 2 2" aria-hidden="true"><circle r="0.3"/></svg>';
   db.addEventListener('click', () => A.toggleDot());
   accBtns.appendChild(db);
+  /* coloration: the selected note black (two thirds of its value), or with nothing selected the notes entered next */
+  if (A.toggleCol) {
+    const cb = document.createElement('button');
+    cb.className = 'ib'; cb.id = 'colBtn';
+    cb.title = 'Coloration: the selected note black, two thirds of its value; with nothing selected, the notes you enter next (K)';
+    cb.setAttribute('aria-label', 'Coloration');
+    cb.innerHTML = iconSVG('Sc', 2.9);
+    cb.addEventListener('click', () => A.toggleCol());
+    accBtns.appendChild(cb);
+  }
+  /* ligature: the note joins the ligature before it, or starts one with the next note */
+  if (A.toggleLig) {
+    const lb = document.createElement('button');
+    lb.className = 'ib'; lb.id = 'ligBtn';
+    lb.title = 'Ligature: joins the note to the ligature before it, or starts one with the next note; on a ligature, takes its last note out or undoes it (L)';
+    lb.setAttribute('aria-label', 'Ligature');
+    lb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v5h-2V6H5v3H3Z"/><path d="M4 11h7v2.2H6.2v1.6H11V17H4Zm8 3h8v6h-8v-2.2h5.8v-1.6H12Z"/></svg>';
+    lb.addEventListener('click', () => A.toggleLig());
+    accBtns.appendChild(lb);
+  }
+  /* Insert or Overwrite: one button, showing the mode in use */
+  if (A.toggleOverwrite) {
+    const ob = document.createElement('button');
+    ob.className = 'tb'; ob.id = 'ovrBtn';
+    ob.title = 'Insert: a new note pushes the music after it along. Overwrite: it takes the place of what stands there, so the other voices stay in step. Alt + arrows move the caret by the chosen value, also into a note (I)';
+    ob.addEventListener('click', () => A.toggleOverwrite());
+    $('#restBtn').parentNode.appendChild(ob);
+  }
 }
 function wire(A){
   $('#restBtn').addEventListener('click', () => A.setRestMode(!A.state().rest));
@@ -238,6 +266,7 @@ function wire(A){
       A.stepPitch((k === 'ArrowUp' ? 1 : -1) * (e.shiftKey || mod ? 7 : 1));
       return;
     }
+    if (edit && e.altKey && !mod && (k === 'ArrowLeft' || k === 'ArrowRight') && A.moveCaret) { e.preventDefault(); A.moveCaret(k === 'ArrowLeft' ? -1 : 1); return; }
     if (mod || e.altKey) return;
     if (k === ' ') { e.preventDefault(); A.togglePlay(); return; }
     if (tag === 'BUTTON' && k === 'Enter') return;
@@ -252,6 +281,9 @@ function wire(A){
     if (k === '=' || k === '+' || k === '#') { e.preventDefault(); A.toggleAcc('#'); return; }
     if (k === 'n' || k === 'N') { e.preventDefault(); A.toggleAcc('n'); return; }
     if (k === '.') { e.preventDefault(); A.toggleDot(); return; }
+    if ((k === 'i' || k === 'I') && A.toggleOverwrite) { e.preventDefault(); A.toggleOverwrite(); return; }
+    if ((k === 'k' || k === 'K') && A.toggleCol) { e.preventDefault(); A.toggleCol(); return; }
+    if ((k === 'l' || k === 'L') && A.toggleLig) { e.preventDefault(); A.toggleLig(); return; }
   });
 }
 function sync(A){
@@ -268,6 +300,9 @@ function sync(A){
   setPressed($('#dotBtn'), !!t && !t.r && !!t.p);
   if ($('#edBtn')) setPressed($('#edBtn'), !!S.edArm || (!!t && !t.r && !!t.a && !!t.ed));
   $('#dotBtn').disabled = !t || t.r;
+  const cb = $('#colBtn'); if (cb) setPressed(cb, !!S.col);
+  const lb = $('#ligBtn'); if (lb) { setPressed(lb, !!t && !t.r && !!t.lig); lb.disabled = !t || t.r; }
+  const ob = $('#ovrBtn'); if (ob) { ob.textContent = S.ovr ? 'Overwrite' : 'Insert'; setPressed(ob, !!S.ovr); }
   $('#stepUp').disabled = $('#stepDown').disabled = !t || t.r;
   $('#del').disabled = !t;
   $('#selPrev').disabled = $('#selNext').disabled = !S.hasNotes;
