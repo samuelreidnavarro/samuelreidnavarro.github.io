@@ -220,73 +220,84 @@ const Sampler = {
   async build(slug, buf){
     const st = this.man.stops[slug], sr = this.man.sr, src = buf.getChannelData(0);
     for (const z of st.zones) {
-      this.buildZone(z, src, sr, buf);
+      this.buildZone(z, src, sr);
       await new Promise(r => setTimeout(r, 0));     /* a breath between zones: the page stays responsive */
     }
     return buf;
   },
-  buildZone(z, src, sr, buf){
-    const n = z.le - z.ls, a0 = z.off, ls = z.ls;
+  buildZone(z, src, sr){
+    const a0 = z.off, ls = z.ls, le = z.le, n = le - ls;
     const f0 = 440 * Math.pow(2, (z.root + (z.tune || 0) / 100 - 69) / 12);
     const P = Math.max(16, Math.min(1500, Math.round(sr / f0)));
-    const T = Math.round(3 * sr), G = Math.min(Math.round(0.24 * sr), Math.max(4 * P, Math.round(0.12 * sr))), O = G >> 1;
-    const seg = i => src[a0 + ls + (((i % n) + n) % n)];
-    const out = new Float32Array(T + G);
-    /* a deterministic pseudo-random sequence, so a note is the same every time */
-    let seed = (z.root * 7919 + z.off) >>> 0;
+    const T0 = Math.round(3 * sr), G = Math.min(Math.round(0.24 * sr), Math.max(4 * P, Math.round(0.12 * sr))), O = G >> 1;
+    /* the material the new loop is cut from: the recording's own steady part, not only the short loop
+       the sampler chose (a loop of a few milliseconds repeats at 100 to 300 Hz, which is heard as a pitch) */
+    const s0 = Math.max(Math.round(0.15 * sr), le - Math.round(0.8 * sr)), nn = le - s0;
+    const wrap = nn < G + 2 * P + O + 16;           /* too little material: fall back on the sampler's loop itself */
+    const seg = wrap ? (i => src[a0 + ls + (((i % n) + n) % n)])
+                     : (i => src[a0 + s0 + (i < 0 ? 0 : i >= nn ? nn - 1 : i)]);
+    const pick = () => wrap ? Math.floor(rnd() * n) : P + 1 + Math.floor(rnd() * Math.max(1, nn - G - 2 * P - O - 4));
+    let seed = (z.root * 7919 + z.off) >>> 0;       /* a deterministic sequence: a note is the same every time */
     const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    const CS = Math.max(3, Math.floor(O / 500));     /* the lining-up looks at about 500 samples: enough, and fast */
     const win = new Float32Array(O); for (let i = 0; i < O; i++) win[i] = Math.pow(Math.sin(Math.PI / 2 * (i + 0.5) / O), 2);
-    /* the offset (near base) at which the source lines up best with target[0..O) */
+    const full = new Float32Array(le + T0 + 2 * G + 2 * P + 64);
+    full.set(src.subarray(a0, a0 + le), 0);
+    /* the offset (near base) at which the source lines up best with tgt(0..O) */
     const align = (base, tgt) => {
       let best = -1e30, bo = base;
       for (let d = -P; d <= P; d++) {
         let c = 0;
-        for (let i = 0; i < O; i += 3) c += tgt(i) * seg(base + d + i);
+        for (let i = 0; i < O; i += CS) c += tgt(i) * seg(base + d + i);
         if (c > best) { best = c; bo = base + d; }
       }
       return bo;
     };
-    let pos = 0, so = 0;                 /* the first grain begins where the loop begins */
-    for (let i = 0; i < G; i++) out[i] = seg(i);
-    while (pos + G < T) {
+    const place = (pos, so) => {
+      for (let i = 0; i < O; i++) full[pos + i] = full[pos + i] * (1 - win[i]) + seg(so + i) * win[i];
+      for (let i = O; i < G; i++) full[pos + i] = seg(so + i);
+    };
+    /* the first grain fades in over the end of the natural recording, the next ones over each other */
+    let pos = le - O;
+    place(pos, align(pick(), i => full[pos + i]));
+    const end = le + T0;
+    while (pos + G < end) {
       pos += G - O;
-      so = align(Math.floor(rnd() * n), i => out[pos + i]);
-      for (let i = 0; i < O; i++) out[pos + i] = out[pos + i] * (1 - win[i]) + seg(so + i) * win[i];
-      for (let i = O; i < G && pos + i < out.length; i++) out[pos + i] = seg(so + i);
+      const at = pos;
+      place(at, align(pick(), i => full[at + i]));
     }
     /* The loop is closed by fading the end into a piece of the source that lines up with the end
        (found first) and then flows into the beginning: if it does not yet, the loop is made a few
        samples longer or shorter, whatever it takes for the waves to meet. */
-    let sc = 0, best = -1e30; const cb = Math.floor(rnd() * n);
+    let sc = 0, best = -1e30; const cb = pick();
     for (let d = -P; d <= P; d++) {
       let c = 0;
-      for (let i = 0; i < O; i += 3) c += out[T - O + i] * seg(cb + d + i);
+      for (let i = 0; i < O; i += CS) c += full[end - O + i] * seg(cb + d + i);
       if (c > best) { best = c; sc = cb + d; }
     }
     let kk = 0; best = -1e30;
     for (let k = -P; k <= P; k++) {
       let c = 0;
-      for (let i = 0; i < O; i += 3) c += seg(i) * seg(sc + O + k + i);
+      for (let i = 0; i < O; i += CS) c += full[le + i] * seg(sc + O + k + i);
       if (c > best) { best = c; kk = k; }
     }
-    const T2 = T + kk;
-    for (let i = 0; i < O; i++) out[T2 - O + i] = out[T2 - O + i] * (1 - win[i]) + seg(sc + kk + i) * win[i];
-    const loop = out.slice(0, T2);
+    const e2 = end + kk;
+    for (let i = 0; i < O; i++) full[e2 - O + i] = full[e2 - O + i] * (1 - win[i]) + seg(sc + kk + i) * win[i];
+    const TL = e2 - le;
     /* a steady loudness: what still wavers slower than about 15 Hz is smoothed out (circularly, so the seam stays shut) */
-    const TL = loop.length, W = Math.round(sr / 40), cum = new Float64Array(TL + W + 1);
+    const loop = full.subarray(le, e2), W = Math.round(sr / 40), cum = new Float64Array(TL + W + 1);
     for (let i = 0; i < TL + W; i++) cum[i + 1] = cum[i] + loop[i % TL] * loop[i % TL];
     const env = new Float32Array(TL); let tot = 0;
     for (let i = 0; i < TL; i++) { env[i] = Math.sqrt((cum[i + W] - cum[i]) / W) + 1e-9; tot += env[i]; }
     const mean = tot / TL, g = new Float32Array(TL);
     for (let i = 0; i < TL; i++) g[i] = Math.max(0.6, Math.min(1.6, mean / env[((i + (W >> 1)) % TL)]));
-    for (let i = 0; i < TL; i++) loop[i] *= g[((i - (W >> 1)) % TL + TL) % TL];
-    const data = new Float32Array(ls + TL + 32);
-    data.set(src.subarray(a0, a0 + ls), 0); data.set(loop, ls);
-    /* the gain eases in over the last tenth of a second of the attack, so there is no step where the loop begins */
-    const R = Math.min(ls, Math.round(sr / 10)), g0 = g[((-(W >> 1)) % TL + TL) % TL];
-    for (let i = 0; i < R; i++) data[ls - R + i] *= 1 + (g0 - 1) * (i + 1) / R;
-    z.lsN = ls; z.leN = ls + TL;
-    z.ab = this.ctxBuf(data, sr);
+    const lg = new Float32Array(TL); for (let i = 0; i < TL; i++) lg[i] = loop[i] * g[((i - (W >> 1)) % TL + TL) % TL];
+    full.set(lg, le);
+    /* the gain eases in over the last tenth of a second of the recording, so there is no step where the loop begins */
+    const R = Math.min(le, Math.round(sr / 10)), g0 = g[((-(W >> 1)) % TL + TL) % TL];
+    for (let i = 0; i < R; i++) full[le - R + i] *= 1 + (g0 - 1) * (i + 1) / R;
+    z.lsN = le; z.leN = le + TL;
+    z.ab = this.ctxBuf(full.slice(0, le + TL + 32), sr);
   },
   ctxBuf(data, sr){
     const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
