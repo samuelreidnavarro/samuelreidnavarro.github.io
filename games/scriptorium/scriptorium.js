@@ -978,7 +978,8 @@ function custosSvg(s, x, top){
    The notes stand side by side from the first note's place, whatever the spacing of the other voices.
    Anything these rules cannot show (a dot, a minima, a semibrevis elsewhere, a repeated note, a ligature that runs over
    the line), and every ligature with Ligatures off, is written as single notes under a bracket. */
-const LIG_W = {B: 1.3, L: 1.3, S: 1.3, Mx: 2.5};
+const LIG_W = {B: 1.3, L: 1.3, S: 1.3, M: 1.3, Sm: 1.3, F: 1.3, Mx: 2.5};
+const LIG_SHORT = ['S', 'M', 'Sm', 'F'];   /* the values of the pair cum opposita proprietate */
 function ligBand(xa, ya, xb, yb, filled){
   const P = (pts) => `<path class="ink" d="M${pts.map(p => f(p[0]) + ' ' + f(p[1])).join('L')}Z"/>`;
   if (filled) return P([[xa, ya - 0.544], [xb, yb - 0.544], [xb, yb + 0.54], [xa, ya + 0.54]]);
@@ -990,17 +991,18 @@ function ligShape(G, top){
   const n = G.length;
   if (n < 2) return false;
   const gs = G.map(([q]) => q.g);
-  if (G.some(([q]) => q.rest || q.dot || q.tieNext || !LIG_W[q.g])) return false;
+  const cop = LIG_SHORT.includes(gs[0]) && gs[1] === gs[0];
+  /* dots are only possible on the two notes of a c.o.p. pair (they just receive their dots) */
+  if (G.some(([q], i) => q.rest || q.tieNext || !LIG_W[q.g] || (q.dot && !(cop && i < 2)))) return false;
   for (let i = 1; i < n; i++) if (G[i][0].step === G[i - 1][0].step) return false;
-  const cop = gs[0] === 'S' && gs[1] === 'S';
-  if (gs.some((g, i) => g === 'S' && !(cop && i < 2))) return false;
+  if (gs.some((g, i) => LIG_SHORT.includes(g) && !(cop && i < 2))) return false;
   const Y = G.map(([q]) => top + 4 - q.pos * 0.5);
   const down = i => G[i][0].step < G[i - 1][0].step;          /* note i lower than the one before */
   /* the first note's value must be one its shape can show */
   if (!cop && !(gs[0] === 'Mx' || (gs[0] === 'B') || (gs[0] === 'L'))) return false;
   /* obliques: a falling step from note i to i+1, i+1 a brevis (or the second semibrevis of c.o.p.), i a brevis, the
      first note (B or L) or the first semibrevis; a falling final brevis must be one */
-  const can = i => down(i + 1) && (cop && i === 0 || (gs[i + 1] === 'B' && (gs[i] === 'B' || (i === 0 && gs[i] === 'L'))));
+  const can = i => down(i + 1) && ((cop && i === 0 && !G[0][0].dot) || (gs[i + 1] === 'B' && (gs[i] === 'B' || (i === 0 && gs[i] === 'L'))));
   const pairAt = new Array(n).fill(false);
   const finalObl = gs[n - 1] === 'B' && down(n - 1) && !(cop && n === 2);
   if (finalObl && !can(n - 2)) return false;
@@ -1015,20 +1017,30 @@ function ligShape(G, top){
   for (let i = 0; i < n; i++) { if (pairAt[i]) { units.push([i, i + 1]); i++; } else units.push([i]); }
   const X = new Array(n);
   let x = G[0][1];
+  const dotW = i => G[i][0].dot ? 0.75 : 0;
   for (const u of units) {
-    if (u.length === 2) { X[u[0]] = x; X[u[1]] = x + 1.3; x += 2.6; }
-    else { X[u[0]] = x; x += LIG_W[gs[u[0]]]; }
+    if (u.length === 2) { X[u[0]] = x; X[u[1]] = x + 1.3; x += 2.6 + dotW(u[1]); }
+    else { X[u[0]] = x; x += LIG_W[gs[u[0]]] + dotW(u[0]); }
   }
   const parts = G.map(() => '');
   const TL = 3.548;
   units.forEach((u, k) => {
-    const i = u[0], j = u[u.length - 1], xa = X[i], xb = j === n - 1 || k === units.length - 1 ? x : X[units[k + 1][0]];
+    const i = u[0], j = u[u.length - 1], xa = X[i], xb = xa + (u.length === 2 ? 2.6 : LIG_W[gs[i]]);
     const col = u.some(q => G[q][0].col);
     parts[i] += ligBand(xa, Y[i], xb, Y[j], col);
+    /* a dot after the unit stretches it with thin lines to the next note */
+    const nxt = k + 1 < units.length ? X[units[k + 1][0]] : null;
+    if (nxt !== null && nxt > xb + 0.01) parts[j] += `<rect class="ink" x="${f(xb)}" y="${f(Y[j] - 0.544)}" width="${f(nxt - xb)}" height="0.1"/><rect class="ink" x="${f(xb)}" y="${f(Y[j] + 0.44)}" width="${f(nxt - xb)}" height="0.1"/>`;
     /* the left side: the first note's, or the joint with the note before (both pitches) */
     if (i === 0) parts[i] += ligV(xa, Y[0] - 0.686, Y[0] + 0.686);
     else parts[i] += ligV(xa, Math.min(Y[i], Y[i - 1]) - 0.686, Math.max(Y[i], Y[i - 1]) + 0.686);
     if (j === n - 1) parts[j] += ligV(xb - 0.12, Y[j] - 0.686, Y[j] + 0.686);
+  });
+  /* dots, after their notes */
+  G.forEach(([q], i) => {
+    if (!q.dot) return;
+    const dy = Y[i] - (q.pos % 2 === 0 ? 0.5 : 0), dx = X[i] + 1.3 + 0.4;
+    parts[i] += `<circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.19"/>`;
   });
   /* stems */
   if (cop) parts[0] += ligV(X[0], Y[0] - TL, Y[0]);
@@ -1380,10 +1392,10 @@ function pageSvg(G, body){
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(G.W)} ${f(G.H)}" preserveAspectRatio="xMidYMid meet">${body}</svg>`;
 }
 function titleBlock(G, x0, x1, y, sub){
-  let s = `<text class="title" x="${f((x0 + x1) / 2)}" y="${f(y + 3.2)}" font-size="3.4" text-anchor="middle">${esc(piece.title)}</text>`;
+  let s = `<text class="title texthit" data-f="title" x="${f((x0 + x1) / 2)}" y="${f(y + 3.2)}" font-size="3.4" text-anchor="middle">${esc(piece.title)}</text>`;
   let h = 4.6;
   if (sub) { s += `<text x="${f((x0 + x1) / 2)}" y="${f(y + h + 1.9)}" font-size="2.2" text-anchor="middle" font-style="italic">${esc(sub)}</text>`; h += 2.8; }
-  if (piece.composer) { s += `<text x="${f(x1)}" y="${f(y + h + 1.6)}" font-size="1.9" text-anchor="end">${esc(piece.composer)}</text>`; h += 2.4; }
+  if (piece.composer) { s += `<text class="texthit" data-f="comp" x="${f(x1)}" y="${f(y + h + 1.6)}" font-size="1.9" text-anchor="end">${esc(piece.composer)}</text>`; h += 2.4; }
   return {svg: s, h: h + 1.2};
 }
 function visibleVoices(){ return piece.voices.filter(v => vis(v.idx).on); }
@@ -1587,7 +1599,6 @@ function render(){
   viewerEl.classList.toggle('wide', wide || Z > 1.001);
   /* the frame is the whole window: as wide as the page area and as tall as the window, the music centred in it */
   viewerEl.style.width = '';
-  { const pg = pagesEl.firstElementChild, x = pg ? pg.getBoundingClientRect().left - viewerEl.getBoundingClientRect().left : 0; $('#fsBtn').style.left = (viewerEl.offsetLeft + Math.max(0, x) + 6) + 'px'; }
   if (typeof showSel === 'function' && (ed.sel || ed.ins || ed.range || ed.picks)) showSel();
   applyMark();
   if (!play) { handTop = -1; $('#handBox').style.top = ''; $('#pendBox').style.top = ''; if (st.view === 'choir') handMid(null); }
@@ -2182,8 +2193,10 @@ $('#voiceTable').addEventListener('change', e => {
 }
 $('#voiceTable').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('vname')) e.target.blur(); e.stopPropagation(); });
 /* title and composer */
-$('#metaTitle').addEventListener('change', e => { const t = e.target.value.trim(); if (!piece || !t) return; commit(() => { for (const k of Object.keys(piece.meta)) if (k.startsWith('OTL') || k === 'OPR') delete piece.meta[k]; piece.meta.OTL = t; }); });
-$('#metaComp').addEventListener('change', e => { if (!piece) return; const c = e.target.value.trim(); commit(() => { delete piece.meta.COA; if (c) piece.meta.COM = c; else delete piece.meta.COM; }); });
+function setTitle(t){ t = String(t).trim(); if (!piece || !t) return; commit(() => { for (const k of Object.keys(piece.meta)) if (k.startsWith('OTL') || k === 'OPR') delete piece.meta[k]; piece.meta.OTL = t; }); }
+function setComposer(c){ if (!piece) return; c = String(c).trim(); commit(() => { delete piece.meta.COA; if (c) piece.meta.COM = c; else delete piece.meta.COM; }); }
+$('#metaTitle').addEventListener('change', e => setTitle(e.target.value));
+$('#metaComp').addEventListener('change', e => setComposer(e.target.value));
 ['#metaTitle', '#metaComp'].forEach(id => $(id).addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); }));
 
 /* a new score: four voices, a brevis rest each, ready to write in */
@@ -2993,26 +3006,36 @@ pagesEl.addEventListener('pointermove', e => {
 pagesEl.addEventListener('pointerleave', clearGhost);
 
 /* a voice's name in the score: click it to rename the voice (the same name as in Voices) */
-function renameInPlace(el){
-  const vi = +el.dataset.v, v = piece && piece.voices[vi]; if (!v) return;
+/* Text in the score is edited where it stands: click a voice name, the title or the composer, type, Enter */
+function editInPlace(el, value, label, commitFn, opts = {}){
   const wr = $('.viewwrap').getBoundingClientRect(), r = el.getBoundingClientRect();
   const inp = document.createElement('input');
-  inp.className = 'vrename'; inp.value = v.name; inp.setAttribute('aria-label', 'Name of the voice');
-  inp.style.left = Math.max(2, r.right - wr.left - Math.max(140, r.width + 30)) + 'px';
+  inp.className = 'vrename'; inp.value = value; inp.setAttribute('aria-label', label);
+  const w = Math.max(opts.min || 140, r.width + 30);
+  inp.style.width = w + 'px';
+  inp.style.left = Math.max(2, (opts.align === 'center' ? r.left + r.width / 2 - w / 2 : r.right - w) - wr.left) + 'px';
   inp.style.top = (r.top - wr.top - 6) + 'px';
-  inp.style.width = Math.max(140, r.width + 30) + 'px';
+  if (opts.font) { inp.style.fontSize = opts.font + 'px'; inp.style.height = Math.round(opts.font * 1.9) + 'px'; }
+  inp.style.textAlign = opts.align === 'center' ? 'center' : 'right'; inp.style.fontStyle = opts.italic === false ? 'normal' : 'italic';
   $('.viewwrap').appendChild(inp);
   inp.focus(); inp.select();
   let done = false;
-  const finish = keep => { if (done) return; done = true; const val = inp.value; inp.remove(); if (keep) VOICE_OPS.rename(vi, val); };
+  const finish = keep => { if (done) return; done = true; const val = inp.value; inp.remove(); if (keep) commitFn(val); };
   inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') finish(true); else if (e.key === 'Escape') finish(false); });
   inp.addEventListener('blur', () => finish(true));
 }
+function renameInPlace(el){
+  const vi = +el.dataset.v, v = piece && piece.voices[vi]; if (!v) return;
+  editInPlace(el, v.name, 'Name of the voice', val => VOICE_OPS.rename(vi, val));
+}
 pagesEl.addEventListener('click', e => {
-  const t = e.target.closest && e.target.closest('.vnamehit');
+  const t = e.target.closest && e.target.closest('.vnamehit, .texthit');
   if (!t || !piece) return;
   e.stopImmediatePropagation(); e.preventDefault();
-  renameInPlace(t);
+  if (t.classList.contains('vnamehit')) { renameInPlace(t); return; }
+  const rect = t.getBoundingClientRect(), sc = rect.height / (+t.getAttribute('font-size') * 1.2 || 1);
+  if (t.dataset.f === 'title') editInPlace(t, (piece.meta.OTL || piece.title || '').replace(/\s*\.\.\.\s*/g, ' … '), 'Title', setTitle, {align: 'center', min: 320, font: 22, italic: false});
+  else editInPlace(t, piece.meta.COM || piece.meta.COA || piece.composer || '', 'Composer', setComposer, {align: 'right', min: 220, font: 16, italic: false});
 }, true);
 
 /* The mensuration menu, opened by clicking a mensuration sign: the signs as a grid, like the clefs. The change goes to
@@ -3372,6 +3395,11 @@ document.addEventListener('keydown', e => {
   }
 });
 
+/* is everything selected one ligature already (the Ligature button shows pressed) */
+function ligSelOn(){
+  if (ed.range || ed.picks) { const it = selItems().filter(x => !x.e.rest); return it.length > 1 && it.every(x => x.e.lig && x.e.lig === it[0].e.lig && x.v === it[0].v); }
+  const t = targetSym(); return !!(t && !t.rest && t.lig);
+}
 /* what the shared note-input tools (shared/note-input.js) need from this app */
 const CBA = {
   edit: () => ed.on,
@@ -3379,7 +3407,7 @@ const CBA = {
   state(){
     const s = selSym(), t = targetSym(), v = curVoice();
     return {selected: !!s, dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
-      target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc, lig: !!t.lig}, edArm: !!ed.edArm, ovr: !!ed.ovr,
+      target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc, lig: !!t.lig}, ligOn: ligSelOn(), edArm: !!ed.edArm, ovr: !!ed.ovr,
       col: s && !s.rest ? !!s.col : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
       hasNotes: !!(piece && piece.voices.length), durs: ed.range || ed.picks ? [] : xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : []), range: !!(ed.range || ed.picks)};
   },
@@ -3442,32 +3470,34 @@ const CBA = {
      ligature it takes the last note out (or undoes the ligature) */
   toggleLig(){
     if (!CBA.guard()) return;
+    /* several notes selected (Shift-click the last one): they become one ligature, or stop being one */
+    if (ed.range || ed.picks) {
+      const it = selItems().filter(x => !x.e.rest);
+      if (it.length < 2 || new Set(it.map(x => x.v)).size > 1) { toast('A ligature joins at least two notes of one voice: select them (Shift-click the last), then press Ligature.'); return; }
+      const v = it[0].v;
+      if (!writable(v)) { refuse(); return; }
+      const idx = it.map(x => v.events.indexOf(x.e)).sort((p, q) => p - q);
+      if (idx.some((e, i) => i && (e !== idx[i - 1] + 1 || v.events[e].rest))) { toast('A ligature joins notes that follow each other, without a rest between.'); return; }
+      const ids = new Set(idx.map(i => v.events[i].lig || 0));
+      const same = ids.size === 1 && !ids.has(0);
+      commit(() => {
+        const old = new Set(idx.map(i => v.events[i].lig).filter(Boolean));
+        if (same) { for (const i of idx) v.events[i].lig = 0; }
+        else { const nid = Math.max(0, ...v.events.map(e => e.lig || 0)) + 1; for (const i of idx) v.events[i].lig = nid; }
+        /* what is left of a ligature that lost notes: fewer than two notes is no ligature */
+        for (const o of old) { const rest = v.events.filter(e => e.lig === o); if (rest.length < 2) rest.forEach(e => { e.lig = 0; }); }
+      });
+      return;
+    }
     const s = targetSym(), v = curVoice();
     if (!s || s.rest || !v) return;
     const syms = v.syms, k = syms.indexOf(s), id = v.events[s.src[0]].lig;
-    const lastOf = q => q.src[q.src.length - 1];
     if (id) {
-      let a = k, b = k;
-      while (a > 0 && syms[a - 1].lig === id && !syms[a - 1].rest) a--;
-      while (b + 1 < syms.length && syms[b + 1].lig === id && !syms[b + 1].rest) b++;
-      const only = k === b && b - a >= 2 ? [s] : syms.slice(a, b + 1);
-      commit(() => { for (const q of only) for (const i of q.src) v.events[i].lig = 0; });
+      /* one note of a ligature: the whole ligature is dissolved */
+      commit(() => { for (const e of v.events) if (e.lig === id) e.lig = 0; });
       return;
     }
-    let p = k - 1; while (p >= 0 && syms[p].src[0] === s.src[0]) p--;
-    const prev = p >= 0 ? syms[p] : null;
-    if (prev && !prev.rest && prev.lig && lastOf(prev) === s.src[0] - 1) {
-      commit(() => { for (const i of s.src) v.events[i].lig = prev.lig; });
-      return;
-    }
-    const next = syms.find(q => q.src[0] > lastOf(s));
-    if (!next || next.rest || next.src[0] !== lastOf(s) + 1) { toast('A ligature joins notes that follow each other: this one has no note right after it.'); return; }
-    const nid = Math.max(0, ...v.events.map(e => e.lig || 0)) + 1, old = v.events[next.src[0]].lig;
-    commit(() => {
-      for (const i of s.src) v.events[i].lig = nid;
-      for (const i of next.src) v.events[i].lig = nid;
-      if (old) v.events.forEach(e => { if (e.lig === old) e.lig = nid; });
-    });
+    toast('A ligature needs at least two notes: select them (click the first, Shift-click the last), then press Ligature.');
   },
   toggleDot(){
     if (!CBA.guard()) return;

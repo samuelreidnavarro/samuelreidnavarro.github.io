@@ -514,7 +514,7 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 #pages svg g.on .selbg,#pages g.sel .selbg{fill:var(--sel);opacity:.1}
 .viewwrap{position:relative}
 /* full screen */
-.fsbtn{position:absolute;top:4px;left:6px;z-index:5;width:32px;height:32px;min-height:0;padding:0;border-radius:6px;display:flex;align-items:center;justify-content:center;
+.fsbtn{position:fixed;right:20px;bottom:84px;z-index:12;width:32px;height:32px;min-height:0;padding:0;border-radius:6px;display:flex;align-items:center;justify-content:center;
   background:rgba(42,34,24,.45);color:#FBF4E8;border:0;transition:opacity .4s}
 .fsbtn:hover{background:var(--accent);color:var(--accent-ink)}
 .fsbtn svg{width:18px;height:18px;fill:currentColor}
@@ -523,7 +523,7 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 .viewwrap.fs .viewer{width:auto !important;height:100% !important;max-width:none;margin:0;padding:24px 0 90px;overflow:auto;scrollbar-width:none}
 .viewwrap.fs .viewer::-webkit-scrollbar{display:none}
 .viewwrap.fs .viewer.horiz{padding:24px 64px}
-.viewwrap.fs .fsbtn{left:12px !important;top:12px}
+.viewwrap.fs .fsbtn{right:20px;bottom:84px}
 .viewwrap.fs .fsctl{display:flex;position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:6;gap:10px;transition:opacity .4s}
 .fsctl button{width:58px;height:58px;min-height:0;padding:0;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;
   background:rgba(42,34,24,.62);color:#FBF4E8;box-shadow:0 6px 16px -6px rgba(0,0,0,.5)}
@@ -765,8 +765,8 @@ html.dark .tools .podg,html.dark .transport .podg{box-shadow:0 1px 4px rgba(0,0,
   html.ctl-bot-idle #podSound:not(:hover):not(:focus-within) .hzctl,html.ctl-bot-idle #podSound:not(:hover):not(:focus-within) #toggleSet{display:none}
 }
 @media (min-width:701px){
-  .viewwrap:not(.fs) .fsbtn{top:58px;transition:opacity .35s ease}
-  html.ctl-top-idle .viewwrap:not(.fs) .fsbtn{opacity:0;pointer-events:none}
+  .viewwrap:not(.fs) .fsbtn{transition:opacity .35s ease}
+  html.ctl-bot-idle .viewwrap:not(.fs) .fsbtn{opacity:0;pointer-events:none}
 }
 /* the hand stands at the very edge of the screen, past the page margin */
 .viewwrap .handbox{right:calc(-1 * clamp(14px,2.6vw,44px))}
@@ -798,3 +798,5 @@ html.dark .tools .podg,html.dark .transport .podg{box-shadow:0 1px 4px rgba(0,0,
 /* Dark room: the page stays as it is; the floating controls get a dark ground of their own so they read over any paper */
 html.dark .podg{background:rgba(34,28,21,.93)}
 html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backdrop-filter:blur(6px)}
+#pages .texthit{cursor:text}
+#pages .texthit:hover{fill:var(--accent)}

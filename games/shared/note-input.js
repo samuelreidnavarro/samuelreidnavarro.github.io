@@ -198,11 +198,11 @@ function fill(A, iconSVG){
     cb.addEventListener('click', () => A.toggleCol());
     accBtns.appendChild(cb);
   }
-  /* ligature: the note joins the ligature before it, or starts one with the next note */
+  /* ligature: the selected notes (two or more) become one ligature, or stop being one */
   if (A.toggleLig) {
     const lb = document.createElement('button');
     lb.className = 'ib'; lb.id = 'ligBtn';
-    lb.title = 'Ligature: joins the note to the ligature before it, or starts one with the next note; on a ligature, takes its last note out or undoes it (L)';
+    lb.title = 'Ligature: select at least two notes (click the first, Shift-click the last) and press it to join them; on a ligature, it undoes it (L)';
     lb.setAttribute('aria-label', 'Ligature');
     lb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v5h-2V6H5v3H3Z"/><path d="M4 11h7v2.2H6.2v1.6H11V17H4Zm8 3h8v6h-8v-2.2h5.8v-1.6H12Z"/></svg>';
     lb.addEventListener('click', () => A.toggleLig());
@@ -322,7 +322,7 @@ function sync(A){
   if ($('#edBtn')) setPressed($('#edBtn'), !!S.edArm || (!!t && !t.r && !!t.a && !!t.ed));
   $('#dotBtn').disabled = !t || t.r;
   const cb = $('#colBtn'); if (cb) setPressed(cb, !!S.col);
-  const lb = $('#ligBtn'); if (lb) { setPressed(lb, !!t && !t.r && !!t.lig); lb.disabled = !t || t.r; }
+  const lb = $('#ligBtn'); if (lb) { setPressed(lb, !!S.ligOn); lb.disabled = !(S.range || (t && !t.r && t.lig)); }
   const ob = $('#ovrBtn'); if (ob) { ob.textContent = S.ovr ? 'Overwrite' : 'Insert'; setPressed(ob, !!S.ovr); }
   $('#stepUp').disabled = $('#stepDown').disabled = (!t || t.r) && !S.range;
   $('#del').disabled = !t && !S.range;
