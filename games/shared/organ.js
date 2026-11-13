@@ -11,6 +11,7 @@
 (function(){
 'use strict';
 const Organ = {};
+const SRC = (document.currentScript && document.currentScript.src) || location.href;
 let S = null;             /* the app's settings object (its "ui" or "st") */
 let H = {save(){}, replay(){}, toast(){}, playing(){}, loopChanged(){}, units: ['Mx','L','B','S','M','Sm','F'], unitIcon: null, unitName: k => k};
 const $ = s => document.querySelector(s);
@@ -65,7 +66,7 @@ function ensureAudio(){
     /* organ bus: dry signal plus a church-like room (a generated impulse response) */
     audio.bus = audio.ctx.createGain();
     const lp = audio.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 7500; lp.Q.value = 0.5;
-    audio.bus.connect(lp); lp.connect(audio.master);
+    audio.bus.connect(lp); lp.connect(audio.master); audio.lp = lp; lp.frequency.value = lpFreq();
     /* a stone room: a few early reflections, then a dense tail that loses its treble as it fades (about 3.5 s) */
     const sr = audio.ctx.sampleRate, len = Math.floor(sr * 5), pre = Math.floor(sr * 0.028), ir = audio.ctx.createBuffer(2, len, sr);
     for (let c = 0; c < 2; c++) {
@@ -98,6 +99,29 @@ const REGISTERS = {
   sine:      {name: "Sine",                       h: [1]},
   custom:    {name: "Your own (drawbars)",        get h(){ return S.draw.map(v => v / 100); }}
 };
+/* Recorded pipe organ: real pipes, sampled (games/shared/organ-samples, made from the SoundFont
+   "Jeux d'orgues 2.1"; see the manifest there). Each registration lists its stops; a stop's file is
+   fetched only when a registration that uses it is chosen. h is the synthesised sound used until then. */
+const SAMPLED = {
+  'rec-montre':    {name: 'Montre 8′',                       sf: ['i-montre-8']},
+  'rec-bordun':    {name: 'Bourdon 8′',                      sf: ['i-bordun-8']},
+  'rec-salicional':{name: 'Salicional 8′',                   sf: ['i-salicional-8']},
+  'rec-fonds8':    {name: 'Montre and Bourdon 8′',           sf: ['i-montre-8', 'i-bordun-8']},
+  'rec-fonds84':   {name: 'Bourdon 8′, Flûte 4′',            sf: ['i-bordun-8', 'i-floete-4']},
+  'rec-prin84':    {name: 'Principals 8′ 4′',                sf: ['i-montre-8', 'i-octav-4']},
+  'rec-prin842':   {name: 'Principals 8′ 4′ 2′',             sf: ['i-montre-8', 'i-octav-4', 'i-doublette-2']},
+  'rec-pos84':     {name: 'Positive: Bourdon 8′, Prestant 4′', sf: ['ii-bordun-8', 'ii-prestant-4']},
+  'rec-nazard':    {name: 'Positive: Bourdon 8′, Nazard 2⅔′', sf: ['ii-bordun-8', 'ii-nazard-2-2-3']},
+  'rec-pleinjeu':  {name: 'Plein jeu',                       sf: ['i-plein-jeu']},
+  'rec-grandplein':{name: 'Grand plein jeu (with 16′)',      sf: ['i-bordun-16', 'i-plein-jeu', 'ii-petit-plein-jeu']},
+  'rec-trompette': {name: 'Trompette 8′',                    sf: ['i-trompette-8']},
+  'rec-grandjeu':  {name: 'Grand jeu (Cornet, Trompette)',   sf: ['i-cornett', 'i-trompette-8']}
+};
+for (const [k, v] of Object.entries(SAMPLED)) REGISTERS[k] = {name: v.name + ' (recorded)', sf: v.sf, h: REGISTERS.principal.h};
+const isSampled = r => !!(REGISTERS[r] && REGISTERS[r].sf);
+/* the room's treble: the synthesised organ is dulled a little; the recorded one follows Brightness */
+const lpFreq = () => isSampled(S.reg) ? 4000 * Math.pow(2, S.bright / 100 * 2.3) : 7500;
+function syncLp(){ if (audio.lp) audio.lp.frequency.setTargetAtTime(lpFreq(), audio.ctx.currentTime, 0.03); }
 const FEET = ["8′", "4′", "2⅔′", "2′", "1⅗′", "1⅓′", "1⅐′", "1′", "8/9′", "4/5′", "8/11′", "2/3′"];
 const padDraw = h => Array.from({length: 12}, (_, i) => Math.round((h[i] || 0) * 100));
 /* amplitudes of the harmonics for the current register, tilted by the brightness setting */
@@ -162,6 +186,83 @@ const Synth = {
     return {osc: {stop(t){ parts.forEach(p => { try { p.stop(t); } catch (e) {} }); }}, g: out, t1};
   }
 };
+const Sampler = {
+  base: new URL('organ-samples/', SRC).href,
+  man: null, manP: null, bufs: {}, loads: {}, failed: false,
+  manifest(){
+    if (!this.manP) this.manP = fetch(this.base + 'manifest.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(m => (this.man = m));
+    return this.manP;
+  },
+  decode(ab){
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const c = new OAC(1, 1, 44100);
+    return new Promise((ok, no) => { const p = c.decodeAudioData(ab, ok, no); if (p && p.then) p.then(ok, no); });
+  },
+  loadStop(slug){
+    if (!this.loads[slug]) this.loads[slug] = this.manifest()
+      .then(m => fetch(this.base + m.stops[slug].file))
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then(ab => this.decode(ab))
+      .then(b => (this.bufs[slug] = b))
+      .catch(e => { delete this.loads[slug]; throw e; });
+    return this.loads[slug];
+  },
+  /* the size still to download for a registration, in MB */
+  pendingMB(reg){
+    if (!this.man) return null;
+    return REGISTERS[reg].sf.filter(s => !this.bufs[s]).reduce((a, s) => a + this.man.stops[s].bytes, 0) / 1e6;
+  },
+  ready(reg){ return isSampled(reg) && REGISTERS[reg].sf.every(s => this.bufs[s]); },
+  prepare(reg, quiet){
+    if (!isSampled(reg)) return Promise.resolve(false);
+    if (this.ready(reg)) return Promise.resolve(true);
+    const loud = !quiet;
+    if (loud) this.manifest().then(() => { if (!this.ready(reg)) H.toast(`Loading the recorded organ (${this.pendingMB(reg).toFixed(1)} MB)…`); }, () => {});
+    return Promise.all(REGISTERS[reg].sf.map(s => this.loadStop(s))).then(() => true, () => {
+      if (loud) H.toast('The recorded organ could not be loaded; the synthesised organ plays instead.');
+      return false;
+    });
+  },
+  /* the same shape as Synth.voice: a note of the recorded stops, from t0 to t1 */
+  voice(ctx, dest, f, t0, t1){
+    const reg = REGISTERS[S.reg], m = this.man;
+    const midi = 69 + 12 * Math.log2(f / S.ref), key = Math.round(midi);
+    const stops = reg.sf.map(s => m.stops[s]);
+    /* one loudness for every registration; the stops keep their balance within it */
+    const gain = 0.16 / Math.sqrt(stops.reduce((a, s) => a + s.rms * s.rms, 0));
+    const out = ctx.createGain(), parts = [];
+    const rel = Math.max(0.06, Math.min(S.rel / 1000, 0.6));
+    out.gain.setValueAtTime(0, t0);
+    out.gain.linearRampToValueAtTime(gain, t0 + 0.006);
+    out.gain.setValueAtTime(gain, Math.max(t0 + 0.01, t1));
+    out.gain.linearRampToValueAtTime(0, t1 + rel);
+    reg.sf.forEach((slug, i) => {
+      const st = stops[i], buf = this.bufs[slug], zs = st.zones;
+      let z = zs.find(z => key >= z.lo && key <= z.hi);
+      if (!z) {
+        const lo = zs[0], hi = zs[zs.length - 1];
+        if (key < lo.lo) { if (lo.lo > 48) return; z = lo; } else z = hi;   /* a treble stop (Cornet) is silent below its compass */
+      }
+      const sr = m.sr, src = ctx.createBufferSource();
+      src.buffer = buf; src.loop = true;
+      src.loopStart = (z.off + z.ls) / sr; src.loopEnd = (z.off + z.le) / sr;
+      /* the organ stands about 5 cents below a′ = 440; tuned up to the chosen a′ */
+      src.playbackRate.value = Math.pow(2, (midi - z.root) / 12 + (z.tune + 5) / 1200);
+      src.connect(out);
+      src.start(t0, z.off / sr); src.stop(t1 + rel + 0.05); parts.push(src);
+    });
+    out.connect(dest);
+    return {osc: {stop(t){ parts.forEach(p => { try { p.stop(t); } catch (e) {} }); }}, g: out, t1: t1 + rel};
+  }
+};
+/* every note goes through here: the recorded organ when it is chosen and loaded, otherwise the synthesis */
+function voice(ctx, dest, f, t0, t1){
+  if (isSampled(S.reg)) {
+    if (Sampler.ready(S.reg) && Sampler.man) return Sampler.voice(ctx, dest, f, t0, t1);
+    Sampler.prepare(S.reg, true);
+  }
+  return Synth.voice(ctx, dest, f, t0, t1);
+}
 function silence(v, now){
   try {
     v.g.gain.cancelScheduledValues(now);
@@ -191,7 +292,7 @@ function buildTune(){
   });
   FEET.forEach((f, i) => {
     $('#db-' + i).addEventListener('input', e => {
-      if (S.reg !== 'custom') { S.draw = padDraw(REGISTERS[S.reg].h); S.reg = 'custom'; }
+      if (S.reg !== 'custom') { if (!isSampled(S.reg)) S.draw = padDraw(REGISTERS[S.reg].h); S.reg = 'custom'; syncLp(); }
       S.draw[i] = Number(e.target.value); syncTune(); H.save();
     });
     $('#db-' + i).addEventListener('change', testTone);
@@ -200,7 +301,7 @@ function buildTune(){
 }
 function syncTune(){
   TUNE.forEach(t => { $('#tn-' + t.k).value = S[t.k]; $('#to-' + t.k).textContent = S[t.k] + t.unit; });
-  const d = S.reg === 'custom' ? S.draw : padDraw(REGISTERS[S.reg].h);
+  const d = S.reg === 'custom' || isSampled(S.reg) ? S.draw : padDraw(REGISTERS[S.reg].h);
   FEET.forEach((f, i) => { $('#db-' + i).value = d[i]; $('#do-' + i).textContent = d[i]; });
   $('#reg').value = S.reg;
 }
@@ -212,7 +313,7 @@ function testTone(){
   if (!ctx || audio.timeline) return;
   const now = ctx.currentTime;
   if (audio.aud) silence(audio.aud, now);
-  audio.aud = Synth.voice(ctx, audio.bus, freq(55), now + 0.01, now + 0.9);
+  audio.aud = voice(ctx, audio.bus, freq(55), now + 0.01, now + 0.9);
   audio.audInfo = {f: freq(55), t1: now + 0.9};
 }
 /* one note, heard while writing */
@@ -222,7 +323,7 @@ function audition(midi, len){
   if (!ctx) return;
   const now = ctx.currentTime, f = freq(midi), d = len || 0.55;
   if (audio.aud) silence(audio.aud, now);
-  audio.aud = Synth.voice(ctx, audio.bus, f, now + 0.01, now + d);
+  audio.aud = voice(ctx, audio.bus, f, now + 0.01, now + d);
   audio.audInfo = {f, t1: now + d};
 }
 /* A woodblock-like tick for the metronome */
@@ -239,7 +340,7 @@ function metroClick(ctx, dest, t){
   return {osc: o, g, t1: t + 0.08};
 }
 
-Object.assign(Organ, {ensureAudio, roomLevel, masterLevel, REGISTERS, FEET, padDraw, organAmps, Synth, silence, TUNE, buildTune, syncTune, testTone, audition, metroClick, freq});
+Object.assign(Organ, {Sampler, voice, isSampled, ensureAudio, roomLevel, masterLevel, REGISTERS, FEET, padDraw, organAmps, Synth, silence, TUNE, buildTune, syncTune, testTone, audition, metroClick, freq});
 
 /* ------------------------------------------------------------------ */
 /* Mensural reading (the same in both apps)                            */
@@ -466,7 +567,7 @@ function play(spec){
     const until = ctx.currentTime + 1.2;
     while (sched.pi < pending.length && pending[sched.pi].a < until) {
       const n = pending[sched.pi++];
-      audio.voices.push(Synth.voice(ctx, dest, freq(n.midi), Math.max(n.a, ctx.currentTime + 0.005), n.b));
+      audio.voices.push(voice(ctx, dest, freq(n.midi), Math.max(n.a, ctx.currentTime + 0.005), n.b));
     }
     while (sched.ti < ticks.length && ticks[sched.ti] < until) audio.voices.push(metroClick(ctx, audio.master, ticks[sched.ti++]));
     /* let go of the notes that are over */
@@ -588,6 +689,7 @@ function sync(){
   if ($('#vol')) $('#vol').value = S.vol;
   if ($('#countIn')) $('#countIn').value = S.countIn ? String(S.countIn) : '';
   if ($('#reg')) { $('#reg').value = S.reg; }
+  syncLp();
   if ($('#bright')) $('#bright').value = S.bright;
   if ($('#room')) $('#room').value = S.room;
   syncOut();
@@ -596,6 +698,17 @@ function sync(){
   applySettingsOpen();
   if (audio.master) audio.master.gain.setTargetAtTime(masterLevel(), audio.ctx.currentTime, 0.03);
   if (audio.wet) audio.wet.gain.setTargetAtTime(roomLevel(), audio.ctx.currentTime, 0.03);
+}
+/* the recorded registrations, as a group of their own in the Sound menu */
+function addSampledOptions(){
+  const sel = $('#reg');
+  if (!sel || sel.querySelector('optgroup')) return;
+  const synth = document.createElement('optgroup'); synth.label = 'Synthesised organ';
+  [...sel.children].forEach(o => synth.appendChild(o));
+  const rec = document.createElement('optgroup'); rec.label = 'Recorded pipe organ';
+  for (const [k, v] of Object.entries(SAMPLED)) { const o = document.createElement('option'); o.value = k; o.textContent = v.name; rec.appendChild(o); }
+  sel.appendChild(synth); sel.appendChild(rec);
+  sel.value = S.reg;
 }
 function wire(){
   initHand();
@@ -680,12 +793,17 @@ function wire(){
     H.save();
   });
   if ($('#toggleSet')) $('#toggleSet').addEventListener('click', () => { S.setOpen = !S.setOpen; applySettingsOpen(); H.save(); });
+  addSampledOptions();
   if ($('#tune')) buildTune();
   if ($('#reg')) $('#reg').addEventListener('change', e => {
     S.reg = e.target.value;
-    if (S.reg !== 'custom') S.draw = padDraw(REGISTERS[S.reg].h);
-    syncTune(); H.save(); testTone();
+    if (S.reg !== 'custom' && !isSampled(S.reg)) S.draw = padDraw(REGISTERS[S.reg].h);
+    syncTune(); syncLp(); H.save();
+    if (isSampled(S.reg)) { const r = S.reg; Sampler.prepare(r).then(ok => { if (ok && S.reg === r) testTone(); }); }
+    else testTone();
   });
+  /* the recorded organ chosen earlier: fetched now, quietly, so it is there when Play is pressed */
+  if (isSampled(S.reg)) Sampler.prepare(S.reg, true);
   if ($('#copySound')) $('#copySound').addEventListener('click', () => {
     const t = `Sound: ${REGISTERS[S.reg].name}; brightness ${S.bright}; room ${S.room}; attack ${S.atk} ms; release ${S.rel} ms; chiff ${S.chiff}; wind ${S.wind}; scoop ${S.scoop} cents; ensemble ${S.ens} cents; drawbars ${S.draw.join(' ')}; a′ ${S.ref} Hz.`;
     const done = () => { $('#copySound').textContent = 'Copied'; setTimeout(() => { $('#copySound').textContent = 'Copy sound settings'; }, 1500); };
@@ -693,7 +811,7 @@ function wire(){
     else window.prompt('Copy this:', t);
   });
   if ($('#bright')) {
-    $('#bright').addEventListener('input', e => { S.bright = Number(e.target.value); syncOut(); H.save(); });
+    $('#bright').addEventListener('input', e => { S.bright = Number(e.target.value); syncOut(); syncLp(); H.save(); });
     $('#bright').addEventListener('change', testTone);
   }
   if ($('#room')) {
