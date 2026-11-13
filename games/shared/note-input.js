@@ -216,6 +216,26 @@ function fill(A, iconSVG){
     ob.addEventListener('click', () => A.toggleOverwrite());
     $('#restBtn').parentNode.appendChild(ob);
   }
+  /* Caret step: how far the arrow keys move the caret, a value of its own (not the note value being entered) */
+  if (A.setNav) {
+    const pop = document.createElement('div');
+    pop.className = 'pop'; pop.id = 'popNav';
+    pop.innerHTML = '<button class="tb popbtn" id="navSum" aria-haspopup="true" aria-label="Caret step" title="Caret step: how far the arrow keys move the caret. It can go on past the last note, into empty space, to write a new one"></button>' +
+      '<div class="popbody"><div class="btns col" id="navBtns" role="group" aria-label="Caret step"></div></div>';
+    const nb = pop.querySelector('#navBtns');
+    const own = document.createElement('button');
+    own.className = 'tb'; own.dataset.n = 'follow'; own.textContent = 'Same as note value';
+    own.addEventListener('click', () => A.setNav('follow'));
+    nb.appendChild(own);
+    DKEYS.forEach(k => {
+      const b = document.createElement('button');
+      b.className = 'tb navv'; b.dataset.n = k; b.title = DNAME[k]; b.setAttribute('aria-label', DNAME[k]);
+      b.innerHTML = '<span class="navg">' + iconSVG(k, 2.7) + '</span><span>' + DNAME[k] + '</span>';
+      b.addEventListener('click', () => A.setNav(k));
+      nb.appendChild(b);
+    });
+    $('#restBtn').parentNode.appendChild(pop);
+  }
 }
 function wire(A){
   $('#restBtn').addEventListener('click', () => A.setRestMode(!A.state().rest));
@@ -323,6 +343,11 @@ function sync(A){
   $('#dotBtn').disabled = !t || t.r;
   const cb = $('#colBtn'); if (cb) setPressed(cb, !!S.col);
   const lb = $('#ligBtn'); if (lb) { setPressed(lb, !!S.ligOn); lb.disabled = !(S.range || (t && !t.r && t.lig)); }
+  if (A.nav && $('#navSum')) {
+    const n = A.nav(), src = document.querySelector('#durBtns button[data-d="' + (n === 'follow' ? S.dur : n) + '"]');
+    $('#navSum').innerHTML = '<span class="navlab">Caret</span>' + (src ? src.innerHTML : '') + CHEV;
+    document.querySelectorAll('#navBtns button').forEach(b => setPressed(b, b.dataset.n === n));
+  }
   const ob = $('#ovrBtn'); if (ob) { ob.textContent = S.ovr ? 'Overwrite' : 'Insert'; setPressed(ob, !!S.ovr); }
   $('#stepUp').disabled = $('#stepDown').disabled = (!t || t.r) && !S.range;
   $('#del').disabled = !t && !S.range;

@@ -800,6 +800,16 @@ html.dark .podg{background:rgba(34,28,21,.93)}
 html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backdrop-filter:blur(6px)}
 #pages .texthit{cursor:text}
 #pages .texthit:hover{fill:var(--accent)}
+<<<<<<< Updated upstream
 .tcol[hidden],.tcol [hidden]{display:none!important}
 .tcol select#temper,.tcol select#temperRoot{grid-column:2/-1}
 #tnCredit a{color:inherit}
+=======
+/* Caret step menu */
+#navSum{gap:6px}
+#navSum .navlab{font-size:.82em;opacity:.7}
+#navSum svg{height:1.3em;width:auto}
+#navBtns .navv{display:flex;align-items:center;gap:10px;justify-content:flex-start}
+#navBtns .navv .navg{display:inline-flex;width:28px;justify-content:center}
+#navBtns .navv svg{height:1.4em;width:auto}
+>>>>>>> Stashed changes

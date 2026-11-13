@@ -2553,6 +2553,7 @@ const ed = {on: false, sel: null, ins: null, inRest: false, undo: [], redo: [], 
 const EKEY = k => APP.store + ':edit:' + k;
 /* Insert or Overwrite, kept per app */
 try { ed.ovr = localStorage.getItem(APP.store + ':ovr') === '1'; } catch (e) { ed.ovr = false; }
+try { ed.nav = localStorage.getItem(APP.store + ':nav') || 'follow'; } catch (e) { ed.nav = 'follow'; }
 const VALS = [['Mx', 8], ['L', 4], ['B', 2], ['S', 1], ['M', 0.5], ['Sm', 0.25], ['F', 0.125]];
 function selSym(){
   if (!ed.sel || !piece) return null;
@@ -2675,8 +2676,12 @@ function caretTime(v){
   if (s) return v.events[s.src[0]].t;
   if (!ed.ins) return v.end;
   const ei = Math.min(ed.ins.ei, v.events.length);
-  return ei < v.events.length ? rt(v.events[ei].t + (ed.ins.off || 0)) : v.end;
+  return ei < v.events.length ? rt(v.events[ei].t + (ed.ins.off || 0)) : rt(v.end + (ed.ins.pad || 0));
 }
+/* the caret's own step (Caret step in the edit bar): a value of its own, or the note value being entered */
+const NAV_KEYS = ['follow', 'Mx', 'L', 'B', 'S', 'M', 'Sm', 'F'];
+function navVal(){ return ed.nav && ed.nav !== 'follow' && VALS.some(x => x[0] === ed.nav) ? ed.nav : ed.val; }
+function navGrid(v, T){ return rt(VALS.find(x => x[0] === navVal())[1] / propAt(v, Math.min(T, v.end))); }
 /* Alt with the arrows: the caret moves on a grid of the value chosen for entering, also into the middle of a note */
 function moveCaret(dir){
   if (!piece) return;
@@ -2684,16 +2689,17 @@ function moveCaret(dir){
   if (vi === null) { const vs = visibleVoices(); if (!vs.length) return; vi = vs[0].idx; }
   const v = piece.voices[vi]; if (!v) return;
   const T = caretTime(v);
-  const g = VALS.find(x => x[0] === ed.val)[1] / propAt(v, T);
+  const g = navGrid(v, T);
   const q = T / g;
   let nt = dir > 0 ? (Math.floor(q + 1e-6) + 1) * g : (Math.ceil(q - 1e-6) - 1) * g;
-  nt = rt(Math.max(0, Math.min(v.end, nt)));
-  let ei = v.events.length, off = 0;
+  nt = rt(Math.max(0, Math.min(v.end + 32, nt)));     /* on past the last note, into empty space, where a new note can be written */
+  let ei = v.events.length, off = 0, pad = 0;
   for (let i = 0; i < v.events.length; i++) {
     const e = v.events[i];
     if (nt < e.t + e.d - EPS) { ei = i; off = rt(nt - e.t); if (off < EPS) off = 0; break; }
   }
-  ed.sel = null; ed.ins = {vi, ei, off};
+  if (ei >= v.events.length && nt > v.end + EPS) pad = rt(nt - v.end);
+  ed.sel = null; ed.ins = {vi, ei, off, pad};
   showSel(true); syncEdit();
 }
 const OPS = {
@@ -3154,6 +3160,8 @@ function insertionIndex(v){
   if (s) return ed.ovr ? s.src[0] : s.src[s.src.length - 1] + 1;
   return ed.ins ? Math.min(ed.ins.ei, v.events.length) : v.events.length;
 }
+/* empty space the caret stands in, past the end of the voice: a rest fills up to it */
+function caretPad(v, idx){ return !ed.sel && ed.ins && ed.ins.vi === v.idx && idx >= v.events.length && ed.ins.pad > EPS ? ed.ins.pad : 0; }
 function refStepBefore(v, idx){
   for (let i = Math.min(idx, v.events.length) - 1; i >= 0; i--) if (!v.events[i].rest) return v.events[i].step;
   for (let i = idx; i < v.events.length; i++) if (!v.events[i].rest) return v.events[i].step;
@@ -3228,7 +3236,7 @@ function moveSelection(dir){
   const R = selSpan(); if (!R) return;
   const vs = []; for (let i = R.v0; i <= R.v1; i++) if (piece.voices[i]) vs.push(piece.voices[i]);
   if (!vs.every(writable)) { refuse(); return; }
-  const g = rt(VALS.find(x => x[0] === ed.val)[1] / propAt(vs[0], R.t0));
+  const g = navGrid(vs[0], R.t0);
   const len = rt(R.t1 - R.t0), T = rt(R.t0 + dir * g);
   if (T < -EPS) return;
   const vi0 = R.one ? ed.sel.vi : null;
@@ -3447,6 +3455,8 @@ const CBA = {
     toast(ed.ovr ? 'Overwrite: a new note takes the place of what stands there, so the other voices stay in step.' : 'Insert: a new note pushes the music after it along.');
   },
   moveCaret: dir => moveCaret(dir),
+  nav: () => ed.nav || 'follow',
+  setNav(k){ ed.nav = NAV_KEYS.includes(k) ? k : 'follow'; try { localStorage.setItem(APP.store + ':nav', ed.nav); } catch (e) {} syncEdit(); toast(ed.nav === 'follow' ? 'Caret step: the same as the note value.' : 'Caret step: ' + ({Mx:'maxima',L:'longa',B:'brevis',S:'semibrevis',M:'minima',Sm:'semiminima',F:'fusa'})[ed.nav] + '. The arrow keys move the caret by this.'); },
   /* coloration: the selected note turns black (two thirds of its value) or white again; with nothing selected,
      the notes entered from now on are coloured, until it is pressed again */
   toggleCol(){
@@ -3531,7 +3541,10 @@ const CBA = {
     if (!syms.length) return;
     const s = selSym();
     let k;
-    if (s) k = syms.indexOf(s) + dir;
+    if (s) {
+      k = syms.indexOf(s) + dir;
+      if (k >= syms.length && ed.on) { ed.sel = null; ed.ins = {vi, ei: v.events.length, off: 0, pad: 0}; showSel(true); return; }
+    }
     else if (ed.ins) {
       const c = ed.ins.ei + (ed.ins.off > EPS ? 1 : 0);
       k = dir < 0 ? syms.findIndex(q => q.src.includes(c - 1)) : syms.findIndex(q => q.src[0] >= c);
@@ -3560,13 +3573,13 @@ const CBA = {
       if (best === null || Math.abs(s - ref) < Math.abs(best - ref)) best = s;
     }
     ed.inRest = false;
-    insertEvent(v.idx, idx, best, false);
+    insertEvent(v.idx, idx, best, false, caretPad(v, idx));
   },
   typeRest(){
     if (!CBA.guard()) return;
     const v = curVoice(); if (!v) return;
     const idx = insertionIndex(v);
-    insertEvent(v.idx, idx, refStepBefore(v, idx), true);
+    insertEvent(v.idx, idx, refStepBefore(v, idx), true, caretPad(v, idx));
   },
   undo: () => undo(), redo: () => redo(),
   deselect(){ if (ed.sel || ed.range || ed.picks) { ed.sel = null; ed.range = null; ed.picks = null; showSel(); } },
@@ -3607,6 +3620,7 @@ function drawCaret(scroll){
   const {vi, ei} = ed.ins, v = piece.voices[vi];
   if (!v || !v.syms) return;
   let k = -1, after = true, frac = -1;
+  const pad = ed.ins.pad > EPS && ei >= v.events.length ? ed.ins.pad : 0;
   /* inside a note (moved there on the grid): between the note's start and the next note, in proportion */
   if (ed.ins.off > EPS && ei < v.events.length) {
     const T = rt(v.events[ei].t + ed.ins.off);
@@ -3625,6 +3639,7 @@ function drawCaret(scroll){
     if (!r) return;
     const bb = el.getBBox(), top = +r.dataset.top;
     let x = after ? bb.x + bb.width + 0.35 : bb.x - 0.45;
+    if (pad) x += 1.2 + pad * 2.4;       /* out in the empty space after the last note */
     if (frac > 0) {
       const nx = par.querySelector('g.n' + vi + '-' + (k + 1));
       const x0 = bb.x + 0.5, x1 = nx ? nx.getBBox().x + 0.5 : bb.x + bb.width + 2;
