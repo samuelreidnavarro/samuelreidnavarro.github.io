@@ -71,7 +71,7 @@ ${APP.popsBeforeVoices || ''}
           <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Open<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
           <div class="popbody"><div class="btns col" id="openList">
 ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
-            <button class="tb" id="openBtn" title="MusicXML, MuseScore, MIDI, LilyPond or **kern"${APP.openFile === false ? ' hidden' : ''}>Open file</button>
+            <button class="tb openfile" id="openBtn"${APP.openFile === false ? ' hidden' : ''}><span class="of-t">Open file</span><span class="of-f">.mxl · MuseScore · MIDI · LilyPond · .krn · .gabc</span></button>
           </div></div>
         </div>
           <div id="library" class="library" role="dialog" aria-label="Pieces" hidden></div>
