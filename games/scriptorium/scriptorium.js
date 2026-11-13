@@ -1756,7 +1756,7 @@ async function buildPieceList(){
 /* ------------------------------------------------------------------ */
 const STAFF_COLORS = [['red', '#8E2A1E', 'Red'], ['black', '#2A2218', 'Black'], ['brown', '#8A6A44', 'Brown'], ['blue', '#2F4F8F', 'Blue'], ['grey', '#9A9286', 'Grey']];
 $('#staffSeg').innerHTML = STAFF_COLORS.map(([k, c, n]) => `<button class="tb swatch" data-v="${k}" style="--c:${c}" aria-label="${n}" title="${n}"><i></i></button>`).join('');
-const PAPER_COLORS = [['parchment', '#EFE3C7', 'Parchment'], ['beige', '#EADCC0', 'Beige'], ['white', '#FFFFFF', 'White']];
+const PAPER_COLORS = [['parchment', '#EFE3C7', 'Parchment'], ['beige', '#F0E8D8', 'Beige'], ['white', '#FFFFFF', 'White']];
 $('#paperColSeg').innerHTML = PAPER_COLORS.map(([k, c, n]) => `<button class="tb swatch" data-v="${k}" style="--c:${c}" aria-label="${n}" title="${n}"><i${k === 'parchment' ? ' style="background:#EFE3C7 var(--paper);background-size:160px"' : ''}></i></button>`).join('') +
   `<label class="tb swatch pick" id="paperPickL" title="Any colour" aria-label="Any colour"><i></i><input type="color" id="paperPick" value="#e8e0d0"></label>`;
 $('#paperColSeg').addEventListener('click', e => {
