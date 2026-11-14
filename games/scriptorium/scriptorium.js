@@ -193,6 +193,8 @@ ${APP.catalogue ? LIBBTN + NEWBTN + '<div id="openRecent"></div><button class="t
   <section class="tp-side" id="tpSide" aria-label="Sound settings" hidden>
     <div class="tcol">
       <label for="reg">Sound</label><select id="reg"><option value="gedackt">Gedackt 8′ (stopped flute)</option><option value="principal">Principal 8′</option><option value="plenum">Principal chorus (8′ 4′ 2′)</option><option value="flute">Open flute 8′</option><option value="regal">Regal (soft reed)</option><option value="sine">Sine</option><option value="custom">Your own (drawbars)</option></select>
+    </div>
+    <div class="tcol" id="toneCol">
       <div class="tg">Tone</div>
       <label for="bright">Brightness</label><input type="range" id="bright" min="0" max="100" step="1"><output id="bo"></output>
       <label for="room">Room</label><input type="range" id="room" min="0" max="100" step="1"><output id="ro"></output>

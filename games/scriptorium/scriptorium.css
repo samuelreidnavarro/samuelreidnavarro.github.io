@@ -922,3 +922,15 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 .ackbody a:hover{color:var(--hov)}
 .ackx{position:absolute;top:8px;right:10px;z-index:2;width:34px;height:34px;border-radius:50%;border:0;background:transparent;font-size:28px;line-height:1;cursor:pointer;color:inherit}
 .ackx:hover{color:var(--hov)}
+
+/* Sound panel: sound and temperament on the left, the sliders in the column on the right */
+.tcol .temperbox{grid-column:1/-1;margin-top:8px}
+.temperbox .tg{margin:0 0 4px;font-style:italic;color:var(--muted);font-size:15px}
+#temperList{display:flex;flex-direction:column;gap:1px}
+.temperbox .rad{display:flex;align-items:center;gap:9px;padding:3px 0;color:inherit;font-size:16px;cursor:pointer}
+.temperbox .rad:hover{color:var(--hov)}
+.temperbox .rad input{appearance:auto;accent-color:var(--sel);width:15px;height:15px;margin:0}
+.temperroot{display:flex;align-items:center;gap:10px;margin-top:6px}
+.temperroot select{width:auto;max-width:none}
+.temperroot[hidden]{display:none}
+@media (max-width:700px){ #tpSide .tcol{width:100%} }

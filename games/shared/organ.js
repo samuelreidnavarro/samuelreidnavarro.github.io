@@ -420,6 +420,7 @@ const TEMPER = {
   equal:       {name: 'Equal',                    c: Array.from({length: 12}, (_, i) => 100 * i)},
   pythagorean: {name: 'Pythagorean',              c: chain(1200 * Math.log2(3 / 2))},
   meantone:    {name: 'Meantone (¼ comma)',       c: chain(1200 * Math.log2(3 / 2) - 1200 * Math.log2(81 / 80) / 4)},
+  meantone6:   {name: 'Meantone (⅙ comma)',       c: chain(1200 * Math.log2(3 / 2) - 1200 * Math.log2(81 / 80) / 6)},
   just:        {name: 'Just intonation',          c: [1, 16/15, 9/8, 6/5, 5/4, 4/3, 45/32, 3/2, 8/5, 5/3, 9/5, 15/8].map(r => 1200 * Math.log2(r))}
 };
 const ROOTS = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'B♭', 'B'];
@@ -835,22 +836,22 @@ function addSampledOptions(){
   sel.appendChild(rec); sel.appendChild(synth);
   sel.value = S.reg;
   /* temperament and its root, under the sound */
-  const mk = (id, label, opts) => {
-    const l = document.createElement('label'); l.htmlFor = id; l.textContent = label; l.id = id + 'L';
-    const s = document.createElement('select'); s.id = id;
-    opts.forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; s.appendChild(o); });
-    return [l, s];
-  };
-  const [tl, ts] = mk('temper', 'Temperament', Object.entries(TEMPER).map(([k, v]) => [k, v.name]));
-  const [rl, rs] = mk('temperRoot', 'On', ROOTS.map((n, i) => [i, n]));
-  sel.after(tl, ts, rl, rs);
-  ts.addEventListener('change', () => { S.temper = ts.value; syncTemper(); H.save(); testTone(); });
+  const box = document.createElement('div'); box.id = 'temperBox'; box.className = 'temperbox';
+  box.innerHTML = '<div class="tg">Temperament</div><div role="radiogroup" aria-label="Temperament" id="temperList">' +
+    Object.entries(TEMPER).map(([k, v]) => `<label class="rad"><input type="radio" name="temper" value="${k}"><span>${v.name}</span></label>`).join('') + '</div>';
+  const rl = document.createElement('label'); rl.htmlFor = 'temperRoot'; rl.textContent = 'On'; rl.id = 'temperRootL';
+  const rs = document.createElement('select'); rs.id = 'temperRoot';
+  ROOTS.forEach((n, i) => { const o = document.createElement('option'); o.value = i; o.textContent = n; rs.appendChild(o); });
+  const rrow = document.createElement('div'); rrow.className = 'temperroot'; rrow.append(rl, rs); box.appendChild(rrow);
+  sel.after(box);
+  box.addEventListener('change', e => { if (e.target.name === 'temper') { S.temper = e.target.value; syncTemper(); H.save(); testTone(); } });
   rs.addEventListener('change', () => { S.temperRoot = +rs.value; H.save(); testTone(); });
   syncTemper();
 }
 function syncTemper(){
-  if (!$('#temper')) return;
-  $('#temper').value = S.temper; $('#temperRoot').value = String(S.temperRoot | 0);
+  if (!$('#temperRoot')) return;
+  document.querySelectorAll('#temperList input').forEach(r => { r.checked = r.value === S.temper; });
+  $('#temperRoot').value = String(S.temperRoot | 0);
   const eq = S.temper === 'equal';
   $('#temperRoot').hidden = eq; $('#temperRootL').hidden = eq;
 }
