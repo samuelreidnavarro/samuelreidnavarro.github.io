@@ -704,7 +704,39 @@ function presetDrift(){
   if (P && LOOK_KEYS.every(k => P.s[k] === undefined || P.s[k] === st[k])) return;
   S.active = ''; presetPut(S); if (typeof presetList === 'function' && document.getElementById('presetList')) presetList();
 }
-const save = () => { presetDrift(); try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} if (window.Organ) Organ.saveShared(); };
+/* Undo and redo cover the look of the score as well as the notes: engraving settings, staff size, spacing, paper, which voices show,
+   the incipit. Each change is one step in the same history as the music (a slider drag, which sends many changes, is one step). */
+const STYLE_KEYS = [...PRESET_KEYS, 'verse', 'barsV'];
+function styleObj(){
+  let pk = null, pc = null; try { pk = pieceKey; pc = piece; } catch (e) {}
+  const o = {_k: pk}; for (const k of STYLE_KEYS) o[k] = st[k];
+  o.inc = JSON.parse(JSON.stringify(st.inc || {}));
+  if (pc) o.vis = pc.voices.map(v => { const q = vis(v.idx); return [q.on, q.notes, q.lyr, q.play]; });
+  return o;
+}
+let styleLast = JSON.stringify(styleObj()), styleAt = 0, styleBusy = false;
+function styleNote(){
+  let E; try { E = ed; } catch (e) { return; }
+  const cur = JSON.stringify(styleObj());
+  if (cur === styleLast) return;
+  const prev = styleLast; styleLast = cur;
+  if (styleBusy || !E || !E.undo) return;
+  if (JSON.parse(prev)._k !== JSON.parse(cur)._k) return;
+  const now = performance.now(), top = E.undo[E.undo.length - 1];
+  if (!(top && typeof top === 'object' && now - styleAt < 900)) E.undo.push({style: JSON.parse(prev)});
+  styleAt = now; E.redo = [];
+  try { syncEdit(); } catch (e) {}
+}
+function styleApply(snap){
+  styleBusy = true;
+  for (const k of STYLE_KEYS) if (snap[k] !== undefined) st[k] = snap[k];
+  st.inc = snap.inc || {};
+  if (snap.vis && piece) snap.vis.forEach((a, i) => { const v = piece.voices[i]; if (!v) return; const q = vis(v.idx); [q.on, q.notes, q.lyr, q.play] = a; });
+  try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
+  syncUI(); render();
+  styleLast = JSON.stringify(styleObj()); styleBusy = false;
+}
+const save = () => { presetDrift(); styleNote(); try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} if (window.Organ) Organ.saveShared(); };
 /* playback, metronome and sound: shared/organ.js, the same engine as the CantusFirmus app's */
 const UNIT_NAMES = {Mx: 'Maxima', L: 'Longa', B: 'Brevis', S: 'Semibrevis', M: 'Minima', Sm: 'Semiminima', F: 'Fusa'};
 let play = false;
@@ -3080,8 +3112,18 @@ function dropEvents(v, list){
     for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > i) m.ei--;
   }
 }
-function undo(){ if (!ed.undo.length) return; ed.redo.push(piece.text || writeKern(piece)); applyText(ed.undo.pop()); }
-function redo(){ if (!ed.redo.length) return; ed.undo.push(piece.text || writeKern(piece)); applyText(ed.redo.pop()); }
+function undo(){
+  if (!ed.undo.length) return;
+  const top = ed.undo.pop();
+  if (typeof top === 'object') { ed.redo.push({style: JSON.parse(styleLast)}); styleApply(top.style); syncEdit(); return; }
+  ed.redo.push(piece.text || writeKern(piece)); applyText(top);
+}
+function redo(){
+  if (!ed.redo.length) return;
+  const top = ed.redo.pop();
+  if (typeof top === 'object') { ed.undo.push({style: JSON.parse(styleLast)}); styleApply(top.style); syncEdit(); return; }
+  ed.undo.push(piece.text || writeKern(piece)); applyText(top);
+}
 function showSel(scroll){
   document.querySelectorAll('#pages g.sel').forEach(g => g.classList.remove('sel'));
   document.querySelectorAll('#pages .caret').forEach(c => c.remove());

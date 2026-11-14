@@ -536,10 +536,10 @@
   $('#popSing').addEventListener('mouseenter', syncSing);
   /* Ctrl+Z / Ctrl+Shift+Z also outside Edit, so a take that replaced the one before can be undone */
   document.addEventListener('keydown', e => {
-    if (ed.on || !(e.ctrlKey || e.metaKey) || (e.key !== 'z' && e.key !== 'Z')) return;
+    if (ed.on || !(e.ctrlKey || e.metaKey) || (e.key !== 'z' && e.key !== 'Z' && e.key !== 'y' && e.key !== 'Y')) return;
     if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
     e.preventDefault();
-    if (e.shiftKey) { if (ed.redo.length) redo(); } else if (ed.undo.length) { undo(); toast('Undone.'); }
+    if (e.shiftKey || /y/i.test(e.key)) { if (ed.redo.length) redo(); } else if (ed.undo.length) { undo(); toast('Undone.'); }
   });
   $('#micFlex').addEventListener('click', () => { st.micFlex = !st.micFlex; mic.snap = null; mic.pend = null; save(); syncSing(); });
   $('#micPhones').addEventListener('click', () => { st.micPhones = !st.micPhones; save(); syncSing(); });
