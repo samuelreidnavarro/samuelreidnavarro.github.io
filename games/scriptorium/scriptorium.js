@@ -40,10 +40,7 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Orientation</span><div class="btns" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
           <span class="lab">Pages</span><div class="btns" id="flowSeg" role="group" aria-label="Pages"><button class="tb" data-v="vertical">Vertical</button><button class="tb" data-v="horizontal">Horizontal</button></div>
           <span class="lab" id="scrollLab">Scroll</span><div class="btns" id="scrollSeg" role="group" aria-label="Scroll"><button class="tb" data-v="vertical" title="Systems below each other">Vertical</button><button class="tb" data-v="horizontal" title="The score as one long line, scrolling sideways">Horizontal</button></div>
-          <span class="lab">Controls</span><div class="btns" id="ctlSeg" role="group" aria-label="When the controls show"><button class="tb" data-v="move">On movement</button><button class="tb" data-v="edge">At the edges</button></div>
           <span class="lab">Dark room</span><div class="btns" id="darkSeg" role="group" aria-label="Dark room"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
-          <label class="ctl" for="handOp">Hand opacity</label><input type="range" id="handOp" min="0.05" max="1" step="0.05">
-          <label class="ctl" for="handSize">Hand size</label><input type="range" id="handSize" min="0.4" max="2.5" step="0.05">
         </div></div>
       </div></div>
       <div class="podg"><div class="pop" id="popLook">
@@ -694,10 +691,11 @@ let DOCK = null;     /* where the site page says the browser window is, when emb
 const KEY = APP.store + ':v1';
 const st = {
   inc: {}, eq: 'off', piece: PIECES[0] || null, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on', heads: 'modern',
-  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', ctlMode: 'move', lig: 'on', webScroll: 'vertical', zoom: 1,
+  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', webScroll: 'vertical', zoom: 1,
   ...(APP.defaults || {})
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+delete st.ctlMode;   /* the old Controls setting (On movement | At the edges) is gone: the controls always wake on movement */
 /* the spacing sliders now cover only their tight end */
 /* every piece opens with the same look: staff size and spacing */
 const LOOK = {size: 1.5, hs: 0.47, vs: 0.6, ss: 0.8};
@@ -2374,12 +2372,11 @@ function segInit(id, key, after){
 }
 function syncUI(){
   if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
-  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ctlSeg': 'ctlMode', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq'};
+  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq'};
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
   for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).value = st[k];
   blackSync();
   Organ.sync();
-  $('#handOp').value = st.handOp; $('#handSize').value = st.handSize;
   if ($('#audition')) $('#audition').checked = !!st.audition;
   document.documentElement.style.setProperty('--staff', (STAFF_COLORS.find(c => c[0] === st.staff) || STAFF_COLORS[0])[1]);
   applyPaper(); if (typeof incSync === 'function') incSync();
@@ -2441,7 +2438,7 @@ segInit('#eqSeg', 'eq'); segInit('#viewList', 'view'); $('#notaSeg').addEventLis
   else { st.nota = 'real'; if (pieceKey) { if (b.dataset.v === 'black') st.black[pieceKey] = 1; else delete st.black[pieceKey]; } }
   save(); syncUI(); render();
 }); segInit('#headSeg', 'heads'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars');
-segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#ctlSeg', 'ctlMode', () => { if (window.__ctlWake) window.__ctlWake(); }); segInit('#edSeg', 'ed');
+segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#edSeg', 'ed');
  segInit('#ligSeg', 'lig'); segInit('#scrollSeg', 'webScroll', () => { viewerEl.scrollLeft = 0; });
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
 let rq = 0;
@@ -4303,8 +4300,8 @@ $('#keepBtn').addEventListener('click', () => {
 syncEdit();
 
 /* the hand's look (the hand itself, the pendulum and the beat menu are the shared engine's) */
-['handOp', 'handSize'].forEach(k => ['#' + k, '#' + k + 'P'].forEach(id => $(id).addEventListener('input', e => {
-  st[k] = +e.target.value; $('#' + k).value = $('#' + k + 'P').value = st[k]; save(); Organ.syncBeat(); })));
+['handOp', 'handSize'].forEach(k => $('#' + k + 'P').addEventListener('input', e => {
+  st[k] = +e.target.value; save(); Organ.syncBeat(); }));
 /* hovering the hand (or the pendulum) opens a small panel with its size and opacity, like the Sound panel:
    it closes a moment after the pointer leaves; on a touch screen a tap on the hand opens and closes it */
 (function(){
@@ -4596,10 +4593,10 @@ viewerEl.addEventListener('scroll', fsWake, {passive: true});
 $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
 
 /* the controls rest: after 3 s without the mouse moving, the top collapses into the Edit button and the arrow icon, and the
-   bottom into Play and the volume; moving the mouse brings them back. "At the edges": they show only near the top or the bottom. */
+   bottom into Play and the volume; moving the mouse brings them back. */
 {
   const root = document.documentElement;
-  let timer = 0, lastY = null, topOn = true, botOn = true;
+  let timer = 0, topOn = true, botOn = true;
   const wide = () => window.innerWidth > 700;
   const hold = () => {
     if (!$('#handPop').hidden || document.querySelector('.pop.open, .pop:hover') || document.querySelector('.pop:has(:focus-visible)') || !libEl.hidden || !$('#tpSide').hidden) return true;
@@ -4611,27 +4608,19 @@ $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
     topOn = t; botOn = b;
     root.classList.toggle('ctl-top-idle', !t); root.classList.toggle('ctl-bot-idle', !b);
   };
-  const zone = () => {
-    const vh = EMBED && DOCK ? DOCK.vh : window.innerHeight, y = (lastY === null ? vh / 2 : lastY) + (EMBED && DOCK ? DOCK.top : 0);
-    return [y < vh * 0.25, y > vh * 0.75];
-  };
   const rest = () => {
     if (!wide() || root.classList.contains('focus')) return;
     if (hold()) { timer = setTimeout(rest, 1000); return; }
-    if (st.ctlMode === 'edge') { const z = zone(); apply(z[0], z[1]); } else apply(false, false);
+    apply(false, false);
   };
-  const wake = e => {
-    if (e && typeof e.clientY === 'number') lastY = e.clientY;
+  const wake = () => {
     clearTimeout(timer);
     if (!wide()) { apply(true, true); return; }
-    if (st.ctlMode === 'edge') { const z = zone(), h = hold(); apply(z[0] || h, z[1] || h); }
-    else apply(true, true);
+    apply(true, true);
     timer = setTimeout(rest, 3000);
   };
   ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(t => document.addEventListener(t, wake, {passive: true}));
   window.addEventListener('resize', () => wake());
-  document.addEventListener('click', () => { if (st.ctlMode === 'edge') wake(); });
-  window.__ctlWake = () => wake();
   timer = setTimeout(rest, 3000);
 }
 
