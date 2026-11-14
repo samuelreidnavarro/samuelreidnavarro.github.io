@@ -887,7 +887,10 @@ function breakLines(cols, avail, firstAvail){
 /* Drawing                                                             */
 /* ------------------------------------------------------------------ */
 const use = (k, x, y) => k === 'na' ? `<use href="#g-na" transform="translate(${f(x)} ${f(y)}) scale(${NATSC})"/>` : `<use href="#g-${k}" x="${f(x)}" y="${f(y)}"/>`;
-const useT = (k, x, y, sx, sy) => `<use href="#g-${k}" transform="translate(${f(x)} ${f(y)}) scale(${sx} ${sy})"/>`;
+/* A stem down turns the glyph over. The minim's hollow head is slanted, so a mirror would reverse its slant: it is turned half a circle about the middle of the head instead (the stem stands in the middle), and the head keeps its shape. */
+const useT = (k, x, y, sx, sy) => k === 'M' && sy === -1 && sx === 1
+  ? `<use href="#g-M" transform="translate(${f(x + 0.64)} ${f(y)}) rotate(180) translate(-0.64 0)"/>`
+  : `<use href="#g-${k}" transform="translate(${f(x)} ${f(y)}) scale(${sx} ${sy})"/>`;
 const hl = (x1, x2, y, cls, w) => `<line class="${cls}" x1="${f(x1)}" x2="${f(x2)}" y1="${f(y)}" y2="${f(y)}" stroke-width="${w}"/>`;
 const vl = (x, y1, y2, cls, w) => `<line class="${cls}" x1="${f(x)}" x2="${f(x)}" y1="${f(y1)}" y2="${f(y2)}" stroke-width="${w}"/>`;
 
