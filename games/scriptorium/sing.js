@@ -23,7 +23,7 @@
   function singIdx(){
     if (!piece) return -1;
     const ok = (v, k) => v.abbr !== 'sung' && vis(k).on;
-    let i = piece.voices.findIndex((v, k) => ok(v, k) && !vis(k).play);
+    let i = piece.voices.findIndex((v, k) => ok(v, k) && vis(k).play !== true);
     if (i < 0) { const v = anyVoice(); if (v && v.abbr !== 'sung') i = piece.voices.indexOf(v); }
     if (i < 0) i = piece.voices.findIndex(ok);
     return i;

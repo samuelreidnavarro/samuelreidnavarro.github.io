@@ -221,7 +221,7 @@
       return `<tr data-i="${i}"><td class="part">${partName(v, C)}</td>` +
         `<td><input class="vname" data-i="${i}" value="${esc(v.name)}" aria-label="Name of the voice" autocomplete="off"></td>` +
         `<td><select class="vclef" data-i="${i}" aria-label="Clef of ${esc(v.name)}">${clefs.map(([k, n]) => opt(k, n, clef)).join('')}</select></td>` +
-        `${cb('on', 'shown')}${cb('notes', 'notes')}${cb('play', 'playback')}` +
+        `${cb('on', 'shown')}${cb('notes', 'notes')}${playCell(i, v.name)}` +
         `<td>${dux ? '' : `<button class="vbtn vdel" data-cop="del" data-r="${v.abbr}" aria-label="Remove ${esc(v.name)}" title="Remove this comes">×</button>`}</td></tr>`;
     });
     tb.innerHTML = `<thead><tr><th></th><th></th><th></th><th>Shown</th><th>Notes</th><th>Playback</th><th></th></tr></thead><tbody>${rows.join('')}</tbody>` +

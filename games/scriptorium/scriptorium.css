@@ -879,3 +879,12 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 
 .infobox .infolink{display:block;margin-top:10px;color:var(--muted);font-style:italic;text-decoration:underline;text-underline-offset:3px}
 .infobox .infolink:hover{color:var(--hov)}
+
+/* Playback of a voice: on, muted, left out */
+.ptri{width:30px;height:28px;min-height:28px;padding:0;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--text);display:inline-grid;place-items:center}
+.ptri svg{width:20px;height:20px;fill:currentColor;stroke:none}
+.ptri svg .w{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.ptri[data-s="on"]{color:var(--accent)}
+.ptri[data-s="mute"]{color:var(--muted);background:color-mix(in srgb,var(--text) 7%,transparent)}
+.ptri[data-s="mute"] svg path:first-child{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
+.ptri[data-s="off"]{color:var(--muted);opacity:.6;border-style:dashed}

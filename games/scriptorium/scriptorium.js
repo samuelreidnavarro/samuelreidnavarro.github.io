@@ -758,6 +758,18 @@ let pieceKey = null;
 const cache = {};
 
 /* per-voice switches: in the layout, notes, lyrics, playback (heard even when not shown) */
+/* Playback of a voice has three states: on (heard, and the cursor follows), muted (silent, the cursor still follows) and left out (no sound, no cursor) */
+const playState = o => o.play === 'mute' ? 'mute' : o.play === false ? 'off' : 'on';
+const PLAY_ICON = {
+  on: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9.5h4l5-4v13l-5-4H3Z"/><path class="w" d="M15.5 8.5a5 5 0 0 1 0 7M18.2 6a8.5 8.5 0 0 1 0 12"/></svg>',
+  mute: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9.5h4l5-4v13l-5-4H3Z"/><path class="w" d="m16 9.5 5 5m0-5-5 5"/></svg>',
+  off: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="w" d="M5 12h14"/></svg>'
+};
+const PLAY_TIP = {on: 'Heard, and the cursor follows it. Press to mute it', mute: 'Muted: no sound, the cursor still follows it. Press to leave it out altogether', off: 'Left out: no sound and no cursor. Press to play it again'};
+function playCell(i, name){
+  const t = playState(vis(i));
+  return `<td><button type="button" class="ptri" data-i="${i}" data-s="${t}" aria-label="${esc(name)}: playback. ${PLAY_TIP[t]}" title="${PLAY_TIP[t]}">${PLAY_ICON[t]}</button></td>`;
+}
 function vis(i){
   const all = st.vis[pieceKey] || (st.vis[pieceKey] = {});
   const o = all[i] || (all[i] = {on: true, notes: true, lyr: true});
@@ -2333,7 +2345,7 @@ function syncUI(){
       const s = vis(v.idx);
       const cb = (k, label) => `<td><input type="checkbox" data-i="${v.idx}" data-k="${k}" aria-label="${esc(v.name)}: ${label}"${s[k] ? ' checked' : ''}${(k === 'notes' || k === 'lyr') && !s.on ? ' disabled' : ''}></td>`;
       return `<tr data-i="${v.idx}"><td><span class="drag" data-i="${v.idx}" title="Drag to change the order" aria-hidden="true">⠿</span></td>` +
-        `<td><input class="vname" data-i="${v.idx}" value="${esc(v.name)}" aria-label="Name of the voice" title="Click to rename"></td>${cb('on', 'shown')}${cb('notes', 'notes')}${cb('lyr', 'lyrics')}${cb('play', 'playback')}` +
+        `<td><input class="vname" data-i="${v.idx}" value="${esc(v.name)}" aria-label="Name of the voice" title="Click to rename"></td>${cb('on', 'shown')}${cb('notes', 'notes')}${cb('lyr', 'lyrics')}${playCell(v.idx, v.name)}` +
         `<td><button class="vbtn vexp" data-op="cf" data-i="${v.idx}" title="Open in CantusFirmus" aria-label="Open ${esc(v.name)} in CantusFirmus"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3.5h6.5V10h-2V6.9l-6.8 6.8-1.4-1.4 6.8-6.8H14ZM4.5 6.5h7v2h-5v9h9v-5h2v7h-13Z"/></svg></button></td>` +
         `<td><button class="vbtn vdel" data-op="del" data-i="${v.idx}" aria-label="Remove ${esc(v.name)}" title="Remove this voice">×</button></td></tr>`;
     };
@@ -2636,6 +2648,13 @@ async function takeHandoff(){
   toast(`${title} came over from CantusFirmus. Voices adds voices above or below it.`);
   return true;
 }
+$('#voiceTable').addEventListener('click', e => {
+  const b = e.target.closest('.ptri'); if (!b) return;
+  e.stopPropagation();   /* the table is redrawn: the menu must not take the old button for a click outside it */
+  const o = vis(+b.dataset.i), t = playState(o);
+  o.play = t === 'on' ? 'mute' : t === 'mute' ? false : true;
+  save(); syncUI(); render(); if (play) restartPlay();
+});
 $('#voiceTable').addEventListener('change', e => {
   const c = e.target; if (!c.dataset.k) return;
   vis(+c.dataset.i)[c.dataset.k] = c.checked; save(); syncUI(); render();
@@ -4292,10 +4311,11 @@ function startPlay(from, again){
   /* Play starts at the selected note (or the beginning) */
   if (typeof from !== 'number') from = selStart();
   from = Math.max(0, Math.min(from, piece.end));
-  const voices = piece.voices.filter(v => vis(v.idx).play);
-  if (!voices.length) { toast('No voice has Playback ticked (Voices).'); return; }
+  const voices = piece.voices.filter(v => vis(v.idx).play !== false);     /* the muted ones stay: their cursor moves, they make no sound */
+  if (!voices.length) { toast('Every voice is left out of Playback (Voices).'); return; }
   const events = [];
   voices.forEach(v => {
+    const muted = vis(v.idx).play === 'mute';
     for (let k = 0; k < v.syms.length; k++) {
       const s = v.syms[k];
       /* a rest sounds nothing but lights up while it lasts */
@@ -4307,7 +4327,7 @@ function startPlay(from, again){
       let struck = false;
       for (let q = k; q <= j; q++) {
         const p = v.syms[q], strike = !struck && p.t + p.d > from + EPS;
-        events.push({id: p.id, t: p.t * 2, d: p.d * 2, midi: midiOf({step: p.step, alt: p.alt === null || p.alt === undefined ? implied(v, p.step, p.t) : p.alt}), silent: !strike, hold: strike ? (chainEnd - p.t) * 2 : undefined});
+        events.push({id: p.id, t: p.t * 2, d: p.d * 2, midi: muted ? null : midiOf({step: p.step, alt: p.alt === null || p.alt === undefined ? implied(v, p.step, p.t) : p.alt}), silent: !strike, hold: strike ? (chainEnd - p.t) * 2 : undefined});
         if (strike) struck = true;
       }
       k = j;
@@ -4316,7 +4336,7 @@ function startPlay(from, again){
   const top = voices[0], u = unitMinims();
   const on = new Set();
   const spec = {
-    events, from: from * 2, count: again ? 0 : st.countIn, unit: u, level: 1 / Math.sqrt(Math.max(1, voices.length)),
+    events, from: from * 2, count: again ? 0 : st.countIn, unit: u, level: 1 / Math.sqrt(Math.max(1, voices.filter(v => vis(v.idx).play === true).length)),
     /* how many beats to the hand's pattern: three under a perfect sign */
     group: bi => { const T = mensInfo(metAt(top, bi * u / 2)).T; return T === 3 ? 3 : 2; },
     groupStart: bi => { let seg = 0; for (const m of top.mets) if (m.t <= bi * u / 2 + EPS) seg = m.t; return Math.round(seg * 2 / u); },
