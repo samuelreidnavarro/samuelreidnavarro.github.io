@@ -129,8 +129,8 @@ function syncLp(){ if (audio.lp) audio.lp.frequency.setTargetAtTime(lpFreq(), au
 const FEET = ["8′", "4′", "2⅔′", "2′", "1⅗′", "1⅓′", "1⅐′", "1′", "8/9′", "4/5′", "8/11′", "2/3′"];
 const padDraw = h => Array.from({length: 12}, (_, i) => Math.round((h[i] || 0) * 100));
 /* amplitudes of the harmonics for the current register, tilted by the brightness setting */
-function organAmps(){
-  const base = REGISTERS[S.reg].h;
+function organAmps(reg){
+  const base = (REGISTERS[reg] || REGISTERS[S.reg]).h;
   return base.map((a, i) => a * Math.pow(2, (S.bright / 100 - 0.5) * i * 0.55));
 }
 let chiffBuf = null;
@@ -140,13 +140,13 @@ const Synth = {
   /* Each harmonic is its own sine with its own small tuning error and its own speech time: the upper
      ones speak a little sooner, the whole pipe starts a few cents sharp and settles, and a breath of
      wind and a puff of air accompany it. Together that is what makes it a pipe and not a tone. */
-  voice(ctx, dest, freq, t0, t1){
+  voice(ctx, dest, freq, t0, t1, reg){
     const out = ctx.createGain();
     const atk = S.atk / 1000, rel = Math.min(S.rel / 1000, (t1 - t0) * 0.4);
     out.gain.setValueAtTime(1, t0);
     out.gain.setValueAtTime(1, Math.max(t0 + 0.01, t1 - rel));
     out.gain.linearRampToValueAtTime(0, t1);
-    const amps = organAmps();
+    const amps = organAmps(reg);
     const power = Math.sqrt(amps.reduce((s, a) => s + a * a, 0)) || 1, parts = [], tun = [];
     amps.forEach((a, i) => {
       const k = i + 1, f = freq * k;
@@ -322,8 +322,8 @@ const Sampler = {
     });
   },
   /* the same shape as Synth.voice: a note of the recorded stops, from t0 to t1 */
-  voice(ctx, dest, f, t0, t1){
-    const reg = REGISTERS[S.reg], m = this.man;
+  voice(ctx, dest, f, t0, t1, rk){
+    const reg = REGISTERS[rk || S.reg], m = this.man;
     const midi = 69 + 12 * Math.log2(f / S.ref), key = Math.round(midi), midiAbs = 69 + 12 * Math.log2(f / 440);   /* the recordings are referred to a′ = 440, so a different a′ shifts them */
     const stops = reg.sf.map(s => m.stops[s]);
     /* one loudness for every registration; the stops keep their balance within it */
@@ -356,11 +356,14 @@ const Sampler = {
     return {osc: {stop(t){ parts.forEach(p => { try { p.stop(t); } catch (e) {} }); }}, g: out, t1: t1 + rel, tun};
   }
 };
-/* every note goes through here: the recorded organ when it is chosen and loaded, otherwise the synthesis */
-function voice(ctx, dest, f, t0, t1){
+/* every note goes through here: the recorded organ when it is chosen and loaded, otherwise the synthesis.
+   reg: a voice's own sound (the Mixer); without it, the Sound chosen for all */
+function voice(ctx, dest, f, t0, t1, reg){
   let v;
-  if (isSampled(S.reg) && Sampler.ready(S.reg) && Sampler.man) v = Sampler.voice(ctx, dest, f, t0, t1);
-  else { if (isSampled(S.reg)) Sampler.prepare(S.reg, true); v = Synth.voice(ctx, dest, f, t0, t1); }
+  const r = reg && REGISTERS[reg] ? reg : S.reg;
+  if (isSampled(r) && Sampler.ready(r) && Sampler.man) v = Sampler.voice(ctx, dest, f, t0, t1, r);
+  else { if (isSampled(r)) Sampler.prepare(r, true); v = Synth.voice(ctx, dest, f, t0, t1, r); }
+  v.reg = reg;
   /* what a later change of temperament needs to retune this note: which key it is, and what it was tuned to */
   const k0 = Math.round(69 + 12 * Math.log2(f / S.ref));
   let key = k0, best = Infinity;
@@ -376,7 +379,7 @@ function retuneAll(){
   const one = v => {
     if (!v || !v.nf || !(v.t1 > now)) return v;
     const nf = freq(v.key);
-    if (v.t0 > now + 0.02) { silence(v, now); return voice(v.ctx, v.dest, nf, v.t0, v.t1); }
+    if (v.t0 > now + 0.02) { silence(v, now); return voice(v.ctx, v.dest, nf, v.t0, v.t1, v.reg); }
     const r = nf / v.f0;
     (v.tun || []).forEach(t => { try { t(r); } catch (e) {} });
     v.nf = nf;
@@ -433,6 +436,7 @@ function syncTune(){
   const rec = isSampled(S.reg);
   $('#tnDraw').hidden = rec; $('#tnCredit').hidden = !rec;
   TUNE.forEach(t => { if (t.k !== 'rel') ['#tn-', '#to-'].forEach(p => { $(p + t.k).hidden = rec; }); const l = document.querySelector(`label[for="tn-${t.k}"]`); if (l && t.k !== 'rel') l.hidden = rec; });
+  if (H.regChanged) H.regChanged();
 }
 
 /* a′ = S.ref Hz, equal temperament */
@@ -458,22 +462,28 @@ const freq = midi => {
   const pc = ((Math.round(midi) % 12) + 12) % 12;
   return S.ref * Math.pow(2, (midi - 69) / 12 + (tempDev(pc) - tempDev(9)) / 1200);
 };
-function testTone(){
+/* the bus a single note goes to: straight to the organ bus, or through a gain (a voice's Mixer volume) */
+function audDest(ctx, gain){
+  if (gain === undefined || gain === null || gain === 1) return audio.bus;
+  const g = ctx.createGain(); g.gain.value = gain; g.connect(audio.bus); return g;
+}
+function testTone(reg, gain){
+  if (typeof reg !== 'string') reg = undefined;
   const ctx = ensureAudio();
   if (!ctx || audio.timeline) return;
   const now = ctx.currentTime;
   if (audio.aud) silence(audio.aud, now);
-  audio.aud = voice(ctx, audio.bus, freq(55), now + 0.01, now + 0.9);
+  audio.aud = voice(ctx, audDest(ctx, gain), freq(55), now + 0.01, now + 0.9, reg);
   audio.audInfo = {f: freq(55), t1: now + 0.9};
 }
 /* one note, heard while writing */
-function audition(midi, len){
+function audition(midi, len, reg, gain){
   if (audio.timeline) return;
   const ctx = ensureAudio();
   if (!ctx) return;
   const now = ctx.currentTime, f = freq(midi), d = len || 0.55;
   if (audio.aud) silence(audio.aud, now);
-  audio.aud = voice(ctx, audio.bus, f, now + 0.01, now + d);
+  audio.aud = voice(ctx, audDest(ctx, gain), f, now + 0.01, now + d, reg);
   audio.audInfo = {f, t1: now + d};
 }
 /* A woodblock-like tick for the metronome */
@@ -490,7 +500,13 @@ function metroClick(ctx, dest, t){
   return {osc: o, g, t1: t + 0.08};
 }
 
-Object.assign(Organ, {Sampler, voice, isSampled, TEMPER, tempDev, syncTemper, ensureAudio, roomLevel, masterLevel, REGISTERS, FEET, padDraw, organAmps, Synth, silence, TUNE, buildTune, syncTune, testTone, audition, metroClick, freq});
+/* the sounds, as the Sound menu groups them: [[group label, [[key, name], ...]], ...] */
+function soundGroups(){
+  return [["Jeux d'orgues", Object.entries(SAMPLED).map(([k, v]) => [k, v.name])],
+    ['Synthesised organ', Object.entries(REGISTERS).filter(([k]) => !isSampled(k)).map(([k, v]) => [k, v.name])]];
+}
+const soundName = k => SAMPLED[k] ? SAMPLED[k].name : REGISTERS[k] ? REGISTERS[k].name : '';
+Object.assign(Organ, {soundGroups, soundName, Sampler, voice, isSampled, TEMPER, tempDev, syncTemper, ensureAudio, roomLevel, masterLevel, REGISTERS, FEET, padDraw, organAmps, Synth, silence, TUNE, buildTune, syncTune, testTone, audition, metroClick, freq});
 
 /* ------------------------------------------------------------------ */
 /* Mensural reading (the same in both apps)                            */
@@ -695,13 +711,21 @@ function play(spec){
   const t0 = c0 + count * beat, origin = t0 - offset;
   /* several voices at once: each a little softer, so the sum stays as loud as one */
   const dest = ctx.createGain(); dest.gain.value = spec.level || 1; dest.connect(audio.bus);
+  /* the Mixer: spec.mix[ch] = {reg, gain} for the events of channel ch (a voice); each channel has its own gain */
+  const mix = spec.mix || {}, chans = {};
+  const chanDest = ch => {
+    if (ch === undefined || ch === null || !mix[ch]) return dest;
+    if (!chans[ch]) { const g = ctx.createGain(); g.gain.value = mix[ch].gain ?? 1; g.connect(dest); chans[ch] = g; }
+    return chans[ch];
+  };
+  for (const m of Object.values(mix)) if (m && m.reg && isSampled(m.reg)) Sampler.prepare(m.reg, true);
   const tl = [], pending = [];
   let end = t0;
   for (const e of spec.events) {
     const a = origin + e.t * spm, b = origin + (e.t + e.d) * spm;
     if (b <= t0 + 1e-4) continue;
     const a1 = Math.max(a, t0);
-    if (e.midi !== null && e.midi !== undefined && !e.silent) pending.push({a: a1, b: origin + (e.t + (e.hold || e.d)) * spm - 0.012, midi: e.midi});
+    if (e.midi !== null && e.midi !== undefined && !e.silent) pending.push({a: a1, b: origin + (e.t + (e.hold || e.d)) * spm - 0.012, midi: e.midi, ch: e.ch});
     tl.push({i: e.id, t0: a1, t1: b});
     end = Math.max(end, b);
   }
@@ -717,13 +741,14 @@ function play(spec){
     const until = ctx.currentTime + 1.2;
     while (sched.pi < pending.length && pending[sched.pi].a < until) {
       const n = pending[sched.pi++];
-      audio.voices.push(voice(ctx, dest, freq(n.midi), Math.max(n.a, ctx.currentTime + 0.005), n.b));
+      const mx = n.ch !== undefined && n.ch !== null ? mix[n.ch] : null;
+      audio.voices.push(voice(ctx, chanDest(n.ch), freq(n.midi), Math.max(n.a, ctx.currentTime + 0.005), n.b, mx && mx.reg));
     }
     while (sched.ti < ticks.length && ticks[sched.ti] < until) audio.voices.push(metroClick(ctx, audio.master, ticks[sched.ti++]));
     /* let go of the notes that are over */
     if (audio.voices.length > 64) { const now = ctx.currentTime; audio.voices = audio.voices.filter(v => !(v.t1 < now - 0.5)); }
   };
-  const T = audio.timeline = {tl, end, origin, beat, count, c0, t0, spm, spec, sched, feed};
+  const T = audio.timeline = {tl, end, origin, beat, count, c0, t0, spm, spec, sched, feed, chans, mix};
   feed();
   sched.timer = setInterval(feed, 200);   /* keeps feeding when the tab is in the background */
   if (spec.onStart) spec.onStart(audio.timeline);
@@ -773,6 +798,14 @@ function stop(){
   H.playing(false);
   setHand(0); setPend(0);
 }
+/* a voice's Mixer volume, changed while the music plays: heard at once */
+function setChannelGain(ch, gain){
+  const T = audio.timeline;
+  if (!T) return;
+  if (T.mix[ch]) T.mix[ch].gain = gain;
+  const g = T.chans[ch];
+  if (g) g.gain.setTargetAtTime(gain, audio.ctx.currentTime, 0.03);
+}
 /* where the music stands, in minims from the start of the piece */
 function position(){
   const T = audio.timeline;
@@ -780,7 +813,7 @@ function position(){
   return Math.max(0, (audio.ctx.currentTime - T.origin) / T.spm);
 }
 const playing = () => !!audio.timeline;
-Object.assign(Organ, {play, stop, position, playing, beatSeconds});
+Object.assign(Organ, {play, stop, position, playing, beatSeconds, setChannelGain});
 
 /* ------------------------------------------------------------------ */
 /* The controls (the same markup in both apps; each part optional)     */

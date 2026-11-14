@@ -48,6 +48,7 @@ ${APP.popsBeforeVoices || ''}
         <div class="popbody"><div class="staffset">
           <span class="lab">Notation</span><div class="btns" id="notaSeg" role="group" aria-label="Notation"><button class="tb" data-v="real" title="White mensural notation">White</button><button class="tb" data-v="black" title="Black mensural notation, for this piece only: filled notes, the semiminima with a flag, coloration in red">Black</button><button class="tb" data-v="fake" title="Modern rhythm, with ties and triplets">Modern</button></div>
           <span class="lab" id="headLab">Note heads</span><div class="btns" id="headSeg" role="group" aria-label="Note heads in modern notation"><button class="tb" data-v="modern" title="Round modern note heads (in modern notation)">Modern</button><button class="tb" data-v="old" title="Lozenge note heads (in modern notation)">Old</button></div>
+          <span class="lab">Mensuration signs</span><div class="btns" id="mensSeg" role="group" aria-label="Mensuration signs"><button class="tb" data-v="on" title="Draw the mensuration signs">Shown</button><button class="tb" data-v="off" title="No mensuration sign drawn; the music is laid out as before">None</button></div>
           <span class="lab">Ligatures</span><div class="btns" id="ligSeg" role="group" aria-label="Ligatures"><button class="tb" data-v="on" title="Ligatures drawn as ligatures (in mensural notation)">On</button><button class="tb" data-v="off" title="The notes of a ligature written one by one, under a bracket">Off</button></div>
           <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
           <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Through the staff</button></div>
@@ -189,17 +190,21 @@ ${APP.catalogue ? LIBBTN + NEWBTN + '<div id="openRecent"></div><button class="t
   </section>
 
   <section class="tp-side" id="tpSide" aria-label="Sound settings" hidden>
-    <div class="tcol">
+    <div class="tcol" id="soundCol">
       <label for="reg">Sound</label><select id="reg"><option value="gedackt">Gedackt 8′ (stopped flute)</option><option value="principal">Principal 8′</option><option value="plenum">Principal chorus (8′ 4′ 2′)</option><option value="flute">Open flute 8′</option><option value="regal">Regal (soft reed)</option><option value="sine">Sine</option><option value="custom">Your own (drawbars)</option></select>
+      <label class="check"><input type="checkbox" id="audition"> Hear notes while editing</label>
+      <button id="copySound" title="Copies the current sound settings as text, to send to whoever is tuning the sound">Copy sound settings</button>
     </div>
     <div class="tcol" id="toneCol">
       <div class="tg">Tone</div>
       <label for="bright">Brightness</label><input type="range" id="bright" min="0" max="100" step="1"><output id="bo"></output>
       <label for="room">Room</label><input type="range" id="room" min="0" max="100" step="1"><output id="ro"></output>
-      <label class="check"><input type="checkbox" id="audition"> Hear notes while editing</label>
-      <button id="copySound" title="Copies the current sound settings as text, to send to whoever is tuning the sound">Copy sound settings</button>
+      <div class="tune" id="tune"></div>
     </div>
-    <div class="tune" id="tune"></div>
+    <div class="mixcol" id="mixCol">
+      <div class="tg">Mixer</div>
+      <div class="mixlist" id="mixList"></div>
+    </div>
   </section>
 
   <div id="toast" role="status" aria-live="polite"></div>
@@ -691,7 +696,7 @@ let DOCK = null;     /* where the site page says the browser window is, when emb
 const KEY = APP.store + ':v1';
 const st = {
   inc: {}, eq: 'off', piece: PIECES[0] || null, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on', heads: 'modern',
-  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', webScroll: 'vertical', zoom: 1,
+  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1,
   ...(APP.defaults || {})
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
@@ -729,7 +734,7 @@ function presetDrift(){
 }
 /* Undo and redo cover the look of the score as well as the notes: engraving settings, staff size, spacing, paper, which voices show,
    the incipit. Each change is one step in the same history as the music (a slider drag, which sends many changes, is one step). */
-const STYLE_KEYS = [...PRESET_KEYS, 'verse', 'barsV'];
+const STYLE_KEYS = [...PRESET_KEYS, 'verse', 'barsV', 'mens'];
 function styleObj(){
   let pk = null, pc = null; try { pk = pieceKey; pc = piece; } catch (e) {}
   const o = {_k: pk}; for (const k of STYLE_KEYS) o[k] = st[k];
@@ -767,7 +772,8 @@ const UNIT_NAMES = {Mx: 'Maxima', L: 'Longa', B: 'Brevis', S: 'Semibrevis', M: '
 let play = false;
 Organ.init(st, {
   save: () => save(), replay: () => restartPlay(), toast: m => toast(m), playing: on => { play = on; setPlayIcon(on); document.documentElement.classList.toggle('playing', on); },
-  units: ['Mx', 'L', 'B', 'S', 'M', 'Sm', 'F'], unitIcon: k => glyphIcon(k, 0.25), unitName: k => UNIT_NAMES[k]
+  units: ['Mx', 'L', 'B', 'S', 'M', 'Sm', 'F'], unitIcon: k => glyphIcon(k, 0.25), unitName: k => UNIT_NAMES[k],
+  regChanged: () => { if (typeof mixSync === 'function') mixSync(); }
 });
 if (st.audition === undefined) st.audition = true;
 let toastTimer = 0;
@@ -893,6 +899,7 @@ function keyAt(v, t){
   return k;
 }
 function mensW(sign){
+  if (st.mens === 'off') return 0;
   const s = sign || '';
   const hasShape = /[CO]/.test(s), num = (s.match(/\d+/) || [''])[0];
   return (hasShape ? 2.2 : 0) + (num ? 1.2 * num.length + (hasShape ? 0.3 : 0) : 0);
@@ -1016,6 +1023,7 @@ const NUMPATH = {
   '1': 'M0.2 0.5L0.7 0L0.7 2.3M0.2 2.3L1.2 2.3'
 };
 function mensSvg(sign, x, top){
+  if (st.mens === 'off') return '';
   const s = sign || '';
   const hasC = /C/.test(s), hasO = /O/.test(s), stroke = /\|/.test(s), dot = /\./.test(s), rev = /r/.test(s);
   const num = (s.match(/\d+/) || [''])[0];
@@ -2372,7 +2380,7 @@ function segInit(id, key, after){
 }
 function syncUI(){
   if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
-  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq'};
+  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#mensSeg': 'mens', '#scrollSeg': 'webScroll', '#eqSeg': 'eq'};
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
   for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).value = st[k];
   blackSync();
@@ -2404,6 +2412,79 @@ function syncUI(){
     if (document.activeElement !== $('#metaComp')) $('#metaComp').value = piece.meta.COM || piece.meta.COA || '';
   }
   document.querySelectorAll('#library .pc').forEach(b => b.setAttribute('aria-current', String(b.dataset.p === pieceKey)));
+  mixBuild();
+}
+/* ---------------- Mixer ---------------- */
+/* Sound > Mixer (Samuel 2026-11-14): every voice of the piece with its own sound and volume. A voice follows the Sound chosen for
+   all until it is given one of its own; kept per piece with the voice's other switches (st.vis), so they follow the voice when
+   voices are added, removed or moved. */
+const mixGain = o => Math.pow(Math.max(0, Math.min(100, o.gain ?? 100)) / 100, 1.6);
+const mixReg = o => o.reg && Organ.soundName(o.reg) ? o.reg : null;
+let mixSig = '';
+function mixOpts(){
+  return Organ.soundGroups().map(([g, items]) => `<optgroup label="${esc(g)}">` + items.map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('') + '</optgroup>').join('');
+}
+function mixBuild(){
+  const box = $('#mixList'); if (!box) return;
+  const vs = piece ? piece.voices : [];
+  const sig = pieceKey + '|' + vs.map(v => v.name).join('|');
+  if (sig !== mixSig) {
+    mixSig = sig;
+    const opts = mixOpts();
+    box.innerHTML = vs.map((v, i) => { const name = v.name || 'Voice ' + (i + 1);
+      return `<div class="mxr" data-i="${i}"><span class="mxn" title="${esc(name)}">${esc(name)}</span>` +
+        `<button type="button" class="ptri mxp" data-i="${i}"></button>` +
+        `<select class="mxs" data-i="${i}" aria-label="${esc(name)}: sound"><option value="">As Sound: </option>${opts}</select>` +
+        `<input type="range" class="mxv" data-i="${i}" min="0" max="100" step="1" aria-label="${esc(name)}: volume"></div>`; }).join('');
+  }
+  mixSync();
+}
+function mixSync(){
+  const box = $('#mixList'); if (!box || !piece) return;
+  const all = Organ.soundName(st.reg);
+  box.querySelectorAll('.mxr').forEach(r => {
+    const i = +r.dataset.i; if (!piece.voices[i]) return;
+    const o = vis(i), t = playState(o), name = piece.voices[i].name || 'Voice ' + (i + 1);
+    const sel = r.querySelector('.mxs'), first = sel.options[0];
+    first.textContent = 'As Sound: ' + all;
+    if (document.activeElement !== sel) sel.value = mixReg(o) || '';
+    sel.classList.toggle('own', !!mixReg(o));
+    const rg = r.querySelector('.mxv'); if (document.activeElement !== rg) rg.value = o.gain ?? 100;
+    const b = r.querySelector('.mxp');
+    if (b.dataset.s !== t) { b.dataset.s = t; b.innerHTML = PLAY_ICON[t]; }
+    b.title = PLAY_TIP[t]; b.setAttribute('aria-label', `${name}: playback. ${PLAY_TIP[t]}`);
+    r.classList.toggle('quiet', t !== 'on');
+  });
+}
+{
+  const box = $('#mixList');
+  box.addEventListener('change', e => {
+    const sel = e.target.closest('.mxs'); if (!sel || !piece) return;
+    const i = +sel.dataset.i, o = vis(i);
+    if (sel.value) o.reg = sel.value; else delete o.reg;
+    save(); mixSync();
+    if (play) { restartPlay(); return; }
+    const r = mixReg(o) || st.reg;
+    if (Organ.isSampled(r)) Organ.Sampler.prepare(r).then(ok => { if (ok && !play) Organ.testTone(r, mixGain(o)); });
+    else Organ.testTone(r, mixGain(o));
+  });
+  box.addEventListener('input', e => {
+    const rg = e.target.closest('.mxv'); if (!rg || !piece) return;
+    const i = +rg.dataset.i, o = vis(i);
+    o.gain = +rg.value; save();
+    Organ.setChannelGain(i, mixGain(o));
+  });
+  box.addEventListener('change', e => {
+    const rg = e.target.closest('.mxv'); if (!rg || !piece || play) return;
+    const o = vis(+rg.dataset.i); Organ.testTone(mixReg(o) || st.reg, mixGain(o));
+  });
+  box.addEventListener('click', e => {
+    const b = e.target.closest('.mxp'); if (!b || !piece) return;
+    e.stopPropagation();
+    const o = vis(+b.dataset.i), t = playState(o);
+    o.play = t === 'on' ? 'mute' : t === 'mute' ? false : true;
+    save(); syncUI(); render(); if (play) restartPlay();
+  });
 }
 /* ---------------- Presets ---------------- */
 function presetList(){
@@ -2439,7 +2520,7 @@ segInit('#eqSeg', 'eq'); segInit('#viewList', 'view'); $('#notaSeg').addEventLis
   save(); syncUI(); render();
 }); segInit('#headSeg', 'heads'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars');
 segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#edSeg', 'ed');
- segInit('#ligSeg', 'lig'); segInit('#scrollSeg', 'webScroll', () => { viewerEl.scrollLeft = 0; });
+ segInit('#ligSeg', 'lig'); segInit('#mensSeg', 'mens'); segInit('#scrollSeg', 'webScroll', () => { viewerEl.scrollLeft = 0; });
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
 let rq = 0;
 const later = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); };
@@ -3682,7 +3763,8 @@ const accOf = s => ACC_OF[s.acc] || ACC_OF[s.edAcc] || '';
 function hear(step, alt){
   if (st.audition === false || play || step === null || step === undefined) return;
   if (alt === null || alt === undefined) { const v = anyVoice() || (piece && piece.voices[0]); alt = v ? implied(v, step, 0) : 0; }   /* as the key signature has it */
-  Organ.audition(midiOf({step, alt}));
+  const at = ed.sel || ed.ins, o = at && piece && piece.voices[at.vi] ? vis(at.vi) : null;
+  Organ.audition(midiOf({step, alt}), undefined, o ? mixReg(o) : undefined);
 }
 function symAt(vi, ei){
   const v = piece && piece.voices[vi];
@@ -4410,7 +4492,7 @@ function startPlay(from, again){
       let struck = false;
       for (let q = k; q <= j; q++) {
         const p = v.syms[q], strike = !struck && p.t + p.d > from + EPS;
-        events.push({id: p.id, t: p.t * 2, d: p.d * 2, midi: muted ? null : midiOf({step: p.step, alt: p.alt === null || p.alt === undefined ? implied(v, p.step, p.t) : p.alt}), silent: !strike, hold: strike ? (chainEnd - p.t) * 2 : undefined});
+        events.push({id: p.id, t: p.t * 2, d: p.d * 2, midi: muted ? null : midiOf({step: p.step, alt: p.alt === null || p.alt === undefined ? implied(v, p.step, p.t) : p.alt}), silent: !strike, hold: strike ? (chainEnd - p.t) * 2 : undefined, ch: v.idx});
         if (strike) struck = true;
       }
       k = j;
@@ -4418,8 +4500,11 @@ function startPlay(from, again){
   });
   const top = voices[0], u = unitMinims();
   const on = new Set();
+  /* the Mixer: each voice's own sound (or the one for all) and volume */
+  const mix = {};
+  voices.forEach(v => { const o = vis(v.idx); mix[v.idx] = {reg: mixReg(o), gain: mixGain(o)}; });
   const spec = {
-    events, from: from * 2, count: again ? 0 : st.countIn, unit: u, level: 1 / Math.sqrt(Math.max(1, voices.filter(v => vis(v.idx).play === true).length)),
+    mix, events, from: from * 2, count: again ? 0 : st.countIn, unit: u, level: 1 / Math.sqrt(Math.max(1, voices.filter(v => vis(v.idx).play === true).length)),
     /* how many beats to the hand's pattern: three under a perfect sign */
     group: bi => { const T = mensInfo(metAt(top, bi * u / 2)).T; return T === 3 ? 3 : 2; },
     groupStart: bi => { let seg = 0; for (const m of top.mets) if (m.t <= bi * u / 2 + EPS) seg = m.t; return Math.round(seg * 2 / u); },
@@ -4661,6 +4746,8 @@ window.addEventListener('resize', () => { if (window.innerWidth === lastW && !(w
 if (EMBED) try { window.top.addEventListener('resize', () => { clearTimeout(rw); rw = setTimeout(() => { sizeViewer(); postHeight(); }, 150); }); } catch (e) {}
 
 Organ.wire();
+/* the organ samples' credit goes under the sound and temperament; the Tone column keeps every slider */
+if ($('#tnCredit') && $('#soundCol')) $('#soundCol').appendChild($('#tnCredit'));
 
 /* add-ons (Canon Maker's canon, ...): each is a function written as if it were part of this file */
 for (const a of (APP.addons || [])) eval('(' + a + ')')();

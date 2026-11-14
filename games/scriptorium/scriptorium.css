@@ -291,7 +291,7 @@ label.ctl{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font
 .unitbtn svg{width:30px;height:30px}
 .stepper button{min-width:var(--h);height:var(--h);padding:0;font-size:20px}
 .stepper input{height:var(--h);min-height:var(--h);font-size:16px}
-.tp-side{display:flex;flex-wrap:wrap;gap:18px 56px;align-items:flex-start;margin-top:12px;padding:14px 18px 16px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.tp-side{display:flex;flex-wrap:wrap;gap:18px 40px;align-items:flex-start;margin-top:12px;padding:14px 18px 16px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
 .tp-side[hidden]{display:none}
 .tune{display:contents;border:0;margin:0;padding:0}
 .tcol{display:grid;grid-template-columns:auto 150px 3.4em;gap:6px 12px;align-items:center;align-content:start}
@@ -999,3 +999,27 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
   .tools .bar.popup,.transport.popup{overflow:visible !important}
   .tools .bar.popup>:first-child,.transport.popup>:first-child{margin-left:calc(-1 * var(--sl,0px))}
 }
+
+
+/* Sound panel (2026-11-14): Sound + temperament | every slider (Tone, pipe speech, drawbars) | Mixer, one row per voice */
+#toneCol .tune > .tcol{display:contents}
+#toneCol .tune .tg{margin-top:10px}
+#soundCol #tnCredit{grid-column:1/-1;display:block;margin-top:12px}
+#soundCol #tnCredit .tg{margin:0 0 4px}
+.mixcol{display:flex;flex-direction:column;gap:6px;min-width:0}
+.mixcol .tg{font-style:italic;color:var(--muted);font-size:15px;margin:0 0 2px}
+.mixlist{display:flex;flex-direction:column;gap:7px}
+.mxr{display:grid;grid-template-columns:5.6em 30px 190px 100px;gap:6px 10px;align-items:center}
+.mxn{color:var(--muted);font-size:16px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mxr .mxs{width:100%;max-width:none;min-width:0}
+.mxr .mxs:not(.own){color:var(--muted)}
+.mxr .mxv{width:100%;min-width:0}
+.mxr.quiet .mxs,.mxr.quiet .mxv{opacity:.55}
+@media (max-width:700px){
+  .mixcol{width:100%}
+  .mxr{grid-template-columns:minmax(0,1fr) 30px minmax(90px,1.2fr);grid-template-areas:"n p v" "s s s";padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .mxr:last-child{border-bottom:0}
+  .mxn{grid-area:n}.mxp{grid-area:p}.mxv{grid-area:v}.mxr .mxs{grid-area:s}
+}
+/* the Sound panel draws over the top bar too: on a phone it can reach the top of the screen */
+#tpSide{z-index:45}
