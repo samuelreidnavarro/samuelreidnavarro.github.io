@@ -486,11 +486,12 @@
     });
 
     // The date of the last change to the game, shown on the title page; set it with every update
-    const LAST_UPDATE = '2026-11-09';
+    const LAST_UPDATE = '2026-11-14';
     function lastUpdateText() { return new Date(LAST_UPDATE + 'T12:00:00').toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); }
     // Earlier builds, kept beside the game and opened from the developer panel
     const BUILDS = [
-        { file: 'mensurator.html', label: '2.1 · 3 November 2026 (this build)' },
+        { file: 'mensurator.html', label: '2.2 · 14 November 2026 (this build)' },
+        { file: 'mensurator-v2.1.html', label: '2.1 · 9 November 2026' },
         { file: 'mensurator-v2.html', label: '2.0 · 28 October 2026' },
         { file: 'mensurator-v1.html', label: '1.0 · 28 October 2026' }
     ];
@@ -1826,10 +1827,44 @@ let devInvincible = false;
     // A page of staves climbed from the bottom up. Each line is read left to right and climbs the staff in a sequence,
     // as in a solmization exercise; at the end of a line the custos shows the first note of the line above,
     // and the singer runs off the right edge of the page to come back on the left.
-    const PERIOD = 4 * GAP + 72;
+    const PERIOD = 4 * GAP + 54; // the staves of the page stand close together, so the climb from one line to the next is short
     const SEQUENCES = [ // [intervals repeated, first position, how hard]
         [[1], 1, 0], [[2, -1], 2, 0.2], [[1, 1, -1], 3, 0.35], [[2, 2, -3], 1, 0.55], [[3, -2], 2, 0.75]
     ];
+    // Every line is checked as it is written: each note can be reached from the one before with a single jump,
+    // and the head of the next line from the end of this one with a double jump, at the slowest Mensura and
+    // with only 85% of the jump and the walk (the margin). A line that fails is written again with closer notes.
+    const REACH = (() => {
+        const sm = 0.8, m = 0.85, jp = 9 * m * sm, v = 6.5 * m * sm;
+        const arc = (jumpNow, t2) => {
+            let y = 0, vy = jumpNow ? -jp : 0; const out = [];
+            for (let t = 1; t < 150; t++) {
+                if (t === t2) vy = -jp;
+                vy = Math.min(vy + 0.6 * sm * (vy < 0 ? 0.625 : 1), 18 * sm); const py = y; y += vy;
+                out.push({ py, y, vy, t });
+            }
+            out.last = t2;
+            return out;
+        };
+        const double = [arc(true, 0)];
+        for (let t2 = 1; t2 <= 50; t2++) { double.push(arc(true, t2)); double.push(arc(false, t2)); }
+        return { v, single: [arc(true, 0)], double };
+    })();
+    // the places a singer's middle can stand on a group: [left, right, top]
+    const footings = g => g.surf.map(s => [s.x - 7, s.x + s.w + 7, Math.min(s.t0, s.t1), Math.max(s.t0, s.t1)]);
+    function reachable(from, to, arcs) {
+        const WR = LW + 20; // running off one edge of the page brings the singer back at the other
+        for (const a of from) for (const b of to) {
+            let d = Infinity;
+            for (const sh of [-WR, 0, WR]) d = Math.min(d, Math.max(0, b[0] + sh - a[1], a[0] - b[1] - sh));
+            const dy = b[2] - a[3];
+            for (const P of arcs) for (const f of P) {
+                if (f.vy >= 0 && f.py <= dy + 3 && f.y >= dy && d <= REACH.v * f.t) return true;
+                if (f.vy > 0 && f.y > dy + 3 && f.t >= P.last) break; // fallen past it with no jump left
+            }
+        }
+        return false;
+    }
     function gradusLevel(modeIdx) {
         const L = newLevel((Math.random() * 1e9) | 0, modeIdx, 0.1, true, modeIdx);
         L.gradus = true; L.staff = 0; L.gradusT = 0; L.next = null;
@@ -1854,43 +1889,70 @@ let devInvincible = false;
         const seq = L.next || pickSequence(L);
         L.next = pickSequence(L);
         const dOf = p => p + (clef.k === 'F' ? 3 : 7) - 2 * (clef.line - 1);
-        const notes = [{ d: dOf(seq.p0) }];
+        const line = [{ d: dOf(seq.p0) }], notes = line;
         for (let i = 0; notes.length < 14; i++) {
             const cur = notes[notes.length - 1].d;
             let nx = cur + seq.iv[i % seq.iv.length];
-            if (Math.abs(semis(nx) - semis(cur)) === 6) nx = cur + Math.sign(nx - cur) * (Math.abs(nx - cur) - 1);
+            // no leap of a tritone: a rising one becomes a fifth, a falling one a fourth, so the sequence still climbs
+            if (Math.abs(semis(nx) - semis(cur)) === 6) nx += 1;
             if (pOf(nx, clef) > 9) break;
             notes.push({ d: nx });
             if (pOf(nx, clef) >= 8 && i % seq.iv.length === seq.iv.length - 1) break;
         }
+        // the line always ends high on the staff, close under the next one
+        while (pOf(notes[notes.length - 1].d, clef) < 7) notes.push({ d: notes[notes.length - 1].d + 2 });
         // b-rotundum for a B between two A's in the modes on D and F
         if ([1, 3].includes(dMod(M.final))) notes.forEach((nt, i) => { if (dMod(nt.d) === 6 && i > 0 && i < notes.length - 1 && notes[i - 1].d === nt.d - 1 && notes[i + 1].d === nt.d - 1 && R() < 0.6) nt.flat = true; });
-        const groups = [];
-        for (let i = 0; i < notes.length;) {
-            if (i === notes.length - 1) { groups.push(single(notes[i], 'L')); break; }
-            const size = Math.min(pickW(R, [[1, 3], [2, 4], [3, 2]]), notes.length - 1 - i);
-            groups.push(size === 1 ? single(notes[i], R() < 0.3 ? 'L' : 'B') : makeLigature(R, notes.slice(i, i + size)));
-            i += size;
-        }
-        const widthOf = g => g.notes.reduce((w, nt, i) => w + (nt.obl || (i > 0 && g.notes[i - 1].obl) ? OBL : g.val === 'MX' ? 2 * OBL : HW), 0);
-        const room = (LW - 50) - x - groups.reduce((w, g) => w + widthOf(g), 0);
-        const gapBase = Math.max(16, Math.min(70 + 40 * L.diff, room / groups.length));
-        groups.forEach((g, i) => {
-            g.colored = i < groups.length - 1 && R() < 0.08 + 0.3 * L.diff;
-            const gap = i === 0 ? 0 : gapBase * (0.75 + R() * 0.5);
-            // a rest written in a wide gap, where the singer must leap through or over it
-            if (gap > 58 && R() < 0.15 + 0.45 * L.diff) {
-                const pg = groups[i - 1], lp = 2 * Math.min(4, Math.round((pOf(pg.notes[pg.notes.length - 1].d, clef) + 3) / 2));
-                const breve = R() < 0.4 * L.diff, top = yP(lp) + oy;
-                L.rests.push({ x: x + gap / 2 - 6, y: top, w: 12, h: breve ? GAP : STEP, baseVx: 0, vx: 0, minX: x + gap / 2 - 6, maxX: x + gap / 2 - 6, aggro: false, dead: false, damage: breve ? 16 : 8, valueIndex: breve ? 16 : 8, type: breve ? 'BREVIS_REST' : 'SEMIBREVIS_REST' });
-            }
-            L.x = x + gap;
-            x = L.x + placeGroup(L, g);
-        });
         // the next line may be in a new mode and clef: the custos names its first note on this line's staff
         const nextClef = modeInfo((k + 1) % 6 === 0 ? (L.modeIdx + 1) % modesData.length : L.modeIdx).clef;
         const nextD = L.next.p0 + (nextClef.k === 'F' ? 3 : 7) - 2 * (nextClef.line - 1);
         sys.custos = Math.max(-1, Math.min(10, pOf(nextD, clef)));
+        // where the next line's first note will stand (as far in as a Tempus on its head would push it)
+        const nextTop = yP(pOf(nextD, nextClef)) - HH / 2 + oy - PERIOD, nextFoot = [[122 - 7, 122 + HW + 7, nextTop, nextTop]];
+        const prevFoot = L.lastFoot || [[-20, LW + 20, FLOOR, FLOOR]];
+        const x0 = x, keep = { g: L.groups.length, n: L.notes.length, r: L.rests.length, f: L.flats.length, s: L.sharps.length, p: L.powerups.length, inkAt: L.inkAt, inkPlaced: L.inkPlaced };
+        let spread = false;
+        for (let attempt = 0; ; attempt++) {
+            if (attempt > 0) {
+                L.groups.length = keep.g; L.notes.length = keep.n; L.rests.length = keep.r; L.flats.length = keep.f; L.sharps.length = keep.s; L.powerups.length = keep.p;
+                L.inkAt = keep.inkAt; L.inkPlaced = keep.inkPlaced; L.prevGroup = null; x = x0;
+            }
+            // a line written again sets its notes closer, or, if it ended too far from the edge of the page, spreads them to it
+            const tight = attempt < 4 ? 1 : attempt < 8 ? 0.7 : 0.45;
+            const groups = [], notes = line.map(nt => Object.assign({}, nt)); // fresh notes, as a ligature marks its own
+            for (let i = 0; i < notes.length;) {
+                if (i === notes.length - 1) { groups.push(single(notes[i], 'L')); break; }
+                const size = Math.min(pickW(R, [[1, 3], [2, 4], [3, 2]]), notes.length - 1 - i);
+                groups.push(size === 1 ? single(notes[i], R() < 0.3 ? 'L' : 'B') : makeLigature(R, notes.slice(i, i + size)));
+                i += size;
+            }
+            const widthOf = g => g.notes.reduce((w, nt, i) => w + (nt.obl || (i > 0 && g.notes[i - 1].obl) ? OBL : g.val === 'MX' ? 2 * OBL : HW), 0);
+            const room = (LW - 50) - x - groups.reduce((w, g) => w + widthOf(g), 0);
+            const gapBase = Math.max(12, Math.min(spread ? 110 : (70 + 40 * L.diff) * tight, room / groups.length));
+            groups.forEach((g, i) => {
+                g.colored = i < groups.length - 1 && R() < 0.08 + 0.3 * L.diff;
+                const gap = i === 0 ? 0 : gapBase * (0.75 + R() * 0.5);
+                // a rest written in a wide gap, where the singer must leap through or over it
+                if (gap > 58 && R() < 0.15 + 0.45 * L.diff) {
+                    const pg = groups[i - 1], lp = 2 * Math.min(4, Math.round((pOf(pg.notes[pg.notes.length - 1].d, clef) + 3) / 2));
+                    const breve = R() < 0.4 * L.diff, top = yP(lp) + oy;
+                    L.rests.push({ x: x + gap / 2 - 6, y: top, w: 12, h: breve ? GAP : STEP, baseVx: 0, vx: 0, minX: x + gap / 2 - 6, maxX: x + gap / 2 - 6, aggro: false, dead: false, damage: breve ? 16 : 8, valueIndex: breve ? 16 : 8, type: breve ? 'BREVIS_REST' : 'SEMIBREVIS_REST' });
+                }
+                L.x = x + gap;
+                x = L.x + placeGroup(L, g);
+            });
+            // can the singer get from note to note, and on to the next line?
+            const made = L.groups.slice(keep.g);
+            const endOk = reachable(footings(made[made.length - 1]), nextFoot, REACH.double);
+            let ok = endOk && reachable(prevFoot, footings(made[0]), REACH.double);
+            for (let i = 1; ok && i < made.length; i++) ok = reachable(footings(made[i - 1]), footings(made[i]), REACH.single);
+            if (!endOk) {
+                spread = !spread;
+                // still too far: one more note at the top of the line, nearer the edge of the page
+                if (attempt % 3 === 2 && line.length < 16) { const d = line[line.length - 1].d; line.push({ d: pOf(d, clef) < 9 ? d + 1 : d - 1 }); }
+            }
+            if (ok || attempt >= 11) { L.lastFoot = footings(made[made.length - 1]); if (!ok) L.unchecked = (L.unchecked || 0) + 1; break; }
+        }
         L.x = 0;
     }
     function pruneGradus(L) {
