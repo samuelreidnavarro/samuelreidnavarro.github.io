@@ -824,3 +824,4 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 #presetNew{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 #presetForm{display:flex;gap:6px}
 #presetForm input{width:130px;padding:6px 8px;font:inherit}
+.pcur{opacity:.8;font-style:italic}.pcurl{flex:1;padding:0 12px;color:var(--muted)}

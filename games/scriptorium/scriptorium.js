@@ -57,7 +57,7 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Staff lines</span><div class="btns" id="linesSeg" role="group" aria-label="Staff lines"><button class="tb" data-v="5">Five</button><button class="tb" data-v="4">Four</button></div>
           <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
           <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
-          <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="0" max="1.2" step="0.01">
+          <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="-0.4" max="1.2" step="0.01">
           <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0" max="2" step="0.02">
           <label class="ctl" for="ss">Space between systems</label><input type="range" id="ss" min="0" max="3" step="0.05">
           <span class="lab">Syllable dashes</span><div class="btns" id="dashSeg" role="group" aria-label="Syllable dashes"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
@@ -664,24 +664,34 @@ const st = {
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
 /* the spacing sliders now cover only their tight end */
 /* every piece opens with the same look: staff size and spacing */
-const LOOK = {size: 1.75, hs: 0.45, vs: 0.6, ss: 0.8};
+const LOOK = {size: 1.5, hs: 0.47, vs: 0.6, ss: 0.8};
 function resetLook(){ Object.assign(st, LOOK); save(); for (const k of ['size', 'hs', 'vs', 'ss']) { const el = document.getElementById(k); if (el) el.value = st[k]; } }
 for (const [k, v] of Object.entries(LOOK)) if (typeof st[k] !== 'number' || !isFinite(st[k])) st[k] = v;
-st.hs = Math.max(0, Math.min(1.2, st.hs)); st.vs = Math.max(0, Math.min(2, st.vs)); st.ss = Math.max(0, Math.min(3, st.ss));
+st.hs = Math.max(-0.4, Math.min(1.2, st.hs)); st.vs = Math.max(0, Math.min(2, st.vs)); st.ss = Math.max(0, Math.min(3, st.ss));
 if (st.bars === 'mstrich') st.bars = 'full';
 /* barlines now stand in each staff only; everyone starts again from those */
 if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
 /* presets (shared by the apps through the browser): the two built-in ones and the ones Samuel saves; one of them opens every score */
 const PRESET_KEYS = ['nota', 'clefs', 'bars', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'orient', 'flow'];
-const MENS1 = {nota: 'real', clefs: 'mens', bars: 'none', staff: 'red', lines: '5', paperCol: 'beige', size: 1.75, hs: 0.45, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', orient: 'portrait', flow: 'vertical'};
-const BUILTIN = [{name: 'Mensural 1', s: MENS1, fixed: true}, {name: 'Mensural 2', s: {...MENS1, paperCol: 'white', bars: 'full'}, fixed: true}];
+const MENS1 = {nota: 'real', clefs: 'modern', bars: 'none', staff: 'black', lines: '5', paperCol: 'white', size: 1.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', orient: 'portrait', flow: 'vertical'};
+const MENS2 = {...MENS1, clefs: 'mens', size: 1.65, dashes: 'off'};
+const BUILTIN = [{name: 'Preset 1', s: MENS1, fixed: true}, {name: 'Preset 2', s: MENS2, fixed: true}];
 const PKEY = 'scriptorium:presets';
-function presetStore(){ let o = {}; try { o = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch (e) {} return {custom: Array.isArray(o.custom) ? o.custom : [], active: o.active || 'Mensural 1'}; }
+function presetStore(){ let o = {}; try { o = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch (e) {} return {custom: Array.isArray(o.custom) ? o.custom : [], active: o.active === undefined || o.active === 'Mensural 1' ? 'Preset 1' : o.active === 'Mensural 2' ? 'Preset 2' : o.active}; }
 function presetPut(o){ try { localStorage.setItem(PKEY, JSON.stringify(o)); } catch (e) {} }
 const presetAll = () => [...BUILTIN, ...presetStore().custom];
 function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; }
-if (APP.id !== 'cantus-firmus') { const P = presetAll().find(q => q.name === presetStore().active) || BUILTIN[0]; presetApply(P); st.barsV = 2; }
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} if (window.Organ) Organ.saveShared(); };
+if (APP.id !== 'cantus-firmus') { const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } }
+/* changing an engraving setting unticks the ticked preset: the settings are now "current settings" of their own */
+const LOOK_KEYS = ['nota', 'clefs', 'bars', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
+function presetDrift(){
+  if (APP.id === 'cantus-firmus') return;
+  const S = presetStore(); if (!S.active) return;
+  const P = presetAll().find(q => q.name === S.active);
+  if (P && LOOK_KEYS.every(k => P.s[k] === undefined || P.s[k] === st[k])) return;
+  S.active = ''; presetPut(S); if (typeof presetList === 'function' && document.getElementById('presetList')) presetList();
+}
+const save = () => { presetDrift(); try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} if (window.Organ) Organ.saveShared(); };
 /* playback, metronome and sound: shared/organ.js, the same engine as the CantusFirmus app's */
 const UNIT_NAMES = {Mx: 'Maxima', L: 'Longa', B: 'Brevis', S: 'Semibrevis', M: 'Minima', Sm: 'Semiminima', F: 'Fusa'};
 let play = false;
@@ -788,7 +798,7 @@ function mensW(sign){
 /* Horizontal layout                                                   */
 /* ------------------------------------------------------------------ */
 /* horizontal spacing: at 0 the notes stand as close as they can without touching; the slider adds room by duration */
-const spring = d => 0.05 + 0.25 * Math.min(1, st.hs) + (0.8 + 2.3 * Math.pow(Math.max(d, 0.05), 0.6)) * st.hs;
+const spring = d => Math.max(0.02, 0.05 + 0.25 * Math.min(1, st.hs) + (0.8 + 2.3 * Math.pow(Math.max(d, 0.05), 0.6)) * st.hs);
 
 /* columns for a set of voices over [a, b) */
 function columns(vlist, a, b, withLyrics){
@@ -2100,19 +2110,23 @@ function syncUI(){
 /* ---------------- Presets ---------------- */
 function presetList(){
   const S = presetStore();
-  $('#presetList').innerHTML = presetAll().map(p => `<div class="prow"><label class="pchk" title="Open all scores with this preset"><input type="checkbox" data-p="${esc(p.name)}"${p.name === S.active ? ' checked' : ''}><span class="plab">Open all scores with it</span></label><button class="tb pname" data-p="${esc(p.name)}" title="Use this preset now">${esc(p.name)}</button>${p.fixed ? '' : `<button class="vbtn pdel" data-d="${esc(p.name)}" aria-label="Delete ${esc(p.name)}" title="Delete this preset">×</button>`}</div>`).join('');
+  const cur = !S.active ? `<div class="prow pcur"><span class="pchk"></span><span class="pname pcurl">Current settings</span></div>` : '';
+  $('#presetList').innerHTML = cur + presetAll().map(p => `<div class="prow"><label class="pchk" title="Open all scores with this preset"><input type="checkbox" data-p="${esc(p.name)}"${p.name === S.active ? ' checked' : ''}><span class="plab">Open all scores with it</span></label><button class="tb pname" data-p="${esc(p.name)}" title="Use this preset now">${esc(p.name)}</button>${p.fixed ? '' : `<button class="vbtn pdel" data-d="${esc(p.name)}" aria-label="Delete ${esc(p.name)}" title="Delete this preset">×</button>`}</div>`).join('');
 }
 $('#presetList').addEventListener('click', e => {
   const d = e.target.closest('[data-d]'), n = e.target.closest('.pname'), c = e.target.closest('input[type=checkbox]');
-  if (d) { const S = presetStore(); S.custom = S.custom.filter(q => q.name !== d.dataset.d); if (S.active === d.dataset.d) S.active = 'Mensural 1'; presetPut(S); presetList(); }
+  if (d) { const S = presetStore(); S.custom = S.custom.filter(q => q.name !== d.dataset.d); if (S.active === d.dataset.d) S.active = ''; presetPut(S); presetList(); }
   else if (n) { const p = presetAll().find(q => q.name === n.dataset.p); if (p) { presetApply(p); save(); syncUI(); render(); } }
   else if (c) { e.preventDefault(); const S = presetStore(); S.active = c.dataset.p; presetPut(S); presetList(); const p = presetAll().find(q => q.name === c.dataset.p); if (p) { presetApply(p); save(); syncUI(); render(); } }
 });
-$('#presetAdd').addEventListener('click', () => { $('#presetForm').hidden = false; $('#presetName').focus(); });
+$('#presetAdd').addEventListener('click', () => {
+  const taken = new Set(presetAll().map(q => q.name)); let n = 3; while (taken.has('Preset ' + n)) n++;
+  $('#presetName').value = 'Preset ' + n; $('#presetForm').hidden = false; $('#presetName').focus(); $('#presetName').select();
+});
 function presetSaveNow(){
   const name = $('#presetName').value.trim(); if (!name) return;
   const S = presetStore(), s = {}; for (const k of PRESET_KEYS) s[k] = st[k];
-  if (BUILTIN.some(b => b.name === name)) { toast('That name is taken'); return; }
+  if (BUILTIN.some(b => b.name === name) || name === 'Current settings') { toast('That name is taken'); return; }
   S.custom = S.custom.filter(q => q.name !== name); S.custom.push({name, s}); presetPut(S);
   $('#presetName').value = ''; $('#presetForm').hidden = true; presetList(); toast('Preset saved');
 }
