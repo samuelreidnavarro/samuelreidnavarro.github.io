@@ -168,24 +168,34 @@
     /* the staves of each instrument, with its name */
     const staffName = new Map(), staffClef = new Map();
     const MS_CLEF = {G: 'G2', G8vb: 'Gv2', 'G8va': 'G2', F: 'F4', F3: 'F3', C1: 'C1', C2: 'C2', C3: 'C3', C4: 'C4', C5: 'C5', F8vb: 'F4'};
+    /* MuseScore 4.6 and later leave out the staff ids in the parts: the staves are then numbered in order, as in the score */
+    let sn = 0;
+    const sid = (sf, i) => sf.getAttribute('id') || String(i + 1);
     for (const part of kids(score, 'Part')) {
-      const ids = kids(part, 'Staff').map(s => s.getAttribute('id'));
+      const ids = kids(part, 'Staff').map(s => s.getAttribute('id') || String(++sn));
+      if (ids.length) sn = Math.max(sn, ...ids.map(Number).filter(n => n > 0));
       /* the instrument's clefs: Staff/defaultClef, Instrument/clef (staff="n"), else treble */
       const inst = kid(part, 'Instrument');
       kids(part, 'Staff').forEach((sf, i) => {
         const ic = kids(inst, 'clef').find(c => (+c.getAttribute('staff') || 1) === i + 1);
-        staffClef.set(sf.getAttribute('id'), MS_CLEF[txt(sf, 'defaultClef') || (ic ? txt(ic) : '') || 'G'] || 'G2');
+        staffClef.set(ids[i], MS_CLEF[txt(sf, 'defaultClef') || (ic ? txt(ic) : '') || 'G'] || 'G2');
       });
-      const name = txt(part, 'trackName') || txt(kid(part, 'Instrument'), 'longName') || '';
+      const name = (txt(part, 'trackName') || txt(kid(part, 'Instrument'), 'longName') || '').replace(/<br\s*\/?>/g, ' ').replace(/<[^>]+>/g, '').trim();
       ids.forEach((id, i) => staffName.set(id, ids.length > 1 ? name + ' ' + (i + 1) : name));
     }
     let title = meta.workTitle || '', composer = meta.composer || '';
-    if (!title) for (const t of score.querySelectorAll('VBox > Text')) if (txt(t, 'style') === 'title' || txt(t, 'style') === 'Title') { title = txt(t, 'text'); break; }
-    if (!composer) for (const t of score.querySelectorAll('VBox > Text')) if (/composer/i.test(txt(t, 'style'))) { composer = txt(t, 'text'); break; }
-    title = title.replace(/<[^>]+>/g, ''); composer = composer.replace(/<[^>]+>/g, '');
+    /* frame texts keep their line breaks as <br/> elements (MuseScore 3) or as escaped text (MuseScore 4) */
+    const rich = el => el ? [...el.childNodes].map(n => n.nodeType === 3 ? n.data : /^br$/i.test(n.tagName) ? ' ' : rich(n)).join('') : '';
+    if (!title) for (const t of score.querySelectorAll('VBox > Text')) if (txt(t, 'style') === 'title' || txt(t, 'style') === 'Title') { title = rich(kid(t, 'text')); break; }
+    if (!composer) for (const t of score.querySelectorAll('VBox > Text')) if (/composer/i.test(txt(t, 'style'))) { composer = rich(kid(t, 'text')); break; }
+    const plain = x => x.replace(/<br\s*\/?>|\n/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    title = plain(title); composer = plain(composer);
+    /* MuseScore 2: no <voice> elements; each note names its track, <tick> moves to an absolute time, tuplets are defined once and referred to by id */
+    const div2 = +txt(score, 'Division') || 480;
     const voices = [];
     let bars = null;
-    for (const staff of kids(score, 'Staff')) {
+    for (const [si, staff] of kids(score, 'Staff').entries()) {
+      const id = sid(staff, si);
       const measures = kids(staff, 'Measure');
       if (!measures.length) continue;
       let pos = 0, mlen = W, clef = null, key = null;
@@ -195,12 +205,20 @@
         starts.push(m0);
         const vlist = kids(m, 'voice').length ? kids(m, 'voice') : [m];
         let len = m.getAttribute('len') ? frac(m.getAttribute('len')) : 0, reach = 0;
-        vlist.forEach((v1, vi) => {
-        const evs = by[vi] || (by[vi] = []);
+        vlist.forEach((v1, vi0) => {
+        let vi = vi0, evs = by[vi] || (by[vi] = []);
         let t = pos, tup = 1;
-        const tupStack = [];
+        const tupStack = [], tupId = new Map();
         for (const el of v1.children) {
           const tag = el.tagName;
+          const tr = kid(el, 'track');
+          if (tr && v1 === m && (tag === 'Chord' || tag === 'Rest')) { vi = (+txt(tr) || 0) % 4; evs = by[vi] || (by[vi] = []); }
+          if (tag === 'tick') {
+            const t2 = Math.round(+txt(el) * W / (4 * div2));
+            if (v1 === m && t2 < t) { vi = Math.min(vi + 1, 3); evs = by[vi] || (by[vi] = []); }   /* back in time: the next voice */
+            t = t2; continue;
+          }
+          if (tag === 'Tuplet' && el.getAttribute('id')) { tupId.set(el.getAttribute('id'), (+txt(el, 'normalNotes') || 2) / (+txt(el, 'actualNotes') || 3)); continue; }
           if (tag === 'TimeSig') {
             const n = +txt(el, 'sigN') || 4, d = +txt(el, 'sigD') || 4;
             mlen = Math.round(n * W / d); mets.push({t, sign: meterSign(n, d, txt(el, 'subtype') === '1' ? 'common' : txt(el, 'subtype') === '2' ? 'cut' : null)});
@@ -216,7 +234,7 @@
             const dt = txt(el, 'durationType');
             let d;
             if (dt === 'measure') d = frac(txt(el, 'duration')) || len || mlen;
-            else d = Math.round((MS_DUR[dt] || 1 / 4) * W * (2 - Math.pow(0.5, +txt(el, 'dots') || 0)) * tup);
+            else d = Math.round((MS_DUR[dt] || 1 / 4) * W * (2 - Math.pow(0.5, +txt(el, 'dots') || 0)) * (kid(el, 'Tuplet') ? tupId.get(txt(el, 'Tuplet')) || 1 : tup));
             const e = {t, d};
             if (tag === 'Rest') e.rest = true;
             else {
@@ -247,8 +265,8 @@
       const list = by.filter(evs => evs && evs.some(e => !e.rest));
       if (!list.length) continue;
       if (!bars) bars = starts.filter(t => t > 0);
-      const nm = voiceNames(staffName.get(staff.getAttribute('id')) || '', list.length);
-      list.forEach((evs, i) => voices.push({name: nm[i], clef: clef || staffClef.get(staff.getAttribute('id')) || null, key: key || 0, mets, events: tidy(evs)}));
+      const nm = voiceNames(staffName.get(id) || '', list.length);
+      list.forEach((evs, i) => voices.push({name: nm[i], clef: clef || staffClef.get(id) || null, key: key || 0, mets, events: tidy(evs)}));
     }
     return {title, composer, voices, bars: bars || []};
   }
@@ -851,26 +869,34 @@
     return out.join('\n') + '\n';
   }
 
-  const EXT = /\.(musicxml|xml|mxl|mscz|mscx|mid|midi|kar|ly|gabc|cmme)$/i;
+  const EXT = /\.(musicxml|xml|mxl|mscz|mscx|mscbackup|mid|midi|kar|ly|gabc|cmme)$/i;   /* MuseScore 4 backups: .mscbackup; MuseScore 3 backups: .name.mscz, */
   async function read(file){
     const name = file.name || '', buf = await file.arrayBuffer();
-    const ext = (name.match(/\.([^.]+)$/) || [, ''])[1].toLowerCase();
+    const b = new Uint8Array(buf, 0, Math.min(4, buf.byteLength));
+    let ext = (name.replace(/,$/, '').match(/\.([^.]+)$/) || [, ''])[1].toLowerCase();
+    /* the contents decide where they are clear: a zip is MusicXML or MuseScore, MThd is MIDI */
+    if (b[0] === 0x50 && b[1] === 0x4B) ext = ext === 'mxl' ? 'mxl' : 'zip';
+    else if (b[0] === 0x4D && b[1] === 0x54 && b[2] === 0x68 && b[3] === 0x64) ext = 'mid';
+    else if (ext === 'mscz' || ext === 'mscbackup') throw new Error('This .' + ext + ' file is not a complete MuseScore file. It may be damaged, or only partly downloaded. Please save it again from MuseScore, or export it as MusicXML.');
     let S;
     if (ext === 'mid' || ext === 'midi' || ext === 'kar') S = fromMidi(buf);
     else if (ext === 'ly') S = fromLilyPond(decodeText(buf));
     else if (ext === 'gabc') S = fromGabc(decodeText(buf));
-    else if (ext === 'mxl' || ext === 'mscz') {
+    else if (ext === 'mxl' || ext === 'zip') {
       const files = await unzip(buf);
       let pick = null;
       if (files.has('META-INF/container.xml')) {
         const c = xmlDoc(decodeText(await files.get('META-INF/container.xml')()));
-        const rf = c.querySelector('rootfile'); if (rf) pick = rf.getAttribute('full-path');
+        /* MuseScore 4 lists its style file (.mss), thumbnail and settings too, the style first: take the first score */
+        const rfs = [...c.querySelectorAll('rootfile')].map(r => r.getAttribute('full-path') || '');
+        pick = rfs.find(n => /\.mscx$/i.test(n) && files.has(n)) || rfs.find(n => /\.(xml|musicxml)$/i.test(n) && files.has(n)) || null;
       }
-      if (!pick || !files.has(pick)) pick = [...files.keys()].find(n => ext === 'mscz' ? /\.mscx$/i.test(n) && !/\//.test(n) : /\.(xml|musicxml)$/i.test(n) && !/^META-INF\//.test(n))
-        || [...files.keys()].find(n => ext === 'mscz' ? /\.mscx$/i.test(n) : /\.(xml|musicxml)$/i.test(n) && !/^META-INF\//.test(n));
-      if (!pick) throw new Error('No score found inside this file.');
+      const names = [...files.keys()];
+      if (!pick) pick = names.find(n => /\.mscx$/i.test(n) && !/\//.test(n)) || names.find(n => /\.mscx$/i.test(n))
+        || names.find(n => /\.(xml|musicxml)$/i.test(n) && !/^META-INF\//.test(n));
+      if (!pick) throw new Error('No MuseScore or MusicXML score was found inside this file.');
       const text = decodeText(await files.get(pick)());
-      S = /\.mscx$/i.test(pick) ? fromMuseScore(text) : fromMusicXML(text);
+      S = /\.mscx$/i.test(pick) || /<museScore\b/.test(text.slice(0, 800)) ? fromMuseScore(text) : fromMusicXML(text);
     } else {
       const text = decodeText(buf);
       const head = text.slice(0, 800);
@@ -878,5 +904,5 @@
     }
     return toKern(S, name);
   }
-  window.ScoreImport = {accepts: name => EXT.test(name || ''), toKern: read, _: {fromMusicXML, fromMuseScore, fromMidi, fromLilyPond, fromGabc, fromCMME, toKern}};
+  window.ScoreImport = {accepts: name => EXT.test((name || '').replace(/,$/, '')), toKern: read, _: {fromMusicXML, fromMuseScore, fromMidi, fromLilyPond, fromGabc, fromCMME, toKern}};
 })();

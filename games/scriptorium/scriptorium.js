@@ -2921,8 +2921,28 @@ document.addEventListener('drop', e => {
 }
 /* **kern is read as it is; MusicXML, MuseScore, MIDI, LilyPond, GABC and CMME are turned into **kern first (shared/score-import.js) */
 function openFile(file){
-  if (window.ScoreImport && ScoreImport.accepts(file.name)) ScoreImport.toKern(file).then(k => loadText(file.name, k), err => { stopPlay(); pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; });
-  else file.text().then(t => loadText(file.name, t));
+  const fail = err => { stopPlay(); pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; };
+  const imp = f => ScoreImport.toKern(f).then(k => loadText(file.name, k), fail);
+  if (window.ScoreImport && ScoreImport.accepts(file.name)) { imp(file); return; }
+  /* any other name: a zip, MIDI or XML score is still read as one (renamed or saved without its extension); plain text as **kern */
+  file.arrayBuffer().then(buf => {
+    const b = new Uint8Array(buf, 0, Math.min(buf.byteLength, 600));
+    const head = new TextDecoder().decode(b).replace(/^\uFEFF/, '').trimStart();
+    const ext = (/\.([^.]+)$/.exec(file.name) || [, ''])[1].toLowerCase();
+    if (window.ScoreImport && b[0] === 0x50 && b[1] === 0x4B) imp(new File([buf], file.name + '.zip'));
+    else if (window.ScoreImport && b[0] === 0x4D && b[1] === 0x54 && b[2] === 0x68 && b[3] === 0x64) imp(new File([buf], file.name + '.mid'));
+    else if (window.ScoreImport && /^<(\?xml|!DOCTYPE score|museScore|score-partwise|score-timewise)\b/.test(head)) imp(new File([buf], file.name + '.xml'));
+    else if (/\*\*(kern|mens)/.test(new TextDecoder().decode(buf)) || /^(krn|kern|txt)$/.test(ext)) loadText(file.name, new TextDecoder().decode(buf));
+    else fail(new Error(unreadable(ext)));
+  }, fail);
+}
+/* the message for a file the app cannot read: what it is, and what to do */
+function unreadable(ext){
+  const FMT = {pdf: 'a PDF (a picture of the music, not its notes)', sib: 'a Sibelius file', musx: 'a Finale file', mus: 'a Finale file', dorico: 'a Dorico file', mscs: 'a MuseScore 4 folder file', mei: 'an MEI file', abc: 'an ABC file',
+    png: 'an image', jpg: 'an image', jpeg: 'an image', heic: 'an image', mp3: 'a recording', wav: 'a recording', m4a: 'a recording', doc: 'a Word document', docx: 'a Word document'};
+  const what = FMT[ext] ? 'This is ' + FMT[ext] + ', which ' + APP.name + ' cannot read.' : APP.name + ' cannot read ' + (ext ? '.' + ext + ' files.' : 'this file.');
+  const fix = /^(sib|musx|mus|dorico|mscs|mei|abc)$/.test(ext) ? ' Please export it from that program as MusicXML (.musicxml or .mxl) and open that.' : '';
+  return what + fix + ' ' + APP.name + ' opens MuseScore (.mscz, .mscx), MusicXML (.musicxml, .mxl, .xml), MIDI (.mid), LilyPond (.ly), GABC (.gabc), CMME (.cmme.xml) and **kern (.krn).';
 }
 $('#printBtn').addEventListener('click', () => {
   if (EMBED && !pieceKey.startsWith('file:')) { window.open(APP.page + '?print=1', '_blank'); return; }
