@@ -1,5 +1,5 @@
 /* Scriptorium add-on: lyrics. Typed under the notes, in every app.
-   Add > Lyrics (or Shift+L, or a click on a syllable while editing) opens a small field under the selected note.
+   Add > Lyrics (or L with a note selected, or a click on any syllable) opens a small field under the selected note.
    Space or Tab: on to the next note. Hyphen: the syllable goes on in the next one (Ky-ri-e). Underscore: the next
    note is left without a syllable (a melisma). Shift+Tab, or the arrows at the field's edge: back and forth.
    Backspace in an empty field: back, taking that syllable off. Enter or Escape: done. Pasting a whole text fills
@@ -9,7 +9,7 @@
 (window.SCRIPTORIUM = window.SCRIPTORIUM || {}).addons = (window.SCRIPTORIUM.addons || []).concat([function(){
   const list = $('#addList'); if (!list) return;
   list.insertAdjacentHTML('beforeend',
-    '<button class="tb" id="addLyr" title="Type the words under the selected note: Space goes on to the next note, a hyphen joins the syllables of a word, underscore leaves a note without one; paste a whole text to fill the notes (Shift+L)">Lyrics</button>' +
+    '<button class="tb" id="addLyr" title="Type the words under the selected note: Space goes on to the next note, a hyphen joins the syllables of a word, underscore leaves a note without one; paste a whole text to fill the notes (L, or click a syllable)">Lyrics</button>' +
     '<button class="tb" id="addVerse" title="A further verse: another line of words under the same notes">New verse</button>' +
     '<button class="tb" id="delLyr" title="Take the words off the selected notes (in the verse shown)">Remove lyrics</button>');
 
@@ -162,7 +162,6 @@
     const inp = document.createElement('input');
     inp.className = 'vrename lyrin'; inp.type = 'text'; inp.autocomplete = 'off'; inp.spellcheck = false;
     inp.setAttribute('autocapitalize', 'off'); inp.setAttribute('aria-label', 'Syllable under the note');
-    inp.placeholder = 'syllable';
     wrapEl.appendChild(inp);
     L.inp = inp;
     inp.addEventListener('keydown', e => {
@@ -231,20 +230,44 @@
     const vs = new Set(it.map(x => x.v));
     commit(() => { for (const {e} of it) { e.syl = e.syl.slice(); e.syl[verse] = undefined; } for (const v of vs) relink(v, verse); trimVerses(); });
   });
-  /* in Edit, a click on a syllable opens it */
-  pagesEl.addEventListener('click', e => {
-    if (!ed.on || !piece) return;
-    const t = e.target.closest && e.target.closest('text.lyr'); if (!t) return;
-    const m = /^n(\d+)-(\d+)/.exec(t.dataset.s || ''); if (!m) return;
-    const v = piece.voices[+m[1]], q = v && v.syms[+m[2]]; if (!q || !q.src) return;
+  /* lyrics are edited in Edit: a click on a syllable (or L) outside it turns Edit on */
+  function editOn(){ if (ed.on) return; ed.on = true; clearGhost(); syncEdit(); postHeight(); }
+  /* a click on any syllable opens it. The staff below reaches up over the line of words with its writing area,
+     so look under the pointer (and before the engine's own click handlers, which would write a note there) */
+  function lyricAt(e){
+    for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
+      if (el.matches && el.matches('#pages text.lyr')) return el;
+      if (el === pagesEl) break;
+    }
+    for (const t of pagesEl.querySelectorAll('text.lyr')) {
+      const r = t.getBoundingClientRect();
+      if (e.clientX >= r.left - 2 && e.clientX <= r.right + 2 && e.clientY >= r.top - 2 && e.clientY <= r.bottom + 2) return t;
+    }
+    return null;
+  }
+  const lyrHit = e => {
+    if (!piece || !e.target.closest || !e.target.closest('#pages') || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return null;
+    if (e.target.closest('g[class^="n"]')) return null;           /* a note itself stays a note */
+    const t = lyricAt(e); if (!t) return null;
+    const m = /^n(\d+)-(\d+)/.exec(t.dataset.s || ''); if (!m) return null;
+    const v = piece.voices[+m[1]], q = v && v.syms[+m[2]]; return q && q.src ? {vi: +m[1], ei: q.src[0]} : null;
+  };
+  /* the pointer is the text cursor over a syllable */
+  pagesEl.addEventListener('pointermove', e => { const on = !!(e.target.closest && !e.target.closest('g[class^="n"]') && lyricAt(e)); pagesEl.classList.toggle('overlyr', on); }, {passive: true});
+  for (const type of ['pointerdown', 'mousedown']) document.addEventListener(type, e => { if (lyrHit(e)) { e.stopImmediatePropagation(); } }, true);
+  document.addEventListener('click', e => {
+    const h = lyrHit(e); if (!h) return;
     e.stopImmediatePropagation(); e.preventDefault();
-    open(+m[1], q.src[0]);
+    editOn(); open(h.vi, h.ei);
   }, true);
-  /* Shift+L, as in Dorico */
+  /* L with one note selected (Shift+L also with only the caret); with several notes selected L stays Ligature */
   document.addEventListener('keydown', e => {
     const tg = e.target, tag = tg.tagName;
-    if (!ed.on || !piece || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tg.isContentEditable) return;
-    if (e.key === 'L' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); e.stopImmediatePropagation(); const p = startAt(); if (p) open(p.vi, p.ei); }
+    if (!piece || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tg.isContentEditable) return;
+    if ((e.key !== 'l' && e.key !== 'L') || e.ctrlKey || e.metaKey || e.altKey || ed.range || ed.picks) return;
+    if (!ed.sel && !(e.shiftKey && ed.on)) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    const p = startAt(); if (p) { editOn(); open(p.vi, p.ei); }
   }, true);
   /* leaving Edit closes the field (and a click elsewhere, opening another score, blurs it first) */
   $('#editBtn').addEventListener('click', () => { if (!ed.on && L.inp) close(true); });
