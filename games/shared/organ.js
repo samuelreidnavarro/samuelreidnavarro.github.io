@@ -323,7 +323,7 @@ const Sampler = {
   /* the same shape as Synth.voice: a note of the recorded stops, from t0 to t1 */
   voice(ctx, dest, f, t0, t1){
     const reg = REGISTERS[S.reg], m = this.man;
-    const midi = 69 + 12 * Math.log2(f / S.ref), key = Math.round(midi);
+    const midi = 69 + 12 * Math.log2(f / S.ref), key = Math.round(midi), midiAbs = 69 + 12 * Math.log2(f / 440);   /* the recordings are referred to a′ = 440, so a different a′ shifts them */
     const stops = reg.sf.map(s => m.stops[s]);
     /* one loudness for every registration; the stops keep their balance within it */
     const gain = 0.16 / Math.sqrt(stops.reduce((a, s) => a + s.rms * s.rms, 0));
@@ -344,8 +344,8 @@ const Sampler = {
       src.loop = true;
       if (z.ab && !this.legacy) { src.buffer = z.ab; src.loopStart = z.lsN / sr; src.loopEnd = z.leN / sr; }
       else { src.buffer = buf; src.loopStart = (z.off + z.ls) / sr; src.loopEnd = (z.off + z.le) / sr; }
-      /* the organ stands about 5 cents below a′ = 440; tuned up to the chosen a′ */
-      src.playbackRate.value = Math.pow(2, (midi - z.root) / 12 + (z.tune + 5) / 1200);
+      /* the organ stands about 5 cents below a′ = 440; the note's true pitch (a′ and temperament) sets the rate */
+      src.playbackRate.value = Math.pow(2, (midiAbs - z.root) / 12 + (z.tune + 5) / 1200);
       src.connect(out);
       src.start(t0, z.ab && !this.legacy ? 0 : z.off / sr); src.stop(t1 + rel + 0.05); parts.push(src);
     });
