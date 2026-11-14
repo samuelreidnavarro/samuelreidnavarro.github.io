@@ -1304,7 +1304,7 @@ function staffLine(o){
     const X = o.xs[i];
     s += symSvg(sym, X, top, show);
     if (o.showLyr && sym.text && st.dashes !== 'off') {
-      s += `<text x="${f(X + sym.hw / 2 + sym.lyo)}" y="${f(o.lyrY)}" font-size="${LYR}" text-anchor="middle">${esc(sym.text)}</text>`;
+      s += `<text class="lyr" data-s="${sym.id}" x="${f(X + sym.hw / 2 + sym.lyo)}" y="${f(o.lyrY)}" font-size="${LYR}" text-anchor="middle">${esc(sym.text)}</text>`;
     }
   }
   /* hyphens between syllables, ties */
@@ -1329,7 +1329,7 @@ function staffLine(o){
       for (let j = k + 1; j < syms.length; j++) { const q = syms[j][0]; if (!q.text) continue; if (!q.cont) break; w += q.text; }
       /* a word that goes on past the line is written whole when it fits in the margin */
       if (!sym.cont) { sym.drewAll = w === sym.word || x + sym.ww <= o.lineEnd + 1.2; if (sym.drewAll) w = sym.word; }
-      s += `<text x="${f(x)}" y="${f(o.lyrY)}" font-size="${LYR}">${esc(w)}</text>`;
+      s += `<text class="lyr" data-s="${sym.id}" x="${f(x)}" y="${f(o.lyrY)}" font-size="${LYR}">${esc(w)}</text>`;
       open = true;
     });
   }
@@ -4267,32 +4267,42 @@ function drawCaret(scroll){
   if (!piece) return;
   const {vi, ei} = ed.ins, v = piece.voices[vi];
   if (!v || !v.syms) return;
-  let k = -1, after = true, frac = -1;
+  let k = -1, frac = 0, at = -1;
   const pad = ed.ins.pad > EPS && ei >= v.events.length ? ed.ins.pad : 0;
-  /* inside a note (moved there on the grid): between the note's start and the next note, in proportion */
-  if (ed.ins.off > EPS && ei < v.events.length) {
-    const T = rt(v.events[ei].t + ed.ins.off);
-    k = v.syms.findIndex(q => q.src && q.src.includes(ei) && T > q.t - EPS && T < q.t + q.d - EPS);
-    if (k >= 0) { frac = (T - v.syms[k].t) / v.syms[k].d; if (frac < EPS) { frac = -1; after = false; } }
-  }
+  /* found by time alone (a note may be written as several, several rests as one): inside a written note,
+     across it in proportion; at its start, just before it; past the last, just after that */
+  const T = ei < v.events.length ? rt(v.events[ei].t + (ed.ins.off || 0)) : v.end;
+  v.syms.forEach((q, i) => { if (q.src && k < 0 && T > q.t + EPS && T < q.t + q.d - EPS) { k = i; frac = (T - q.t) / q.d; } });
   if (k < 0) {
-    k = v.syms.findIndex(q => q.src && q.src.includes(ei - 1));
-    if (k < 0) { k = v.syms.findIndex(q => q.src && q.src[0] >= ei); after = false; }
+    at = v.syms.findIndex(q => q.src && Math.abs(q.t - T) < EPS);
+    if (at < 0) { for (let i = v.syms.length - 1; i >= 0; i--) if (v.syms[i].src) { at = i + 1; break; } }
   }
-  if (k < 0) return;
-  document.querySelectorAll('#pages g.n' + vi + '-' + k).forEach((el, n) => {
+  /* drawn on the system of the note before (at a line's start that is the end of the line above) */
+  let anchor = k >= 0 ? k : at > 0 && v.syms[at - 1] && v.syms[at - 1].src ? at - 1 : at;
+  if (anchor >= v.syms.length) anchor = v.syms.length - 1;
+  if (anchor < 0) return;
+  const GAP_L = 0.35, GAP_R = 0.45;
+  document.querySelectorAll('#pages g.n' + vi + '-' + anchor).forEach((el, n) => {
     const par = el.parentNode;
     let r = null;
-    for (const r2 of par.querySelectorAll('rect.stafhit[data-v="' + vi + '"]')) if (r2.dataset.k0 !== '' && +r2.dataset.k0 <= k && k <= +r2.dataset.k1) r = r2;
+    for (const r2 of par.querySelectorAll('rect.stafhit[data-v="' + vi + '"]')) if (r2.dataset.k0 !== '' && +r2.dataset.k0 <= anchor && anchor <= +r2.dataset.k1) r = r2;
     if (!r) return;
-    const bb = el.getBBox(), top = +r.dataset.top;
-    let x = after ? bb.x + bb.width + 0.35 : bb.x - 0.45;
+    const top = +r.dataset.top;
+    /* every caret place comes from one rule (the place just before a note, on this system), so the
+       arrows always move it the way they point: halfway between two notes, after the last, before the first */
+    const box = q => { const e = q >= 0 && par.querySelector('g.n' + vi + '-' + q); return e ? e.getBBox() : null; };
+    const before = q => {
+      const a = box(q - 1), b = box(q);
+      if (a && b) return Math.max(a.x + a.width + 0.1, (a.x + a.width + b.x) / 2);
+      if (a) return a.x + a.width + GAP_L;
+      if (b) return b.x - GAP_R;
+      return null;
+    };
+    let x;
+    if (k >= 0) { const x0 = before(k), x1 = before(k + 1); x = x0 + frac * Math.max(0.8, x1 - x0); }
+    else x = before(at);
+    if (x === null || isNaN(x)) return;
     if (pad) x += 1.2 + pad * 2.4;       /* out in the empty space after the last note */
-    if (frac > 0) {
-      const nx = par.querySelector('g.n' + vi + '-' + (k + 1));
-      const x0 = bb.x + 0.5, x1 = nx ? nx.getBBox().x + 0.5 : bb.x + bb.width + 2;
-      x = x0 + frac * Math.max(1, x1 - x0);
-    }
     const c = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     c.setAttribute('class', 'caret'); c.setAttribute('x', f(x - 0.07)); c.setAttribute('y', f(top - 1));
     c.setAttribute('width', '0.14'); c.setAttribute('height', '6');

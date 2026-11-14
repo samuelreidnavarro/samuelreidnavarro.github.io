@@ -1037,3 +1037,8 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
   .mxr.gen .mxn{grid-area:n}.mxr.gen #reg{grid-area:s}
 }
 #mensMenu li.mdel{grid-column:1/-1;flex-direction:row;justify-content:center;padding:5px 8px;border-top:1px solid var(--line);border-radius:0;margin-top:2px}
+/* lyrics (lyrics.js): the field under a note, and the syllables open to a click while editing */
+.vrename.lyrin{font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif;font-style:normal;text-align:center;padding:0 6px;min-width:0;box-shadow:0 2px 8px rgba(60,40,20,.18)}
+.vrename.lyrin::placeholder{color:var(--muted,#9a8a74);font-style:italic}
+body.editing #pages text.lyr{cursor:text}
+@media (hover:hover){ body.editing #pages text.lyr:hover{fill:var(--accent)} }
