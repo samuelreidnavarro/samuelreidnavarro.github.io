@@ -4367,9 +4367,17 @@ function selStart(){
 let heldAt = null, heldSel = '';
 function togglePlayHold(){
   const sid = () => JSON.stringify([ed.sel, ed.ins, ed.range && [ed.range.t0, ed.range.t1, ed.range.v0, ed.range.v1], ed.picks]);
-  if (play) { heldAt = playPos(); heldSel = sid(); stopPlay(); }
-  else { const at = heldAt !== null && heldAt < piece.end - EPS && sid() === heldSel ? heldAt : undefined; heldAt = null; startPlay(at); }
+  if (play) { heldAt = playPos(); heldSel = sid(); selClicked = false; stopPlay(); }
+  else { const at = heldAt !== null && heldAt < piece.end - EPS && sid() === heldSel && !selClicked ? heldAt : undefined; heldAt = null; selClicked = false; startPlay(at); }
 }
+/* A click on a note is a new start point, even on the note that is already selected: while playing, the music goes on from it at once;
+   after a pause, Play starts there instead of resuming where it stopped */
+let selClicked = false;
+pagesEl.addEventListener('pointerdown', e => {
+  if (e.button || !e.target.closest || !e.target.closest('g[class^="n"]')) return;
+  selClicked = true;
+  if (play && ed.on) setTimeout(() => { if (play && (ed.sel || ed.range || ed.picks)) startPlay(selStart(), true); }, 30);
+}, true);
 $('#play').addEventListener('click', togglePlayHold);
 /* While playing, the view follows the music (Samuel 2026-11-13, now that the frame is the whole window):
    horizontal Web: the sounding note stays in the middle, eased every frame so it never jerks;
