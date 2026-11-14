@@ -3805,7 +3805,7 @@ const CBA = {
     return {selected: !!s, dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
       target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc, lig: !!t.lig}, ligOn: ligSelOn(), edArm: !!ed.edArm, ovr: !!ed.ovr,
       col: s && !s.rest ? !!s.col : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
-      hasNotes: !!(piece && piece.voices.length), durs: ed.range || ed.picks ? [] : xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : []), range: !!(ed.range || ed.picks)};
+      hasNotes: !!(piece && piece.voices.length), durs: ed.range || ed.picks ? ['B'] : xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : []), range: !!(ed.range || ed.picks)};
   },
   setDur(k){
     ed.val = k;
@@ -3980,7 +3980,16 @@ const CBA = {
   undo: () => undo(), redo: () => redo(),
   deselect(){ if (ed.sel || ed.range || ed.picks) { ed.sel = null; ed.range = null; ed.picks = null; showSel(); } },
   togglePlay(){ togglePlayHold(); },
-  scaleAll(dir){ if (!CBA.guard() || ed.range || ed.picks) return; const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) e.d = rt(dir < 0 ? e.d * 2 : e.d / 2); }); },
+  scaleAll(dir){
+    if (!CBA.guard()) return;
+    /* with a selection, only the selected notes and rests are doubled or halved; what follows in each voice moves along */
+    if (ed.range || ed.picks) {
+      const it = selItems().filter(x => writable(x.v));
+      if (!it.length) return;
+      commit(() => { for (const {e} of it) e.d = rt(dir < 0 ? e.d * 2 : e.d / 2); });
+      return;
+    }
+    const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) e.d = rt(dir < 0 ? e.d * 2 : e.d / 2); }); },
   shiftOctave(dir){ if (!CBA.guard()) return; if (ed.range || ed.picks) { rangeStep(7 * dir); return; } const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) if (!e.rest) e.step = clampStep(e.step + 7 * dir); }); },
   mutate: fn => { if (CBA.guard()) commit(fn); },
   pitched(){
