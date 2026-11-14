@@ -495,6 +495,7 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 #pages svg .staff{stroke:var(--staff,#8E2A1E)}
 #pages svg .ledger,#pages svg .barl,#pages svg .tie,#pages svg .ms{stroke:var(--leaf-ink)}
 #pages svg use,#pages svg .ink{fill:var(--leaf-ink)}
+#headSeg.dim{opacity:.45}
 #pages svg .red use,#pages svg .ink.red{fill:#A12C1C}
 #pages svg text.foot{opacity:.8}
 #pages svg text{fill:var(--leaf-ink);font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif}
