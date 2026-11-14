@@ -832,3 +832,10 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 #pages .keyhit .ksarr:hover{opacity:1}
 @media (hover:none){#pages .ksarr{opacity:.28}}
 @media print{#pages .ksarr{display:none}}
+
+/* faint mensuration sign where there is none */
+#pages .mensadd{opacity:0;cursor:pointer;transition:opacity .12s}
+#pages .keyhit:hover ~ .mensadd,#pages .mensadd:hover{opacity:.35}
+@media (hover:none){#pages .mensadd{opacity:.15}}
+@media print{#pages .mensadd{display:none}}
+#pages .incipit{opacity:.9}

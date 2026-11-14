@@ -67,6 +67,13 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab pslab">Presets</span><div id="presetBox"><div id="presetList"></div><div id="presetNew"><button class="tb" id="presetAdd">Save current settings as preset</button><span id="presetForm" hidden><input id="presetName" type="text" placeholder="Name" maxlength="30" autocomplete="off"><button class="tb" id="presetOk">Save</button></span></div></div>
         </div></div>
       </div></div>
+      <div class="podg"><div class="pop" id="popAdd">
+        <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Add<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <div class="popbody"><div class="btns col" id="addList">
+          <button class="tb" id="addMens" title="Put a mensuration sign at the selected note, in the selected voice or voices only (select several voices to give them all one)">Add mensuration sign</button>
+          <button class="tb" id="addInc" title="The original clefs, mensuration signs and first notes of every voice, before the staves">Add incipit</button>
+        </div></div>
+      </div></div>
       <div class="grow">
         <div class="podg"><div class="pop" id="popInfo">
           <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Info<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
@@ -659,7 +666,7 @@ function chooseClef(v, mode){
 let DOCK = null;     /* where the site page says the browser window is, when embedded: {top, vh, pageTop} */
 const KEY = APP.store + ':v1';
 const st = {
-  eq: 'off', piece: PIECES[0] || null, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on',
+  inc: {}, eq: 'off', piece: PIECES[0] || null, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on',
   size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', ctlMode: 'move', lig: 'on', webScroll: 'vertical', zoom: 1,
   ...(APP.defaults || {})
 };
@@ -1143,6 +1150,8 @@ function staffLine(o){
   { const ks = keySig(v, t0, clef), kx = x; let g = '';
     for (const k of ks) { g += use(k.g, x, top + 4 - k.pos * 0.5); x += gw(k.g) + 0.15; }
     const kw = Math.max(1.6, x - kx), cx = kx + kw / 2 - 0.05;
+    /* no mensuration sign yet: a faint one shows when the mouse is over the place, and a click adds it */
+    if (t0 < EPS && !v.mets.some(m => m.t < EPS)) s += `<g class="mensadd" data-v="${v.idx}"><rect x="${f(x)}" y="${f(top - 0.5)}" width="2.8" height="5" fill="transparent"/>${mensSvg('C', x + 0.3, top)}</g>`;
     s += `<g class="keyhit" data-v="${v.idx}"><rect x="${f(kx - 0.2)}" y="${f(top - 2.6)}" width="${f(kw + 0.4)}" height="9.2" fill="transparent"/>${g}` +
       `<g class="ksarr" data-ks="1"><rect x="${f(cx - 0.9)}" y="${f(top - 2.6)}" width="1.8" height="2" fill="transparent"/><path d="M${f(cx - 0.6)} ${f(top - 0.8)}L${f(cx + 0.6)} ${f(top - 0.8)}L${f(cx)} ${f(top - 1.9)}Z"/></g>` +
       `<g class="ksarr" data-ks="-1"><rect x="${f(cx - 0.9)}" y="${f(top + 4.6)}" width="1.8" height="2" fill="transparent"/><path d="M${f(cx - 0.6)} ${f(top + 4.8)}L${f(cx + 0.6)} ${f(top + 4.8)}L${f(cx)} ${f(top + 5.9)}Z"/></g></g>`; }
@@ -1329,6 +1338,48 @@ function sectionLabels(line, top, W){
   }
   return s;
 }
+/* Incipit: the clef, mensuration sign and first notes of every voice as the piece was when it was opened (original clefs and
+   values), set before the staves of the first system (Add > Add incipit) */
+const INC = {key: null, snap: null};
+function incipitSnap(){
+  try {
+    INC.key = pieceKey;
+    INC.snap = piece.voices.map(v => ({
+      clef: v.oclef && CLEFS[KERN_CLEF[v.oclef]] ? KERN_CLEF[v.oclef] : KERN_CLEF[v.kclef] || 'treble',
+      mens: metAt(v, 0), key: Object.assign({}, keyAt(v, 0)),
+      notes: (v.syms || []).filter(q => !q.rest).slice(0, 5).map(q => ({step: q.step, alt: q.alt, glyph: q.glyph, g: q.g, hw: q.hw, dot: !!q.dot}))
+    }));
+  } catch (e) { INC.snap = null; }
+  if (incipitOn()) render();
+}
+function incipitOn(){ return !!(piece && INC.snap && INC.key === pieceKey && (st.inc || {})[pieceKey] && INC.snap.length === piece.voices.length); }
+const incAcc = (n, q) => { if (n.alt === null || n.alt === undefined) return null; const a = Math.max(-1, Math.min(1, n.alt)); return a !== (q.key[LETTERS[((n.step % 7) + 7) % 7]] || 0) ? ACCG[a] : null; };
+function incipitW(){
+  let w = 0;
+  for (const q of INC.snap) {
+    let x = 0.4 + gw(CLEFS[q.clef].g) + 0.5 + (q.mens ? mensW(q.mens) + 0.6 : 0);
+    for (const n of q.notes) { const a = incAcc(n, q); x += (a ? gw(a) + 0.35 : 0) + n.hw + 1.1; }
+    w = Math.max(w, x);
+  }
+  return w + 1.6;
+}
+function incipitSvg(q, x0, top){
+  if (!q) return '';
+  const C = CLEFS[q.clef], W = incipitW() - 1.2;
+  let o = '';
+  for (let k = st.lines === '4' ? 1 : 0; k < 5; k++) o += hl(x0, x0 + W, top + k, 'staff', 0.12);
+  let x = x0 + 0.4;
+  o += clefSvg(q.clef, x, top); x += gw(C.g) + 0.5;
+  if (q.mens) { o += mensSvg(q.mens, x, top); x += mensW(q.mens) + 0.6; }
+  for (const n of q.notes) {
+    const pos = n.step - C.bottom, y = top + 4 - pos * 0.5, a = incAcc(n, q);
+    if (a) { o += use(a, x, y); x += gw(a) + 0.35; }
+    o += ledgers(pos, x, n.hw, top) + use(n.glyph, x, y);
+    if (n.dot) o += `<circle class="ink" cx="${f(x + n.hw + 0.4)}" cy="${f(top + 4 - (pos % 2 === 0 ? pos + 1 : pos) * 0.5)}" r="0.19"/>`;
+    x += n.hw + 1.1;
+  }
+  return `<g class="incipit">${o}</g>`;
+}
 /* draw one system (several voices stacked) at y; returns {svg, h} */
 function drawSystem(vlist, line, y, opts = {}){
   const rooms = vlist.map(v => lineRoom(v, line));
@@ -1361,7 +1412,8 @@ function drawSystem(vlist, line, y, opts = {}){
     s += staffLine({v, k0, k1, cols: line.cols, from: line.from, to: line.to, xs: line.xs, top: tops[k], x0: line.x0, x1: line.x1,
       last: line.endsPiece, tail: line.last ? line.W : null, t0: line.t0, showNotes: sh.notes, showLyr: sh.lyr, lyrY: tops[k] + rooms[k].lyrY, lineEnd: line.x1,
       next: nextSym(v, line.tEnd), tEnd: line.tEnd});
-    if (opts.names && opts.names[k]) s += `<text class="vnamehit" data-v="${v.idx}" x="${f(line.x0 - 0.8)}" y="${f(tops[k] + 2.6)}" font-size="1.8" text-anchor="end" font-style="italic">${esc(opts.names[k])}</text>`;
+    if (opts.inc) s += incipitSvg(INC.snap[v.idx], line.x0 - opts.inc, tops[k]);
+    if (opts.names && opts.names[k]) s += `<text class="vnamehit" data-v="${v.idx}" x="${f(line.x0 - 0.8 - (opts.inc || 0))}" y="${f(tops[k] + 2.6)}" font-size="1.8" text-anchor="end" font-style="italic">${esc(opts.names[k])}</text>`;
   });
   /* barlines */
   const single = vlist.length === 1;
@@ -1475,19 +1527,20 @@ function layoutScore(G){
   const vlist = visibleVoices();
   if (!vlist.length) return [];
   const names = vlist.map(v => APP.voiceNames === false ? '' : v.name);   /* CantusFirmus: no names before the staves */
-  const indent = Math.max(...names.map(n => textW(n, 1.8, true))) + 1.4;
+  const inc = incipitOn() ? incipitW() : 0;
+  const indent = Math.max(...names.map(n => textW(n, 1.8, true))) + 1.4 + inc;
   /* Web, scrolling sideways: the whole score as one line, as long as the music */
   if (G.web && st.webScroll === 'horizontal') {
     const lines = buildLines(vlist, 0, piece.end + 1, 1e6, {indent, ragged: true});
     if (lines.length) {
       const need = Math.max(G.W, lines[0].x1 + 2 * G.M + 1);
       const G2 = {...G, W: need, wmm: need * G.sp, titleW: G.W};
-      return paginate(G2, lines, vlist, (line, li) => li === 0 ? {names, join: true} : {join: true}, null);
+      return paginate(G2, lines, vlist, (line, li) => li === 0 ? {names, join: true, inc} : {join: true}, null);
     }
   }
   const W = G.W - 2 * G.M;
   const lines = buildLines(vlist, 0, piece.end + 1, W, {indent});
-  return paginate(G, lines, vlist, (line, li) => li === 0 ? {names, join: true} : {join: true}, null);
+  return paginate(G, lines, vlist, (line, li) => li === 0 ? {names, join: true, inc} : {join: true}, null);
 }
 function paginate(G, lines, vlist, optsFor, sub){
   const pages = [];
@@ -1931,6 +1984,7 @@ async function loadPiece(file){
   showSource(file);
   syncUI();
   render();
+  incipitSnap();
 }
 /* a file opened from the computer stays open after a reload: its text is kept in this browser (the last one only) */
 const FILE_KEY = APP.store + ':lastfile';
@@ -1942,7 +1996,7 @@ function loadText(name, text){
     piece = parseKern(text);
     pieceKey = 'file:' + name; fileKeep(name, text); st.piece = pieceKey; save();
     if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; ed.range = null; ed.picks = null; }
-    syncUI(); render();
+    syncUI(); render(); incipitSnap();
   } catch (e) { pagesEl.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
 const meta = {};
@@ -2109,7 +2163,7 @@ function syncUI(){
   $('#handOp').value = st.handOp; $('#handSize').value = st.handSize;
   if ($('#audition')) $('#audition').checked = !!st.audition;
   document.documentElement.style.setProperty('--staff', (STAFF_COLORS.find(c => c[0] === st.staff) || STAFF_COLORS[0])[1]);
-  applyPaper();
+  applyPaper(); if (typeof incSync === 'function') incSync();
   const horiz = isHoriz();
   viewerEl.classList.toggle('horiz', horiz); $('.viewwrap').classList.toggle('horiz', horiz);
   /* verses */
@@ -3196,7 +3250,46 @@ mensMenu.addEventListener('click', e => {
 });
 document.addEventListener('pointerdown', e => { if (!mensMenu.hidden && !e.target.closest('#mensMenu') && !e.target.closest('.menshit')) mensMenu.hidden = true; });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') mensMenu.hidden = true; });
+/* Add > Add mensuration sign: at the selected note of the selected voice(s) only; Add incipit: before the staves */
+function mensTargets(){
+  const out = new Map(), add = (vi, t) => { if (!out.has(vi) || t < out.get(vi)) out.set(vi, t); };
+  if (ed.range || ed.picks) for (const {v, e} of selItems()) add(v.idx, e.t);
+  else if (ed.sel) { const v = piece.voices[ed.sel.vi], e = v && v.events[ed.sel.ei]; if (e) add(v.idx, e.t); }
+  else if (ed.ins) { const v = piece.voices[ed.ins.vi], e = v && v.events[ed.ins.ei]; if (e) add(v.idx, e.t); }
+  return out;
+}
+$('#addMens').addEventListener('click', () => {
+  if (!piece) return;
+  const T = mensTargets();
+  if (!T.size) { toast('Select a note first (click it, or put the caret before it); the sign goes there, in that voice.'); return; }
+  if ([...T.keys()].some(vi => !writable(piece.voices[vi]))) { refuse(); return; }
+  let first = null;
+  commit(() => {
+    for (const [vi, t] of T) {
+      const v = piece.voices[vi], k = v.events.findIndex(e => eq(e.t, t));
+      if (k < 0 || v.mets.some(m => eq(m.t, t))) continue;
+      v.mets.push({t, sign: 'C', ei: k}); v.mets.sort((a, b) => a.t - b.t);
+      if (!first) first = {vi, t, k};
+    }
+  });
+  if (!first) { toast('There is a sign there already: click it to change it.'); return; }
+  setTimeout(() => {
+    const el = pagesEl.querySelector(`g.n${first.vi}-${first.k} .menshit`);
+    if (el) { const r = el.getBoundingClientRect(); openMensMenu(first.vi, first.t, {clientX: r.left, clientY: r.bottom}); mensTargetOnly(); }
+  }, 60);
+});
+/* a sign added by hand belongs to the selected voice(s) only: the menu opens with "this voice only" on */
+function mensTargetOnly(){ const c = $('#mensDiff'); if (c) c.checked = true; }
+function incSync(){ const on = !!(st.inc || {})[pieceKey]; $('#addInc').textContent = on ? 'Remove incipit' : 'Add incipit'; }
+$('#addInc').addEventListener('click', () => {
+  if (!piece || !INC.snap || INC.key !== pieceKey) { toast('Open a score first.'); return; }
+  st.inc = st.inc || {}; if (st.inc[pieceKey]) delete st.inc[pieceKey]; else st.inc[pieceKey] = true;
+  save(); incSync(); render();
+  if (st.inc[pieceKey] && st.view !== 'score') toast('The incipit shows in the Score view.');
+});
 pagesEl.addEventListener('click', e => {
+  const ma = e.target.closest && e.target.closest('.mensadd');
+  if (ma && piece) { e.stopImmediatePropagation(); e.preventDefault(); if (!writable(piece.voices[+ma.dataset.v])) { refuse(); return; } openMensMenu(+ma.dataset.v, 0, e); return; }
   const mh = e.target.closest && e.target.closest('.menshit');
   if (!mh || !piece) return;
   const g = mh.closest('g[class^="n"]'); const m = g && g.classList[0].match(/^n(\d+)-(\d+)$/);
