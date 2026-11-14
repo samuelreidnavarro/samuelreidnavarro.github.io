@@ -936,7 +936,25 @@ function wire(){
     if (audio.master) audio.master.gain.setTargetAtTime(masterLevel(), audio.ctx.currentTime, 0.03);
     H.save();
   });
-  if ($('#toggleSet')) $('#toggleSet').addEventListener('click', () => { S.setOpen = !S.setOpen; applySettingsOpen(); H.save(); });
+  /* with a mouse the Sound panel follows the pointer like the other menus (a short grace delay lets the pointer travel to it);
+     on a touch screen the button still opens and closes it */
+  const hov = () => window.matchMedia && matchMedia('(hover:hover)').matches;
+  if ($('#toggleSet')) {
+    const tg = $('#toggleSet'), side = $('#tpSide');
+    let tm = 0;
+    const show = () => { clearTimeout(tm); if (!S.setOpen) { S.setOpen = true; applySettingsOpen(); } };
+    const hide = () => { clearTimeout(tm); tm = setTimeout(() => {
+      if (!S.setOpen || tg.matches(':hover') || (side && (side.matches(':hover') || side.contains(document.activeElement) && document.activeElement.matches('select,input:not([type=range]):not([type=checkbox])')))) return;
+      S.setOpen = false; applySettingsOpen(); }, 350); };
+    [tg, side].forEach(el => { if (!el) return;
+      el.addEventListener('mouseenter', () => { if (hov()) show(); });
+      el.addEventListener('mouseleave', () => { if (hov()) hide(); }); });
+    if (side) side.addEventListener('focusout', () => { if (hov()) hide(); });
+    tg.addEventListener('click', e => {
+      if (hov()) { e.preventDefault(); show(); return; }
+      S.setOpen = !S.setOpen; applySettingsOpen(); H.save(); });
+    if (hov() && S.setOpen) { S.setOpen = false; applySettingsOpen(); }
+  }
   addSampledOptions();
   if ($('#tune')) buildTune();
   if ($('#reg')) $('#reg').addEventListener('change', e => {

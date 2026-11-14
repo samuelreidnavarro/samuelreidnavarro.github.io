@@ -793,7 +793,8 @@ html.dark .tools .podg,html.dark .transport .podg{box-shadow:0 1px 4px rgba(0,0,
 #ghostClefs{position:absolute;z-index:2;pointer-events:none;
   background:linear-gradient(90deg,color-mix(in srgb,var(--pagebg,#EFE3C7) 96%,transparent) 0,color-mix(in srgb,var(--pagebg,#EFE3C7) 90%,transparent) 62%,transparent 100%)}
 #ghostClefs[hidden]{display:none}
-#ghostClefs svg{display:block;overflow:visible}
+#ghostClefs{overflow:hidden}
+#ghostClefs svg{display:block;overflow:hidden}
 #ghostClefs .staff{stroke:var(--rule)}
 @media print{#ghostClefs{display:none !important}}
 /* Dark room: the page stays as it is; the floating controls get a dark ground of their own so they read over any paper */

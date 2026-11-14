@@ -1894,7 +1894,7 @@ function ghostClefs(){
   if (!el) { el = document.createElement('div'); el.id = 'ghostClefs'; el.setAttribute('aria-hidden', 'true'); el.innerHTML = '<svg></svg>'; wrapEl.appendChild(el); }
   const wr = wrapEl.getBoundingClientRect(), vr = viewerEl.getBoundingClientRect();
   /* appears as the real clef leaves the left edge */
-  const o = Math.max(0, Math.min(1, (vr.left + 60 - real.getBoundingClientRect().right) / 50));
+  const o = Math.max(0, Math.min(1, (vr.left + 10 - real.getBoundingClientRect().right) / 40));
   if (o <= 0) { el.hidden = true; return; }
   el.hidden = false; el.style.opacity = String(o * 0.6);
   const W = 64;
@@ -1906,7 +1906,7 @@ function ghostClefs(){
     if (y < -40 || y > vr.height + 40) continue;
     let lines = '';
     for (let k = st.lines === '4' ? 1 : 0; k < 5; k++) lines += hl(-3, 7, k, 'staff', 0.12);
-    g += `<g transform="translate(14 ${f(y)}) scale(${f(sc)})">${lines}${clefSvg(v.clef, 0.2, 0)}</g>`;
+    g += `<g transform="translate(${f(3 * sc)} ${f(y)}) scale(${f(sc)})">${lines}${clefSvg(v.clef, 0.2, 0)}</g>`;
   }
   el.firstChild.setAttribute('width', W); el.firstChild.setAttribute('height', vr.height);
   el.firstChild.innerHTML = g;
