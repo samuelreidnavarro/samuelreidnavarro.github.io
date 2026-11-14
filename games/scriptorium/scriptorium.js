@@ -973,13 +973,13 @@ function fermata(cx, y){
   return `<path class="ink" d="M${f(cx - 0.9)} ${f(y)}A0.9 0.85 0 0 1 ${f(cx + 0.9)} ${f(y)}L${f(cx + 0.78)} ${f(y)}A0.78 0.66 0 0 0 ${f(cx - 0.78)} ${f(y)}Z"/><circle class="ink" cx="${f(cx)}" cy="${f(y - 0.22)}" r="0.16"/>`;
 }
 /* how far a symbol reaches above and below the staff (staff spaces from the top line) */
-function extent(s){
+function extent(s, L = 3.6){
   if (s.rest) return [0, 4];
   const y = 4 - s.pos * 0.5;
   let lo = y - 0.8, hi = y + 0.8;
   const flip = isFlipped(s);
-  if (STEMMED[s.g]) { if (flip) hi = y + 3.6; else lo = y - 3.6; }
-  if (TAILED[s.g]) { if (flip) lo = y - 3.6; else hi = y + 3.6; }
+  if (STEMMED[s.g]) { if (flip) hi = y + L; else lo = y - L; }
+  if (TAILED[s.g]) { if (flip) lo = y - L; else hi = y + L; }
   if (s.acc) { lo = Math.min(lo, y - (s.acc === 'fl' ? 2.1 : 1.6)); hi = Math.max(hi, y + 1.6); }
   if (s.edAcc) lo = Math.min(lo, Math.min(-0.9, y - (flip ? 1.6 : STEMMED[s.g] ? 4.3 : 1.7)) - 1.5);
   if (s.ferm) lo = Math.min(lo, y - 2.2, -1.6);
@@ -1025,7 +1025,14 @@ function symInner(s, X, top){
   o += ledgers(s.pos, hx, s.hw, top);
   if (s.acc) o += use(s.acc, hx - gw(s.acc) - 0.3, y);
   if (s.ligSvg) { o += s.ligSvg; }
-  else o += isFlipped(s) ? useT(s.glyph, hx, y, 1, -1) : use(s.glyph, hx, y);
+  else {
+    const gm = isFlipped(s) ? useT(s.glyph, hx, y, 1, -1) : use(s.glyph, hx, y);
+    if (s.cut > 0.02) {
+      const upStem = isFlipped(s) ? !!TAILED[s.g] : !!STEMMED[s.g];
+      const y0 = upStem ? y - 3.7 + s.cut : y - 1.5, y1 = upStem ? y + 1.5 : y + 3.7 - s.cut;
+      o += `<clipPath id="c-${s.id}"><rect x="${f(hx - 1)}" y="${f(y0)}" width="${f(s.hw + 3)}" height="${f(y1 - y0)}"/></clipPath><g clip-path="url(#c-${s.id})">${gm}</g>`;
+    } else o += gm;
+  }
   if (s.dot && !s.ligSvg) {
     const dy = top + 4 - (s.pos % 2 === 0 ? s.pos + 1 : s.pos) * 0.5;
     o += `<circle class="ink" cx="${f(hx + s.hw + 0.4)}" cy="${f(dy)}" r="0.19"/>`;
@@ -1332,35 +1339,57 @@ function buildLines(vlist, a, b, W, opts = {}){
   });
 }
 /* vertical room a voice needs in a line */
+const CUTTABLE = {M: 1, Mc: 1, L: 1, Lc: 1, Mx: 1, Mxc: 1};   /* stems without a flag: they may be drawn shorter where they would hit something */
+const STEM_MIN = 2.2;
 function lineRoom(v, line){
   const m = Math.min(1, st.vs), pad = 0.05 + 0.25 * m, base = 0.05 + 0.7 * m;
   const n = Math.max(1, line.to - line.from);
-  /* per column how far the music reaches above and below the staff (so a neighbouring staff only keeps clear where something really is) */
-  const lo = Array(n).fill(-base), hi = Array(n).fill(4 + base), hiTxt = Array(n).fill(4 + base);
-  const up = (i, y) => { lo[i] = Math.min(lo[i], y); }, dn = (i, y) => { hi[i] = Math.max(hi[i], y); };
-  /* the custos at the line end, pointing at the next note */
+  /* per column how far the music reaches above and below the staff (so a neighbouring staff only keeps clear where something really is).
+     kind: 'full' stems at their length, 'short' stems that may be cut at the shortest they may be, 'base' without those stems */
   const tEnd = line.tEnd !== undefined ? line.tEnd : line.to < line.cols.length ? line.cols[line.to].t : null;
   const nx = tEnd !== null && !line.endsPiece ? nextSym(v, tEnd) : null;
-  if (nx && !nx.rest && nx.pos !== null && nx.pos !== undefined) { const y = 4 - nx.pos * 0.5; up(n - 1, y - 1.9 - pad); dn(n - 1, y + 1.9 + pad); }
-  /* the clef and the key signature at the line start */
-  up(0, -1.3 - pad);
-  for (const k of keySig(v, line.cols[line.from].t, v.clef)) { const y = 4 - k.pos * 0.5; up(0, y - (/fl/.test(k.g) ? 2.1 : 1.6) - pad); dn(0, y + 1.6 + pad); }
-  for (let i = line.from; i < line.to; i++) {
-    const s = line.cols[i].items.get(v);
-    if (!s) continue;
-    const e = extent(s);
-    up(i - line.from, e[0] - pad); dn(i - line.from, e[1] + pad);
-    /* what the lyric row has to clear: not a stem that its syllable stands beside */
-    const ci = i - line.from; hiTxt[ci] = Math.max(hiTxt[ci], (s.lyo ? Math.min(e[1], 4 - s.pos * 0.5 + 0.8) : e[1]) + pad);
-  }
-  /* a note's reach counts for its neighbours too */
-  const lo2 = lo.map((x, i) => Math.min(x, lo[i - 1] ?? 0, lo[i + 1] ?? 0)), hi2 = hi.map((x, i) => Math.max(x, hi[i - 1] ?? 0, hi[i + 1] ?? 0));
+  const build = kind => {
+    const lo = Array(n).fill(-base), hi = Array(n).fill(4 + base);
+    const up = (i, y) => { lo[i] = Math.min(lo[i], y); }, dn = (i, y) => { hi[i] = Math.max(hi[i], y); };
+    /* the custos at the line end, pointing at the next note */
+    if (nx && !nx.rest && nx.pos !== null && nx.pos !== undefined) { const y = 4 - nx.pos * 0.5; up(n - 1, y - 1.9 - pad); dn(n - 1, y + 1.9 + pad); }
+    /* the clef and the key signature at the line start */
+    up(0, -1.3 - pad);
+    for (const k of keySig(v, line.cols[line.from].t, v.clef)) { const y = 4 - k.pos * 0.5; up(0, y - (/fl/.test(k.g) ? 2.1 : 1.6) - pad); dn(0, y + 1.6 + pad); }
+    for (let i = line.from; i < line.to; i++) {
+      const s = line.cols[i].items.get(v);
+      if (!s) continue;
+      const cut = CUTTABLE[s.glyph] && !s.ligSvg;
+      const e = extent(s, kind === 'full' || !cut ? 3.6 : kind === 'short' ? STEM_MIN : 0);
+      up(i - line.from, e[0] - pad); dn(i - line.from, e[1] + pad);
+    }
+    /* a note's reach counts for its neighbours too */
+    return [lo.map((x, i) => Math.min(x, lo[i - 1] ?? 0, lo[i + 1] ?? 0)), hi.map((x, i) => Math.max(x, hi[i - 1] ?? 0, hi[i + 1] ?? 0))];
+  };
+  const [lo2, hi2] = build('full'), [loS, hiS] = build('short'), [loB, hiB] = build('base');
+  /* what the lyric row has to clear: not a stem that its syllable stands beside, nor one on a note without a syllable */
+  const hiTxt = Array(n).fill(4 + base);
+  for (let i = line.from; i < line.to; i++) { const s = line.cols[i].items.get(v); if (s) hiTxt[i - line.from] = Math.max(hiTxt[i - line.from], extent(s, 0)[1] + pad); }
   const txt2 = hiTxt.map((x, i) => Math.max(x, hiTxt[i - 1] ?? 0, hiTxt[i + 1] ?? 0));
   let above = -Math.min(...lo2), below = Math.max(...hi2) - 4;
   const lyr = vis(v.idx).lyr && v.syms.some(s => s.text);
   const lyrY = Math.max(4 + 1.5 + 1.1 * m, 4 + (Math.max(...txt2) - 4) + 0.9 + 0.6 * m);
-  if (lyr) { for (let i = 0; i < hi2.length; i++) hi2[i] = Math.max(hi2[i], lyrY + 0.7); below = Math.max(...hi2) - 4; }
-  return {above, below, lyrY, lo: lo2, hi: hi2};
+  if (lyr) {
+    /* the lyric row only claims room where a syllable (or its dash) really stands, so a neighbouring staff's stems may pass the empty stretches of the row */
+    const hit = new Array(n).fill(!line.xs), sy = [];
+    if (line.xs) for (let i = line.from; i < line.to; i++) { const q = line.cols[i].items.get(v); if (q && q.text) sy.push([q, line.xs[i]]); }
+    sy.forEach(([q, X], k) => {
+      const cx = X + q.hw / 2 + q.lyo;
+      let lo = cx - q.tw / 2 - 0.4, hiX = cx + q.tw / 2 + 0.4;
+      if (q.ww && st.dashes === 'off') hiX = Math.max(hiX, X + q.hw / 2 + q.lyo - q.tw / 2 + q.ww + 0.4);
+      if (q.hy && k + 1 < sy.length) { const [r, X2] = sy[k + 1]; hiX = Math.max(hiX, X2 + r.hw / 2 + r.lyo - r.tw / 2); }
+      else if (q.hy) hiX = line.x1;
+      for (let j = line.from; j < line.to; j++) { const mx = line.xs[j] + 0.65; if (mx >= lo && mx <= hiX) hit[j - line.from] = true; }
+    });
+    for (const H of [hi2, hiS, hiB]) for (let i = 0; i < n; i++) if (hit[i] || hit[i - 1] || hit[i + 1]) H[i] = Math.max(H[i], lyrY + 0.7);
+    below = Math.max(lyrY + 0.7, ...hi2) - 4;
+  }
+  return {above, below, lyrY, lo: lo2, hi: hi2, loS, hiS, loB, hiB};
 }
 function nextSym(v, t){
   return v.syms.find(s => s.t >= t - EPS) || null;
@@ -1433,7 +1462,7 @@ function drawSystem(vlist, line, y, opts = {}){
     if (!k) return 0;
     const A = rooms[k - 1], B = rooms[k];
     let d = 0;
-    for (let i = 0; i < A.hi.length; i++) d = Math.max(d, (A.hi[i] - 4) + -B.lo[i]);
+    for (let i = 0; i < A.hiS.length; i++) d = Math.max(d, (A.hiS[i] - 4) + -B.loS[i]);
     return d + gap;
   });
   if (st.eq === 'on' && vlist.length > 1) { const D = Math.max(...need.slice(1)); for (let k = 1; k < need.length; k++) need[k] = D; }
@@ -1443,6 +1472,18 @@ function drawSystem(vlist, line, y, opts = {}){
     tops.push(yy);
   });
   yy += 4 + rooms[vlist.length - 1].below;
+  /* stems that would reach into what the neighbouring staff has at that place (its notes, accidentals or lyrics) are drawn shorter, not the staves further apart */
+  for (const v of vlist) for (let i = line.from; i < line.to; i++) { const q = line.cols[i].items.get(v); if (q) q.cut = 0; }
+  vlist.forEach((v, k) => {
+    for (let i = line.from; i < line.to; i++) {
+      const q = v.syms && line.cols[i].items.get(v);
+      if (!q || q.rest || q.pos === null || q.pos === undefined || !CUTTABLE[q.glyph] || q.ligSvg) continue;
+      const ci = i - line.from, y = 4 - q.pos * 0.5, upStem = isFlipped(q) ? !!TAILED[q.g] : !!STEMMED[q.g];
+      const max = 3.544 - STEM_MIN;
+      if (upStem && k > 0) { const floor = tops[k - 1] + rooms[k - 1].hiB[ci] + 0.1, tip = tops[k] + y - 3.544; if (tip < floor) q.cut = Math.min(max, floor - tip); }
+      else if (!upStem && k + 1 < vlist.length) { const ceil = tops[k + 1] + rooms[k + 1].loB[ci] - 0.1, tip = tops[k] + y + 3.544; if (tip > ceil) q.cut = Math.min(max, tip - ceil); }
+    }
+  });
   let s = '';
   if (secRoom) s += sectionLabels(line, tops[0] - rooms[0].above - 0.4, line.x1);
   vlist.forEach((v, k) => {
