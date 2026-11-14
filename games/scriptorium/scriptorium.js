@@ -128,7 +128,7 @@ ${APP.catalogue ? LIBBTN + NEWBTN + '<div id="openRecent"></div><button class="t
     <div id="countBox" aria-live="off" hidden></div>
     <ul id="clefPick" class="menu" role="menu" aria-label="Clef" hidden></ul>
     <button class="pagenav next" id="pgNext" aria-label="Next page" title="Next page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button>
-    <div class="handbox" id="handBox" title="The tactus: the hand drops on one beat and lifts on the next" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="handRot"></g></svg></div><div class="handbox pendbox" id="pendBox" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="pendG"><path d="M66 158 H130 L120 142 H76Z" fill="currentColor"/><g id="pendRot"><line x1="98" y1="150" x2="98" y2="-16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="84" y="14" width="28" height="34" rx="4" fill="currentColor"/></g></g></svg></div>
+    <div class="handbox" id="handBox" title="The tactus: the hand drops on one beat and lifts on the next" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="handRot"></g></svg></div><div class="handbox pendbox" id="pendBox" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="pendG"><path d="M66 158 H130 L120 142 H76Z" fill="currentColor"/><g id="pendRot"><line x1="98" y1="150" x2="98" y2="-16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="84" y="14" width="28" height="34" rx="4" fill="currentColor"/></g></g></svg></div><div class="handpop" id="handPop" role="group" aria-label="Hand settings" hidden><label for="handSizeP">Size</label><input type="range" id="handSizeP" min="0.4" max="2.5" step="0.05"><label for="handOpP">Opacity</label><input type="range" id="handOpP" min="0.05" max="1" step="0.05"></div>
   </div>
 
   <section class="transport" aria-label="Playback and sound">
@@ -4303,8 +4303,36 @@ $('#keepBtn').addEventListener('click', () => {
 syncEdit();
 
 /* the hand's look (the hand itself, the pendulum and the beat menu are the shared engine's) */
-$('#handOp').addEventListener('input', e => { st.handOp = +e.target.value; save(); Organ.syncBeat(); });
-$('#handSize').addEventListener('input', e => { st.handSize = +e.target.value; save(); Organ.syncBeat(); });
+['handOp', 'handSize'].forEach(k => ['#' + k, '#' + k + 'P'].forEach(id => $(id).addEventListener('input', e => {
+  st[k] = +e.target.value; $('#' + k).value = $('#' + k + 'P').value = st[k]; save(); Organ.syncBeat(); })));
+/* hovering the hand (or the pendulum) opens a small panel with its size and opacity, like the Sound panel:
+   it closes a moment after the pointer leaves; on a touch screen a tap on the hand opens and closes it */
+(function(){
+  const pop = $('#handPop'), boxes = [$('#handBox'), $('#pendBox')];
+  const hov = () => window.matchMedia && matchMedia('(hover:hover)').matches;
+  let tm = 0, from = null;
+  const place = () => {
+    const bx = from && !from.hidden ? from : boxes.find(x => !x.hidden) || boxes[0];
+    const b = bx.querySelector('svg > g').getBoundingClientRect();   /* the drawing itself, not its box */
+    pop.hidden = false;
+    const w = pop.offsetWidth, h = pop.offsetHeight;
+    let x = b.left + b.width / 2 - w / 2, y = b.bottom + 4;
+    if (y + h > innerHeight - 8) y = Math.max(8, b.top - h - 4);
+    pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, x)) + 'px'; pop.style.top = Math.max(8, y) + 'px';
+  };
+  const show = box => { clearTimeout(tm); if (box) from = box; if (pop.hidden) { $('#handSizeP').value = st.handSize; $('#handOpP').value = st.handOp; place(); } };
+  const hide = () => { clearTimeout(tm); tm = setTimeout(() => { if (pop.matches(':hover') || pop.contains(document.activeElement) && document.activeElement.matches(':focus-visible')) return; pop.hidden = true; }, 330); };
+  boxes.forEach(bx => { const svg = bx.querySelector('svg');
+    svg.addEventListener('mouseover', () => { if (hov()) show(bx); });
+    svg.addEventListener('mouseout', e => { if (hov() && !svg.contains(e.relatedTarget)) hide(); });
+    svg.addEventListener('click', e => { if (hov()) return; e.stopPropagation(); if (pop.hidden) show(bx); else pop.hidden = true; }); });
+  pop.addEventListener('mouseenter', () => { if (hov()) show(); });
+  pop.addEventListener('mouseleave', () => { if (hov()) hide(); });
+  pop.addEventListener('click', e => e.stopPropagation());
+  document.addEventListener('click', () => { pop.hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') pop.hidden = true; });
+  /* while the size slider moves, the panel stays under the pointer: it is not re-placed until it opens again */
+})();
 if ($('#audition')) $('#audition').addEventListener('change', e => { st.audition = e.target.checked; save(); });
 
 /* the music box fills the window (or the visitor's window, when embedded), with the controls above and below it */
@@ -4574,7 +4602,7 @@ $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
   let timer = 0, lastY = null, topOn = true, botOn = true;
   const wide = () => window.innerWidth > 700;
   const hold = () => {
-    if (document.querySelector('.pop.open, .pop:hover') || document.querySelector('.pop:has(:focus-visible)') || !libEl.hidden || !$('#tpSide').hidden) return true;
+    if (!$('#handPop').hidden || document.querySelector('.pop.open, .pop:hover') || document.querySelector('.pop:has(:focus-visible)') || !libEl.hidden || !$('#tpSide').hidden) return true;
     const a = document.activeElement;
     return !!(a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && a.closest('.tools,.transport'));
   };

@@ -336,6 +336,13 @@ button[aria-pressed="true"]:hover:not(:disabled){background:#6F2017;color:var(--
 .transport .popbody{top:auto;bottom:calc(100% - 2px)}
 .handbox{color:#2A2218}
 .handbox[hidden]{display:none}
+/* the hand itself (its drawn strokes, not the empty box around it) answers the pointer: hovering it opens its settings */
+.handbox svg g{pointer-events:visiblePainted;cursor:pointer}
+.handpop{position:fixed;z-index:80;display:grid;grid-template-columns:auto 150px;gap:8px 12px;align-items:center;padding:10px 14px;background:var(--surface);color:var(--text);
+  border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 28px -12px rgba(0,0,0,.4);font-size:14px}
+.handpop[hidden]{display:none}
+.handpop input[type=range]{width:150px;margin:0}
+html.dark .handpop{box-shadow:0 14px 34px -10px rgba(0,0,0,.85)}
 .pendbox.both{right:calc(190px * var(--hand-sc,1))}
 #reg{width:178px}
 @media (max-width:700px){
@@ -609,7 +616,7 @@ body.editing #pages .stafhit{cursor:crosshair}
 @media print{
   html,body{background:#fff !important;overflow:visible !important;height:auto !important}
   .wrap{padding:0 !important}
-  header.top,.tools,.transport,.pnum,.msg,.handbox,.pendbox,.fsbtn,.fsctl,#countBox,.pagenav,#toast,#clefPick,.markbar,.srcnote{display:none !important}
+  header.top,.tools,.transport,.pnum,.msg,.handbox,.handpop,.pendbox,.fsbtn,.fsctl,#countBox,.pagenav,#toast,#clefPick,.markbar,.srcnote{display:none !important}
   .viewer{height:auto !important;width:auto !important;overflow:visible !important;padding:0 !important;background:none !important;box-shadow:none !important}
   #pages{display:block !important;gap:0;width:auto !important}
   .opening{display:block}
