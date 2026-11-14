@@ -20,6 +20,8 @@ const escH = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>'
   const LIBBTN = LIBSUB
     ? `<button class="tb openfile" id="libBtn" aria-haspopup="true" aria-expanded="false" aria-controls="library"><span class="of-t">${esc(L.lib)}</span><span class="of-f">${esc(LIBSUB)}</span></button>`
     : `<button class="tb" id="libBtn" aria-haspopup="true" aria-expanded="false" aria-controls="library">${esc(L.lib)}</button>`;
+  /* Open menu order (Samuel 2026-11-14): Repertoire, Open file, New score, then Recent scores and My scores */
+  const OPENBTN = `<button class="tb openfile" id="openBtn"${APP.openFile === false ? ' hidden' : ''}><span class="of-t">Open file</span><span class="of-f">.mxl · MuseScore · MIDI · LilyPond · .krn · .gabc · CMME</span></button>`;
   const NEWBTN = `<button class="tb" id="newBtn" title="${esc(L.newTitle)}">${esc(L.newScore)}</button>`;
   document.body.insertAdjacentHTML('afterbegin', `<main class="wrap">
   <header class="top"><h1>${esc(APP.name)}</h1></header>
@@ -86,8 +88,7 @@ ${APP.popsBeforeVoices || ''}
         <div class="podg" id="libPod"><div class="libwrap"><div class="pop" id="popOpen">
           <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Open<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
           <div class="popbody"><div class="btns col" id="openList">
-${APP.catalogue ? LIBBTN + NEWBTN + '<div id="openRecent"></div><button class="tb openfile" id="myBtn"><span class="of-t">' + esc(L.mine) + '</span><span class="of-f">Everything you have kept</span></button>' : APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
-            <button class="tb openfile" id="openBtn"${APP.openFile === false ? ' hidden' : ''}><span class="of-t">Open file</span><span class="of-f">.mxl · MuseScore · MIDI · LilyPond · .krn · .gabc · CMME</span></button>
+${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead" hidden>Recent scores</div><div id="openRecent"></div><button class="tb openfile" id="myBtn"><span class="of-t">' + esc(L.mine) + '</span><span class="of-f">Everything you have kept</span></button>' : APP.newFirst ? NEWBTN + LIBBTN + OPENBTN : LIBBTN + OPENBTN + NEWBTN}
           </div></div>
         </div>
           <div id="library" class="library" role="dialog" aria-label="Pieces" hidden></div>
@@ -780,10 +781,15 @@ Organ.init(st, {
 });
 if (st.audition === undefined) st.audition = true;
 let toastTimer = 0;
-function toast(msg){
+function toast(msg, act){
   const t = document.getElementById('toast'); if (!t) return;
-  t.textContent = msg; t.classList.add('on');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
+  t.textContent = msg; t.classList.add('on'); t.classList.toggle('act', !!act);
+  if (act) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'toastact'; b.textContent = act.label;
+    b.addEventListener('click', () => { t.classList.remove('on', 'act'); act.fn(); });
+    t.appendChild(b);
+  }
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on', 'act'), act ? 6000 : 2600);
 }
 
 let piece = null;           /* parsed piece */
@@ -2293,8 +2299,8 @@ function favBtn(key, on, title){
 function mineRows(){
   const all = mineAll(), favs = favAll();
   return [
-    ...Object.keys(all).filter(id => !mineEmpty(id, all)).map(id => ({at: all[id].at, pc: itemHtml(id, all[id].title || 'Untitled', (L.mineSub ? L.mineSub + 'last edited ' : 'Last edited ') + whenEdited(all[id].at)), html: `<div class="mine">${itemHtml(id, all[id].title || 'Untitled', (L.mineSub ? L.mineSub + 'last edited ' : 'Last edited ') + whenEdited(all[id].at))}<button class="mdel" data-del="${esc(id)}" aria-label="Remove ${esc(all[id].title || 'this score')}" title="Remove from ${esc(L.mine)}">×</button></div>`})),
-    ...Object.keys(favs).map(k => ({at: favs[k].at, pc: itemHtml(k, favs[k].t, favs[k].c), html: `<div class="mine">${itemHtml(k, favs[k].t, favs[k].c)}${favBtn(k, true, favs[k].t)}</div>`}))
+    ...Object.keys(all).filter(id => !mineEmpty(id, all)).map(id => ({key: id, own: true, title: all[id].title || 'Untitled', at: all[id].at, pc: itemHtml(id, all[id].title || 'Untitled', (L.mineSub ? L.mineSub + 'last edited ' : 'Last edited ') + whenEdited(all[id].at)), html: `<div class="mine">${itemHtml(id, all[id].title || 'Untitled', (L.mineSub ? L.mineSub + 'last edited ' : 'Last edited ') + whenEdited(all[id].at))}<button class="mdel" data-del="${esc(id)}" aria-label="Remove ${esc(all[id].title || 'this score')}" title="Remove from ${esc(L.mine)}">×</button></div>`})),
+    ...Object.keys(favs).map(k => ({key: k, own: false, title: favs[k].t || k, at: favs[k].at, pc: itemHtml(k, favs[k].t, favs[k].c), html: `<div class="mine">${itemHtml(k, favs[k].t, favs[k].c)}${favBtn(k, true, favs[k].t)}</div>`}))
   ].sort((a, b) => b.at - a.at);
 }
 function mineHtml(){
@@ -2304,7 +2310,14 @@ function mineHtml(){
     : L.mineHint ? `<p class="libhint">${esc(L.mineHint)}</p>` : '');
 }
 /* the five most recent scores, listed in the Open menu itself (ChoirBook) */
-function recentSync(){ const box = $('#openRecent'); if (box) box.innerHTML = mineRows().slice(0, 5).map(r => r.pc).join(''); }
+/* each with a small × that takes it off: a starred piece is unstarred; a score of your own is removed from My scores,
+   with Undo in the message for a few seconds */
+function recentSync(){
+  const box = $('#openRecent'); if (!box) return;
+  const rows = mineRows().slice(0, 5);
+  box.innerHTML = rows.map(r => `<div class="rrow">${r.pc}<button class="rdel" data-del="${esc(r.key)}" aria-label="Remove ${esc(r.title)}" title="${r.own ? 'Delete this score' : 'Take it off My scores'}">×</button></div>`).join('');
+  const hd = $('#recentHead'); if (hd) hd.hidden = !rows.length;
+}
 function refreshMine(){
   recentSync();
   const box = $('#libMine'); if (box) box.innerHTML = mineHtml();
@@ -2856,6 +2869,22 @@ if ($('#myBtn')) $('#myBtn').addEventListener('click', e => { e.stopPropagation(
 }
 /* a piece chosen in the recent list opens at once */
 if ($('#openRecent')) $('#openRecent').addEventListener('click', e => {
+  const x = e.target.closest('.rdel');
+  if (x) {
+    e.stopPropagation(); e.preventDefault();
+    const id = x.dataset.del, all = mineAll();
+    if (!all[id]) { toggleFav(id); return; }
+    const entry = all[id]; let text = null; try { text = localStorage.getItem(EKEY(id)); } catch (err) {}
+    delete all[id]; mineSave(all); try { localStorage.removeItem(EKEY(id)); } catch (err) {}
+    refreshMine();
+    if (H.mineRemoved) H.mineRemoved(id);
+    toast(`“${entry.title || 'Untitled'}” deleted.`, {label: 'Undo', fn: () => {
+      const a = mineAll(); a[id] = entry; mineSave(a);
+      if (text !== null) { try { localStorage.setItem(EKEY(id), text); } catch (err) {} }
+      refreshMine();
+    }});
+    return;
+  }
   const b = e.target.closest('.pc'); if (!b) return;
   mark = null; loadPiece(b.dataset.p).catch(err => { pagesEl.innerHTML = `<p class="msg">${err.html || esc(err.message)}</p>`; });
 });
@@ -3128,7 +3157,7 @@ function applyText(text){
   if (pieceKey && pieceKey.startsWith('mine:')) { try { localStorage.setItem(EKEY(pieceKey), text); } catch (e) {} }
   else if (pieceKey && pieceKey.startsWith('file:')) fileKeep(pieceKey.slice(5), text);
   else if (!ed.warned) { ed.warned = true; toast('Changes to this piece are not kept once you leave it. Export, Save to My scores keeps a copy.'); }
-  if (pieceKey && pieceKey.startsWith('mine:')) { const all = mineAll(); if (all[pieceKey]) { all[pieceKey].title = piece.title; all[pieceKey].at = Date.now(); mineSave(all); } }
+  if (pieceKey && pieceKey.startsWith('mine:')) { const all = mineAll(); if (all[pieceKey]) { all[pieceKey].title = piece.title; all[pieceKey].at = Date.now(); mineSave(all); } recentSync(); }
   if (sel) { const v = piece.voices[sel.vi]; if (!v || sel.ei >= v.events.length) ed.sel = v && v.events.length ? {vi: sel.vi, ei: v.events.length - 1} : null; }
   if (ed.ins) { const v = piece.voices[ed.ins.vi]; if (!v) ed.ins = null; else ed.ins.ei = Math.min(ed.ins.ei, v.events.length); }
   if (H.applyEnd) H.applyEnd(ha);

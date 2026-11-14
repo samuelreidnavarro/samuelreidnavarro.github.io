@@ -1065,3 +1065,13 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
 #secMenu li svg{width:20px;height:34px;fill:currentColor}
 #secMenu li.mdel{grid-column:1/-1;flex-direction:row;justify-content:center;padding:5px 8px;border-top:1px solid var(--line);border-radius:0;margin-top:2px}
 @media print{#pages .sechit{display:none}}
+/* Open menu: the Recent scores heading, and a small × on each recent score */
+#openList .rhead{font-size:13px;color:var(--muted);padding:8px 10px 2px;border-top:1px solid var(--line);margin-top:4px;cursor:default;user-select:none}
+#openList .rhead[hidden]{display:none}
+#openRecent .rrow{display:flex;align-items:center;gap:2px}
+#openRecent .rrow .pc{flex:1;min-width:0}
+#openRecent .rdel{flex:none;width:28px;height:28px;min-height:0;padding:0;border:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;border-radius:6px;display:grid;place-items:center}
+#openRecent .rdel:hover{background:var(--ground);color:var(--text)}
+@media (hover:hover){ #openRecent .rdel{opacity:.35} #openRecent .rrow:hover .rdel{opacity:1} }
+#toast.act{pointer-events:auto;display:flex;align-items:center;gap:14px}
+#toast .toastact{background:transparent;border:1px solid currentColor;color:inherit;border-radius:5px;padding:3px 10px;font:inherit;font-size:15px;cursor:pointer;min-height:0;height:auto}
