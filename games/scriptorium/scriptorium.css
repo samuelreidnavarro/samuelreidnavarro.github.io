@@ -810,3 +810,17 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 #navBtns .navv{display:flex;align-items:center;gap:10px;justify-content:flex-start}
 #navBtns .navv .navg{display:inline-flex;width:28px;justify-content:center}
 #navBtns .navv svg{height:1.4em;width:auto}
+
+/* presets in Engraving */
+.pslab{align-self:start;margin-top:6px}
+#presetBox{display:flex;flex-direction:column;gap:6px}
+#presetList{display:flex;flex-direction:column;gap:4px}
+.prow{display:flex;align-items:center;gap:8px}
+.prow .pname{flex:1;justify-content:flex-start}
+.pchk{display:flex;align-items:center;gap:4px;color:var(--muted);font-size:13px;cursor:pointer}
+.pchk .plab{display:none}
+.pchk input{width:18px;height:18px;accent-color:var(--accent,#8E2A1E)}
+.pdel{width:28px;height:28px}
+#presetNew{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+#presetForm{display:flex;gap:6px}
+#presetForm input{width:130px;padding:6px 8px;font:inherit}

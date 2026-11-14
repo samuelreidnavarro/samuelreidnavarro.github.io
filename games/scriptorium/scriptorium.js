@@ -63,6 +63,7 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Syllable dashes</span><div class="btns" id="dashSeg" role="group" aria-label="Syllable dashes"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <span class="lab" id="verseLab">Verse</span><div class="btns" id="verseSeg" role="group" aria-label="Verse"></div>
+          <span class="lab pslab">Presets</span><div id="presetBox"><div id="presetList"></div><div id="presetNew"><button class="tb" id="presetAdd">Save current settings as preset</button><span id="presetForm" hidden><input id="presetName" type="text" placeholder="Name" maxlength="30" autocomplete="off"><button class="tb" id="presetOk">Save</button></span></div></div>
         </div></div>
       </div></div>
       <div class="grow">
@@ -659,6 +660,16 @@ st.hs = Math.max(0, Math.min(1.2, st.hs)); st.vs = Math.max(0, Math.min(2, st.vs
 if (st.bars === 'mstrich') st.bars = 'full';
 /* barlines now stand in each staff only; everyone starts again from those */
 if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
+/* presets (shared by the apps through the browser): the two built-in ones and the ones Samuel saves; one of them opens every score */
+const PRESET_KEYS = ['nota', 'clefs', 'bars', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'orient', 'flow'];
+const MENS1 = {nota: 'real', clefs: 'mens', bars: 'none', staff: 'red', lines: '5', paperCol: 'beige', size: 1.75, hs: 0.45, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', orient: 'portrait', flow: 'vertical'};
+const BUILTIN = [{name: 'Mensural 1', s: MENS1, fixed: true}, {name: 'Mensural 2', s: {...MENS1, paperCol: 'white', bars: 'full'}, fixed: true}];
+const PKEY = 'scriptorium:presets';
+function presetStore(){ let o = {}; try { o = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch (e) {} return {custom: Array.isArray(o.custom) ? o.custom : [], active: o.active || 'Mensural 1'}; }
+function presetPut(o){ try { localStorage.setItem(PKEY, JSON.stringify(o)); } catch (e) {} }
+const presetAll = () => [...BUILTIN, ...presetStore().custom];
+function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; }
+if (APP.id !== 'cantus-firmus') { const P = presetAll().find(q => q.name === presetStore().active) || BUILTIN[0]; presetApply(P); st.barsV = 2; }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} if (window.Organ) Organ.saveShared(); };
 /* playback, metronome and sound: shared/organ.js, the same engine as the CantusFirmus app's */
 const UNIT_NAMES = {Mx: 'Maxima', L: 'Longa', B: 'Brevis', S: 'Semibrevis', M: 'Minima', Sm: 'Semiminima', F: 'Fusa'};
@@ -2075,6 +2086,28 @@ function syncUI(){
   }
   document.querySelectorAll('#library .pc').forEach(b => b.setAttribute('aria-current', String(b.dataset.p === pieceKey)));
 }
+/* ---------------- Presets ---------------- */
+function presetList(){
+  const S = presetStore();
+  $('#presetList').innerHTML = presetAll().map(p => `<div class="prow"><label class="pchk" title="Open all scores with this preset"><input type="checkbox" data-p="${esc(p.name)}"${p.name === S.active ? ' checked' : ''}><span class="plab">Open all scores with it</span></label><button class="tb pname" data-p="${esc(p.name)}" title="Use this preset now">${esc(p.name)}</button>${p.fixed ? '' : `<button class="vbtn pdel" data-d="${esc(p.name)}" aria-label="Delete ${esc(p.name)}" title="Delete this preset">×</button>`}</div>`).join('');
+}
+$('#presetList').addEventListener('click', e => {
+  const d = e.target.closest('[data-d]'), n = e.target.closest('.pname'), c = e.target.closest('input[type=checkbox]');
+  if (d) { const S = presetStore(); S.custom = S.custom.filter(q => q.name !== d.dataset.d); if (S.active === d.dataset.d) S.active = 'Mensural 1'; presetPut(S); presetList(); }
+  else if (n) { const p = presetAll().find(q => q.name === n.dataset.p); if (p) { presetApply(p); save(); syncUI(); render(); } }
+  else if (c) { e.preventDefault(); const S = presetStore(); S.active = c.dataset.p; presetPut(S); presetList(); }
+});
+$('#presetAdd').addEventListener('click', () => { $('#presetForm').hidden = false; $('#presetName').focus(); });
+function presetSaveNow(){
+  const name = $('#presetName').value.trim(); if (!name) return;
+  const S = presetStore(), s = {}; for (const k of PRESET_KEYS) s[k] = st[k];
+  if (BUILTIN.some(b => b.name === name)) { toast('That name is taken'); return; }
+  S.custom = S.custom.filter(q => q.name !== name); S.custom.push({name, s}); presetPut(S);
+  $('#presetName').value = ''; $('#presetForm').hidden = true; presetList(); toast('Preset saved');
+}
+$('#presetOk').addEventListener('click', presetSaveNow);
+$('#presetName').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') presetSaveNow(); });
+presetList();
 segInit('#viewList', 'view'); segInit('#notaSeg', 'nota'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars');
 segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#ctlSeg', 'ctlMode', () => { if (window.__ctlWake) window.__ctlWake(); }); segInit('#edSeg', 'ed'); segInit('#ligSeg', 'lig'); segInit('#scrollSeg', 'webScroll', () => { viewerEl.scrollLeft = 0; });
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
