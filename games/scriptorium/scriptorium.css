@@ -888,3 +888,8 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 .ptri[data-s="mute"]{color:var(--muted);background:color-mix(in srgb,var(--text) 7%,transparent)}
 .ptri[data-s="mute"] svg path:first-child{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
 .ptri[data-s="off"]{color:var(--muted);opacity:.6;border-style:dashed}
+
+/* ChoirBook: the Repertoire is the first choice of the Open menu, in the red of the Play button */
+#openList #libBtn{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+#openList #libBtn .of-f{color:inherit;opacity:.85}
+#openList #libBtn:hover:not(:disabled){background:#6F2017;color:var(--accent-ink)}

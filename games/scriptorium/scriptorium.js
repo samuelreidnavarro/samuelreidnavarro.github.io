@@ -85,9 +85,8 @@ ${APP.popsBeforeVoices || ''}
         <div class="podg" id="libPod"><div class="libwrap"><div class="pop" id="popOpen">
           <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Open<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
           <div class="popbody"><div class="btns col" id="openList">
-${APP.catalogue ? NEWBTN + '<div id="openRecent"></div><button class="tb openfile" id="myBtn"><span class="of-t">' + esc(L.mine) + '</span><span class="of-f">Everything you have kept</span></button>' : APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
+${APP.catalogue ? LIBBTN + NEWBTN + '<div id="openRecent"></div><button class="tb openfile" id="myBtn"><span class="of-t">' + esc(L.mine) + '</span><span class="of-f">Everything you have kept</span></button>' : APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
             <button class="tb openfile" id="openBtn"${APP.openFile === false ? ' hidden' : ''}><span class="of-t">Open file</span><span class="of-f">.mxl · MuseScore · MIDI · LilyPond · .krn · .gabc · CMME</span></button>
-${APP.catalogue ? LIBBTN : ''}
           </div></div>
         </div>
           <div id="library" class="library" role="dialog" aria-label="Pieces" hidden></div>
@@ -1302,7 +1301,8 @@ function staffLine(o){
   if (show) {
     for (let k = 0; k < syms.length; k++) {
       const [sym, X] = syms[k];
-      if (sym.tieNext && !sym.rest) {
+      /* mensural notation has no ties: a value that no single note can show is written as the notes that make it up, the arc is only for modern notation */
+      if (sym.tieNext && !sym.rest && st.nota !== 'real') {
         const nx = syms[k + 1];
         const xa = X + sym.hw + 0.15, xb = nx ? nx[1] - 0.15 : o.lineEnd - 1.4;
         const y = top + 4 - sym.pos * 0.5 + (sym.pos >= 4 ? -0.9 : 0.9), dir = sym.pos >= 4 ? -1 : 1;
