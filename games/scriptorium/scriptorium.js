@@ -206,7 +206,8 @@ const GLY = {"Mx":{"d":"M2.456 -0.684H2.42C2.396 -0.684 2.38 -0.664 2.38 -0.64V-
 /* filled (coloured) note heads: the outer contour of the void shapes */
 for (const k of ['Mx','L','B','S','M']) GLY[k + 'c'] = {d: GLY[k].d.slice(0, GLY[k].d.indexOf('Z') + 1), b: GLY[k].b};
 
-const gw = k => GLY[k].b[2] - GLY[k].b[0];
+const NATSC = 1.3;   /* the natural sign is drawn a little larger than its glyph (Samuel 2026-11-14) */
+const gw = k => (GLY[k].b[2] - GLY[k].b[0]) * (k === 'na' ? NATSC : 1);
 const f = n => (Math.round(n * 1000) / 1000).toString();
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const EPS = 1e-6, eq = (a, b) => Math.abs(a - b) < 1e-4;
@@ -871,7 +872,7 @@ function breakLines(cols, avail, firstAvail){
 /* ------------------------------------------------------------------ */
 /* Drawing                                                             */
 /* ------------------------------------------------------------------ */
-const use = (k, x, y) => `<use href="#g-${k}" x="${f(x)}" y="${f(y)}"/>`;
+const use = (k, x, y) => k === 'na' ? `<use href="#g-na" transform="translate(${f(x)} ${f(y)}) scale(${NATSC})"/>` : `<use href="#g-${k}" x="${f(x)}" y="${f(y)}"/>`;
 const useT = (k, x, y, sx, sy) => `<use href="#g-${k}" transform="translate(${f(x)} ${f(y)}) scale(${sx} ${sy})"/>`;
 const hl = (x1, x2, y, cls, w) => `<line class="${cls}" x1="${f(x1)}" x2="${f(x2)}" y1="${f(y)}" y2="${f(y)}" stroke-width="${w}"/>`;
 const vl = (x, y1, y2, cls, w) => `<line class="${cls}" x1="${f(x)}" x2="${f(x)}" y1="${f(y1)}" y2="${f(y2)}" stroke-width="${w}"/>`;
@@ -1665,7 +1666,7 @@ function navIndex(){
 function goPage(dir){
   const items = navItems(); if (!items.length) return;
   const i = Math.max(0, Math.min(items.length - 1, navIndex() + dir)), c = items[i];
-  viewerEl.scrollTo({left: c.offsetLeft + c.offsetWidth / 2 - viewerEl.clientWidth / 2, behavior: 'smooth'});
+  viewerEl.scrollTo({left: c.offsetLeft + c.offsetWidth / 2 - viewerEl.clientWidth / 2, behavior: webFit() ? 'auto' : 'smooth'});
 }
 function syncNav(){
   const horiz = isHoriz();
@@ -1739,7 +1740,7 @@ function bringIntoView(el, force){
   const offX = st.flow === 'horizontal' && (r.left < vr.left + 50 || r.right > vr.right - 50);
   const offY = r.top < top + 20 || r.bottom > bottom - 20;
   if (!force && !offX && !offY) return false;
-  if (offX) { const c = navItems().find(c => c.contains(el)); if (c) viewerEl.scrollTo({left: c.offsetLeft + c.offsetWidth / 2 - viewerEl.clientWidth / 2, behavior: 'smooth'}); }
+  if (offX) { const c = navItems().find(c => c.contains(el)); if (c) viewerEl.scrollTo({left: c.offsetLeft + c.offsetWidth / 2 - viewerEl.clientWidth / 2, behavior: webFit() ? 'auto' : 'smooth'}); }
   if (offY) {
     const y = r.top - top - (bottom - top) / 3;
     if (EMBED) { try { window.top.scrollBy({top: y, behavior: 'smooth'}); return true; } catch (e) {} }
@@ -3214,7 +3215,11 @@ const clampStep = s => Math.max(STEP_MIN, Math.min(STEP_MAX, Math.round(s)));
 const ACC_ALT = {b: -1, n: 0, '#': 1}, ACC_OF = {fl: 'b', na: 'n', sh: '#'};
 const valKey = s => VALS.some(x => x[0] === s.g) ? s.g : 'S';
 const accOf = s => ACC_OF[s.acc] || ACC_OF[s.edAcc] || '';
-function hear(step, alt){ if (st.audition !== false && !play && step !== null && step !== undefined) Organ.audition(midiOf({step, alt})); }
+function hear(step, alt){
+  if (st.audition === false || play || step === null || step === undefined) return;
+  if (alt === null || alt === undefined) { const v = anyVoice() || (piece && piece.voices[0]); alt = v ? implied(v, step, 0) : 0; }   /* as the key signature has it */
+  Organ.audition(midiOf({step, alt}));
+}
 function symAt(vi, ei){
   const v = piece && piece.voices[vi];
   return v && v.syms ? v.syms.find(q => q.src && q.src.includes(ei)) || null : null;
@@ -3893,7 +3898,7 @@ function startPlay(from, again){
       let struck = false;
       for (let q = k; q <= j; q++) {
         const p = v.syms[q], strike = !struck && p.t + p.d > from + EPS;
-        events.push({id: p.id, t: p.t * 2, d: p.d * 2, midi: midiOf(p), silent: !strike, hold: strike ? (chainEnd - p.t) * 2 : undefined});
+        events.push({id: p.id, t: p.t * 2, d: p.d * 2, midi: midiOf({step: p.step, alt: p.alt === null || p.alt === undefined ? implied(v, p.step, p.t) : p.alt}), silent: !strike, hold: strike ? (chainEnd - p.t) * 2 : undefined});
         if (strike) struck = true;
       }
       k = j;
@@ -3975,7 +3980,7 @@ function followPlay(el, tNow, T){
   }
   if (viewerEl.classList.contains('horiz')) {
     const c = navItems().find(c => c.contains(el));
-    if (c && c !== navItems()[navIndex()] && now > followJump) { followJump = now + 500; viewerEl.scrollTo({left: c.offsetLeft + c.offsetWidth / 2 - viewerEl.clientWidth / 2, behavior: 'smooth'}); }
+    if (c && c !== navItems()[navIndex()] && now > followJump) { followJump = now + 500; viewerEl.scrollTo({left: c.offsetLeft + c.offsetWidth / 2 - viewerEl.clientWidth / 2, behavior: webFit() ? 'auto' : 'smooth'}); }
     return;
   }
   if (viewerEl.classList.contains('frame')) {
