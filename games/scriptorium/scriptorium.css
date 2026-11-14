@@ -876,3 +876,6 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
   body.editing #pages g[class^="n"]:has(>.hit:hover)>use,body.editing #pages g[class^="n"]:has(>.hit:hover)>.ink{fill:var(--hov)}
   body.editing #pages g[class^="n"]:has(>.hit:hover)>.ledger{stroke:var(--hov)}
 }
+
+.infobox .infolink{display:block;margin-top:10px;color:var(--muted);font-style:italic;text-decoration:underline;text-underline-offset:3px}
+.infobox .infolink:hover{color:var(--hov)}

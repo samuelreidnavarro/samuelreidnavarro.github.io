@@ -80,7 +80,7 @@ ${APP.popsBeforeVoices || ''}
       <div class="grow">
         <div class="podg"><div class="pop" id="popInfo">
           <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Info<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-          <div class="popbody"><div class="pagemeta infobox"><label class="lab" for="metaTitle">Title</label><input id="metaTitle" type="text" autocomplete="off"><label class="lab" for="metaComp">Composer</label><input id="metaComp" type="text" autocomplete="off"><span class="lab">Source</span><div id="infoSrc"></div></div></div>
+          <div class="popbody"><div class="pagemeta infobox"><label class="lab" for="metaTitle">Title</label><input id="metaTitle" type="text" autocomplete="off"><label class="lab" for="metaComp">Composer</label><input id="metaComp" type="text" autocomplete="off"><span class="lab">Source</span><div id="infoSrc"></div><a class="infolink" href="../choirbook-acknowledgements.html" target="_top">Acknowledgments</a></div></div>
         </div></div>
         <div class="podg" id="libPod"><div class="libwrap"><div class="pop" id="popOpen">
           <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Open<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
