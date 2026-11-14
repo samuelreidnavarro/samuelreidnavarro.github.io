@@ -990,3 +990,9 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
   .transport>*,.tp-main>*,.tp-stack>*,.tp-tools>*{flex:none !important}
   .transport .popbody{position:fixed;bottom:calc(var(--tph,56px) + 6px);top:auto;left:10px;right:10px;width:auto}
 }
+/* phones: a row with an open menu is no scroll box for the moment (see scriptorium.js), shifted to where it was scrolled */
+@media (max-width:700px), (max-height:520px) and (orientation:landscape){
+  .tools{overflow-x:clip}
+  .tools .bar.popup,.transport.popup{overflow:visible !important}
+  .tools .bar.popup>:first-child,.transport.popup>:first-child{margin-left:calc(-1 * var(--sl,0px))}
+}

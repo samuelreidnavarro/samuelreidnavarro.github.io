@@ -4678,6 +4678,26 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.bar .popbtn'); if (b) place(b); }, true);
   document.addEventListener('pointerenter', e => { const b = e.target.closest && e.target.closest('.bar .popbtn'); if (b) place(b); }, true);
 }
+/* phones: while a menu of a sideways-scrolling row is open, the row stops being a scroll box (Safari on the iPhone cuts off, or hides,
+   fixed menus inside one); the buttons keep their place, and the row scrolls again, where it was, once the menu closes */
+{
+  const rows = () => [...document.querySelectorAll('.tools .bar, .transport')];
+  const sync = () => {
+    for (const r of rows()) {
+      const open = !!r.querySelector('.pop.open, #library:not([hidden])');
+      if (open && !r.classList.contains('popup')) {
+        r.dataset.sl = r.scrollLeft;
+        r.style.setProperty('--sl', r.scrollLeft + 'px');
+        r.classList.add('popup');
+      } else if (!open && r.classList.contains('popup')) {
+        r.classList.remove('popup');
+        r.scrollLeft = +r.dataset.sl || 0;
+      }
+    }
+  };
+  const mo = new MutationObserver(sync);
+  for (const r of rows()) mo.observe(r, {subtree: true, attributes: true, attributeFilter: ['class', 'hidden']});
+}
 /* start */
 if (H.start) H.start(); else (async () => {
   try { await document.fonts.load('100px "IM Fell English"'); await document.fonts.load('italic 100px "IM Fell English"'); } catch (e) {}
