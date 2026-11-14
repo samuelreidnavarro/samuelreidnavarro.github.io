@@ -355,8 +355,50 @@
   const LY_MODE = {major: 0, ionian: 0, minor: -3, aeolian: -3, dorian: -2, phrygian: -4, lydian: 1, mixolydian: -1, locrian: -5};
   const lyAlt = s => ({isis: 2, is: 1, eses: -2, es: -1, s: -1, ses: -2}[s] || 0);
   const LY_DUR = {1: 1, 2: 2, 4: 4, 8: 8, 16: 16, 32: 32, 64: 64, 128: 128};
+  /* a file with several \score blocks at the top (e.g. the verses of a hymn, each with its own variables): each one is read
+     with the variables defined before it, and they follow one another with a double bar between them; voices are matched
+     by name (or else by place) */
   function fromLilyPond(src){
     src = src.replace(/%\{[\s\S]*?%\}/g, ' ').replace(/%[^\n]*/g, ' ');
+    const tops = [];
+    for (let j = 0, depth = 0; j < src.length; j++) {
+      const c = src[j];
+      if (c === '"') { j++; while (j < src.length && src[j] !== '"') { if (src[j] === '\\') j++; j++; } continue; }
+      if (c === '{') depth++;
+      else if (c === '}') depth--;
+      else if (!depth && src.startsWith('\\score', j) && !/\w/.test(src[j + 6] || '')) { const k = src.indexOf('{', j); if (k < 0) break; const e = balanced(src, k, '{', '}'); tops.push([j, e]); j = e - 1; }
+    }
+    if (tops.length < 2) return lyOne(src);
+    const blank = (t, a, b) => t.slice(0, a) + ' '.repeat(b - a) + t.slice(b);
+    const secs = [];
+    tops.forEach(([a, b], n) => {
+      let sub = src.slice(0, b);
+      for (let q = n - 1; q >= 0; q--) sub = blank(sub, tops[q][0], tops[q][1]);
+      try { secs.push(lyOne(sub)); } catch (e) {}
+    });
+    if (!secs.length) throw new Error('No notes found in this LilyPond file (only simple files can be read).');
+    if (secs.length === 1) return secs[0];
+    const out = {title: secs[0].title, composer: secs[0].composer, voices: [], bars: [], doubles: []};
+    let t0 = 0;
+    for (const S of secs) {
+      const len = Math.max(...S.voices.map(v => v.events.reduce((m, e) => Math.max(m, e.t + e.d), 0)));
+      let prev = -1;
+      S.voices.forEach((v, i) => {
+        let k = out.voices.findIndex(o => o.name && o.name === v.name);
+        if (k < 0 && !v.name && i < out.voices.length && !out.voices[i].name) k = i;
+        if (k < 0) { k = prev + 1; out.voices.splice(k, 0, {name: v.name, clef: v.clef, key: v.key, mets: v.mets.map(m => ({t: m.t + t0, sign: m.sign})), events: []}); }
+        else v.mets.forEach(m => { if (!out.voices[k].mets.some(x => x.t === m.t + t0)) out.voices[k].mets.push({t: m.t + t0, sign: m.sign}); });
+        v.events.forEach(e => { e.t += t0; out.voices[k].events.push(e); });
+        prev = k;
+      });
+      S.bars.forEach(b => out.bars.push(b + t0));
+      if (t0) { out.bars.push(t0); out.doubles.push(t0); }
+      t0 += len;
+    }
+    out.voices.forEach(v => { v.events = tidy(v.events); v.mets.sort((a, b) => a.t - b.t); });
+    return out;
+  }
+  function lyOne(src){
     const hdr = (k) => { const m = new RegExp('\\\\header\\s*\\{[\\s\\S]*?\\b' + k + '\\s*=\\s*"([^"]*)"').exec(src); return m ? m[1] : ''; };
     const title = hdr('title'), composer = hdr('composer');
     /* drop \header, \paper, \layout, \midi blocks, and markup */
@@ -380,6 +422,10 @@
           src = src.slice(0, m.index) + '\n' + ' '.repeat(e - m.index - 1) + src.slice(e);
         } else if (src[k] === '"') { const e = src.indexOf('"', k + 1) + 1; vars[m[2]] = src.slice(j, e); src = src.slice(0, m.index) + '\n' + ' '.repeat(e - m.index - 1) + src.slice(e); }
       } }
+    /* a voice's name from its music variable: \new Voice = "v1" { ... \cantus } -> Cantus */
+    const vname = {};
+    { const re = /\\new\s+Voice\s*=\s*"?([\w-]+)"?[^{]*\{([^{}]*)\}/g; let m;
+      while ((m = re.exec(src))) { const ns = (m[2].match(/\\[A-Za-z]+/g) || []).map(x => x.slice(1)).filter(n => n in vars && n !== 'global' && !/^\s*\\lyricmode/.test(vars[n]) && /[a-g]/.test(vars[n])); if (ns.length) vname[m[1]] = ns[ns.length - 1]; } }
     const expand = (t, depth = 0) => depth > 20 ? t : t.replace(/\\([A-Za-z]+)/g, (all, n) => n in vars ? ' ' + expand(vars[n], depth + 1) + ' ' : all);
     let score = '';
     { const m = /\\score\s*\{/.exec(src); score = m ? src.slice(m.index + m[0].length - 1, balanced(src, m.index + m[0].length - 1, '{', '}')) : src; }
@@ -411,7 +457,7 @@
     /* inside a staff with several voices, the first voice */
     music.forEach(x => {
       const v = /\\new\s+Voice\b/.exec(x.text);
-      if (kind === 'Staff' && v) { const sub = x.text.slice(v.index + v[0].length); const nm = /^\s*=\s*"?([\w-]+)"?/.exec(sub); const k = sub.search(/\{/); if (k >= 0) { x.text = (/\\relative\s*[a-g][',]*\s*$/.exec(sub.slice(0, k)) || [''])[0] + sub.slice(k, balanced(sub, k, '{', '}')); if (nm) named[nm[1]] = x; } }
+      if (kind === 'Staff' && v) { const sub = x.text.slice(v.index + v[0].length); const nm = /^\s*=\s*"?([\w-]+)"?/.exec(sub); const k = sub.search(/\{/); const ky = /\\key\s+[a-g]\w*\s+\\[a-z]+/.exec(x.text.slice(0, v.index)); if (k >= 0) { x.text = (ky ? ky[0] + ' ' : '') + (/\\relative\s*[a-g][',]*\s*$/.exec(sub.slice(0, k)) || [''])[0] + sub.slice(k, balanced(sub, k, '{', '}')); if (nm) { named[nm[1]] = x; if (vname[nm[1]] && !x.name) x.name = vname[nm[1]]; } } }
       else if (x.text.trim().startsWith('<<')) { const k = x.text.indexOf('{'); if (k >= 0) x.text = x.text.slice(k, balanced(x.text, k, '{', '}')); }
     });
     /* lyrics: \addlyrics after a staff's music, or \new Lyrics \lyricsto "name" */
@@ -427,7 +473,7 @@
       if (!r.events.some(e => !e.rest)) continue;
       if (lyrics.has(x)) lyAttach(r.events, lyrics.get(x));
       if (!bars) bars = r.bars;
-      voices.push({name: x.iname || x.name.replace(/^./, c => c.toUpperCase()), clef: r.clef || 'G2', key: r.key, mets: r.mets, events: tidy(r.events)});
+      voices.push({name: x.iname || x.name.replace(/^./, c => c.toUpperCase()).replace(/^(.{3,}?)(uno|dos|tres)$/, (all, b, n) => b + ' ' + {uno: 'I', dos: 'II', tres: 'III'}[n]), clef: r.clef || 'G2', key: r.key, mets: r.mets, events: tidy(r.events)});
     }
     if (!voices.length) throw new Error('No notes found in this LilyPond file (only simple files can be read).');
     return {title, composer, voices, bars: bars || []};

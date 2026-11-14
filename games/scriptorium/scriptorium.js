@@ -1961,7 +1961,7 @@ window.addEventListener('afterprint', () => {
 let CAT = null, CATBY = {};
 const APP_NAME = APP.name, APP_URL = 'samuelreidnavarro.github.io/' + APP.page;
 const SRC_FROM = {jrp: 'the Josquin Research Project, josquin.stanford.edu', '1520': 'the 1520s Project, 1520s-project.org',
-  pal: 'the music21 corpus, github.com/cuthbertLab/music21'};
+  pal: 'the music21 corpus, github.com/cuthbertLab/music21', uma: 'the Victoria website of Nancho Álvarez, victoria.uma.es'};
 /* what the first page says about where the score comes from, who made it and its copyright */
 function creditText(){
   const m = (piece && piece.meta) || {};
@@ -1980,16 +1980,24 @@ function creditText(){
 }
 const SRC_NAMES = {jrp: ['Josquin Research Project', 'https://josquin.stanford.edu', ''],
   '1520': ['The 1520s Project', 'https://1520s-project.org', ''],
-  pal: ['music21 corpus (Palestrina, encoded by John Miller)', 'https://github.com/cuthbertLab/music21', '']};
+  pal: ['music21 corpus (Palestrina, encoded by John Miller)', 'https://github.com/cuthbertLab/music21', ''],
+  uma: ['Tomás Luis de Victoria website (Nancho Álvarez, Universidad de Málaga)', 'https://victoria.uma.es/scores.html', '']};
+/* the scores of victoria.uma.es are not copied here: choirbook/victoria.json only lists them (built from the site's data.json),
+   and each piece is read from that site when opened, through a small Cloudflare Worker that adds the CORS header the site lacks */
+const UMA = 'https://victoria.uma.es/', UMA_PROXY = 'https://victoria-proxy.samreidn.workers.dev/f/';
+const UMA_EXT = {msc: 'mscz', ly: 'ly', mid: 'mid'};
+function umaPath(e){ const p = e.k.slice(4), i = p.lastIndexOf('/'); return (i >= 0 ? p.slice(0, i + 1) : '') + e.f + '/' + p.slice(i + 1) + '.' + UMA_EXT[e.f]; }
 let catPromise = null;
 function loadCatalogue(){
-  if (!catPromise) catPromise = fetch('choirbook/catalogue.json').then(r => r.json()).then(j => {
-    CAT = j; CAT.pieces.forEach(e => { CATBY[e.k] = e; });
+  if (!catPromise) catPromise = Promise.all([fetch('choirbook/catalogue.json').then(r => r.json()),
+    fetch('choirbook/victoria.json').then(r => r.ok ? r.json() : []).catch(() => [])]).then(([j, uma]) => {
+    CAT = j; CAT.pieces = CAT.pieces.concat(uma); CAT.pieces.forEach(e => { CATBY[e.k] = e; });
     return CAT;
   });
   return catPromise;
 }
 function catUrl(e){
+  if (e.s === 'uma') return UMA + umaPath(e);
   if (e.h) return 'choirbook/redix-progressio/' + e.k + '.krn';
   return CAT.sources[e.s] + (e.u || (e.s === 'pal' ? e.k.slice(4) : e.k) + '.krn');
 }
@@ -1998,6 +2006,7 @@ async function pieceUrl(key){
   await loadCatalogue();
   const e = CATBY[key];
   if (!e) throw new Error('This piece is not in the library: ' + key);
+  if (e.s === 'uma') return UMA_PROXY + umaPath(e);
   return catUrl(e);
 }
 function showSource(key){
@@ -2078,6 +2087,7 @@ async function loadPiece(file){
     if (!m) throw new Error('This score is no longer kept in this browser.');
     text = m.text;
   }
+  if (!text && file.startsWith('uma/')) { await loadCatalogue(); if (CATBY[file]) text = cache[file] = await umaLoad(CATBY[file]); }
   if (!text) {
     const r = await fetch(await pieceUrl(file));
     if (!r.ok) throw new Error('Could not load ' + file);
@@ -2098,6 +2108,33 @@ async function loadPiece(file){
   syncUI();
   render();
   incipitSnap();
+}
+/* a piece from victoria.uma.es: its MuseScore, LilyPond or MIDI file, fetched from that site and read like an opened file */
+async function umaLoad(e){
+  const get = async path => {
+    const r = await fetch(UMA_PROXY + path);
+    if (!r.ok) throw new Error('fetch');
+    return ScoreImport.toKern(new File([await r.arrayBuffer()], path.split('/').pop()));
+  };
+  const spines = k => ((k.split('\n').find(l => l.startsWith('**')) || '').match(/\*\*kern/g) || []).length;
+  if (!window.ScoreImport) throw new Error('This app cannot read this score.');
+  let k = null;
+  try { k = await get(umaPath(e)); } catch (x) {}
+  /* a few of the oldest LilyPond files use a syntax this app cannot read: their MIDI file has the notes (without the words) */
+  if (e.f === 'ly' && e.m !== 0 && (!k || spines(k) < Math.max(2, e.v || 0))) try { k = await get(umaPath(Object.assign({}, e, {f: 'mid'}))); } catch (x) {}
+  if (!k) {
+    const err = new Error('This score could not be fetched from victoria.uma.es just now.');
+    err.html = `This score could not be fetched from victoria.uma.es just now. You can download it <a href="${esc(catUrl(e))}" target="_blank" rel="noopener">from their website</a> and open it here with Open file, or find it on <a href="${UMA}scores.html" target="_blank" rel="noopener">their score page</a>.`;
+    throw err;
+  }
+  /* MuseScore and MIDI part names carry the instrument and a short voice name ("Electric Piano, 2s"): Cantus II */
+  const VN = {s: 'Cantus', a: 'Altus', t: 'Tenor', b: 'Bassus'}, ROM = ['', ' I', ' II', ' III', ' IV'];
+  k = k.replace(/\*I"(?:[^\t\n,]*, )?([1-4]?)([satb])(?=[\t\n])/g, (all, n, v) => '*I"' + VN[v] + (ROM[+n] || ''));
+  k = k.replace(/\*I"[^\t\n,]*, ([^\t\n]+)/g, '*I"$1');
+  if (!/^!!!OTL/m.test(k)) k = '!!!OTL: ' + e.t + '\n' + k;
+  else k = k.replace(/^!!!OTL:.*$/m, '!!!OTL: ' + e.t);
+  if (!/^!!!COM/m.test(k)) k = '!!!COM: ' + nameOf(e.c) + '\n' + k;
+  return k;
 }
 /* a file opened from the computer stays open after a reload: its text is kept in this browser (the last one only) */
 const FILE_KEY = APP.store + ':lastfile';
@@ -2163,7 +2200,7 @@ function libList(){
   }
   html += `<p class="libhint">${n} piece${n === 1 ? '' : 's'}${n > show.length ? ` (showing ${show.length})` : ''}</p>`;
   const favs = favAll();
-  html += show.map(e => `<div class="lrow">${itemHtml(e.k, e.t, `${nameOf(e.c)}${e.a ? ' (attributed)' : ''}${e.d ? ', ' + e.d : ''} · ${e.v} voices · ${(GENRES[e.g] || e.g).replace(/s$/, '')}`)}${favBtn(e.k, !!favs[e.k], e.t)}</div>`).join('');
+  html += show.map(e => `<div class="lrow">${itemHtml(e.k, e.t, `${nameOf(e.c)}${e.a ? ' (attributed)' : ''}${e.d ? ', ' + e.d : ''} · ${e.v} voices · ${(GENRES[e.g] || e.g).replace(/s$/, '')}`.replace(' · 0 voices', ''))}${favBtn(e.k, !!favs[e.k], e.t)}</div>`).join('');
   if (n > show.length) html += `<button class="more" id="libMore">Show more</button>`;
   box.innerHTML = html;
 }
@@ -2232,7 +2269,7 @@ async function buildPieceList(){
       <select id="libSort" aria-label="Sort"><option value="composer">Sort by composer</option><option value="title">Sort by title</option><option value="voices">Sort by voices</option></select>
     </div>
     <div id="libFeat"><div id="libMine">${mineHtml()}</div><h2>Library</h2>
-    <p class="gnote">From the <a href="https://josquin.stanford.edu" target="_blank" rel="noopener">Josquin Research Project</a>, <a href="https://1520s-project.org" target="_blank" rel="noopener">the 1520s Project</a> and the <a href="https://github.com/cuthbertLab/music21" target="_blank" rel="noopener">music21</a> Palestrina masses, as collected by <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">ReDiX</a> (Ugo Bindini). Search their sonorities with <a href="../redix-progressio.html" target="_top">ReDiX Progressio</a>.</p></div>
+    <p class="gnote">From the <a href="https://josquin.stanford.edu" target="_blank" rel="noopener">Josquin Research Project</a>, <a href="https://1520s-project.org" target="_blank" rel="noopener">the 1520s Project</a> and the <a href="https://github.com/cuthbertLab/music21" target="_blank" rel="noopener">music21</a> Palestrina masses, as collected by <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">ReDiX</a> (Ugo Bindini), and the editions of Victoria, Morales, Guerrero and others by Nancho Álvarez on <a href="https://victoria.uma.es/scores.html" target="_blank" rel="noopener">victoria.uma.es</a>, read from that site when opened. Search their sonorities with <a href="../redix-progressio.html" target="_top">ReDiX Progressio</a>.</p></div>
     <div id="libList"></div>`;
   const upd = () => { lib.shown = 150; $('#libFeat').hidden = !!(lib.q || lib.comp || lib.genre || lib.voices); libList(); };
   $('#libQ').addEventListener('input', e => { lib.q = e.target.value; upd(); });
@@ -2614,7 +2651,7 @@ if ($('#myBtn')) $('#myBtn').addEventListener('click', e => { e.stopPropagation(
 /* a piece chosen in the recent list opens at once */
 if ($('#openRecent')) $('#openRecent').addEventListener('click', e => {
   const b = e.target.closest('.pc'); if (!b) return;
-  mark = null; loadPiece(b.dataset.p).catch(err => { pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; });
+  mark = null; loadPiece(b.dataset.p).catch(err => { pagesEl.innerHTML = `<p class="msg">${err.html || esc(err.message)}</p>`; });
 });
 /* the Open menu closes once a choice is made */
 $('#openList').addEventListener('click', e => { if (e.target.closest('button')) { closePops(); if (document.activeElement) document.activeElement.blur(); } });
@@ -2645,7 +2682,7 @@ libEl.addEventListener('click', e => {
   if (e.target.id === 'libMore') { lib.shown += 300; libList(); return; }
   const b = e.target.closest('.pc'); if (!b) return;
   setLib(false); mark = null;
-  loadPiece(b.dataset.p).then(() => { if (!b.dataset.p.startsWith('mine:')) setAddress(b.dataset.p); }).catch(err => { pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; });
+  loadPiece(b.dataset.p).then(() => { if (!b.dataset.p.startsWith('mine:')) setAddress(b.dataset.p); }).catch(err => { pagesEl.innerHTML = `<p class="msg">${err.html || esc(err.message)}</p>`; });
 });
 /* the note-input tools (shared/note-input.js, the same as CantusFirmus) go in before the pop-overs are wired */
 NoteInput.build($('#editBar'), {what: 'voice', whole: 'the whole voice'});
@@ -4558,7 +4595,7 @@ if (H.start) H.start(); else (async () => {
   }
   catch (e) {
     if (!want && pieceKey !== PIECES[0]) { pieceKey = PIECES[0]; try { await loadPiece(pieceKey); } catch (e2) { pagesEl.innerHTML = `<p class="msg">${esc(e2.message)}</p>`; } }
-    else pagesEl.innerHTML = `<p class="msg">${esc(e.message)}</p>`;
+    else pagesEl.innerHTML = `<p class="msg">${e.html || esc(e.message)}</p>`;
   }
   buildPieceList().then(syncUI);
   if (/[?&]print=1/.test(location.search)) setTimeout(() => window.print(), 600);
