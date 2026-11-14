@@ -831,13 +831,13 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 #pages .ksarr{opacity:0;cursor:pointer;fill:var(--ink,#2A2218);transition:opacity .12s}
 #pages .keyhit:hover .ksarr{opacity:.45}
 #pages .keyhit .ksarr:hover{opacity:1}
-@media (hover:none){#pages .ksarr{opacity:.28}}
+@media (hover:none){#pages .ksarr{opacity:0}#pages .keyhit.ks-on .ksarr{opacity:.8}}
 @media print{#pages .ksarr{display:none}}
 
 /* faint mensuration sign where there is none */
 #pages .mensadd{opacity:0;cursor:pointer;transition:opacity .12s}
 #pages .keyhit:hover ~ .mensadd,#pages .mensadd:hover{opacity:.35}
-@media (hover:none){#pages .mensadd{opacity:.15}}
+@media (hover:none){#pages .mensadd{opacity:0}#pages .mensadd.on{opacity:.5}}
 @media print{#pages .mensadd{display:none}}
 #pages .incipit{opacity:.9}
 

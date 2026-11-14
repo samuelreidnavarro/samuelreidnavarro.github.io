@@ -71,6 +71,9 @@ ${APP.popsBeforeVoices || ''}
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Add<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="btns col" id="addList">
           <button class="tb" id="addMens" title="Put a mensuration sign at the selected note, in the selected voice or voices only (select several voices to give them all one)">Add mensuration sign</button>
+          <button class="tb" id="addFerm" title="A fermata over the selected note or notes (again to take it off)">Add signum</button>
+          <button class="tb" id="addKey" title="A new key signature at the selected note, in the selected voice or voices only; hover (tap on a phone) it to change it. Again to take it off">Add key signature change</button>
+          <button class="tb" id="addMark" title="A rehearsal mark, [A], [B] and so on, over the selected note (again to take it off)">Add rehearsal mark</button>
           <button class="tb" id="addInc" title="The original clefs, mensuration signs and first notes of every voice, before the staves">Add incipit</button>
         </div></div>
       </div></div>
@@ -765,6 +768,9 @@ function prepare(){
         else if (a !== sigAlt) s.acc = ACCG[a];
       }
       s.left = s.acc ? gw(s.acc) + 0.35 : 0;
+      s.vi = i;
+      s.keyc = s.t > EPS && !s.cont ? v.keys.find(q => Math.abs(q.t - s.t) < EPS) || null : null;
+      if (s.keyc) { s.keyN = keyChangeGlyphs(v, s.keyc).length; s.left += s.keyN * 1.0 + 0.9; }
       if (s.mens) s.left += mensW(s.mens) + 1.3;
       s.right = s.hw + (s.dot ? 0.75 : 0);
       const sy = s.syl && s.syl[Math.min(st.verse, s.syl.length - 1)] !== undefined ? s.syl[Math.min(st.verse, (s.syl.length || 1) - 1)] : null;
@@ -893,7 +899,12 @@ function clefSvg(c, x, top){
 }
 const clefW = c => gw(CLEFS[c].g);
 function keySig(v, t, clef){
-  const k = keyAt(v, t), C = CLEFS[clef], out = [];
+  /* where a key change stands at the very start of a line, the line starts with the old signature and the change is drawn as such */
+  const kt = t > EPS && v.keys.some(q => Math.abs(q.t - t) < EPS) ? t - 0.01 : t;
+  return keySigOf(keyAt(v, kt), clef);
+}
+function keySigOf(k, clef){
+  const C = CLEFS[clef], out = [];
   for (const L of Object.keys(k)) {
     const idx = LETTERS.indexOf(L);
     let best = null;
@@ -969,9 +980,31 @@ function extent(s){
 }
 const isFlipped = s => (STEMMED[s.g] && s.pos >= 7) || (TAILED[s.g] && s.pos <= -1);
 
+/* a key change in the middle of a line: naturals for what is cancelled, then the new signature */
+function keyChangeGlyphs(v, kc){
+  const prev = keyAt(v, kc.t - 0.01), out = [], clef = v.clef;
+  const gone = {}; for (const L of Object.keys(prev)) if (!kc.alts[L]) gone[L] = 0;
+  const nat = keySigOf(Object.fromEntries(Object.keys(gone).map(L => [L, 0])), clef);
+  return [...nat.map(q => ({g: 'na', pos: q.pos})), ...keySigOf(kc.alts, clef)];
+}
+function markSvg(s, X, top){
+  let o = '', ox = X - s.left;
+  if (s.keyc) {
+    const gl = keyChangeGlyphs(piece.voices[s.vi], s.keyc);
+    let g = '', x = ox;
+    for (const k of gl) { g += use(k.g, x, top + 4 - k.pos * 0.5); x += gw(k.g) + 0.15; }
+    const kw = Math.max(1.6, x - ox), cx = ox + kw / 2 - 0.05;
+    o += `<g class="keyhit" data-v="${s.vi}" data-t="${s.t}"><rect x="${f(ox - 0.2)}" y="${f(top - 2.6)}" width="${f(kw + 0.4)}" height="9.2" fill="transparent"/>${g}` +
+      `<g class="ksarr" data-ks="1"><rect x="${f(cx - 0.9)}" y="${f(top - 2.6)}" width="1.8" height="2" fill="transparent"/><path d="M${f(cx - 0.6)} ${f(top - 0.8)}L${f(cx + 0.6)} ${f(top - 0.8)}L${f(cx)} ${f(top - 1.9)}Z"/></g>` +
+      `<g class="ksarr" data-ks="-1"><rect x="${f(cx - 0.9)}" y="${f(top + 4.6)}" width="1.8" height="2" fill="transparent"/><path d="M${f(cx - 0.6)} ${f(top + 4.8)}L${f(cx + 0.6)} ${f(top + 4.8)}L${f(cx)} ${f(top + 5.9)}Z"/></g></g>`;
+    ox += s.keyN * 1.0 + 0.9;
+  }
+  if (s.mens) o += `<g class="menshit" data-t="${s.t}"><rect x="${f(ox - 0.2)}" y="${f(top - 0.5)}" width="${f(X - ox - 0.1)}" height="5" fill="transparent"/>${mensSvg(s.mens, ox, top)}</g>`;
+  return o;
+}
 function symSvg(s, X, top, showNotes){
-  /* with the notes hidden, the mensuration sign stays, like the clef */
-  if (!showNotes) return s.mens ? mensSvg(s.mens, X - s.left, top) : '';
+  /* with the notes hidden, the key change and mensuration sign stay, like the clef */
+  if (!showNotes) return s.keyc || s.mens ? markSvg(s, X, top) : '';
   if (s.ligSvg && s.ligX != null) X = s.ligX;   /* a note of a drawn ligature stands where the ligature puts it */
   const hy = s.rest ? top + 0.5 : top + 4 - s.pos * 0.5 - 1;
   return `<g class="${s.id}"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top)}</g>`;
@@ -979,10 +1012,7 @@ function symSvg(s, X, top, showNotes){
 function symInner(s, X, top){
   let o = '';
   let hx = X;
-  if (s.mens) {
-    const mx = X - s.left;
-    o += `<g class="menshit" data-t="${s.t}"><rect x="${f(mx - 0.2)}" y="${f(top - 0.5)}" width="${f(s.left - 0.3)}" height="5" fill="transparent"/>${mensSvg(s.mens, mx, top)}</g>`;
-  }
+  if (s.mens || s.keyc) o += markSvg(s, X, top);
   if (s.rest) { o += restSvg(s, hx + s.hw / 2, top); return o; }
   const y = top + 4 - s.pos * 0.5;
   o += ledgers(s.pos, hx, s.hw, top);
@@ -1144,7 +1174,7 @@ function staffLine(o){
   const tx = []; for (let i = o.from; i < o.to; i++) tx.push(o.cols[i].t + ':' + f(o.xs[i]));
   if (o.tEnd !== undefined && o.tEnd !== null) tx.push(o.tEnd + ':' + f(x1));
   s += `<rect class="stafhit" data-v="${v.idx}" data-tx="${tx.join(',')}" data-top="${f(top)}" data-end="${f(x1)}" data-k0="${o.k0 ?? ''}" data-k1="${o.k1 ?? ''}" x="${f(x0)}" y="${f(top - 2.6)}" width="${f(hx1 - x0)}" height="9.2" fill="transparent"/>`;
-  s += `<g class="clefhit" data-v="${v.idx}"><rect x="${f(x0 + 0.2)}" y="${f(top - 1.5)}" width="${f(clefW(clef) + 0.6)}" height="7" fill="transparent"/>${clefSvg(clef, x0 + 0.5, top)}</g>`;
+  s += `<g class="clefhit" data-v="${v.idx}"><rect x="${f(x0 + 0.2)}" y="${f(top - 1.5)}" width="${f(clefW(clef) + 0.4)}" height="7" fill="transparent"/>${clefSvg(clef, x0 + 0.5, top)}</g>`;
   let x = x0 + 0.5 + clefW(clef) + 0.5;
   /* the key signature: hovering it shows arrows, down adds flats, up goes to no accidental and then sharps */
   { const ks = keySig(v, t0, clef), kx = x; let g = '';
@@ -1152,7 +1182,7 @@ function staffLine(o){
     const kw = Math.max(1.6, x - kx), cx = kx + kw / 2 - 0.05;
     /* no mensuration sign yet: a faint one shows when the mouse is over the place, and a click adds it */
     if (t0 < EPS && !v.mets.some(m => m.t < EPS)) s += `<g class="mensadd" data-v="${v.idx}"><rect x="${f(x)}" y="${f(top - 0.5)}" width="2.8" height="5" fill="transparent"/>${mensSvg('C', x + 0.3, top)}</g>`;
-    s += `<g class="keyhit" data-v="${v.idx}"><rect x="${f(kx - 0.2)}" y="${f(top - 2.6)}" width="${f(kw + 0.4)}" height="9.2" fill="transparent"/>${g}` +
+    s += `<g class="keyhit" data-v="${v.idx}"><rect x="${f(kx - 0.1)}" y="${f(top - 2.6)}" width="${f(kw + 0.9)}" height="9.2" fill="transparent"/>${g}` +
       `<g class="ksarr" data-ks="1"><rect x="${f(cx - 0.9)}" y="${f(top - 2.6)}" width="1.8" height="2" fill="transparent"/><path d="M${f(cx - 0.6)} ${f(top - 0.8)}L${f(cx + 0.6)} ${f(top - 0.8)}L${f(cx)} ${f(top - 1.9)}Z"/></g>` +
       `<g class="ksarr" data-ks="-1"><rect x="${f(cx - 0.9)}" y="${f(top + 4.6)}" width="1.8" height="2" fill="transparent"/><path d="M${f(cx - 0.6)} ${f(top + 4.8)}L${f(cx + 0.6)} ${f(top + 4.8)}L${f(cx)} ${f(top + 5.9)}Z"/></g></g>`; }
   /* notes */
@@ -1334,7 +1364,8 @@ function sectionLabels(line, top, W){
     let i = line.cols.findIndex((c, k) => k >= line.from && k < line.to && c.t >= sec.t - EPS);
     if (i < 0) continue;
     const x = sec.t < EPS ? line.x0 : line.xs[i] - 0.5;
-    s += `<text x="${f(x)}" y="${f(top)}" font-size="1.9" font-style="italic">${esc(sec.label)}</text>`;
+    if (/^[A-Z0-9]{1,3}$/.test(sec.label)) { const w = textW(sec.label, 1.9, false) + 0.9; s += `<rect x="${f(x - 0.2)}" y="${f(top - 1.55)}" width="${f(w)}" height="2.2" fill="none" stroke="currentColor" stroke-width="0.14"/><text x="${f(x + 0.25)}" y="${f(top)}" font-size="1.9">${esc(sec.label)}</text>`; }
+    else s += `<text x="${f(x)}" y="${f(top)}" font-size="1.9" font-style="italic">${esc(sec.label)}</text>`;
   }
   return s;
 }
@@ -1347,13 +1378,13 @@ function incipitSnap(){
     INC.snap = piece.voices.map(v => ({
       clef: v.oclef && CLEFS[KERN_CLEF[v.oclef]] ? KERN_CLEF[v.oclef] : KERN_CLEF[v.kclef] || 'treble',
       mens: metAt(v, 0), key: Object.assign({}, keyAt(v, 0)),
-      notes: (v.syms || []).filter(q => !q.rest).slice(0, 5).map(q => ({step: q.step, alt: q.alt, glyph: q.glyph, g: q.g, hw: q.hw, dot: !!q.dot}))
+      notes: (() => { const out = []; let n = 0; for (const q of v.syms || []) { if (n >= 5 || out.length >= 9) break; out.push({rest: !!q.rest, step: q.step, alt: q.alt, glyph: q.glyph, g: q.g, hw: q.hw, dot: !!q.dot}); if (!q.rest) n++; } return out; })()
     }));
   } catch (e) { INC.snap = null; }
   if (incipitOn()) render();
 }
 function incipitOn(){ return !!(piece && INC.snap && INC.key === pieceKey && (st.inc || {})[pieceKey] && INC.snap.length === piece.voices.length); }
-const incAcc = (n, q) => { if (n.alt === null || n.alt === undefined) return null; const a = Math.max(-1, Math.min(1, n.alt)); return a !== (q.key[LETTERS[((n.step % 7) + 7) % 7]] || 0) ? ACCG[a] : null; };
+const incAcc = (n, q) => { if (n.rest || n.alt === null || n.alt === undefined) return null; const a = Math.max(-1, Math.min(1, n.alt)); return a !== (q.key[LETTERS[((n.step % 7) + 7) % 7]] || 0) ? ACCG[a] : null; };
 function incipitW(){
   let w = 0;
   for (const q of INC.snap) {
@@ -1372,6 +1403,7 @@ function incipitSvg(q, x0, top){
   o += clefSvg(q.clef, x, top); x += gw(C.g) + 0.5;
   if (q.mens) { o += mensSvg(q.mens, x, top); x += mensW(q.mens) + 0.6; }
   for (const n of q.notes) {
+    if (n.rest) { o += restSvg(n, x + n.hw / 2, top); x += n.hw + 1.1; continue; }
     const pos = n.step - C.bottom, y = top + 4 - pos * 0.5, a = incAcc(n, q);
     if (a) { o += use(a, x, y); x += gw(a) + 0.35; }
     o += ledgers(pos, x, n.hw, top) + use(n.glyph, x, y);
@@ -3280,6 +3312,54 @@ $('#addMens').addEventListener('click', () => {
 });
 /* a sign added by hand belongs to the selected voice(s) only: the menu opens with "this voice only" on */
 function mensTargetOnly(){ const c = $('#mensDiff'); if (c) c.checked = true; }
+/* Add > Signum: a fermata on the selected note(s) */
+function selEvents(){
+  if (ed.range || ed.picks) return selItems();
+  if (ed.sel) { const v = piece.voices[ed.sel.vi], e = v && v.events[ed.sel.ei]; return e ? [{v, e}] : []; }
+  if (ed.ins) { const v = piece.voices[ed.ins.vi], e = v && v.events[ed.ins.ei]; return e ? [{v, e}] : []; }
+  return [];
+}
+$('#addFerm').addEventListener('click', () => {
+  if (!piece) return;
+  const it = selEvents();
+  if (!it.length) { toast('Select a note first.'); return; }
+  if (it.some(x => !writable(x.v))) { refuse(); return; }
+  const all = it.every(x => x.e.ferm);
+  commit(() => { for (const {e} of it) e.ferm = !all; });
+});
+/* Add > Key signature change: at the selected note, in the selected voice(s) only, one flat more than before (then use the arrows) */
+$('#addKey').addEventListener('click', () => {
+  if (!piece) return;
+  const T = mensTargets();
+  if (!T.size) { toast('Select a note first (click it, or put the caret before it); the change goes there, in that voice.'); return; }
+  if ([...T.keys()].some(vi => !writable(piece.voices[vi]))) { refuse(); return; }
+  if ([...T.values()].some(t => t < EPS)) { toast('At the very start the key signature is the one after the clef: hover it (tap it on a phone) for the arrows.'); return; }
+  commit(() => {
+    for (const [vi, t] of T) {
+      const v = piece.voices[vi], k = v.events.findIndex(e => eq(e.t, t));
+      if (k < 0) continue;
+      const had = v.keys.findIndex(m => eq(m.t, t));
+      if (had >= 0) { v.keys.splice(had, 1); continue; }
+      const prev = keyAt(v, t - 0.01), n = fifthsOfAlts(prev);
+      v.keys.push({t, alts: altsOfFifths(n > -7 ? n - 1 : n + 1), ei: k}); v.keys.sort((a, b) => a.t - b.t);
+    }
+  });
+});
+/* Add > Rehearsal mark: [A], [B], ... over the selected note (a score-wide mark, written as a section line) */
+$('#addMark').addEventListener('click', () => {
+  if (!piece) return;
+  const T = mensTargets(), it = selEvents();
+  const t = T.size ? Math.min(...T.values()) : null;
+  if (t === null) { toast('Select a note first.'); return; }
+  const had = piece.sections.findIndex(x => eq(x.t, t));
+  commit(() => {
+    if (had >= 0) { piece.sections.splice(had, 1); return; }
+    const used = new Set(piece.sections.map(x => x.label));
+    let L = ''; for (let i = 0; i < 26 && !L; i++) { const c = String.fromCharCode(65 + i); if (!used.has(c)) L = c; }
+    if (!L) L = String(piece.sections.length + 1);
+    piece.sections.push({t, label: L}); piece.sections.sort((a, b) => a.t - b.t);
+  });
+});
 function incSync(){ const on = !!(st.inc || {})[pieceKey]; $('#addInc').textContent = on ? 'Remove incipit' : 'Add incipit'; }
 $('#addInc').addEventListener('click', () => {
   if (!piece || !INC.snap || INC.key !== pieceKey) { toast('Open a score first.'); return; }
@@ -3287,7 +3367,20 @@ $('#addInc').addEventListener('click', () => {
   save(); incSync(); render();
   if (st.inc[pieceKey] && st.view !== 'score') toast('The incipit shows in the Score view.');
 });
+/* On a touch screen nothing waits for a hover: a tap on the key signature (or on the place for a mensuration sign) shows its arrows or outline, a second tap uses them */
+const touchOnly = () => window.matchMedia('(hover:none)').matches;
+document.addEventListener('pointerdown', e => { if (!e.target.closest || !e.target.closest('.keyhit,.mensadd')) pagesEl.querySelectorAll('.ks-on,.mensadd.on').forEach(g => g.classList.remove('ks-on', 'on')); });
 pagesEl.addEventListener('click', e => {
+  if (touchOnly() && piece && e.target.closest) {
+    let kh = e.target.closest('.keyhit');
+    /* the key signature is a small target next to the clef and the mensuration sign: a finger lands on whichever is nearer, so look for a key signature just under the finger */
+    if (!kh && !e.target.closest('.ksarr,.mensadd')) for (const q of pagesEl.querySelectorAll('.keyhit')) { const r = q.querySelector('rect').getBoundingClientRect(); if (e.clientX >= r.left - 3 && e.clientX <= r.right + 3 && e.clientY >= r.top && e.clientY <= r.bottom) { kh = q; break; } }
+    if (kh && !e.target.closest('.ksarr')) { const was = kh.classList.contains('ks-on'); pagesEl.querySelectorAll('.ks-on,.mensadd.on').forEach(g => g.classList.remove('ks-on', 'on')); if (!was) kh.classList.add('ks-on'); e.stopImmediatePropagation(); e.preventDefault(); return; }
+    const mq = e.target.closest('.mensadd');
+    if (mq && !mq.classList.contains('on')) { pagesEl.querySelectorAll('.ks-on,.mensadd.on').forEach(g => g.classList.remove('ks-on', 'on')); mq.classList.add('on'); e.stopImmediatePropagation(); e.preventDefault(); return; }
+    const ar = e.target.closest('.ksarr');
+    if (ar && !ar.closest('.keyhit').classList.contains('ks-on')) { ar.closest('.keyhit').classList.add('ks-on'); e.stopImmediatePropagation(); e.preventDefault(); return; }
+  }
   const ma = e.target.closest && e.target.closest('.mensadd');
   if (ma && piece) { e.stopImmediatePropagation(); e.preventDefault(); if (!writable(piece.voices[+ma.dataset.v])) { refuse(); return; } openMensMenu(+ma.dataset.v, 0, e); return; }
   const mh = e.target.closest && e.target.closest('.menshit');
@@ -3302,12 +3395,23 @@ pagesEl.addEventListener('click', e => {
 const FLATS = 'beadgcf', SHARPS = 'fcgdaeb';
 const fifthsOfAlts = a => { const n = Object.values(a).filter(x => x > 0).length, m = Object.values(a).filter(x => x < 0).length; return n || -m; };
 function altsOfFifths(n){ const o = {}; if (n > 0) SHARPS.slice(0, n).split('').forEach(l => { o[l] = 1; }); if (n < 0) FLATS.slice(0, -n).split('').forEach(l => { o[l] = -1; }); return o; }
-function keyStep(vi, dir){
+function keyStep(vi, dir, t){
   const v = piece.voices[vi]; if (!v) return;
   if (!writable(v)) { refuse(); return; }
-  const n = Math.max(-7, Math.min(7, fifthsOfAlts(keyAt(v, 0)) + dir));
-  if (n === fifthsOfAlts(keyAt(v, 0))) return;
+  const mid = t !== undefined && t > EPS;
+  const cur = fifthsOfAlts(keyAt(v, mid ? t : 0));
+  const n = Math.max(-7, Math.min(7, cur + dir));
+  if (n === cur) return;
   commit(() => {
+    if (mid) {
+      /* a change in the middle: this voice only; back to what went before, it is no change at all */
+      const k = v.keys.find(m => eq(m.t, t));
+      if (!k) return;
+      k.alts = altsOfFifths(n); delete k.raw;
+      const prevAlts = keyAt({keys: v.keys.filter(m => m !== k)}, t - 0.01);
+      if (JSON.stringify(prevAlts) === JSON.stringify(k.alts)) v.keys.splice(v.keys.indexOf(k), 1);
+      return;
+    }
     for (const q of piece.voices) {
       if (!writable(q)) continue;
       let k = q.keys.find(m => eq(m.t, 0));
@@ -3319,7 +3423,8 @@ function keyStep(vi, dir){
 }
 pagesEl.addEventListener('click', e => {
   const ka = e.target.closest && e.target.closest('.ksarr');
-  if (ka && piece) { e.stopImmediatePropagation(); e.preventDefault(); keyStep(+ka.closest('.keyhit').dataset.v, +ka.dataset.ks); return; }
+  if (ka && piece && window.matchMedia('(hover:none)').matches && !ka.closest('.keyhit').classList.contains('ks-on')) { e.stopImmediatePropagation(); e.preventDefault(); pagesEl.querySelectorAll('.ks-on,.mensadd.on').forEach(g => g.classList.remove('ks-on', 'on')); ka.closest('.keyhit').classList.add('ks-on'); return; }
+  if (ka && piece) { e.stopImmediatePropagation(); e.preventDefault(); const kh = ka.closest('.keyhit'); keyStep(+kh.dataset.v, +ka.dataset.ks, kh.dataset.t !== undefined ? +kh.dataset.t : undefined); return; }
   const ch = e.target.closest && e.target.closest('.clefhit');
   if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e); return; }
   if (ed.on && typeof noteAt === 'function') {
