@@ -15,7 +15,7 @@
   on Humdrum **kern files such as those of the Josquin Research Project.
   The app itself is the Scriptorium engine (scriptorium/scriptorium.js and .css), shared with
   CantusFirmus and Canon Maker; this page only names the app and its repertoire.
-  A few pieces live in games/choirbook/*.krn (pieces below); the full library
+  No pieces are copied here any more; the library
   (games/choirbook/catalogue.json) is loaded from the public repositories of the Josquin Research
   Project, the 1520s Project and music21 (Palestrina), as collected by ReDiX (Ugo Bindini).
   Note shapes, clefs and accidentals are outlines from the Bravura music font
@@ -27,13 +27,14 @@
 <script>
 window.SCRIPTORIUM = {
   id: 'choirbook', name: 'ChoirBook', page: 'choirbook.html', store: 'choirbook', msg: 'choirbook', catalogue: true,
-  pieces: [
-    'Jos2306-Ave_Maria_virgo_serena.krn',
-    'Jos0403a-Missa_Pange_lingua-Kyrie.krn',
-    'Jos2918-Nymphes_des_bois.krn',
-    'Duf2012-Ave_regina_celorum_III.krn',
-    'Duf3015-Se_la_face_ay_pale.krn'
-  ]
+  first: 'Jos/Jos2306-Ave_Maria_..._virgo_serena',
+  moved: {
+    'Jos2306-Ave_Maria_virgo_serena.krn': 'Jos/Jos2306-Ave_Maria_..._virgo_serena',
+    'Jos0403a-Missa_Pange_lingua-Kyrie.krn': 'Jos/Jos0403a-Missa_Pange_lingua-Kyrie',
+    'Jos2918-Nymphes_des_bois.krn': 'Jos/Jos2918-Nymphes_des_bois__Requiem',
+    'Duf2012-Ave_regina_celorum_III.krn': 'Duf/Duf2012-Ave_regina_celorum_III',
+    'Duf3015-Se_la_face_ay_pale.krn': 'Duf/Duf3015-Se_la_face_ay_pale'
+  }
 };
 </script>
 <script src="shared/styled-select.js?v=1"></script>
@@ -47,6 +48,6 @@ window.SCRIPTORIUM = {
   <script src="scriptorium/export2.js?v=2"></script>
 <script src="scriptorium/share.js?v=1"></script>
 <script src="scriptorium/lyrics.js?v=2"></script>
-<script src="scriptorium/scriptorium.js?v=80"></script>
+<script src="scriptorium/scriptorium.js?v=81"></script>
 </body>
 </html>
