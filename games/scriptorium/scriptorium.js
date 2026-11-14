@@ -4290,6 +4290,19 @@ Organ.wire();
 /* add-ons (Canon Maker's canon, ...): each is a function written as if it were part of this file */
 for (const a of (APP.addons || [])) eval('(' + a + ')')();
 
+/* phones: a top menu opens as a panel across the screen, just below its button (see the media query in the CSS) */
+{
+  const small = () => window.matchMedia('(max-width:700px), (max-height:520px) and (orientation:landscape)').matches;
+  const place = btn => {
+    if (!small()) return;
+    const r = btn.getBoundingClientRect(), bar = btn.closest('.bar').getBoundingClientRect();
+    document.documentElement.style.setProperty('--poptop', Math.round(r.bottom - bar.top + 6) + 'px');
+    document.documentElement.style.setProperty('--popabs', Math.round(r.bottom + 6) + 'px');
+    document.documentElement.style.setProperty('--win', window.innerHeight + 'px');
+  };
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.bar .popbtn'); if (b) place(b); }, true);
+  document.addEventListener('pointerenter', e => { const b = e.target.closest && e.target.closest('.bar .popbtn'); if (b) place(b); }, true);
+}
 /* start */
 if (H.start) H.start(); else (async () => {
   try { await document.fonts.load('100px "IM Fell English"'); await document.fonts.load('italic 100px "IM Fell English"'); } catch (e) {}
