@@ -1050,3 +1050,18 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
 #editPod #editBtn{border-top-right-radius:0;border-bottom-right-radius:0}
 #editPod .edmore{border-top-left-radius:0;border-bottom-left-radius:0}
 #navSum svg.chev{width:11px;height:11px}
+/* the mensuration menu: All voices | Only this voice, on top */
+#mensMenu li.mscope{grid-column:1/-1;flex-direction:row;justify-content:flex-start;align-items:center;gap:8px;padding:4px 6px 8px;border-bottom:1px solid var(--line);border-radius:4px 4px 0 0;margin-bottom:2px;cursor:default}
+#mensMenu li.mscope:hover{background:none}
+#mensMenu .mslab{color:var(--muted);font-size:13px}
+#mensMenu .mscope .seg{display:inline-flex;gap:2px}
+#mensMenu .mscope .tb{font-size:14px;padding:4px 10px;min-height:0;height:auto}
+/* section lines: the click area, and their menu */
+#pages .sechit{fill:transparent;cursor:pointer;pointer-events:all}
+#pages .sechit:hover{fill:var(--accent);fill-opacity:.12}
+#secMenu{display:grid;grid-template-columns:repeat(2,72px);gap:2px;padding:6px;z-index:25}
+#secMenu[hidden]{display:none}
+#secMenu li{flex-direction:column;gap:2px;padding:6px 2px;font-size:14px;text-align:center}
+#secMenu li svg{width:20px;height:34px;fill:currentColor}
+#secMenu li.mdel{grid-column:1/-1;flex-direction:row;justify-content:center;padding:5px 8px;border-top:1px solid var(--line);border-radius:0;margin-top:2px}
+@media print{#pages .sechit{display:none}}

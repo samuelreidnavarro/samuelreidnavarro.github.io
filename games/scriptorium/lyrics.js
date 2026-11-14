@@ -248,6 +248,7 @@
   const lyrHit = e => {
     if (!piece || !e.target.closest || !e.target.closest('#pages') || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return null;
     if (e.target.closest('g[class^="n"]')) return null;           /* a note itself stays a note */
+    if (e.target.closest('.sechit')) return null;                /* a section line opens its own menu */
     const t = lyricAt(e); if (!t) return null;
     const m = /^n(\d+)-(\d+)/.exec(t.dataset.s || ''); if (!m) return null;
     const v = piece.voices[+m[1]], q = v && v.syms[+m[2]]; return q && q.src ? {vi: +m[1], ei: q.src[0]} : null;

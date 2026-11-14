@@ -73,6 +73,7 @@ ${APP.popsBeforeVoices || ''}
           <button class="tb" id="addMens" title="Put a mensuration sign at the selected note, in the selected voice or voices only (select several voices to give them all one)">Mensuration sign</button>
           <button class="tb" id="addKey" title="A new key signature at the selected note, in the selected voice or voices only; hover (tap on a phone) it to change it. Again to take it off">Key signature change</button>
           <button class="tb" id="addFerm" title="A fermata over the selected note or notes (again to take it off)">Signum</button>
+          <button class="tb" id="addSec" title="A section line through all the staves at the selected note or the caret, apart from the barlines; click it to make it double or take it off">Section line</button>
           <button class="tb" id="addMark" title="A rehearsal mark, [A], [B] and so on, over the selected note (again to take it off)">Rehearsal mark</button>
         </div></div>
       </div></div>
@@ -434,7 +435,7 @@ function parseKern(text){
     if (tok[0].startsWith('=')) {
       const t = Math.max(...voices.map(v => v.t));
       const s = tok[0];
-      if (t > EPS && !/-/.test(s)) bars.push({t: rt(t), type: (s.startsWith('==') || s.includes('||')) ? 'double' : 'single'});
+      if (t > EPS && !/-/.test(s)) bars.push({t: rt(t), type: (s.startsWith('==') || s.includes('||')) ? 'double' : s.includes('!') ? 'sec' : 'single'});
       { const bm = s.match(/^=+(\d+)/); if (bm && !barNums.some(b => b.n === +bm[1])) barNums.push({n: +bm[1], t: rt(t)}); }
       continue;
     }
@@ -575,7 +576,7 @@ function notate(piece, v, mode){
       const a = evs[i - 1], b = evs[i];
       if (!a.rest || !b.rest || a.ferm || !eq(a.t + a.d, b.t)) continue;
       if (v.mets.some(m => m.t > a.t + EPS && m.t <= b.t + EPS)) continue;
-      if (piece.sections.some(sec => eq(sec.t, b.t)) || piece.bars.some(br => br.type === 'double' && eq(br.t, b.t))) continue;
+      if (piece.sections.some(sec => eq(sec.t, b.t)) || piece.bars.some(br => (br.type === 'double' || br.type === 'sec') && eq(br.t, b.t))) continue;
       a.d = rt(a.d + b.d); a.src = a.src.concat(b.src); a.ferm = b.ferm;
       evs.splice(i, 1);
     }
@@ -930,7 +931,7 @@ function columns(vlist, a, b, withLyrics){
     let left = 0, right = 0.3;
     for (const s of c.items.values()) { left = Math.max(left, s.left); right = Math.max(right, s.right); }
     c.left = left; c.right = right;
-    const needBar = c.bar && (barOn || c.bar === 'double');
+    const needBar = c.bar && (barOn || c.bar === 'double' || c.bar === 'sec');
     let x = prev ? prev.x + prev.right + left + 0.28 + 0.27 * m1 + (needBar ? 0.5 + 0.4 * m1 : 0) : left;
     for (const [v, s] of c.items) {
       if (lastX.has(v)) x = Math.max(x, lastX.get(v) + spring(lastD.get(v)) + (needBar ? 0.5 : 0));
@@ -1387,6 +1388,8 @@ function barSvg(type, x, tops, single, segs){
     for (const t of tops) { s += vl(x - 0.25, t, t + 4, 'barl', 0.14) + vl(x + 0.25, t, t + 4, 'barl', 0.14); }
     return s;
   }
+  /* a section line: a full single line through every staff, whatever the barline style */
+  if (type === 'sec') { for (const t of tops) s += vl(x, t, t + 4, 'barl', 0.14); return s; }
   if (style === 'none') return '';
   if (style === 'full') {
     for (const t of tops) s += vl(x, t, t + 4, 'barl', 0.14);
@@ -1395,6 +1398,8 @@ function barSvg(type, x, tops, single, segs){
   }
   return s;
 }
+/* the place to click a section line or double bar (to make it single or double, or take it away) */
+function secHit(t, x, tops){ return `<rect class="sechit" data-t="${t}" x="${f(x - 0.6)}" y="${f(tops[0] - 0.5)}" width="1.2" height="${f(tops[tops.length - 1] + 4.5 - tops[0] + 0.5)}"/>`; }
 function finalBar(x, tops){
   let s = '';
   for (const t of tops) s += `<rect class="ink" x="${f(x)}" y="${f(t)}" width="0.16" height="4"/><rect class="ink" x="${f(x + 0.4)}" y="${f(t)}" width="0.5" height="4"/>`;
@@ -1607,13 +1612,15 @@ function drawSystem(vlist, line, y, opts = {}){
     if (!c.bar || i === line.from) continue;
     /* a tick stands midway between the notes, in the room they already have */
     const pc = i > 0 ? line.cols[i - 1] : null;
-    const bx = st.bars === 'tick' && c.bar !== 'double' && pc ? (line.xs[i - 1] + pc.right + line.xs[i] - c.left) / 2 : line.xs[i] - c.left - (st.bars === 'full' || c.bar === 'double' ? 0.85 : 0.6);
+    const strong = c.bar === 'double' || c.bar === 'sec';
+    const bx = st.bars === 'tick' && !strong && pc ? (line.xs[i - 1] + pc.right + line.xs[i] - c.left) / 2 : line.xs[i] - c.left - (st.bars === 'full' || strong ? 0.85 : 0.6);
     s += barSvg(c.bar, bx, tops, single, segs);
+    if (strong) s += secHit(c.t, bx, tops);
   }
   /* a barline that falls on the line break goes at the line end */
   if (!line.endsPiece) {
     const br = piece.bars.find(b => eq(b.t, line.tEnd));
-    if (br && br.type === 'double') s += barSvg('double', line.x1 - 0.4, tops, single, segs);
+    if (br && (br.type === 'double' || br.type === 'sec')) { s += barSvg(br.type, line.x1 - 0.4, tops, single, segs); s += secHit(br.t, line.x1 - 0.4, tops); }
   }
   if (line.endsPiece) s += finalBar(line.x1 - 0.9, tops);
   /* left edge: a thin line joining the staves in score */
@@ -3052,7 +3059,7 @@ function writeKern(P){
   for (const t of sorted) {
     if (vs.some(v => [...ligE.get(v)].some(x => eq(x, t)))) out.push(line(c => c.text < 0 && [...ligE.get(c.v)].some(x => eq(x, t)) ? '*Xlig' : '*'));
     const bar = P.bars.find(b => eq(b.t, t) && !eq(t, P.end));
-    if (bar) out.push(line(() => bar.type === 'double' ? '=||' : '='));
+    if (bar) out.push(line(() => bar.type === 'double' ? '=||' : bar.type === 'sec' ? '=!' : '='));
     for (const kind of ['clef', 'key', 'met']) {
       const any = vs.some(v => markersAt(v, t)[kind].length);
       if (!any) continue;
@@ -3259,9 +3266,10 @@ const OPS = {
     const src = srcOf(); if (!src.length) return;
     const val = VALS.find(x => x[0] === g)[1];
     commit(() => {
-      const e = v.events[src[0]];
+      const e = v.events[src[0]], was = src.reduce((a, i) => a + v.events[i].d, 0);
       e.d = rt(val / propAt(v, e.t)); e.tieStart = e.tieEnd = e.tieMid = false; e.long = g === 'L' && e.long;
       dropEvents(v, src.slice(1));
+      if (ed.ovr) ovrResize(v, src[0], was);
     });
     ed.val = g; syncEdit();
   },
@@ -3273,6 +3281,7 @@ const OPS = {
       const total = src.reduce((a, i) => a + v.events[i].d, 0);
       e.d = rt(s.dot ? total / 1.5 : total * 1.5); e.tieStart = e.tieEnd = e.tieMid = false;
       dropEvents(v, src.slice(1));
+      if (ed.ovr) ovrResize(v, src[0], total);
     });
   },
   rest(){
@@ -3362,6 +3371,28 @@ const OPS = {
     });
   }
 };
+/* Overwrite, when a note changes its length (Samuel 2026-11-14): longer, it takes the time of what follows (notes and
+   rests it covers go, one it covers in part keeps the rest of its time as a rest); shorter, a rest fills the time it
+   gave up. Either way what comes after stays where it was. Insert pushes or pulls the music instead. */
+function ovrResize(v, k, was){
+  const e = v.events[k], delta = rt(e.d - was);
+  const fix = (at, by) => { for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > at) m.ei += by; };
+  if (delta < -EPS) {
+    v.events.splice(k + 1, 0, {d: rt(-delta), rest: true, alt: null, ed: false, syl: [], t: rt(e.t + e.d)});
+    fix(k, 1);
+    return;
+  }
+  let need = delta, j = k + 1;
+  while (need > EPS && v.events[j]) {
+    const r = v.events[j];
+    if (r.d <= need + EPS) {
+      need = rt(need - r.d); v.events.splice(j, 1); fix(j, -1);
+    } else {
+      r.d = rt(r.d - need); r.kd = r.d; r.t = rt(r.t + need); need = 0;
+      if (!r.rest) { r.rest = true; r.tieStart = r.tieEnd = r.tieMid = false; r.syl = []; r.lig = 0; r.alt = null; r.ed = false; r.long = false; }
+    }
+  }
+}
 function dropEvents(v, list){
   const sorted = list.slice().sort((a, b) => b - a);
   for (const i of sorted) {
@@ -3611,16 +3642,19 @@ function mensIcon(sg){
   for (let i = 0; i < 5; i++) lines += `<line x1="-0.3" x2="4.6" y1="${i}" y2="${i}" stroke="currentColor" stroke-opacity=".5" stroke-width="0.1"/>`;
   return `<svg viewBox="-0.3 -1.9 4.9 8.8" aria-hidden="true">${lines}<g fill="currentColor" stroke="none">${mensSvg(sg, 0.2, 0)}</g></svg>`;
 }
-mensMenu.innerHTML = MENS_MENU.map(([sg, name]) => `<li role="option" data-m="${esc(sg)}" title="${esc(name)}">${mensIcon(sg)}<span>${esc(sg.replace('r', ' rev.'))}</span></li>`).join('') +
+mensMenu.innerHTML = `<li class="flatopt mscope" data-m="" role="presentation"><span class="mslab">Change</span><span class="seg" role="group" aria-label="Which voices the sign changes in"><button type="button" class="tb" data-scope="all" aria-pressed="true">All voices</button><button type="button" class="tb" data-scope="one" aria-pressed="false">Only <span class="mvn">this voice</span></button></span><input type="checkbox" id="mensDiff" hidden></li>` + MENS_MENU.map(([sg, name]) => `<li role="option" data-m="${esc(sg)}" title="${esc(name)}">${mensIcon(sg)}<span>${esc(sg.replace('r', ' rev.'))}</span></li>`).join('') +
   `<li class="flatopt mdel" data-m="-" role="option" title="Remove this mensuration sign (or press Delete)"><span>Delete the sign</span></li>` +
-  `<li class="flatopt mdiff" data-m="" role="option"><label class="check"><input type="checkbox" id="mensDiff"> Different mensuration <span class="mhint">(this voice only)</span></label></li>`;
+  '';
+/* All voices | Only this voice, at the top of the menu (Samuel 2026-11-14: one voice's sign must be easy to change) */
+function mensScope(one){ $('#mensDiff').checked = one; mensMenu.querySelectorAll('[data-scope]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.scope === 'one') === one))); }
 let mensAt = null;
 function openMensMenu(vi, t, e){
   const wr = $('.viewwrap').getBoundingClientRect();
   const v = piece.voices[vi]; if (!v) return;
   mensAt = {vi, t};
   const cur = metAt(v, t);
-  $('#mensDiff').checked = false;
+  mensScope(false);
+  mensMenu.querySelector('.mvn').textContent = v.name || 'this voice';
   mensMenu.querySelectorAll('li[data-m]').forEach(li => li.setAttribute('aria-selected', String(!!li.dataset.m && li.dataset.m === cur)));
   mensMenu.hidden = false; clefPick.hidden = true;
   mensMenu.style.left = Math.max(4, Math.min(wr.width - mensMenu.offsetWidth - 4, e.clientX - wr.left)) + 'px';
@@ -3649,7 +3683,8 @@ function setMens(sign){
   });
 }
 mensMenu.addEventListener('click', e => {
-  if (e.target.closest('.mdiff')) return;
+  const sc = e.target.closest('[data-scope]'); if (sc) { mensScope(sc.dataset.scope === 'one'); return; }
+  if (e.target.closest('.mscope')) return;
   const li = e.target.closest('li[data-m]'); if (li && li.dataset.m) setMens(li.dataset.m);
 });
 document.addEventListener('pointerdown', e => { if (!mensMenu.hidden && !e.target.closest('#mensMenu') && !e.target.closest('.menshit')) mensMenu.hidden = true; });
@@ -3686,7 +3721,7 @@ $('#addMens').addEventListener('click', () => {
   }, 60);
 });
 /* a sign added by hand belongs to the selected voice(s) only: the menu opens with "this voice only" on */
-function mensTargetOnly(){ const c = $('#mensDiff'); if (c) c.checked = true; }
+function mensTargetOnly(){ mensScope(true); }
 /* Add > Signum: a fermata on the selected note(s) */
 function selEvents(){
   if (ed.range || ed.picks) return selItems();
@@ -3735,6 +3770,55 @@ $('#addMark').addEventListener('click', () => {
     piece.sections.push({t, label: L}); piece.sections.sort((a, b) => a.t - b.t);
   });
 });
+/* Add > Section line (Samuel 2026-11-14): a line through all the staves at a time, independent of the metric
+   barlines and of the barline style; stored as a kern barline (=! single, =|| double). Click it: Single, Double, Remove. */
+function secTime(){
+  const T = mensTargets();
+  if (T.size) return Math.min(...T.values());
+  if (ed.ins && piece) { const v = piece.voices[ed.ins.vi]; if (v) return caretTime(v); }
+  return null;
+}
+$('#addSec').addEventListener('click', () => {
+  if (!piece) return;
+  const t = secTime();
+  if (t === null) { toast('Select a note first, or put the caret where the line goes.'); return; }
+  if (t < EPS || t > piece.end - EPS) { toast('A section line goes between notes, not at the very start or end.'); return; }
+  const had = piece.bars.find(b => eq(b.t, t));
+  if (had && had.type !== 'single') { toast('There is a section line there already: click it to change it.'); return; }
+  commit(() => { if (had) had.type = 'sec'; else { piece.bars.push({t: rt(t), type: 'sec'}); piece.bars.sort((a, b) => a.t - b.t); } });
+});
+const secMenu = document.createElement('ul');
+secMenu.id = 'secMenu'; secMenu.className = 'menu'; secMenu.setAttribute('role', 'listbox'); secMenu.hidden = true;
+secMenu.setAttribute('aria-label', 'Section line');
+secMenu.innerHTML = '<li role="option" data-s="sec"><svg viewBox="0 0 12 20" aria-hidden="true"><path d="M5.3 1h1.4v18H5.3Z"/></svg><span>Single</span></li>' +
+  '<li role="option" data-s="double"><svg viewBox="0 0 12 20" aria-hidden="true"><path d="M3.3 1h1.4v18H3.3ZM7.3 1h1.4v18H7.3Z"/></svg><span>Double</span></li>' +
+  '<li role="option" data-s="-" class="mdel"><span>Remove</span></li>';
+$('.viewwrap').appendChild(secMenu);
+let secAt = null;
+pagesEl.addEventListener('click', e => {
+  const h = e.target.closest && e.target.closest('.sechit');
+  if (!h || !piece) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  secAt = +h.dataset.t;
+  const br = piece.bars.find(b => eq(b.t, secAt));
+  secMenu.querySelectorAll('li[data-s]').forEach(li => li.setAttribute('aria-selected', String(!!br && li.dataset.s === br.type)));
+  const wr = $('.viewwrap').getBoundingClientRect();
+  secMenu.hidden = false;
+  secMenu.style.left = Math.max(4, Math.min(wr.width - secMenu.offsetWidth - 4, e.clientX - wr.left)) + 'px';
+  secMenu.style.top = (e.clientY - wr.top + 10) + 'px';
+}, true);
+secMenu.addEventListener('click', e => {
+  const li = e.target.closest('li[data-s]'); if (!li || secAt === null || !piece) return;
+  secMenu.hidden = true;
+  const t = secAt, k = li.dataset.s;
+  if (!piece.voices.every(writable)) { refuse(); return; }
+  commit(() => {
+    const i = piece.bars.findIndex(b => eq(b.t, t)); if (i < 0) return;
+    if (k === '-') piece.bars.splice(i, 1); else piece.bars[i].type = k;
+  });
+});
+document.addEventListener('pointerdown', e => { if (!secMenu.hidden && !e.target.closest('#secMenu') && !e.target.closest('.sechit')) secMenu.hidden = true; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') secMenu.hidden = true; }, true);
 function incSync(){ const on = !!(st.inc || {})[pieceKey]; $('#addInc').textContent = on ? 'Remove incipit' : 'Incipit'; }
 $('#addInc').addEventListener('click', () => {
   if (!piece || !INC.snap || INC.key !== pieceKey) { toast('Open a score first.'); return; }
@@ -4465,6 +4549,14 @@ NoteInput.wire(CBA);
 /* edit mode is always caret mode: the caret stands at the start until a note is clicked */
 function setEdit(on){
   ed.on = on; clearGhost();
+  /* entering Edit mode takes the selection away: the caret stands just before what was selected (Samuel 2026-11-14) */
+  if (ed.on && piece && (ed.sel || ed.range || ed.picks)) {
+    let at = null;
+    if (ed.sel) at = {vi: ed.sel.vi, ei: ed.sel.ei};
+    else { const it = selItems(); if (it.length) { const x = it.reduce((a, y) => !a || y.e.t < a.e.t - EPS || (Math.abs(y.e.t - a.e.t) < EPS && y.v.idx < a.v.idx) ? y : a, null); at = {vi: x.v.idx, ei: x.v.events.indexOf(x.e)}; } }
+    ed.sel = null; ed.range = null; ed.picks = null;
+    ed.ins = at && at.ei >= 0 ? {vi: at.vi, ei: at.ei, off: 0, pad: 0} : null;
+  }
   if (ed.on && piece && !ed.sel && !ed.ins && !ed.range && !ed.picks) { const vs = visibleVoices(); if (vs.length) ed.ins = {vi: vs[0].idx, ei: 0, off: 0, pad: 0}; }
   showSel(true); syncEdit(); postHeight();
 }
