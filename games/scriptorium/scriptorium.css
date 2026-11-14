@@ -858,3 +858,21 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
   .bar .popbody input[type=text],.bar .popbody select{max-width:100%;min-width:0}
   .bar .popbody table{max-width:100%;display:block;overflow-x:auto}
 }
+
+/* ChoirBook's Open menu: My scores and the Repertoire are two views of one panel */
+.library[data-mode="mine"] .libtools,.library[data-mode="mine"] #libList,.library[data-mode="mine"] #libFeat>:not(#libMine){display:none}
+.library[data-mode="rep"] #libMine{display:none}
+#openRecent .pc{display:block;width:100%;text-align:left;height:auto;min-height:0;line-height:1.3;padding:6px 10px;border:0;background:transparent;border-radius:6px}
+#openRecent .pc:hover{background:var(--ground)}
+#openRecent .pc .t{display:block;font-size:16px}
+#openRecent .pc .c{display:block;font-size:13px;color:var(--muted);font-style:italic}
+
+/* Everything that can be changed by clicking turns the same red as the clefs when the pointer is over it (not on touch screens, where a tap shows it instead) */
+@media (hover:hover){
+  #pages .menshit:hover .ms,#pages .mensadd:hover .ms{stroke:var(--hov)}
+  #pages .menshit:hover .ink,#pages .menshit:hover use,#pages .menshit:hover text,#pages .mensadd:hover .ink,#pages .mensadd:hover use,#pages .mensadd:hover text{fill:var(--hov)}
+  #pages .mensadd:hover{opacity:.7}
+  #pages .keyhit:hover>use{fill:var(--hov)}
+  body.editing #pages g[class^="n"]:has(>.hit:hover)>use,body.editing #pages g[class^="n"]:has(>.hit:hover)>.ink{fill:var(--hov)}
+  body.editing #pages g[class^="n"]:has(>.hit:hover)>.ledger{stroke:var(--hov)}
+}

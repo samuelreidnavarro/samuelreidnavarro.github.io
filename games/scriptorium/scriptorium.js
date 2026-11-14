@@ -16,7 +16,7 @@ const L = Object.assign({lib: 'Repertoire', newScore: 'New score', newTitle: 'A 
 const escH = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 {
   const esc = escH;
-  const LIBSUB = L.libSub !== undefined ? L.libSub : L.lib === 'Repertoire' ? 'Saved scores and digitized corpus' : '';
+  const LIBSUB = L.libSub !== undefined ? L.libSub : L.lib === 'Repertoire' ? 'Digitized corpus' : '';
   const LIBBTN = LIBSUB
     ? `<button class="tb openfile" id="libBtn" aria-haspopup="true" aria-expanded="false" aria-controls="library"><span class="of-t">${esc(L.lib)}</span><span class="of-f">${esc(LIBSUB)}</span></button>`
     : `<button class="tb" id="libBtn" aria-haspopup="true" aria-expanded="false" aria-controls="library">${esc(L.lib)}</button>`;
@@ -85,8 +85,9 @@ ${APP.popsBeforeVoices || ''}
         <div class="podg" id="libPod"><div class="libwrap"><div class="pop" id="popOpen">
           <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Open<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
           <div class="popbody"><div class="btns col" id="openList">
-${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
+${APP.catalogue ? NEWBTN + '<div id="openRecent"></div><button class="tb openfile" id="myBtn"><span class="of-t">' + esc(L.mine) + '</span><span class="of-f">Everything you have kept</span></button>' : APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
             <button class="tb openfile" id="openBtn"${APP.openFile === false ? ' hidden' : ''}><span class="of-t">Open file</span><span class="of-f">.mxl · MuseScore · MIDI · LilyPond · .krn · .gabc · CMME</span></button>
+${APP.catalogue ? LIBBTN : ''}
           </div></div>
         </div>
           <div id="library" class="library" role="dialog" aria-label="Pieces" hidden></div>
@@ -2095,17 +2096,23 @@ const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 14.7 
 function favBtn(key, on, title){
   return `<button class="fav" data-fav="${esc(key)}" aria-pressed="${on}" aria-label="${on ? 'Remove' : 'Add'} ${esc(title)} ${on ? 'from' : 'to'} My scores" title="${on ? 'Remove from My scores' : 'Add to My scores'}">${STAR}</button>`;
 }
-function mineHtml(){
+function mineRows(){
   const all = mineAll(), favs = favAll();
-  const rows = [
-    ...Object.keys(all).filter(id => !mineEmpty(id, all)).map(id => ({at: all[id].at, html: `<div class="mine">${itemHtml(id, all[id].title || 'Untitled', (L.mineSub ? L.mineSub + 'last edited ' : 'Last edited ') + whenEdited(all[id].at))}<button class="mdel" data-del="${esc(id)}" aria-label="Remove ${esc(all[id].title || 'this score')}" title="Remove from ${esc(L.mine)}">×</button></div>`})),
-    ...Object.keys(favs).map(k => ({at: favs[k].at, html: `<div class="mine">${itemHtml(k, favs[k].t, favs[k].c)}${favBtn(k, true, favs[k].t)}</div>`}))
+  return [
+    ...Object.keys(all).filter(id => !mineEmpty(id, all)).map(id => ({at: all[id].at, pc: itemHtml(id, all[id].title || 'Untitled', (L.mineSub ? L.mineSub + 'last edited ' : 'Last edited ') + whenEdited(all[id].at)), html: `<div class="mine">${itemHtml(id, all[id].title || 'Untitled', (L.mineSub ? L.mineSub + 'last edited ' : 'Last edited ') + whenEdited(all[id].at))}<button class="mdel" data-del="${esc(id)}" aria-label="Remove ${esc(all[id].title || 'this score')}" title="Remove from ${esc(L.mine)}">×</button></div>`})),
+    ...Object.keys(favs).map(k => ({at: favs[k].at, pc: itemHtml(k, favs[k].t, favs[k].c), html: `<div class="mine">${itemHtml(k, favs[k].t, favs[k].c)}${favBtn(k, true, favs[k].t)}</div>`}))
   ].sort((a, b) => b.at - a.at);
+}
+function mineHtml(){
+  const rows = mineRows();
   if (!rows.length && !L.mineHint) return '';
   return `<h2>${esc(L.mine)}</h2>` + (rows.length ? rows.map(r => r.html).join('')
     : L.mineHint ? `<p class="libhint">${esc(L.mineHint)}</p>` : '');
 }
+/* the five most recent scores, listed in the Open menu itself (ChoirBook) */
+function recentSync(){ const box = $('#openRecent'); if (box) box.innerHTML = mineRows().slice(0, 5).map(r => r.pc).join(''); }
 function refreshMine(){
+  recentSync();
   const box = $('#libMine'); if (box) box.innerHTML = mineHtml();
   const favs = favAll();
   document.querySelectorAll('#libList .fav').forEach(b => {
@@ -2154,7 +2161,7 @@ async function buildPieceList(){
   $('#libGenre').addEventListener('change', e => { lib.genre = e.target.value; upd(); });
   $('#libVoices').addEventListener('change', e => { lib.voices = e.target.value; upd(); });
   $('#libSort').addEventListener('change', e => { lib.sort = e.target.value; upd(); });
-  libList();
+  libList(); recentSync();
 }
 
 /* ------------------------------------------------------------------ */
@@ -2520,9 +2527,16 @@ $('#voiceTable').addEventListener('change', e => {
 });
 /* pieces */
 const libEl = $('#library'), libBtn = $('#libBtn');
-function setLib(open){ libEl.hidden = !open; libBtn.setAttribute('aria-expanded', String(open)); postHeight(); if (open) { const q = $('#libQ'); if (q) setTimeout(() => q.focus(), 0); } }
+function setLib(open, mode){ if (mode) libEl.dataset.mode = mode; libEl.hidden = !open; libBtn.setAttribute('aria-expanded', String(open)); postHeight(); if (open) { const q = $('#libQ'); if (q) setTimeout(() => q.focus(), 0); } }
 $('#markClear').addEventListener('click', () => { mark = null; document.querySelectorAll('#pages g.mark').forEach(g => g.classList.remove('mark')); $('#markBar').hidden = true; setAddress(pieceKey); postHeight(); });
-libBtn.addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden); });
+const libMode = () => APP.catalogue ? 'rep' : '';
+libBtn.addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden || libEl.dataset.mode !== libMode(), libMode()); });
+if ($('#myBtn')) $('#myBtn').addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden || libEl.dataset.mode !== 'mine', 'mine'); });
+/* a piece chosen in the recent list opens at once */
+if ($('#openRecent')) $('#openRecent').addEventListener('click', e => {
+  const b = e.target.closest('.pc'); if (!b) return;
+  mark = null; loadPiece(b.dataset.p).catch(err => { pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; });
+});
 /* the Open menu closes once a choice is made */
 $('#openList').addEventListener('click', e => { if (e.target.closest('button')) { closePops(); if (document.activeElement) document.activeElement.blur(); } });
 libEl.addEventListener('click', e => {
