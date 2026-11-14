@@ -3775,7 +3775,12 @@ const CBA = {
     const t = targetSym(), v = curVoice(); if (!t || t.rest) return;
     const off = accOf(t) === a;
     const edit = !!ed.edArm && !off; ed.edArm = false;
-    commit(() => { for (const i of t.src) { const e = v.events[i]; e.alt = off ? implied(v, e.step, e.t) : ACC_ALT[a]; e.ed = edit; } });
+    /* as in the 16th century a sharp sign raises the note a semitone from where it stands, a flat sign lowers it: a flat in the signature plus a sharp makes a natural, a sharp plus a flat makes a natural (never a double sign) */
+    commit(() => { for (const i of t.src) {
+      const e = v.events[i], cur = e.alt !== null && e.alt !== undefined ? e.alt : (implied(v, e.step, e.t) || 0);
+      const to = a === 'n' ? 0 : a === '#' ? Math.min(1, cur + 1) : Math.max(-1, cur - 1);
+      e.alt = off || (a !== 'n' && to === cur && e.alt !== null && e.alt !== undefined) ? implied(v, e.step, e.t) : to; e.ed = edit;
+    } });
     const e = curVoice().events[t.src[0]]; if (e) hear(e.step, e.alt);
   },
   /* Ed.: the selected note's accidental becomes editorial (or written again); with none, the next accidental entered is editorial */
