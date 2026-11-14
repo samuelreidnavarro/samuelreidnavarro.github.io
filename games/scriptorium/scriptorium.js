@@ -3568,6 +3568,9 @@ function setMens(sign){
       const v = piece.voices[i];
       if (!writable(v)) continue;
       const m = v.mets.find(x => eq(x.t, t));
+      /* the same sign as the one already in effect from earlier in the piece: no override at all (Samuel 2026-11-14) */
+      let prev = null; for (const q of v.mets) if (q.t < t - EPS) prev = q.sign;
+      if (prev !== null && prev === sign) { if (m) v.mets = v.mets.filter(x => x !== m); continue; }
       if (m) { m.sign = sign; continue; }
       const k = v.events.findIndex(e => eq(e.t, t));
       if (k >= 0) { v.mets.push({t, sign, ei: k}); v.mets.sort((a, b) => a.t - b.t); }
