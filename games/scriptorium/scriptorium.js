@@ -2802,6 +2802,47 @@ $('#markClear').addEventListener('click', () => { mark = null; document.querySel
 const libMode = () => APP.catalogue ? 'rep' : '';
 libBtn.addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden || libEl.dataset.mode !== libMode(), libMode()); });
 if ($('#myBtn')) $('#myBtn').addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden || libEl.dataset.mode !== 'mine', 'mine'); });
+/* with a mouse the Repertoire (and My scores) open on hover like every other menu, and close once the pointer has left them
+   (Samuel 2026-11-14); a click still opens them. Touch screens keep the one tap. The links list opens on hover too. */
+{
+  const mouse = () => window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches;
+  const wrap = libEl.closest('.libwrap') || libEl.parentNode;
+  let tOpen = 0, tShut = 0;
+  const hoverOpen = (btn, mode) => btn && btn.addEventListener('mouseenter', () => {
+    if (!mouse()) return;
+    clearTimeout(tOpen);
+    tOpen = setTimeout(() => { if (btn.matches(':hover') && (libEl.hidden || libEl.dataset.mode !== mode)) setLib(true, mode); }, 260);
+  });
+  hoverOpen(libBtn, libMode()); hoverOpen($('#myBtn'), 'mine');
+  [libBtn, $('#myBtn')].forEach(b => b && b.addEventListener('mouseleave', () => clearTimeout(tOpen)));
+  /* passing over the other choices of the Open menu (New score, Open file) closes the panel */
+  $('#openList').addEventListener('mouseover', e => {
+    const b = e.target.closest('button'); if (!mouse() || !b || b === libBtn || b.id === 'myBtn') return;
+    clearTimeout(tOpen); if (!libEl.hidden) setLib(false);
+  });
+  const ssOpenHere = () => window.StyledSelect && StyledSelect.isOpen() && libEl.contains(StyledSelect.owner());
+  const shutLater = () => {
+    clearTimeout(tShut);
+    tShut = setTimeout(() => {
+      if (libEl.hidden || !mouse()) return;
+      if (wrap.matches(':hover') || ssOpenHere()) { if (ssOpenHere()) shutLater(); return; }
+      setLib(false); if (libEl.contains(document.activeElement)) document.activeElement.blur();
+    }, 450);
+  };
+  wrap.addEventListener('mouseleave', () => { if (mouse()) shutLater(); });
+  wrap.addEventListener('mouseenter', () => clearTimeout(tShut));
+  /* + Show the links: opens while the mouse is over it */
+  libEl.addEventListener('mouseover', e => {
+    const d = e.target.closest && e.target.closest('details.morelinks'); if (!d || !mouse()) return;
+    clearTimeout(d._t); d.open = true;
+  });
+  libEl.addEventListener('mouseout', e => {
+    const d = e.target.closest && e.target.closest('details.morelinks'); if (!d || !mouse() || d.contains(e.relatedTarget)) return;
+    clearTimeout(d._t); d._t = setTimeout(() => { if (!d.matches(':hover')) d.open = false; }, 300);
+  });
+  /* a click on the summary with a mouse keeps it as the hover left it (open), instead of shutting it under the pointer */
+  libEl.addEventListener('click', e => { const s = e.target.closest && e.target.closest('details.morelinks > summary'); if (s && mouse()) e.preventDefault(); }, true);
+}
 /* a piece chosen in the recent list opens at once */
 if ($('#openRecent')) $('#openRecent').addEventListener('click', e => {
   const b = e.target.closest('.pc'); if (!b) return;
