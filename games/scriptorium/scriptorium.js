@@ -78,9 +78,10 @@ ${APP.popsBeforeVoices || ''}
         </div></div>
       </div></div>
       <div class="grow">
+        <div class="podg"><button class="tb" id="ackBtn" aria-haspopup="dialog">Acknowledgments</button></div>
         <div class="podg"><div class="pop" id="popInfo">
           <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Info<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-          <div class="popbody"><div class="pagemeta infobox"><label class="lab" for="metaTitle">Title</label><input id="metaTitle" type="text" autocomplete="off"><label class="lab" for="metaComp">Composer</label><input id="metaComp" type="text" autocomplete="off"><span class="lab">Source</span><div id="infoSrc"></div><a class="infolink" href="../choirbook-acknowledgements.html" target="_top">Acknowledgments</a></div></div>
+          <div class="popbody"><div class="pagemeta infobox"><label class="lab" for="metaTitle">Title</label><input id="metaTitle" type="text" autocomplete="off"><label class="lab" for="metaComp">Composer</label><input id="metaComp" type="text" autocomplete="off"><span class="lab">Source</span><div id="infoSrc"></div></div></div>
         </div></div>
         <div class="podg" id="libPod"><div class="libwrap"><div class="pop" id="popOpen">
           <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Open<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
@@ -118,6 +119,7 @@ ${APP.catalogue ? LIBBTN + NEWBTN + '<div id="openRecent"></div><button class="t
 
   <div class="markbar" id="markBar" hidden><span id="markTxt"></span><button id="markClear">Clear marking</button></div>
   <div class="viewwrap">
+    <div class="ackov" id="ackOv" role="dialog" aria-label="Acknowledgments" hidden><div class="ackbox"><button class="ackx" id="ackX" aria-label="Close" title="Close">×</button><div class="ackbody" id="ackBody"></div></div></div>
     <section class="viewer" id="viewer" aria-label="Music"><div id="pages"></div></section>
     <button class="fsbtn" id="fsBtn" aria-label="Full screen" title="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="fsIcon" d="M3 3h7v2.4H5.4V10H3Zm11 0h7v7h-2.4V5.4H14ZM3 14h2.4v4.6H10V21H3Zm15.6 0H21v7h-7v-2.4h4.6Z"/></svg></button>
     <div class="fsctl" id="fsCtl"><button id="fsPlay" aria-label="Play" title="Play"><svg viewBox="0 0 14 14" aria-hidden="true"><path id="fsPlayIcon" d="M3 1.5 12.5 7 3 12.5Z"/></svg></button></div>
@@ -4632,3 +4634,29 @@ if (H.start) H.start(); else (async () => {
 })();
 window.__cb = Object.assign({st, get piece(){ return piece; }, render, parseKern, notate, ed, writeKern, CBA, insertEvent, undo, redo, startPlay, get pieceKey(){ return pieceKey; }}, H.expose ? H.expose() : {});
 })();
+
+/* Acknowledgments: a panel over the viewing area; the text is the one of choirbook-acknowledgements.html. It opens by itself
+   the first time someone uses the apps in a browser (the key carries a version: change it when the text changes materially). */
+{
+  const ov = document.querySelector('#ackOv'), body = document.querySelector('#ackBody'), AKEY = 'scriptorium:ack:v1';
+  let loaded = false;
+  const fill = async () => {
+    if (loaded) return; loaded = true;
+    try {
+      const t = await (await fetch('../choirbook-acknowledgements.html')).text();
+      const m = new DOMParser().parseFromString(t, 'text/html').querySelector('main.ack');
+      if (!m) throw 0;
+      m.querySelectorAll('a').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
+      body.innerHTML = m.innerHTML;
+    } catch (e) { loaded = false; body.innerHTML = '<p>The acknowledgments could not be loaded just now. <a href="../choirbook-acknowledgements.html" target="_top">Open the page</a>.</p>'; }
+  };
+  const remember = () => { try { localStorage.setItem(AKEY, '1'); } catch (e) {} };
+  const open = () => { fill(); ov.hidden = false; body.scrollTop = 0; document.querySelector('#ackX').focus({preventScroll: true}); };
+  const shut = () => { if (ov.hidden) return; ov.hidden = true; remember(); document.querySelector('#ackBtn').focus({preventScroll: true}); };
+  document.querySelector('#ackBtn').addEventListener('click', e => { e.stopPropagation(); ov.hidden ? open() : shut(); });
+  document.querySelector('#ackX').addEventListener('click', shut);
+  ov.addEventListener('click', e => { if (e.target === ov) shut(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !ov.hidden) { e.stopPropagation(); shut(); } }, true);
+  let seen = false; try { seen = !!localStorage.getItem(AKEY); } catch (e) { seen = true; }
+  if (!seen && !/[?&]print=1/.test(location.search)) setTimeout(open, 600);
+}
