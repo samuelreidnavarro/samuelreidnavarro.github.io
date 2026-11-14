@@ -949,3 +949,44 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 
 /* on the site, the bar's S square sits just left of the Edit pen (set by the page's nav.js) */
 html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))}
+
+/* ================= Phones: every row stays one row, as on a big screen, and scrolls sideways when it does not fit ================= */
+@media (max-width:700px), (max-height:520px) and (orientation:landscape){
+  .tools .bar{flex-wrap:nowrap !important;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+    padding-top:4px;padding-bottom:6px;padding-right:10px;gap:12px}
+  .tools .bar::-webkit-scrollbar{display:none}
+  .tools .bar>*,.tools .grow>*{flex:none}
+  .tools .podg{flex-wrap:nowrap}
+  .tools .grow{display:flex;flex:none;margin-left:auto;gap:12px}
+  .tools .bar .spacer{flex:1 0 16px;height:auto}
+  .tools .vsep{display:block}
+  #libPod,#clearPod,#editPod,#navPod{order:0}
+  /* the menus open below their button across the screen, outside the scrolling row (so the row never cuts them off) */
+  .tools .bar .popbody{position:fixed !important;top:var(--popabs,64px) !important;left:8px !important;right:8px !important;bottom:auto !important}
+  #libPod .library{position:fixed;left:8px;right:8px;top:var(--popabs,64px);width:auto}
+}
+@media (max-width:700px){
+  .tools .bar{padding-left:10px}
+  .editbar{margin-top:2px}
+}
+@media (min-width:701px) and (max-height:520px) and (orientation:landscape){
+  .tools .bar{top:4px;padding-left:4px}
+  .tools .bar.editbar{top:52px}
+}
+/* phones held upright: the music goes from edge to edge */
+@media (max-width:700px){
+  .wrap{padding-left:0;padding-right:0}
+  .viewer{padding-left:0;padding-right:0}
+  .viewer.horiz{padding-left:26px;padding-right:26px}
+  .markbar{margin-left:10px;margin-right:10px}
+  .viewwrap .handbox{right:0}
+  .viewwrap .pendbox.both{right:calc(190px * var(--hand-sc,1))}
+}
+/* phones on their side: the playback row too stays one row and scrolls sideways */
+@media (min-width:701px) and (max-height:520px) and (orientation:landscape){
+  .transport,.tp-main,.tp-stack,.tp-tools{flex-wrap:nowrap !important;flex-direction:row !important;align-items:center;gap:8px}
+  .transport{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .transport::-webkit-scrollbar{display:none}
+  .transport>*,.tp-main>*,.tp-stack>*,.tp-tools>*{flex:none !important}
+  .transport .popbody{position:fixed;bottom:calc(var(--tph,56px) + 6px);top:auto;left:10px;right:10px;width:auto}
+}

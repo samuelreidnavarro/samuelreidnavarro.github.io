@@ -232,7 +232,7 @@ main.home { max-width: 60rem; gap: 2.5rem; }
 .nav .menu a { padding: .45rem 1.2rem; border-bottom: 0; white-space: nowrap; }
 .nav .menu a:hover { background: var(--band); }
 @media (max-width: 760px) {
-  .nav ul { position: relative; } .nav .has-menu { position: static; }
+  .nav { position: relative; } .nav ul { position: static; } .nav .has-menu { position: static; }
   .nav .menu { max-width: calc(100vw - 2rem); } .nav .menu a { white-space: normal; text-align: center; }
 }
 
@@ -328,3 +328,11 @@ body.compact.nav-folded .nav .brand {
 body.compact.nav-folded .nav .b-rest { max-width: 0; opacity: 0; }
 body.compact.nav-folded .edge .game { border-top-color: transparent; }
 body.compact.nav-folded main.game-page { padding-top: 3.5rem; }
+
+/* Small screens: the links stay on one line, as on a big screen, and scroll sideways when they do not fit */
+@media (max-width: 760px) {
+  .nav ul { flex-wrap: nowrap; justify-content: safe center; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; gap: .2rem 1.6rem; }
+  .nav ul::-webkit-scrollbar { display: none; }
+  .nav li { flex: none; }
+  .nav .menu { top: 100%; }
+}
