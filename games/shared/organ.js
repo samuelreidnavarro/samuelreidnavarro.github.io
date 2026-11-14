@@ -147,7 +147,7 @@ const Synth = {
     out.gain.setValueAtTime(1, Math.max(t0 + 0.01, t1 - rel));
     out.gain.linearRampToValueAtTime(0, t1);
     const amps = organAmps();
-    const power = Math.sqrt(amps.reduce((s, a) => s + a * a, 0)) || 1, parts = [];
+    const power = Math.sqrt(amps.reduce((s, a) => s + a * a, 0)) || 1, parts = [], tun = [];
     amps.forEach((a, i) => {
       const k = i + 1, f = freq * k;
       if (a < 0.008 || f > 15000) return;
@@ -160,6 +160,7 @@ const Synth = {
       g.gain.setValueAtTime(0, t0);
       g.gain.linearRampToValueAtTime(this.level * 0.7 * a / power, t0 + at);
       o.connect(g); g.connect(out);
+      tun.push(r => o.frequency.setTargetAtTime(f * r, o.context.currentTime, 0.012));
       o.start(t0); o.stop(t1 + 0.03); parts.push(o);
     });
     if (!noiseBuf) {
@@ -187,7 +188,7 @@ const Synth = {
       n.start(t0, Math.random() * 0.8); n.stop(t0 + 0.12); parts.push(n);
     }
     out.connect(dest);
-    return {osc: {stop(t){ parts.forEach(p => { try { p.stop(t); } catch (e) {} }); }}, g: out, t1};
+    return {osc: {stop(t){ parts.forEach(p => { try { p.stop(t); } catch (e) {} }); }}, g: out, t1, tun};
   }
 };
 const Sampler = {
@@ -327,7 +328,7 @@ const Sampler = {
     const stops = reg.sf.map(s => m.stops[s]);
     /* one loudness for every registration; the stops keep their balance within it */
     const gain = 0.16 / Math.sqrt(stops.reduce((a, s) => a + s.rms * s.rms, 0));
-    const out = ctx.createGain(), parts = [];
+    const out = ctx.createGain(), parts = [], tun = [];
     const rel = Math.max(0.06, Math.min(S.rel / 1000, 0.6));
     out.gain.setValueAtTime(0, t0);
     out.gain.linearRampToValueAtTime(gain, t0 + 0.006);
@@ -345,21 +346,44 @@ const Sampler = {
       if (z.ab && !this.legacy) { src.buffer = z.ab; src.loopStart = z.lsN / sr; src.loopEnd = z.leN / sr; }
       else { src.buffer = buf; src.loopStart = (z.off + z.ls) / sr; src.loopEnd = (z.off + z.le) / sr; }
       /* the organ stands about 5 cents below a′ = 440; the note's true pitch (a′ and temperament) sets the rate */
-      src.playbackRate.value = Math.pow(2, (midiAbs - z.root) / 12 + (z.tune + 5) / 1200);
+      const pr = Math.pow(2, (midiAbs - z.root) / 12 + (z.tune + 5) / 1200);
+      src.playbackRate.value = pr;
+      tun.push(r => src.playbackRate.setTargetAtTime(pr * r, ctx.currentTime, 0.012));
       src.connect(out);
       src.start(t0, z.ab && !this.legacy ? 0 : z.off / sr); src.stop(t1 + rel + 0.05); parts.push(src);
     });
     out.connect(dest);
-    return {osc: {stop(t){ parts.forEach(p => { try { p.stop(t); } catch (e) {} }); }}, g: out, t1: t1 + rel};
+    return {osc: {stop(t){ parts.forEach(p => { try { p.stop(t); } catch (e) {} }); }}, g: out, t1: t1 + rel, tun};
   }
 };
 /* every note goes through here: the recorded organ when it is chosen and loaded, otherwise the synthesis */
 function voice(ctx, dest, f, t0, t1){
-  if (isSampled(S.reg)) {
-    if (Sampler.ready(S.reg) && Sampler.man) return Sampler.voice(ctx, dest, f, t0, t1);
-    Sampler.prepare(S.reg, true);
-  }
-  return Synth.voice(ctx, dest, f, t0, t1);
+  let v;
+  if (isSampled(S.reg) && Sampler.ready(S.reg) && Sampler.man) v = Sampler.voice(ctx, dest, f, t0, t1);
+  else { if (isSampled(S.reg)) Sampler.prepare(S.reg, true); v = Synth.voice(ctx, dest, f, t0, t1); }
+  /* what a later change of temperament needs to retune this note: which key it is, and what it was tuned to */
+  const k0 = Math.round(69 + 12 * Math.log2(f / S.ref));
+  let key = k0, best = Infinity;
+  for (const k of [k0 - 1, k0, k0 + 1]) { const d = Math.abs(freq(k) - f); if (d < best) { best = d; key = k; } }
+  v.nf = f; v.f0 = f; v.key = key; v.t0 = t0; v.dest = dest; v.ctx = ctx;
+  return v;
+}
+/* A change of temperament is heard at once: notes already sounding glide to the new pitch (the playback rate of a recorded pipe, the
+   frequency of the synthesised ones); notes that are scheduled but have not started yet are made again with the new tuning. */
+function retuneAll(){
+  const ctx = audio.ctx; if (!ctx) return;
+  const now = ctx.currentTime;
+  const one = v => {
+    if (!v || !v.nf || !(v.t1 > now)) return v;
+    const nf = freq(v.key);
+    if (v.t0 > now + 0.02) { silence(v, now); return voice(v.ctx, v.dest, nf, v.t0, v.t1); }
+    const r = nf / v.f0;
+    (v.tun || []).forEach(t => { try { t(r); } catch (e) {} });
+    v.nf = nf;
+    return v;
+  };
+  audio.voices = audio.voices.map(one);
+  if (audio.aud) audio.aud = one(audio.aud);
 }
 function silence(v, now){
   try {
@@ -844,8 +868,8 @@ function addSampledOptions(){
   ROOTS.forEach((n, i) => { const o = document.createElement('option'); o.value = i; o.textContent = n; rs.appendChild(o); });
   const rrow = document.createElement('div'); rrow.className = 'temperroot'; rrow.append(rl, rs); box.appendChild(rrow);
   sel.after(box);
-  box.addEventListener('change', e => { if (e.target.name === 'temper') { S.temper = e.target.value; syncTemper(); H.save(); testTone(); } });
-  rs.addEventListener('change', () => { S.temperRoot = +rs.value; H.save(); testTone(); });
+  box.addEventListener('change', e => { if (e.target.name === 'temper') { S.temper = e.target.value; syncTemper(); H.save(); retuneAll(); testTone(); } });
+  rs.addEventListener('change', () => { S.temperRoot = +rs.value; H.save(); retuneAll(); testTone(); });
   syncTemper();
 }
 function syncTemper(){

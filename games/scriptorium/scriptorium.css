@@ -934,3 +934,6 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 .temperroot select{width:auto;max-width:none}
 .temperroot[hidden]{display:none}
 @media (max-width:700px){ #tpSide .tcol{width:100%} }
+
+.morelinks .linksub{margin:8px 0 2px;font-style:italic;opacity:.75;font-size:.95em}
+#libFeat p.linksub{margin:-4px 0 8px;font-style:italic;color:var(--muted);font-size:14px;line-height:1.3}
