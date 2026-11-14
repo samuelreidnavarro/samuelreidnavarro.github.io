@@ -825,3 +825,10 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 #presetForm{display:flex;gap:6px}
 #presetForm input{width:130px;padding:6px 8px;font:inherit}
 .pcur{opacity:.8;font-style:italic}.pcurl{flex:1;padding:0 12px;color:var(--muted)}
+
+/* key signature arrows */
+#pages .ksarr{opacity:0;cursor:pointer;fill:var(--ink,#2A2218);transition:opacity .12s}
+#pages .keyhit:hover .ksarr{opacity:.45}
+#pages .keyhit .ksarr:hover{opacity:1}
+@media (hover:none){#pages .ksarr{opacity:.28}}
+@media print{#pages .ksarr{display:none}}

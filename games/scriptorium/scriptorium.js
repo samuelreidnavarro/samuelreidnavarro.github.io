@@ -1139,7 +1139,13 @@ function staffLine(o){
   s += `<rect class="stafhit" data-v="${v.idx}" data-tx="${tx.join(',')}" data-top="${f(top)}" data-end="${f(x1)}" data-k0="${o.k0 ?? ''}" data-k1="${o.k1 ?? ''}" x="${f(x0)}" y="${f(top - 2.6)}" width="${f(hx1 - x0)}" height="9.2" fill="transparent"/>`;
   s += `<g class="clefhit" data-v="${v.idx}"><rect x="${f(x0 + 0.2)}" y="${f(top - 1.5)}" width="${f(clefW(clef) + 0.6)}" height="7" fill="transparent"/>${clefSvg(clef, x0 + 0.5, top)}</g>`;
   let x = x0 + 0.5 + clefW(clef) + 0.5;
-  for (const k of keySig(v, t0, clef)) { s += use(k.g, x, top + 4 - k.pos * 0.5); x += gw(k.g) + 0.15; }
+  /* the key signature: hovering it shows arrows, down adds flats, up goes to no accidental and then sharps */
+  { const ks = keySig(v, t0, clef), kx = x; let g = '';
+    for (const k of ks) { g += use(k.g, x, top + 4 - k.pos * 0.5); x += gw(k.g) + 0.15; }
+    const kw = Math.max(1.6, x - kx), cx = kx + kw / 2 - 0.05;
+    s += `<g class="keyhit" data-v="${v.idx}"><rect x="${f(kx - 0.2)}" y="${f(top - 2.6)}" width="${f(kw + 0.4)}" height="9.2" fill="transparent"/>${g}` +
+      `<g class="ksarr" data-ks="1"><rect x="${f(cx - 0.9)}" y="${f(top - 2.6)}" width="1.8" height="2" fill="transparent"/><path d="M${f(cx - 0.6)} ${f(top - 0.8)}L${f(cx + 0.6)} ${f(top - 0.8)}L${f(cx)} ${f(top - 1.9)}Z"/></g>` +
+      `<g class="ksarr" data-ks="-1"><rect x="${f(cx - 0.9)}" y="${f(top + 4.6)}" width="1.8" height="2" fill="transparent"/><path d="M${f(cx - 0.6)} ${f(top + 4.8)}L${f(cx + 0.6)} ${f(top + 4.8)}L${f(cx)} ${f(top + 5.9)}Z"/></g></g>`; }
   /* notes */
   const show = o.showNotes;
   let ligOut = '';
@@ -2304,7 +2310,7 @@ async function newScore(){
   ['treble', 'treble8', 'treble8', 'bass'].forEach((c, i) => { vis(i).clef = c; });
   save(); render();
   refreshMine();
-  ed.on = true; ed.sel = {vi: 0, ei: 0}; syncEdit(); showSel();
+  ed.on = true; ed.sel = null; ed.ins = {vi: 0, ei: 0, off: 0, pad: 0}; syncEdit(); showSel(true);
   toast('A new score. Click on a staff to write a note where you point, or type the letters A to G. Notes written over rests take their place. Voices adds, names and orders the voices.');
 }
 $('#newBtn').addEventListener('click', () => { (H.newScore || newScore)().catch(err => toast(err.message)); });
@@ -2963,7 +2969,7 @@ pagesEl.addEventListener('click', e => {
    and the B flat in the signature. Arrow keys move, Enter chooses, Escape closes. */
 const clefPick = $('#clefPick');
 clefPick.id = 'clefMenu'; clefPick.setAttribute('role', 'listbox'); clefPick.tabIndex = -1;
-const CLEF_KEYS = [...CLEF_MENU.map(c => c[0]), '', 'flat'];
+const CLEF_KEYS = [...CLEF_MENU.map(c => c[0]), ''];
 let clefActive = 0;
 function clefIcon(k){
   let lines = '';
@@ -3199,7 +3205,28 @@ pagesEl.addEventListener('click', e => {
   openMensMenu(+m[1], +mh.dataset.t, e);
 }, true);
 
+/* key signature: one step up (towards sharps) or down (towards flats), in every voice that can be written */
+const FLATS = 'beadgcf', SHARPS = 'fcgdaeb';
+const fifthsOfAlts = a => { const n = Object.values(a).filter(x => x > 0).length, m = Object.values(a).filter(x => x < 0).length; return n || -m; };
+function altsOfFifths(n){ const o = {}; if (n > 0) SHARPS.slice(0, n).split('').forEach(l => { o[l] = 1; }); if (n < 0) FLATS.slice(0, -n).split('').forEach(l => { o[l] = -1; }); return o; }
+function keyStep(vi, dir){
+  const v = piece.voices[vi]; if (!v) return;
+  if (!writable(v)) { refuse(); return; }
+  const n = Math.max(-7, Math.min(7, fifthsOfAlts(keyAt(v, 0)) + dir));
+  if (n === fifthsOfAlts(keyAt(v, 0))) return;
+  commit(() => {
+    for (const q of piece.voices) {
+      if (!writable(q)) continue;
+      let k = q.keys.find(m => eq(m.t, 0));
+      if (!k) { k = {t: 0, alts: {}, ei: 0}; q.keys.unshift(k); }
+      k.alts = altsOfFifths(n); delete k.raw;
+    }
+  });
+  toast(n === 0 ? 'No sharps or flats in the signature' : Math.abs(n) + (n < 0 ? ' flat' : ' sharp') + (Math.abs(n) > 1 ? 's' : '') + ' in the signature');
+}
 pagesEl.addEventListener('click', e => {
+  const ka = e.target.closest && e.target.closest('.ksarr');
+  if (ka && piece) { e.stopImmediatePropagation(); e.preventDefault(); keyStep(+ka.closest('.keyhit').dataset.v, +ka.dataset.ks); return; }
   const ch = e.target.closest && e.target.closest('.clefhit');
   if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e); return; }
   if (ed.on && typeof noteAt === 'function') {
@@ -3555,7 +3582,7 @@ const CBA = {
   },
   moveCaret: dir => moveCaret(dir),
   nav: () => ed.nav || 'follow',
-  setNav(k){ ed.nav = NAV_KEYS.includes(k) ? k : 'follow'; try { localStorage.setItem(APP.store + ':nav', ed.nav); } catch (e) {} syncEdit(); toast(ed.nav === 'follow' ? 'Caret step: the same as the note value.' : 'Caret step: ' + ({Mx:'maxima',L:'longa',B:'brevis',S:'semibrevis',M:'minima',Sm:'semiminima',F:'fusa'})[ed.nav] + '. The arrow keys move the caret by this.'); },
+  setNav(k){ ed.nav = NAV_KEYS.includes(k) ? k : 'follow'; try { localStorage.setItem(APP.store + ':nav', ed.nav); } catch (e) {} syncEdit(); toast(ed.nav === 'follow' ? 'Grid step: the same as the note value.' : 'Caret step: ' + ({Mx:'maxima',L:'longa',B:'brevis',S:'semibrevis',M:'minima',Sm:'semiminima',F:'fusa'})[ed.nav] + '. The arrow keys move the caret by this.'); },
   /* coloration: the selected note turns black (two thirds of its value) or white again; with nothing selected,
      the notes entered from now on are coloured, until it is pressed again */
   toggleCol(){
@@ -3704,7 +3731,7 @@ const CBA = {
     if (e.shiftKey && !e.altKey && !mod && has) return extendBy(k);
     if ((k === 'ArrowLeft' || k === 'ArrowRight') && (e.altKey || mod) && has) { if (CBA.guard()) moveSelection(k === 'ArrowLeft' ? -1 : 1); return true; }
     if ((k === 'ArrowUp' || k === 'ArrowDown') && mod && !e.altKey && !has && ed.ins) return caretStaff(k === 'ArrowUp' ? -1 : 1);
-    if ((k === 'ArrowLeft' || k === 'ArrowRight') && !e.shiftKey && !e.altKey && !mod && !has && ed.ins) { moveCaret(k === 'ArrowLeft' ? -1 : 1); return true; }
+    if ((k === 'ArrowLeft' || k === 'ArrowRight') && !e.shiftKey && !e.altKey && !mod && (!has || ed.sel)) { moveCaret(k === 'ArrowLeft' ? -1 : 1); return true; }
     return false;
   },
   setXform(t){ ed.xf = t; },
@@ -3817,7 +3844,12 @@ function glyphIcon(k, minBox){
 }
 NoteInput.fill(CBA, glyphIcon);
 NoteInput.wire(CBA);
-$('#editBtn').addEventListener('click', () => { ed.on = !ed.on; clearGhost(); showSel(); postHeight(); });
+/* edit mode is always caret mode: the caret stands at the start until a note is clicked */
+$('#editBtn').addEventListener('click', () => {
+  ed.on = !ed.on; clearGhost();
+  if (ed.on && piece && !ed.sel && !ed.ins && !ed.range && !ed.picks) { const vs = visibleVoices(); if (vs.length) ed.ins = {vi: vs[0].idx, ei: 0, off: 0, pad: 0}; }
+  showSel(true); syncEdit(); postHeight();
+});
 $('#saveBtn').addEventListener('click', () => {
   closePops();
   const text = piece.text || writeKern(piece);
