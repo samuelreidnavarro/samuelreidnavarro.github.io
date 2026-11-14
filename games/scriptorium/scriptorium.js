@@ -4211,7 +4211,7 @@ function restartPlay(){ if (!play) return; startPlay(playPos(), true); }
 function startPlay(from, again){
   if (!piece) return;
   /* Play starts at the selected note (or the beginning) */
-  if (typeof from !== 'number') { const s = selSym(); from = s ? s.t : 0; }
+  if (typeof from !== 'number') from = selStart();
   from = Math.max(0, Math.min(from, piece.end));
   const voices = piece.voices.filter(v => vis(v.idx).play);
   if (!voices.length) { toast('No voice has Playback ticked (Voices).'); return; }
@@ -4254,10 +4254,20 @@ function startPlay(from, again){
   if (H.playSpec) H.playSpec(spec);
   Organ.play(spec);
 }
-/* Pause keeps the place: Play goes on from there, unless a different note has been selected meanwhile */
+/* where Play starts: the selected note, the start of a selected range, the caret, or the beginning */
+function selStart(){
+  if (!piece) return 0;
+  if (ed.range) return ed.range.t0;
+  if (ed.picks && ed.picks.length) return Math.min(...ed.picks.map(p => p.t));
+  const s = selSym(); if (s) return s.t;
+  if (ed.sel) { const v = piece.voices[ed.sel.vi], e = v && v.events[ed.sel.ei]; if (e) return e.t; }
+  if (ed.ins) { const v = piece.voices[ed.ins.vi]; if (v) { const e = v.events[ed.ins.ei]; return (e ? e.t : v.end) + (ed.ins.off || 0); } }
+  return 0;
+}
+/* Pause keeps the place: Play goes on from there, unless the selection or the caret has been moved meanwhile */
 let heldAt = null, heldSel = '';
 function togglePlayHold(){
-  const sid = () => { const q = selSym(); return q ? q.id : ''; };
+  const sid = () => JSON.stringify([ed.sel, ed.ins, ed.range && [ed.range.t0, ed.range.t1, ed.range.v0, ed.range.v1], ed.picks]);
   if (play) { heldAt = playPos(); heldSel = sid(); stopPlay(); }
   else { const at = heldAt !== null && heldAt < piece.end - EPS && sid() === heldSel ? heldAt : undefined; heldAt = null; startPlay(at); }
 }
