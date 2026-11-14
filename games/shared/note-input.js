@@ -234,7 +234,11 @@ function fill(A, iconSVG){
       b.addEventListener('click', () => A.setNav(k));
       nb.appendChild(b);
     });
-    $('#restBtn').parentNode.appendChild(pop);
+    /* its own island, between Undo/Redo and the arrows */
+    const pg = document.createElement('div');
+    pg.className = 'podg'; pg.id = 'gridPod';
+    pg.appendChild(pop);
+    $('#navPod').parentNode.insertBefore(pg, $('#navPod'));
   }
 }
 function wire(A){
@@ -312,7 +316,9 @@ function wire(A){
     if (k === ' ') { e.preventDefault(); A.togglePlay(); return; }
     if (tag === 'BUTTON' && k === 'Enter') return;
     if (k === 'ArrowLeft' || k === 'ArrowRight') { e.preventDefault(); A.moveSel(k === 'ArrowLeft' ? -1 : 1); return; }
-    if (k === 'Escape') { A.deselect(); return; }
+    /* Escape leaves Edit mode first (where the app has one to leave), and then clears the selection */
+    if (k === 'Escape') { if (edit && A.exitEdit) A.exitEdit(); else A.deselect(); return; }
+    if ((k === 'Backspace' || k === 'Delete') && !edit && A.canDelete && A.canDelete()) { e.preventDefault(); A.deleteTarget(); return; }
     if (!edit) return;
     if (/^[a-gA-G]$/.test(k)) { e.preventDefault(); A.typeNote(k.toUpperCase()); return; }
     if (k === 'r' || k === 'R') { e.preventDefault(); A.typeRest(); return; }

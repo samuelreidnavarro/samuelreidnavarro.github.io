@@ -26,7 +26,7 @@ const escH = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>'
 
   <section class="tools" aria-label="View">
     <div class="bar">
-      <div class="podg" id="editPod"><button class="ib" id="editBtn" aria-pressed="false" aria-label="Edit" title="Edit: change, add and remove notes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17.3 14.8 6l3.2 3.2L6.7 20.5 3 21Zm13.7-12.6 1.4-1.4a1.5 1.5 0 0 1 2.1 0l1.1 1.1a1.5 1.5 0 0 1 0 2.1l-1.4 1.4Z"/></svg></button></div>
+      <div class="podg split" id="editPod"><button class="ib" id="editBtn" aria-pressed="false" aria-label="Edit" title="Edit mode: write, change and remove notes (Escape leaves it)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17.3 14.8 6l3.2 3.2L6.7 20.5 3 21Zm13.7-12.6 1.4-1.4a1.5 1.5 0 0 1 2.1 0l1.1 1.1a1.5 1.5 0 0 1 0 2.1l-1.4 1.4Z"/></svg></button><button class="ib edmore" id="editMore" aria-expanded="false" aria-controls="editBar" aria-label="Editing tools" title="Show or hide the editing tools"><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button></div>
 ${APP.popsBeforeVoices || ''}
       <div class="podg"><div class="pop" id="popVoices">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Voices<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
@@ -3088,6 +3088,10 @@ const EKEY = k => APP.store + ':edit:' + k;
 /* Insert or Overwrite, kept per app */
 try { ed.ovr = localStorage.getItem(APP.store + ':ovr') === '1'; } catch (e) { ed.ovr = false; }
 try { ed.nav = localStorage.getItem(APP.store + ':nav') || 'follow'; } catch (e) { ed.nav = 'follow'; }
+/* the editing tools row is shown or hidden by the arrow beside the pen, apart from Edit mode itself; until the arrow
+   has been used it comes and goes with Edit mode */
+try { const b = localStorage.getItem(APP.store + ':edbar'); ed.bar = b === null ? undefined : b === '1'; } catch (e) { ed.bar = undefined; }
+const barOpen = () => ed.bar === undefined ? ed.on : ed.bar;
 const VALS = [['Mx', 8], ['L', 4], ['B', 2], ['S', 1], ['M', 0.5], ['Sm', 0.25], ['F', 0.125]];
 function selSym(){
   if (!ed.sel || !piece) return null;
@@ -4103,6 +4107,10 @@ function ligSelOn(){
 /* what the shared note-input tools (shared/note-input.js) need from this app */
 const CBA = {
   edit: () => ed.on,
+  /* Escape leaves Edit mode (the selection stays, so Delete still works on it) */
+  exitEdit(){ if (ed.on) setEdit(false); },
+  /* Delete and Backspace also work outside Edit mode, on what is selected (a note, a rest, a range) */
+  canDelete: () => !!(ed.on || ed.sel || ed.range || ed.picks),
   guard(){ return H.guard ? H.guard() : true; },
   state(){
     const s = selSym(), t = targetSym(), v = curVoice();
@@ -4323,50 +4331,48 @@ const CBA = {
   range: [STEP_MIN, STEP_MAX],
   toast: m => toast(m)
 };
-/* the cursor: a thin line after the note just entered (or before the next one) */
+/* The caret stands where the next note goes, centred on that place (Samuel 2026-11-14): on the head of the note now
+   at the insertion point (in Insert it moves on, in Overwrite it is replaced), across a note in proportion when the
+   caret is inside it, and one note's room after the last note at the end. A line through the staff with a small
+   mark above it. */
 function drawCaret(scroll){
   if (!piece) return;
   const {vi, ei} = ed.ins, v = piece.voices[vi];
   if (!v || !v.syms) return;
   let k = -1, frac = 0, at = -1;
   const pad = ed.ins.pad > EPS && ei >= v.events.length ? ed.ins.pad : 0;
-  /* found by time alone (a note may be written as several, several rests as one): inside a written note,
-     across it in proportion; at its start, just before it; past the last, just after that */
+  /* found by time alone (a note may be written as several, several rests as one) */
   const T = ei < v.events.length ? rt(v.events[ei].t + (ed.ins.off || 0)) : v.end;
   v.syms.forEach((q, i) => { if (q.src && k < 0 && T > q.t + EPS && T < q.t + q.d - EPS) { k = i; frac = (T - q.t) / q.d; } });
+  let last = -1; for (let i = v.syms.length - 1; i >= 0; i--) if (v.syms[i].src) { last = i; break; }
   if (k < 0) {
     at = v.syms.findIndex(q => q.src && Math.abs(q.t - T) < EPS);
-    if (at < 0) { for (let i = v.syms.length - 1; i >= 0; i--) if (v.syms[i].src) { at = i + 1; break; } }
+    if (at < 0) at = last + 1;
   }
-  /* drawn on the system of the note before (at a line's start that is the end of the line above) */
-  let anchor = k >= 0 ? k : at > 0 && v.syms[at - 1] && v.syms[at - 1].src ? at - 1 : at;
-  if (anchor >= v.syms.length) anchor = v.syms.length - 1;
+  /* drawn on the system of the note it stands on (after the last note: the last note's system) */
+  let anchor = k >= 0 ? k : at <= last ? at : last;
   if (anchor < 0) return;
-  const GAP_L = 0.35, GAP_R = 0.45;
+  const w = ed.inRest ? 0.6 : gw(ed.val);
   document.querySelectorAll('#pages g.n' + vi + '-' + anchor).forEach((el, n) => {
     const par = el.parentNode;
     let r = null;
     for (const r2 of par.querySelectorAll('rect.stafhit[data-v="' + vi + '"]')) if (r2.dataset.k0 !== '' && +r2.dataset.k0 <= anchor && anchor <= +r2.dataset.k1) r = r2;
     if (!r) return;
     const top = +r.dataset.top;
-    /* every caret place comes from one rule (the place just before a note, on this system), so the
-       arrows always move it the way they point: halfway between two notes, after the last, before the first */
-    const box = q => { const e = q >= 0 && par.querySelector('g.n' + vi + '-' + q); return e ? e.getBBox() : null; };
-    const before = q => {
-      const a = box(q - 1), b = box(q);
-      if (a && b) return Math.max(a.x + a.width + 0.1, (a.x + a.width + b.x) / 2);
-      if (a) return a.x + a.width + GAP_L;
-      if (b) return b.x - GAP_R;
-      return null;
-    };
+    /* a note's place: the middle of its head (its selection box), on this system */
+    const bg = q => { const e = q >= 0 && par.querySelector('g.n' + vi + '-' + q + '>rect.selbg'); return e ? {x: +e.getAttribute('x'), w: +e.getAttribute('width')} : null; };
+    const mid = q => { const b = bg(q); return b ? b.x + b.w / 2 : null; };
+    const after = q => { const b = bg(q); return b ? b.x + b.w + 0.5 + w / 2 : null; };   /* the place just after a note */
     let x;
-    if (k >= 0) { const x0 = before(k), x1 = before(k + 1); x = x0 + frac * Math.max(0.8, x1 - x0); }
-    else x = before(at);
+    if (k >= 0) { const x0 = mid(k), x1 = mid(k + 1) ?? after(k); x = x0 + frac * (x1 - x0); }
+    else if (at <= last) x = mid(at);
+    else x = after(last);
     if (x === null || isNaN(x)) return;
-    if (pad) x += 1.2 + pad * 2.4;       /* out in the empty space after the last note */
-    const c = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    c.setAttribute('class', 'caret'); c.setAttribute('x', f(x - 0.07)); c.setAttribute('y', f(top - 1));
-    c.setAttribute('width', '0.14'); c.setAttribute('height', '6');
+    if (pad) x += pad * 2.4;       /* out in the empty space after the last note */
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    c.setAttribute('class', 'caret');
+    c.innerHTML = `<rect x="${f(x - 0.075)}" y="${f(top - 0.9)}" width="0.15" height="5.5"/>` +
+      `<path d="M${f(x - 0.45)} ${f(top - 1.6)}H${f(x + 0.45)}L${f(x)} ${f(top - 0.85)}Z"/>`;
     par.appendChild(c);
     if (scroll && !n) bringIntoView(c);
   });
@@ -4423,7 +4429,8 @@ pagesEl.addEventListener('pointercancel', () => { if (noteDrag) { noteDrag = nul
 
 function syncEdit(){
   $('#editBtn').setAttribute('aria-pressed', String(ed.on));
-  $('#editBar').hidden = !ed.on;
+  $('#editBar').hidden = !barOpen();
+  $('#editMore').setAttribute('aria-expanded', String(barOpen()));
   document.body.classList.toggle('editing', ed.on);
   if (piece) NoteInput.sync(CBA);
 }
@@ -4435,10 +4442,17 @@ function glyphIcon(k, minBox){
 NoteInput.fill(CBA, glyphIcon);
 NoteInput.wire(CBA);
 /* edit mode is always caret mode: the caret stands at the start until a note is clicked */
-$('#editBtn').addEventListener('click', () => {
-  ed.on = !ed.on; clearGhost();
+function setEdit(on){
+  ed.on = on; clearGhost();
   if (ed.on && piece && !ed.sel && !ed.ins && !ed.range && !ed.picks) { const vs = visibleVoices(); if (vs.length) ed.ins = {vi: vs[0].idx, ei: 0, off: 0, pad: 0}; }
   showSel(true); syncEdit(); postHeight();
+}
+$('#editBtn').addEventListener('click', () => setEdit(!ed.on));
+/* the arrow beside the pen: the editing tools row, open or shut, kept per app */
+$('#editMore').addEventListener('click', () => {
+  ed.bar = !barOpen();
+  try { localStorage.setItem(APP.store + ':edbar', ed.bar ? '1' : '0'); } catch (e) {}
+  syncEdit(); postHeight();
 });
 $('#saveBtn').addEventListener('click', () => {
   closePops();

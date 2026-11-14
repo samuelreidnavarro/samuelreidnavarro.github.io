@@ -1042,3 +1042,11 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
 .vrename.lyrin::placeholder{color:var(--muted,#9a8a74);font-style:italic}
 #pages.overlyr,#pages.overlyr *{cursor:text}
 @media (hover:hover){ #pages text.lyr:hover{fill:var(--accent)} }
+/* Edit: the pen enters and leaves Edit mode; the arrow beside it shows or hides the editing tools row */
+#editPod.split{gap:0}
+#editPod .ib.edmore{width:22px;padding:0}
+#editPod .ib.edmore svg.chev{width:11px;height:11px;transition:transform .15s}
+#editPod .ib.edmore[aria-expanded="true"] svg.chev{transform:rotate(180deg)}
+#editPod #editBtn{border-top-right-radius:0;border-bottom-right-radius:0}
+#editPod .edmore{border-top-left-radius:0;border-bottom-left-radius:0}
+#navSum svg.chev{width:11px;height:11px}
