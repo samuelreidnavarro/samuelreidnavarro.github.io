@@ -2106,7 +2106,7 @@ $('#presetList').addEventListener('click', e => {
   const d = e.target.closest('[data-d]'), n = e.target.closest('.pname'), c = e.target.closest('input[type=checkbox]');
   if (d) { const S = presetStore(); S.custom = S.custom.filter(q => q.name !== d.dataset.d); if (S.active === d.dataset.d) S.active = 'Mensural 1'; presetPut(S); presetList(); }
   else if (n) { const p = presetAll().find(q => q.name === n.dataset.p); if (p) { presetApply(p); save(); syncUI(); render(); } }
-  else if (c) { e.preventDefault(); const S = presetStore(); S.active = c.dataset.p; presetPut(S); presetList(); }
+  else if (c) { e.preventDefault(); const S = presetStore(); S.active = c.dataset.p; presetPut(S); presetList(); const p = presetAll().find(q => q.name === c.dataset.p); if (p) { presetApply(p); save(); syncUI(); render(); } }
 });
 $('#presetAdd').addEventListener('click', () => { $('#presetForm').hidden = false; $('#presetName').focus(); });
 function presetSaveNow(){
