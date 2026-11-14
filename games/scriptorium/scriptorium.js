@@ -70,11 +70,11 @@ ${APP.popsBeforeVoices || ''}
       <div class="podg"><div class="pop" id="popAdd">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Add<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="btns col" id="addList">
-          <button class="tb" id="addMens" title="Put a mensuration sign at the selected note, in the selected voice or voices only (select several voices to give them all one)">Add mensuration sign</button>
-          <button class="tb" id="addFerm" title="A fermata over the selected note or notes (again to take it off)">Add signum</button>
-          <button class="tb" id="addKey" title="A new key signature at the selected note, in the selected voice or voices only; hover (tap on a phone) it to change it. Again to take it off">Add key signature change</button>
-          <button class="tb" id="addMark" title="A rehearsal mark, [A], [B] and so on, over the selected note (again to take it off)">Add rehearsal mark</button>
-          <button class="tb" id="addInc" title="The original clefs, mensuration signs and first notes of every voice, before the staves">Add incipit</button>
+          <button class="tb" id="addInc" title="The original clefs, mensuration signs and first notes of every voice, before the staves">Incipit</button>
+          <button class="tb" id="addMens" title="Put a mensuration sign at the selected note, in the selected voice or voices only (select several voices to give them all one)">Mensuration sign</button>
+          <button class="tb" id="addKey" title="A new key signature at the selected note, in the selected voice or voices only; hover (tap on a phone) it to change it. Again to take it off">Key signature change</button>
+          <button class="tb" id="addFerm" title="A fermata over the selected note or notes (again to take it off)">Signum</button>
+          <button class="tb" id="addMark" title="A rehearsal mark, [A], [B] and so on, over the selected note (again to take it off)">Rehearsal mark</button>
         </div></div>
       </div></div>
       <div class="grow">
@@ -2556,6 +2556,8 @@ libEl.addEventListener('click', e => {
 });
 /* the note-input tools (shared/note-input.js, the same as CantusFirmus) go in before the pop-overs are wired */
 NoteInput.build($('#editBar'), {what: 'voice', whole: 'the whole voice'});
+/* the Add menu belongs to the edit controls: it shows when Edit is on */
+{ const pod = $('#popAdd').parentNode; $('#editBar').appendChild(pod); }
 /* pop-overs: hover, or click to keep open */
 function closePops(except){ document.querySelectorAll('.pop.open').forEach(p => { if (p !== except) { p.classList.remove('open'); p.querySelector('button').setAttribute('aria-expanded', 'false'); } }); }
 /* with a mouse a menu follows the pointer: nothing is pinned open by a click. Touch screens tap to open and close. */
@@ -3361,7 +3363,7 @@ $('#addMark').addEventListener('click', () => {
     piece.sections.push({t, label: L}); piece.sections.sort((a, b) => a.t - b.t);
   });
 });
-function incSync(){ const on = !!(st.inc || {})[pieceKey]; $('#addInc').textContent = on ? 'Remove incipit' : 'Add incipit'; }
+function incSync(){ const on = !!(st.inc || {})[pieceKey]; $('#addInc').textContent = on ? 'Remove incipit' : 'Incipit'; }
 $('#addInc').addEventListener('click', () => {
   if (!piece || !INC.snap || INC.key !== pieceKey) { toast('Open a score first.'); return; }
   st.inc = st.inc || {}; if (st.inc[pieceKey]) delete st.inc[pieceKey]; else st.inc[pieceKey] = true;
