@@ -893,3 +893,14 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 #openList #libBtn{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 #openList #libBtn .of-f{color:inherit;opacity:.85}
 #openList #libBtn:hover:not(:disabled){background:#6F2017;color:var(--accent-ink)}
+
+.morelinks{margin:0 0 14px}
+.morelinks summary{display:inline-block;cursor:pointer;padding:4px 12px;border-radius:14px;background:rgba(0,0,0,.05);list-style:none}
+.morelinks summary::-webkit-details-marker{display:none}
+.morelinks summary:hover{color:#8E2A1E}
+.morelinks[open] summary{color:#8E2A1E}
+.morelinks ul{list-style:none;margin:8px 0 0;padding:0}
+.morelinks li{padding:3px 0}
+.morelinks li a{color:inherit;text-decoration:underline}
+.morelinks li a:hover{color:#8E2A1E}
+.morelinks li span{opacity:.6;font-size:.9em}
