@@ -1023,3 +1023,17 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
 }
 /* the Sound panel draws over the top bar too: on a phone it can reach the top of the screen */
 #tpSide{z-index:45}
+
+/* Sound button red while its panel is open; the Mixer (General + voices) leads the panel */
+#toggleSet[aria-expanded="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+#toggleSet[aria-expanded="true"] svg{fill:currentColor}
+.mxr.gen .mxn{font-style:normal;color:var(--text)}
+.mxr.gen #reg{width:100%;max-width:none;min-width:0}
+.mxr.gen{padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:2px}
+#mensMenu .mdel{grid-column:1/-1}
+@media (max-width:700px){
+  .mxr.gen{grid-template-columns:minmax(0,1fr);grid-template-areas:"n" "s"}
+  .mxr.gen .mxg{display:none}
+  .mxr.gen .mxn{grid-area:n}.mxr.gen #reg{grid-area:s}
+}
+#mensMenu li.mdel{grid-column:1/-1;flex-direction:row;justify-content:center;padding:5px 8px;border-top:1px solid var(--line);border-radius:0;margin-top:2px}

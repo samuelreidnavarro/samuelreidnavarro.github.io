@@ -900,7 +900,7 @@ function addSampledOptions(){
   const rs = document.createElement('select'); rs.id = 'temperRoot';
   ROOTS.forEach((n, i) => { const o = document.createElement('option'); o.value = i; o.textContent = n; rs.appendChild(o); });
   const rrow = document.createElement('div'); rrow.className = 'temperroot'; rrow.append(rl, rs); box.appendChild(rrow);
-  sel.after(box);
+  if ($('#soundCol')) $('#soundCol').prepend(box); else sel.after(box);
   box.addEventListener('change', e => { if (e.target.name === 'temper') { S.temper = e.target.value; syncTemper(); H.save(); retuneAll(); testTone(); } });
   rs.addEventListener('change', () => { S.temperRoot = +rs.value; H.save(); retuneAll(); testTone(); });
   syncTemper();

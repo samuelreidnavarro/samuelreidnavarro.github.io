@@ -190,20 +190,19 @@ ${APP.catalogue ? LIBBTN + NEWBTN + '<div id="openRecent"></div><button class="t
   </section>
 
   <section class="tp-side" id="tpSide" aria-label="Sound settings" hidden>
+    <div class="mixcol" id="mixCol">
+      <div class="tg">Mixer</div>
+      <div class="mxr gen"><label class="mxn" for="reg" title="The sound of every voice that is set to General">General</label><span class="mxg"></span><select id="reg"><option value="gedackt">Gedackt 8′ (stopped flute)</option><option value="principal">Principal 8′</option><option value="plenum">Principal chorus (8′ 4′ 2′)</option><option value="flute">Open flute 8′</option><option value="regal">Regal (soft reed)</option><option value="sine">Sine</option><option value="custom">Your own (drawbars)</option></select><span class="mxg"></span></div>
+      <div class="mixlist" id="mixList"></div>
+    </div>
     <div class="tcol" id="soundCol">
-      <label for="reg">Sound</label><select id="reg"><option value="gedackt">Gedackt 8′ (stopped flute)</option><option value="principal">Principal 8′</option><option value="plenum">Principal chorus (8′ 4′ 2′)</option><option value="flute">Open flute 8′</option><option value="regal">Regal (soft reed)</option><option value="sine">Sine</option><option value="custom">Your own (drawbars)</option></select>
       <label class="check"><input type="checkbox" id="audition"> Hear notes while editing</label>
-      <button id="copySound" title="Copies the current sound settings as text, to send to whoever is tuning the sound">Copy sound settings</button>
     </div>
     <div class="tcol" id="toneCol">
       <div class="tg">Tone</div>
       <label for="bright">Brightness</label><input type="range" id="bright" min="0" max="100" step="1"><output id="bo"></output>
       <label for="room">Room</label><input type="range" id="room" min="0" max="100" step="1"><output id="ro"></output>
       <div class="tune" id="tune"></div>
-    </div>
-    <div class="mixcol" id="mixCol">
-      <div class="tg">Mixer</div>
-      <div class="mixlist" id="mixList"></div>
     </div>
   </section>
 
@@ -2434,7 +2433,7 @@ function mixBuild(){
     box.innerHTML = vs.map((v, i) => { const name = v.name || 'Voice ' + (i + 1);
       return `<div class="mxr" data-i="${i}"><span class="mxn" title="${esc(name)}">${esc(name)}</span>` +
         `<button type="button" class="ptri mxp" data-i="${i}"></button>` +
-        `<select class="mxs" data-i="${i}" aria-label="${esc(name)}: sound"><option value="">As Sound: </option>${opts}</select>` +
+        `<select class="mxs" data-i="${i}" aria-label="${esc(name)}: sound"><option value="">General</option>${opts}</select>` +
         `<input type="range" class="mxv" data-i="${i}" min="0" max="100" step="1" aria-label="${esc(name)}: volume"></div>`; }).join('');
   }
   mixSync();
@@ -2446,7 +2445,7 @@ function mixSync(){
     const i = +r.dataset.i; if (!piece.voices[i]) return;
     const o = vis(i), t = playState(o), name = piece.voices[i].name || 'Voice ' + (i + 1);
     const sel = r.querySelector('.mxs'), first = sel.options[0];
-    first.textContent = 'As Sound: ' + all;
+    first.textContent = 'General: ' + all;
     if (document.activeElement !== sel) sel.value = mixReg(o) || '';
     sel.classList.toggle('own', !!mixReg(o));
     const rg = r.querySelector('.mxv'); if (document.activeElement !== rg) rg.value = o.gain ?? 100;
@@ -3544,6 +3543,7 @@ function mensIcon(sg){
   return `<svg viewBox="-0.3 -1.9 4.9 8.8" aria-hidden="true">${lines}<g fill="currentColor" stroke="none">${mensSvg(sg, 0.2, 0)}</g></svg>`;
 }
 mensMenu.innerHTML = MENS_MENU.map(([sg, name]) => `<li role="option" data-m="${esc(sg)}" title="${esc(name)}">${mensIcon(sg)}<span>${esc(sg.replace('r', ' rev.'))}</span></li>`).join('') +
+  `<li class="flatopt mdel" data-m="-" role="option" title="Remove this mensuration sign (or press Delete)"><span>Delete the sign</span></li>` +
   `<li class="flatopt mdiff" data-m="" role="option"><label class="check"><input type="checkbox" id="mensDiff"> Different mensuration <span class="mhint">(this voice only)</span></label></li>`;
 let mensAt = null;
 function openMensMenu(vi, t, e){
@@ -3561,12 +3561,14 @@ function setMens(sign){
   if (!mensAt || !piece) return;
   const {vi, t} = mensAt, only = $('#mensDiff').checked;
   mensMenu.hidden = true;
+  const del = sign === '-';
   const targets = only ? [vi] : piece.voices.map((v, i) => i).filter(i => i === vi || piece.voices[i].mets.some(m => eq(m.t, t)) || piece.voices[i].events.some(e => eq(e.t, t)));
   if (targets.some(i => !writable(piece.voices[i])) && only) { refuse(); return; }
   commit(() => {
     for (const i of targets) {
       const v = piece.voices[i];
       if (!writable(v)) continue;
+      if (del) { v.mets = v.mets.filter(x => !eq(x.t, t)); continue; }
       const m = v.mets.find(x => eq(x.t, t));
       /* the same sign as the one already in effect from earlier in the piece: no override at all (Samuel 2026-11-14) */
       let prev = null; for (const q of v.mets) if (q.t < t - EPS) prev = q.sign;
@@ -3582,7 +3584,10 @@ mensMenu.addEventListener('click', e => {
   const li = e.target.closest('li[data-m]'); if (li && li.dataset.m) setMens(li.dataset.m);
 });
 document.addEventListener('pointerdown', e => { if (!mensMenu.hidden && !e.target.closest('#mensMenu') && !e.target.closest('.menshit')) mensMenu.hidden = true; });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') mensMenu.hidden = true; });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') mensMenu.hidden = true;
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && !mensMenu.hidden && mensAt) { e.preventDefault(); e.stopPropagation(); setMens('-'); }
+}, true);
 /* Add > Add mensuration sign: at the selected note of the selected voice(s) only; Add incipit: before the staves */
 function mensTargets(){
   const out = new Map(), add = (vi, t) => { if (!out.has(vi) || t < out.get(vi)) out.set(vi, t); };
