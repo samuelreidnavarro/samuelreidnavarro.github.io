@@ -110,7 +110,8 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px;margin:0}
 .popbody{display:none;position:absolute;left:-6px;top:calc(100% - 2px);z-index:15;padding:6px;background:var(--surface);
   border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 28px -12px rgba(0,0,0,.4)}
 /* a menu is open while the mouse is over it (or the keyboard is in it, or a field in it is being typed in); on touch screens a tap opens it */
-.pop:hover .popbody,.pop:has(:focus-visible) .popbody,.pop:has(select:focus) .popbody,.pop:has(input:not([type=range]):not([type=checkbox]):focus) .popbody{display:block}
+@media (hover:hover){ .pop:hover .popbody{display:block} }
+.pop:has(:focus-visible) .popbody,.pop:has(select:focus) .popbody,.pop:has(input:not([type=range]):not([type=checkbox]):focus) .popbody{display:block}
 @media (hover:none){ .pop.open .popbody{display:block} }
 .pop.shut .popbody{display:none !important}
 .popbody{width:max-content}
@@ -772,7 +773,9 @@ html.dark .tools .podg,html.dark .transport .podg{box-shadow:0 1px 4px rgba(0,0,
   html.ctl-bot-idle #play:hover,html.ctl-bot-idle #podSound:hover,html.ctl-bot-idle #podSound:focus-within{opacity:1}
   html.ctl-bot-idle .tp-stack{opacity:0;pointer-events:none;transform:translateX(-16px)}
   html.ctl-bot-idle .tp-stack *{pointer-events:none}
+  @media (hover:hover){
   html.ctl-bot-idle #podSound:not(:hover):not(:focus-within) .hzctl,html.ctl-bot-idle #podSound:not(:hover):not(:focus-within) #toggleSet{display:none}
+  }
 }
 @media (min-width:701px){
   .viewwrap:not(.fs) .fsbtn{transition:opacity .35s ease}
