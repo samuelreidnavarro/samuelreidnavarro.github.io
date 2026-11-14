@@ -775,13 +775,15 @@ function prepare(){
       if (s.mens) s.left += mensW(s.mens) + 1.3;
       s.right = s.hw + (s.dot ? 0.75 : 0);
       const sy = s.syl && s.syl[Math.min(st.verse, s.syl.length - 1)] !== undefined ? s.syl[Math.min(st.verse, (s.syl.length || 1) - 1)] : null;
-      s.text = null; s.hy = false; s.hyRaw = false; s.cont = false; s.ww = 0;
+      s.text = null; s.hy = false; s.hyRaw = false; s.cont = false; s.ww = 0; s.lyo = 0;
       if (sy && sy !== '.') {
         let tx = sy.replace(/^-/, '');
         if (/-$/.test(tx)) { s.hyRaw = true; s.hy = st.dashes === 'on'; tx = tx.slice(0, -1); }
         tx = tx.replace(/\|\|?/g, '').replace(/_/g, ' ').trim();
         if (tx.includes('&')) { decoder.innerHTML = tx; tx = decoder.value; }
         s.text = tx; s.tw = textW(tx, LYR);
+        /* a long note whose stem hangs down through the lyric row: its syllable starts beside the stem, so the row need not drop below the stem (and the staves stay close) */
+        if (!s.rest && s.pos !== null && s.pos !== undefined && (STEMMED[s.g] ? isFlipped(s) : TAILED[s.g] ? !isFlipped(s) : false) && 4 - s.pos * 0.5 + 3.6 > 5.1) s.lyo = s.tw / 2 + 0.4 + (TAILED[s.g] ? s.hw / 2 : 0);
       }
       s.end = rt(s.t + s.d);
     }
@@ -837,13 +839,13 @@ function columns(vlist, a, b, withLyrics){
     let x = prev ? prev.x + prev.right + left + 0.28 + 0.27 * m1 + (needBar ? 0.5 + 0.4 * m1 : 0) : left;
     for (const [v, s] of c.items) {
       if (lastX.has(v)) x = Math.max(x, lastX.get(v) + spring(lastD.get(v)) + (needBar ? 0.5 : 0));
-      if (withLyrics(v) && s.text && !s.cont && lastSyl.has(v)) x = Math.max(x, lastSyl.get(v) + s.tw / 2 - s.hw / 2 + 0.3 + 0.25 * m1);
+      if (withLyrics(v) && s.text && !s.cont && lastSyl.has(v)) x = Math.max(x, lastSyl.get(v) + s.tw / 2 - s.hw / 2 - s.lyo + 0.3 + 0.25 * m1);
     }
     c.x = x;
     for (const [v, s] of c.items) {
       lastX.set(v, x); lastD.set(v, s.d);
-      if (withLyrics(v) && s.text && s.ww) lastSyl.set(v, x + s.hw / 2 - s.tw / 2 + s.ww);
-      else if (withLyrics(v) && s.text && !s.cont) lastSyl.set(v, x + s.hw / 2 + s.tw / 2 + (s.hy ? 0.9 : 0));
+      if (withLyrics(v) && s.text && s.ww) lastSyl.set(v, x + s.hw / 2 + s.lyo - s.tw / 2 + s.ww);
+      else if (withLyrics(v) && s.text && !s.cont) lastSyl.set(v, x + s.hw / 2 + s.lyo + s.tw / 2 + (s.hy ? 0.9 : 0));
     }
     prev = c;
   }
@@ -877,7 +879,8 @@ function breakLines(cols, avail, firstAvail){
       j++;
     }
     let end = j;
-    if (j < cols.length && lastClean > i) end = lastClean;
+    /* a line ends where no voice holds a note across, unless that would leave it well short of the margin (a long note in one voice must not make the whole line stretch to fill the space) */
+    if (j < cols.length && lastClean > i && cols[lastClean].x - cols[i].x + cols[i].left + cols[lastClean].right + CUST >= 0.72 * W) end = lastClean;
     lines.push({from: i, to: end});
     i = end;
   }
@@ -1201,7 +1204,7 @@ function staffLine(o){
     const X = o.xs[i];
     s += symSvg(sym, X, top, show);
     if (o.showLyr && sym.text && st.dashes !== 'off') {
-      s += `<text x="${f(X + sym.hw / 2)}" y="${f(o.lyrY)}" font-size="${LYR}" text-anchor="middle">${esc(sym.text)}</text>`;
+      s += `<text x="${f(X + sym.hw / 2 + sym.lyo)}" y="${f(o.lyrY)}" font-size="${LYR}" text-anchor="middle">${esc(sym.text)}</text>`;
     }
   }
   /* hyphens between syllables, ties */
@@ -1214,7 +1217,7 @@ function staffLine(o){
     syms.forEach(([sym, X], k) => {
       if (!sym.text) return;
       if (sym.cont && open) return;
-      const x = X + sym.hw / 2 - sym.tw / 2;
+      const x = X + sym.hw / 2 + sym.lyo - sym.tw / 2;
       if (sym.cont) {
         /* the line begins inside a word: nothing more if the line before wrote it whole */
         let i = v.syms.indexOf(sym) - 1;
@@ -1234,14 +1237,14 @@ function staffLine(o){
     for (const [sym, X] of syms) {
       if (sym.text) {
         if (prevSyl && prevSyl[0].hy) {
-          const a = prevSyl[1] + prevSyl[0].hw / 2 + prevSyl[0].tw / 2, b = X + sym.hw / 2 - sym.tw / 2;
+          const a = prevSyl[1] + prevSyl[0].hw / 2 + prevSyl[0].lyo + prevSyl[0].tw / 2, b = X + sym.hw / 2 + sym.lyo - sym.tw / 2;
           if (b - a > 0.6) s += hl((a + b) / 2 - 0.3, (a + b) / 2 + 0.3, o.lyrY - 0.45, 'barl', 0.1);
         }
         prevSyl = [sym, X];
       }
     }
     if (prevSyl && prevSyl[0].hy && !o.last) {
-      const a = prevSyl[1] + prevSyl[0].hw / 2 + prevSyl[0].tw / 2;
+      const a = prevSyl[1] + prevSyl[0].hw / 2 + prevSyl[0].lyo + prevSyl[0].tw / 2;
       if (o.lineEnd - a > 0.8) s += hl(a + 0.3, a + 0.9, o.lyrY - 0.45, 'barl', 0.1);
     }
   }
@@ -1333,7 +1336,7 @@ function lineRoom(v, line){
   const m = Math.min(1, st.vs), pad = 0.05 + 0.25 * m, base = 0.05 + 0.7 * m;
   const n = Math.max(1, line.to - line.from);
   /* per column how far the music reaches above and below the staff (so a neighbouring staff only keeps clear where something really is) */
-  const lo = Array(n).fill(-base), hi = Array(n).fill(4 + base);
+  const lo = Array(n).fill(-base), hi = Array(n).fill(4 + base), hiTxt = Array(n).fill(4 + base);
   const up = (i, y) => { lo[i] = Math.min(lo[i], y); }, dn = (i, y) => { hi[i] = Math.max(hi[i], y); };
   /* the custos at the line end, pointing at the next note */
   const tEnd = line.tEnd !== undefined ? line.tEnd : line.to < line.cols.length ? line.cols[line.to].t : null;
@@ -1347,13 +1350,16 @@ function lineRoom(v, line){
     if (!s) continue;
     const e = extent(s);
     up(i - line.from, e[0] - pad); dn(i - line.from, e[1] + pad);
+    /* what the lyric row has to clear: not a stem that its syllable stands beside */
+    const ci = i - line.from; hiTxt[ci] = Math.max(hiTxt[ci], (s.lyo ? Math.min(e[1], 4 - s.pos * 0.5 + 0.8) : e[1]) + pad);
   }
   /* a note's reach counts for its neighbours too */
   const lo2 = lo.map((x, i) => Math.min(x, lo[i - 1] ?? 0, lo[i + 1] ?? 0)), hi2 = hi.map((x, i) => Math.max(x, hi[i - 1] ?? 0, hi[i + 1] ?? 0));
+  const txt2 = hiTxt.map((x, i) => Math.max(x, hiTxt[i - 1] ?? 0, hiTxt[i + 1] ?? 0));
   let above = -Math.min(...lo2), below = Math.max(...hi2) - 4;
   const lyr = vis(v.idx).lyr && v.syms.some(s => s.text);
-  const lyrY = Math.max(4 + 1.5 + 1.1 * m, 4 + below + 0.9 + 0.6 * m);
-  if (lyr) { below = lyrY + 0.7 - 4; hi2.fill(lyrY + 0.7); }
+  const lyrY = Math.max(4 + 1.5 + 1.1 * m, 4 + (Math.max(...txt2) - 4) + 0.9 + 0.6 * m);
+  if (lyr) { for (let i = 0; i < hi2.length; i++) hi2[i] = Math.max(hi2[i], lyrY + 0.7); below = Math.max(...hi2) - 4; }
   return {above, below, lyrY, lo: lo2, hi: hi2};
 }
 function nextSym(v, t){
