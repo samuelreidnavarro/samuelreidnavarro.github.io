@@ -1,5 +1,5 @@
-/* App and tool pages: the bar folds to the left into a small "S" square while the mouse is in the lower part of the window,
-   and opens again when the mouse comes to the top. On touch screens the S is tapped to open it, and a tap elsewhere folds it.
+/* App and tool pages: the bar is out when the page opens and folds to the left into a small "S" square after ten seconds;
+   resting the mouse on the S opens it again, and it folds once the mouse leaves the bar. On touch screens the S is tapped to open it, and a tap elsewhere folds it.
    In ChoirBook, Canon Maker and CantusFirmus the S sits just left of the app's Edit pen, on the same row. */
 (function () {
   var body = document.body, nav = document.querySelector("body.compact .nav"), brand = nav && nav.querySelector(".brand");
@@ -9,7 +9,7 @@
   brand.setAttribute("aria-label", name);
   var GAP = 8, SIZE = 40, root = document.documentElement;
   var frame = document.querySelector("main iframe");
-  var open = true, lastY = null, anim = 0;
+  var open = true, anim = 0;
 
   /* where the S goes: beside the pen when the app has one, else in the top left corner */
   function appDoc() { try { return frame && frame.contentDocument; } catch (e) { return null; } }
@@ -62,35 +62,33 @@
     if (!o) place();
     settle();
   }
-  var held = function () { return nav.matches(":hover") || nav.matches(":focus-within"); };
-  function decide() {
-    if (held()) return set(true);
-    if (window.scrollY > 40) return set(false);
-    set(lastY !== null && lastY < window.innerHeight * 0.2);
+  /* a phone keeps a "hover" where it was last tapped, so only a real mouse counts as resting on the bar */
+  var mouse = false;
+  document.addEventListener("pointermove", function (e) { mouse = e.pointerType === "mouse"; }, { passive: true });
+  var held = function () { return (mouse && nav.matches(":hover")) || nav.matches(":focus-within"); };
+  var foldTimer = 0, started = false;
+  function foldSoon(ms) {
+    clearTimeout(foldTimer);
+    foldTimer = setTimeout(function () { if (!held()) set(false); }, ms);
   }
 
-  function onMove(e, offset) {
-    if (e.pointerType && e.pointerType !== "mouse") return;
-    lastY = e.clientY + offset;
-    decide();
-  }
-  document.addEventListener("pointermove", function (e) { onMove(e, 0); }, { passive: true });
-  document.documentElement.addEventListener("mouseleave", function () { if (!held() && lastY !== null && lastY > 40) set(false); });
-  window.addEventListener("scroll", function () { if (window.scrollY > 40) set(false); }, { passive: true });
+  /* the mouse opens the bar only by resting on the S itself, and the bar folds again shortly after the mouse leaves it */
+  brand.addEventListener("pointerenter", function (e) { if (e.pointerType === "mouse" && !open) { clearTimeout(foldTimer); set(true); } });
+  nav.addEventListener("pointerenter", function (e) { if (e.pointerType === "mouse") clearTimeout(foldTimer); });
+  nav.addEventListener("pointerleave", function (e) { if (e.pointerType === "mouse" && open && started) foldSoon(600); });
 
   /* touch: the folded S opens the bar instead of going home; a tap anywhere else folds it */
   brand.addEventListener("click", function (e) { if (!open) { e.preventDefault(); set(true); } });
   function onTap(e) { if (e.pointerType !== "mouse" && open && !nav.contains(e.target)) set(false); }
   document.addEventListener("pointerdown", onTap, true);
-  nav.addEventListener("focusin", function () { set(true); });
-  nav.addEventListener("focusout", function () { setTimeout(function () { if (!nav.matches(":focus-within") && lastY !== null && lastY > window.innerHeight * 0.2) set(false); }, 0); });
+  nav.addEventListener("focusin", function () { clearTimeout(foldTimer); set(true); });
+  nav.addEventListener("focusout", function () { setTimeout(function () { if (started && !held()) set(false); }, 0); });
 
   /* the app in the frame is on this site, so its mouse moves can be followed too */
   function hook() {
     var d = appDoc();
     if (!d || d.__siteNav) return;
     d.__siteNav = true;
-    d.addEventListener("pointermove", function (e) { onMove(e, frame.getBoundingClientRect().top); }, { passive: true });
     d.addEventListener("pointerdown", function (e) { if (e.pointerType !== "mouse" && open) set(false); }, true);
   }
   if (frame) {
@@ -100,9 +98,7 @@
   window.addEventListener("resize", function () { if (!open) place(); });
   window.addEventListener("load", place);
 
-  /* start folded, so the page opens compact */
-  place();
-  open = false;
-  body.classList.add("nav-folded", "nav-fold");
-  setTimeout(settle, 0);
+  /* the page opens with the bar out; after ten seconds it folds into the S (unless the mouse is on it) */
+  body.classList.add("nav-fold");
+  setTimeout(function () { started = true; if (!held()) set(false); }, 10000);
 })();
