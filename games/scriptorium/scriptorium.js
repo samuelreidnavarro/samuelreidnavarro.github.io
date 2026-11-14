@@ -1076,7 +1076,7 @@ function ligShape(G, top){
   if (!cop && !(gs[0] === 'Mx' || (gs[0] === 'B') || (gs[0] === 'L'))) return false;
   /* obliques: a falling step from note i to i+1, i+1 a brevis (or the second semibrevis of c.o.p.), i a brevis, the
      first note (B or L) or the first semibrevis; a falling final brevis must be one */
-  const can = i => down(i + 1) && ((cop && i === 0 && !G[0][0].dot) || (gs[i + 1] === 'B' && (gs[i] === 'B' || (i === 0 && gs[i] === 'L'))));
+  const can = i => down(i + 1) && ((cop && i === 0) || (gs[i + 1] === 'B' && (gs[i] === 'B' || (i === 0 && gs[i] === 'L'))));
   const pairAt = new Array(n).fill(false);
   const finalObl = gs[n - 1] === 'B' && down(n - 1) && !(cop && n === 2);
   if (finalObl && !can(n - 2)) return false;
@@ -1091,7 +1091,7 @@ function ligShape(G, top){
   for (let i = 0; i < n; i++) { if (pairAt[i]) { units.push([i, i + 1]); i++; } else units.push([i]); }
   const X = new Array(n);
   let x = G[0][1];
-  const dotW = () => 0;   /* a dot in a ligature stands over or under its note, it does not widen the ligature */
+  const dotW = i => G[i][0].dot ? 0.8 : 0;   /* a dot stands to the right of its note, where the next note makes room for it */
   for (const u of units) {
     if (u.length === 2) { X[u[0]] = x; X[u[1]] = x + 1.3; x += 2.6 + dotW(u[1]); }
     else { X[u[0]] = x; x += LIG_W[gs[u[0]]] + dotW(u[0]); }
@@ -1102,20 +1102,18 @@ function ligShape(G, top){
     const i = u[0], j = u[u.length - 1], xa = X[i], xb = xa + (u.length === 2 ? 2.6 : LIG_W[gs[i]]);
     const col = u.some(q => G[q][0].col);
     parts[i] += ligBand(xa, Y[i], xb, Y[j], col);
-    /* a dot after the unit stretches it with thin lines to the next note */
-    const nxt = k + 1 < units.length ? X[units[k + 1][0]] : null;
-    if (nxt !== null && nxt > xb + 0.01) parts[j] += `<rect class="ink" x="${f(xb)}" y="${f(Y[j] - 0.544)}" width="${f(nxt - xb)}" height="0.1"/><rect class="ink" x="${f(xb)}" y="${f(Y[j] + 0.44)}" width="${f(nxt - xb)}" height="0.1"/>`;
     /* the left side: the first note's, or the joint with the note before (both pitches) */
     if (i === 0) parts[i] += ligV(xa, Y[0] - 0.686, Y[0] + 0.686);
     else parts[i] += ligV(xa, Math.min(Y[i], Y[i - 1]) - 0.686, Math.max(Y[i], Y[i - 1]) + 0.686);
     if (j === n - 1) parts[j] += ligV(xb - 0.12, Y[j] - 0.686, Y[j] + 0.686);
   });
-  /* dots: over or under the body of their note (on the side away from the neighbouring note), not between the notes */
+  /* dots: to the right of their note, always on a space (a line note: the space above it, a space note: that space).
+     The first note of an oblique has the slanted body to its right, so its dot stands above the body, in the space diagonally up and right. */
   G.forEach(([q], i) => {
     if (!q.dot) return;
-    const other = i === 0 ? Y[1] : Y[i - 1];
-    const above = !(other < Y[i]);           /* the neighbour is not higher on the staff: the dot goes above */
-    const dy = above ? Y[i] - 1.05 : Y[i] + 1.05, dx = X[i] + (G[i][0].dot && pairAt[i - 1] ? 0.65 : 0.65);
+    const u = units.find(w => w.includes(i)), first = u.length === 2 && u[0] === i, line = q.pos % 2 === 0;
+    const dy = first ? (line ? Y[i] - 0.5 : Y[i] - 1) : (line ? Y[i] - 0.5 : Y[i]);
+    const dx = first ? X[i] + 1.3 : X[u[u.length - 1]] + (u.length === 2 ? 1.3 : LIG_W[gs[i]]) + 0.4;
     parts[i] += `<circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.2"/>`;
   });
   /* stems */
