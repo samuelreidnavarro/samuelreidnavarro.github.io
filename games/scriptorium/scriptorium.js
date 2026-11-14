@@ -2030,6 +2030,8 @@ async function pieceUrl(key){
 function showSource(key){
   const e = CATBY[key];
   const info = $('#infoSrc');
+  const own = H.sourceHtml ? H.sourceHtml(key) : '';
+  if (own) { if (info) info.innerHTML = own; return; }
   if (info) {
     const c = creditText().about;
     info.innerHTML = e ? '' : esc(c || (key && key.startsWith('mine:') ? `Your own, kept in this browser (${L.mine}).` : key && key.startsWith('file:') ? 'A file from your computer: ' + key.slice(5) : ''));
@@ -2106,6 +2108,7 @@ async function loadPiece(file){
     text = m.text;
   }
   if (!text && file.startsWith('uma/')) { await loadCatalogue(); if (CATBY[file]) text = cache[file] = await umaLoad(CATBY[file]); }
+  if (!text && H.loadKey) { const k = await H.loadKey(file); if (k) text = cache[file] = k; }   /* an add-on's own pieces, e.g. gb:<id> from GregoBase */
   if (!text) {
     const r = await fetch(await pieceUrl(file));
     if (!r.ok) throw new Error('Could not load ' + file);

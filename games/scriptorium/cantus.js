@@ -83,6 +83,81 @@
     for (let k = 0; k < 5; k++) lines += hl(0, w, top + k, 'staff', 0.13);
     return `<svg viewBox="0 -2.6 ${f(w)} 9.6" style="width:${f(w * 4.8)}px" aria-hidden="true">${lines}${o}</svg>`;
   }
+
+  /* ---------------- GregoBase: every chant of gregobase.selapa.net, opened from there ----------------
+     gregobase.json only lists the chants (id, incipit, edition, usage; made from GregoBase's incipit pages). The GABC itself
+     is fetched from GregoBase when a chant is opened, through the read-only relay gregobase-proxy (GregoBase sends no CORS
+     headers), and read like an opened .gabc file. Pieces are gb:<id>. */
+  const GB = 'https://gregobase.selapa.net/', GB_PROXY = 'https://gregobase-proxy.samreidn.workers.dev/gabc/', GB_COUNT = 20472;
+  const GB_USE = {al: 'Alleluia', an: 'Antiphona', ca: 'Canticum', co: 'Communio', gr: 'Graduale', hy: 'Hymnus', im: 'Improperia',
+    in: 'Introitus', ky: 'Kyriale', of: 'Offertorium', tp: 'Toni Communes', ps: 'Psalmus', pr: 'Praefationes', pa: 'Prosa',
+    or: 'Varia', rb: 'Responsorium breve', re: 'Responsorium', rh: 'Rhythmus', se: 'Sequentia', su: 'Supplicatio', tr: 'Tractus', va: 'Varia'};
+  GB_USE.or = 'Ordinarium';
+  let gbIdx = null, gbP = null;
+  const gbLoad = () => gbP || (gbP = fetch('scriptorium/gregobase.json?v=1').then(r => { if (!r.ok) throw new Error('x'); return r.json(); }).then(j => {
+    const fold = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/æ/g, 'ae').replace(/œ/g, 'oe').replace(/j/g, 'i').replace(/v/g, 'u');
+    gbIdx = j.c.map(([id, t, v, u]) => ({id, t, v: j.v[v], u, f: fold(t)}));
+    gbIdx.fold = fold;
+    return gbIdx;
+  }).catch(e => { gbP = null; throw e; }));
+  const gbById = id => gbIdx && gbIdx.find(e => e.id === id);
+  const gbSub = e => [GB_USE[e.u], e.v].filter(Boolean).join(' · ');
+  const gbPage = id => `${GB}chant.php?id=${id}`;
+  async function gbOpen(key){
+    const id = +key.slice(3);
+    let txt = null;
+    try { const r = await fetch(GB_PROXY + id); if (r.ok) txt = await r.text(); } catch (e) {}
+    if (!txt) {
+      const err = new Error('This chant could not be fetched from GregoBase just now.');
+      err.html = `This chant could not be fetched from GregoBase just now. You can download its GABC <a href="${esc(gbPage(id))}" target="_blank" rel="noopener">on GregoBase</a> and open it here with Open file.`;
+      throw err;
+    }
+    const S = ScoreImport._.fromGabc(txt);
+    S.voices.forEach(v => { v.name = 'Cantus firmus'; });
+    try { await gbLoad(); } catch (e) {}
+    const e = gbById(id);
+    if (!S.title && e) S.title = e.t;
+    let k = ScoreImport._.toKern(S, id + '.gabc');
+    const book = (/^\s*book\s*:\s*([^;\n]*)/m.exec(txt) || [])[1];
+    const src = 'GregoBase, chant ' + id + (e && e.v ? ' (' + e.v + ')' : '') + (book ? '. ' + book.trim() : '');
+    if (!/^!!!OTL/m.test(k)) k = `!!!OTL: ${S.title || 'GregoBase ' + id}\n` + k;
+    return `!!!SMS: ${src}\n` + k;
+  }
+  const gbSource = key => {
+    if (!key || !key.startsWith('gb:')) return '';
+    const id = +key.slice(3);
+    return `Chant: <a href="${esc(gbPage(id))}" target="_blank" rel="noopener">GregoBase, chant ${id}</a> · <a href="${esc(GB + 'download.php?id=' + id + '&format=gabc&elem=1')}" target="_blank" rel="noopener">GABC file</a>`;
+  };
+  const gb = {q: '', u: '', v: '', shown: 150};
+  function gbList(){
+    const box = libEl.querySelector('#gbList');
+    if (!box) return;
+    if (!gbIdx) { box.innerHTML = '<p class="libhint">Loading the list of GregoBase chants…</p>'; return; }
+    const words = gbIdx.fold(gb.q).split(/[^a-z0-9]+/).filter(Boolean);
+    const num = /^\d+$/.test(gb.q.trim()) ? +gb.q.trim() : null;
+    const list = gbIdx.filter(e => (num !== null ? e.id === num || e.f.includes(gb.q.trim()) : words.every(w => e.f.includes(w))) &&
+      (!gb.u || GB_USE[e.u] === gb.u) && (!gb.v || e.v === gb.v));
+    /* the incipit itself first, then incipits that start with the search; Solesmes and Vatican before other editions */
+    const lead = words.join(' '), PRI = {Solesmes: 0, Vatican: 1};
+    if (lead) list.sort((a, b) => ((b.f === lead) - (a.f === lead)) || (b.f.startsWith(lead) - a.f.startsWith(lead)) || ((PRI[a.v] ?? 2) - (PRI[b.v] ?? 2)) || (a.f < b.f ? -1 : a.f > b.f ? 1 : 0));
+    const show = list.slice(0, gb.shown), n = list.length;
+    let h = `<p class="libhint">${n.toLocaleString('en')} chant${n === 1 ? '' : 's'}${n > show.length ? ` (showing ${show.length})` : ''}</p>`;
+    h += show.map(e => { const key = 'gb:' + e.id;
+      return `<button class="pc gbitem" data-p="${key}" aria-current="${key === pieceKey}"><span class="t">${esc(e.t)}</span><span class="c">${esc(gbSub(e))}</span></button>`; }).join('');
+    if (n > show.length) h += '<button class="more" id="gbMore">Show more</button>';
+    box.innerHTML = h;
+  }
+  function gbRender(h){
+    const uses = [...new Set(Object.values(GB_USE))].sort();
+    const eds = gbIdx ? [...new Set(gbIdx.map(e => e.v).filter(Boolean))].sort((a, b) => a.localeCompare(b)) : [];
+    h += `<div class="libnav"><button class="libback" type="button"><svg class="chev l" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.8 2 3.6 6 7.8 10 8.9 8.9 5.9 6 8.9 3.1Z"/></svg>All categories</button></div>` +
+      `<h2>GregoBase</h2><p class="gnote">From <a href="${GB}" target="_blank" rel="noopener">gregobase.selapa.net</a></p>` +
+      `<div class="libtools"><input type="search" id="gbQ" placeholder="Search the incipit" aria-label="Search the incipit" value="${esc(gb.q)}">` +
+      `<select id="gbU" aria-label="Usage"><option value="">All usages</option>${uses.map(u => `<option${u === gb.u ? ' selected' : ''}>${esc(u)}</option>`).join('')}</select>` +
+      `<select id="gbV" aria-label="Edition"><option value="">All editions</option>${eds.map(v => `<option${v === gb.v ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></div>` +
+      '<div id="gbList"></div>';
+    return h;
+  }
   let libCat = null;
   function renderLib(){
     let h = `<div id="libMine">${mineHtml()}</div>`;
@@ -94,6 +169,11 @@
           `<span class="cnt">${g.items.length} cantus firmi<svg class="chev r" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.2 2 8.4 6 4.2 10 3.1 8.9 6.1 6 3.1 3.1Z"/></svg></span></span>` +
           `<span class="d">${esc(g.note)}</span><span class="pv">${preview(first)}</span><span class="first">Starts with ${esc(first.title)}</span></button>`;
       });
+      h += `<button class="catitem" data-g="gb"><span class="cathead"><span class="t">GregoBase</span>` +
+        `<span class="cnt">${GB_COUNT.toLocaleString('en')} chants<svg class="chev r" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.2 2 8.4 6 4.2 10 3.1 8.9 6.1 6 3.1 3.1Z"/></svg></span></span>` +
+        `<span class="d">gregobase.selapa.net</span></button>`;
+    } else if (libCat === 'gb') {
+      h = gbRender(h);
     } else {
       const g = LIB[libCat];
       h += `<div class="libnav"><button class="libback" type="button"><svg class="chev l" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.8 2 3.6 6 7.8 10 8.9 8.9 5.9 6 8.9 3.1Z"/></svg>All categories</button></div>` +
@@ -105,11 +185,22 @@
     }
     libEl.innerHTML = h;
     libEl.scrollTop = 0;
+    if (libCat === 'gb') {
+      gbList();
+      if (!gbIdx) gbLoad().then(() => { if (libCat === 'gb') { const q = libEl.querySelector('#gbQ'), f = q === document.activeElement; renderLib(); if (f) { const n = libEl.querySelector('#gbQ'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); } } },
+        () => { const box = libEl.querySelector('#gbList'); if (box) box.innerHTML = `<p class="libhint">The list of GregoBase chants could not be loaded. <a href="${GB}" target="_blank" rel="noopener">GregoBase</a></p>`; });
+    }
   }
   libEl.addEventListener('click', e => {
     const c = e.target.closest('.catitem');
-    if (c) { libCat = +c.dataset.g; renderLib(); return; }
-    if (e.target.closest('.libback')) { libCat = null; renderLib(); }
+    if (c) { libCat = c.dataset.g === 'gb' ? 'gb' : +c.dataset.g; renderLib(); return; }
+    if (e.target.closest('.libback')) { libCat = null; renderLib(); return; }
+    if (e.target.closest('#gbMore')) { gb.shown += 150; gbList(); }
+  });
+  libEl.addEventListener('input', e => { if (e.target.id === 'gbQ') { gb.q = e.target.value; gb.shown = 150; gbList(); } });
+  libEl.addEventListener('change', e => {
+    if (e.target.id === 'gbU') { gb.u = e.target.value; gb.shown = 150; gbList(); }
+    if (e.target.id === 'gbV') { gb.v = e.target.value; gb.shown = 150; gbList(); }
   });
   libBtn.addEventListener('click', () => { libCat = null; renderLib(); });
 
@@ -166,6 +257,8 @@
   Object.assign(H, {
     buildPieceList: async () => { renderLib(); },
     newScore: newCF,
+    loadKey: key => key.startsWith('gb:') ? gbOpen(key) : null,
+    sourceHtml: gbSource,
     fromHandoff,
     /* the Contrapunctus starts with Playback off: it is the voice sung (or written) against the cantus firmus */
     afterLoad(){
