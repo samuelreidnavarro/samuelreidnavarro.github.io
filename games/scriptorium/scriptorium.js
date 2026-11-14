@@ -1911,7 +1911,7 @@ async function loadPiece(file){
     if (!r.ok) throw new Error('Could not load ' + file);
     text = cache[file] = await r.text();
   }
-  stopPlay();
+  stopPlay(); heldAt = null;
   let saved = null; try { saved = localStorage.getItem(APP.store + ':edit:' + file); } catch (e) {}
   piece = null;
   if (saved && file.startsWith('mine:')) { try { piece = parseKern(saved); piece.text = saved; } catch (e) { piece = null; } }
@@ -1926,11 +1926,15 @@ async function loadPiece(file){
   syncUI();
   render();
 }
+/* a file opened from the computer stays open after a reload: its text is kept in this browser (the last one only) */
+const FILE_KEY = APP.store + ':lastfile';
+function fileKeep(name, text){ try { if (text.length < 3e6) localStorage.setItem(FILE_KEY, JSON.stringify({name, text})); } catch (e) {} }
+function fileKept(){ try { return JSON.parse(localStorage.getItem(FILE_KEY) || 'null'); } catch (e) { return null; } }
 function loadText(name, text){
   try {
-    stopPlay();
+    stopPlay(); heldAt = null;
     piece = parseKern(text);
-    pieceKey = 'file:' + name;
+    pieceKey = 'file:' + name; fileKeep(name, text); st.piece = pieceKey; save();
     if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; ed.range = null; ed.picks = null; }
     syncUI(); render();
   } catch (e) { pagesEl.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
@@ -2667,6 +2671,7 @@ function applyText(text){
   try { piece = parseKern(text); } catch (e) { piece = keep; return; }
   piece.text = text;
   if (pieceKey && pieceKey.startsWith('mine:')) { try { localStorage.setItem(EKEY(pieceKey), text); } catch (e) {} }
+  else if (pieceKey && pieceKey.startsWith('file:')) fileKeep(pieceKey.slice(5), text);
   else if (!ed.warned) { ed.warned = true; toast('Changes to this piece are not kept once you leave it. Export, Save to My scores keeps a copy.'); }
   if (pieceKey && pieceKey.startsWith('mine:')) { const all = mineAll(); if (all[pieceKey]) { all[pieceKey].title = piece.title; all[pieceKey].at = Date.now(); mineSave(all); } }
   if (sel) { const v = piece.voices[sel.vi]; if (!v || sel.ei >= v.events.length) ed.sel = v && v.events.length ? {vi: sel.vi, ei: v.events.length - 1} : null; }
@@ -3680,7 +3685,7 @@ const CBA = {
   },
   undo: () => undo(), redo: () => redo(),
   deselect(){ if (ed.sel || ed.range || ed.picks) { ed.sel = null; ed.range = null; ed.picks = null; showSel(); } },
-  togglePlay(){ if (play) stopPlay(); else startPlay(); },
+  togglePlay(){ togglePlayHold(); },
   scaleAll(dir){ if (!CBA.guard() || ed.range || ed.picks) return; const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) e.d = rt(dir < 0 ? e.d * 2 : e.d / 2); }); },
   shiftOctave(dir){ if (!CBA.guard()) return; if (ed.range || ed.picks) { rangeStep(7 * dir); return; } const vs = xfVoices(); if (vs.length) commit(() => { for (const v of vs) for (const e of v.events) if (!e.rest) e.step = clampStep(e.step + 7 * dir); }); },
   mutate: fn => { if (CBA.guard()) commit(fn); },
@@ -3941,7 +3946,14 @@ function startPlay(from, again){
   if (H.playSpec) H.playSpec(spec);
   Organ.play(spec);
 }
-$('#play').addEventListener('click', () => { if (play) stopPlay(); else startPlay(); });
+/* Pause keeps the place: Play goes on from there, unless a different note has been selected meanwhile */
+let heldAt = null, heldSel = '';
+function togglePlayHold(){
+  const sid = () => { const q = selSym(); return q ? q.id : ''; };
+  if (play) { heldAt = playPos(); heldSel = sid(); stopPlay(); }
+  else { const at = heldAt !== null && heldAt < piece.end - EPS && sid() === heldSel ? heldAt : undefined; heldAt = null; startPlay(at); }
+}
+$('#play').addEventListener('click', togglePlayHold);
 /* While playing, the view follows the music (Samuel 2026-11-13, now that the frame is the whole window):
    horizontal Web: the sounding note stays in the middle, eased every frame so it never jerks;
    vertical: when the note leaves the view, quickly to its system; pages side by side: to its page.
@@ -4070,11 +4082,7 @@ function fsWake(){
 }
 ['pointermove', 'pointerdown', 'wheel'].forEach(t => wrapEl.addEventListener(t, fsWake, {passive: true}));
 viewerEl.addEventListener('scroll', fsWake, {passive: true});
-$('#fsPlay').addEventListener('click', () => {
-  if (play) { fsPaused = playPos(); stopPlay(); }
-  else { const at = fsPaused; fsPaused = null; startPlay(typeof at === 'number' ? at : undefined); }
-  fsWake();
-});
+$('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
 
 /* the controls rest: after 3 s without the mouse moving, the top collapses into the Edit button and the arrow icon, and the
    bottom into Play and the volume; moving the mouse brings them back. "At the edges": they show only near the top or the bottom. */
@@ -4171,7 +4179,10 @@ if (H.start) H.start(); else (async () => {
   try { minePrune(pieceKey); } catch (e) {}
   syncUI(); sizeViewer();
   if (await takeHandoff().catch(() => false)) { buildPieceList().then(syncUI); return; }
-  try { await loadPiece(pieceKey); }
+  try {
+    if (pieceKey.startsWith('file:')) { const k = fileKept(); if (k && 'file:' + k.name === pieceKey) loadText(k.name, k.text); else throw new Error('x'); }
+    else await loadPiece(pieceKey);
+  }
   catch (e) {
     if (!want && pieceKey !== PIECES[0]) { pieceKey = PIECES[0]; try { await loadPiece(pieceKey); } catch (e2) { pagesEl.innerHTML = `<p class="msg">${esc(e2.message)}</p>`; } }
     else pagesEl.innerHTML = `<p class="msg">${esc(e.message)}</p>`;
