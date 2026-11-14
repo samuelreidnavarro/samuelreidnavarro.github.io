@@ -75,7 +75,7 @@ ${APP.popsBeforeVoices || ''}
           <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Open<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
           <div class="popbody"><div class="btns col" id="openList">
 ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
-            <button class="tb openfile" id="openBtn"${APP.openFile === false ? ' hidden' : ''}><span class="of-t">Open file</span><span class="of-f">.mxl · MuseScore · MIDI · LilyPond · .krn · .gabc</span></button>
+            <button class="tb openfile" id="openBtn"${APP.openFile === false ? ' hidden' : ''}><span class="of-t">Open file</span><span class="of-f">.mxl · MuseScore · MIDI · LilyPond · .krn · .gabc · CMME</span></button>
           </div></div>
         </div>
           <div id="library" class="library" role="dialog" aria-label="Pieces" hidden></div>
@@ -100,7 +100,7 @@ ${APP.newFirst ? NEWBTN + LIBBTN : LIBBTN + NEWBTN}
           </div>
         </div>
       </div>
-      <input type="file" id="fileIn" accept=".krn,.kern,.txt,.musicxml,.xml,.mxl,.mscz,.mscx,.mid,.midi,.ly,.gabc" hidden>
+      <input type="file" id="fileIn" accept=".krn,.kern,.txt,.musicxml,.xml,.mxl,.mscz,.mscx,.mid,.midi,.ly,.gabc,.cmme" hidden>
     </div>
     <div class="bar editbar" id="editBar" hidden></div>
   </section>
@@ -301,6 +301,7 @@ function parseNoteTok(tok){
   const ev = {d: r.d, kd: r.d, dots: r.dots, rational: r.rational};
   ev.tieStart = tok.includes('['); ev.tieEnd = tok.includes(']'); ev.tieMid = tok.includes('_');
   ev.ferm = tok.includes(';');
+  ev.colH = tok.includes('@');   /* coloured as written (CMME), user signifier */
   ev.long = /l/.test(rest.replace(/[a-gA-G]/g, ''));
   ev.tupS = tok.includes('V'); ev.tupE = tok.includes('Z');
   const pm = rest.match(/([a-gA-G])\1*/);
@@ -377,6 +378,7 @@ function parseKern(text){
         if ((m = s.match(/^\*I"(.*)$/))) v.name = m[1];
         else if ((m = s.match(/^\*I'(.*)$/))) v.abbr = m[1];
         else if ((m = s.match(/^\*clef(.+)$/))) v.clefs.push({t: v.t, c: m[1], ei: v.events.length});
+        else if ((m = s.match(/^\*oclef(.+)$/))) { if (!v.oclef) v.oclef = m[1]; }
         else if ((m = s.match(/^\*k\[(.*)\]$/))) {
           const alts = {};
           (m[1].match(/[a-g](#+|-+)/g) || []).forEach(a => { alts[a[0]] = a[1][0] === '#' ? 1 : -1; });
@@ -472,6 +474,13 @@ function shapeReal(w, T, P){
   for (const [g, v] of tab) if (eq(w * 1.5, v) && g !== 'Sm' && g !== 'F') return {g, col:true};
   /* last resort, before splitting into tied notes: a dot of addition even on a perfect value */
   for (const [g, v] of tab) if (eq(w, v * 1.5)) return {g, dot:true};
+  return null;
+}
+/* a note the source writes black (CMME): the white shape it is two thirds of (the usual coloration), three quarters of
+   (minor colour: a black breve with a black semibreve), or the same value blackened (semibreves in a hemiola under 3) */
+function shapeCol(w, T, P){
+  const tab = valueTable(T, P).filter(([g]) => g !== 'Sm' && g !== 'F');
+  for (const f of [1.5, 4 / 3, 1]) for (const [g, v] of tab) if (eq(w * f, v) && (f !== 1 || g !== 'M')) return {g, col:true};
   return null;
 }
 function shapeFake(d){
@@ -577,7 +586,7 @@ function notate(piece, v, mode){
       }
       continue;
     }
-    const sh = shapeReal(w, mi.T, mi.P);
+    const sh = (e.colH && shapeCol(w, mi.T, mi.P)) || shapeReal(w, mi.T, mi.P);
     if (!sh) { pushSplit(out, base, w, mi.T, mi.P, false, mi.p); continue; }
     const pos = rt(((rt(e.t - segStart) * mi.p) % (mi.T * (mi.P === 3 ? 1.5 : 1))));
     out.push(Object.assign(base, {g: sh.g, dot: !!sh.dot, col: !!sh.col, imp: !!sh.imp, w, pos}));
@@ -626,6 +635,8 @@ function pushSplit(out, base, w, T, P, tieLast, p = 1){
 /* clef for a voice: as encoded, or a mensural C/F clef that keeps the range on the staff */
 function chooseClef(v, mode){
   if (mode === 'modern') return KERN_CLEF[v.kclef] || 'treble';
+  /* the original clef, when the file gives one (*oclef, from CMME) */
+  if (v.oclef && CLEFS[KERN_CLEF[v.oclef]]) return KERN_CLEF[v.oclef];
   /* tied continuations don't count, so a clef doesn't change because an edit split notes at the barlines */
   const steps = v.events.filter(e => !e.rest && !e.tieEnd && !e.tieMid).map(e => e.step);
   if (!steps.length) return 'c3';
@@ -2452,7 +2463,7 @@ document.addEventListener('drop', e => {
   const file = e.dataTransfer.files[0]; if (file) openFile(file);
 });
 }
-/* **kern is read as it is; MusicXML, MuseScore, MIDI, LilyPond and GABC are turned into **kern first (shared/score-import.js) */
+/* **kern is read as it is; MusicXML, MuseScore, MIDI, LilyPond, GABC and CMME are turned into **kern first (shared/score-import.js) */
 function openFile(file){
   if (window.ScoreImport && ScoreImport.accepts(file.name)) ScoreImport.toKern(file).then(k => loadText(file.name, k), err => { stopPlay(); pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; });
   else file.text().then(t => loadText(file.name, t));
@@ -2493,6 +2504,7 @@ function noteTok(e, tie){
   }
   if (e.long) s += 'l';
   if (e.ferm) s += ';';
+  if (e.colH && !e.rest) s += '@';
   return s;
 }
 function retime(v){
@@ -2514,6 +2526,7 @@ function writeKern(P){
   out.push(line(c => c.text < 0 ? '**kern' : '**text'));
   out.push(line(c => c.text < 0 ? `*I"${c.v.name}` : '*'));
   if (vs.some(v => v.abbr)) out.push(line(c => c.text < 0 && c.v.abbr ? `*I'${c.v.abbr}` : '*'));
+  if (vs.some(v => v.oclef)) out.push(line(c => c.text < 0 && c.v.oclef ? `*oclef${c.v.oclef}` : '*'));
   /* every event split at the barlines, with ties */
   const barT = P.bars.map(b => b.t);
   const pieces = new Map();
@@ -3513,7 +3526,10 @@ const CBA = {
     commit(() => {
       const e = v.events[first];
       const total = s.src.reduce((a, i) => a + v.events[i].d, 0);
-      e.d = rt(on ? total * 2 / 3 : total * 1.5); e.tieStart = e.tieEnd = e.tieMid = false;
+      /* black as written in the source file: white again with the same sound */
+      if (e.colH && !on) { e.colH = false; e.d = rt(total); }
+      else { e.d = rt(on ? total * 2 / 3 : total * 1.5); e.colH = false; }
+      e.tieStart = e.tieEnd = e.tieMid = false;
       dropEvents(v, s.src.slice(1));
     });
     if (st.nota === 'real') {

@@ -1,4 +1,4 @@
-/* Reading scores from other programs: MusicXML (.musicxml, .xml, .mxl), MuseScore (.mscz, .mscx), MIDI (.mid), LilyPond (.ly) and GABC (.gabc).
+/* Reading scores from other programs: MusicXML (.musicxml, .xml, .mxl), MuseScore (.mscz, .mscx), MIDI (.mid), LilyPond (.ly), GABC (.gabc) and CMME (.cmme.xml).
    Each is read into a plain list of voices and written out as **kern, which the app already reads.
    ScoreImport.toKern(file) -> Promise<string>; ScoreImport.accepts(name) -> true for the types read here.
    One line per voice: of chords only the first note, of several voices on one staff only the first. */
@@ -577,6 +577,140 @@
     return {title: meta['name'] || '', composer: meta['author'] || '', voices: [v], bars};
   }
 
+
+  /* ---------------- CMME (.cmme.xml, Computerized Mensural Music Editing) ----------------
+     Mensural notation as written: note shapes with their lengths in minims, clefs on their original lines,
+     signs, coloration, ligatures, dots, rests, syllables and modern (editorial) accidentals. Sections follow each other.
+     Pitches count octaves from A (gamut): C3 is middle C, A3 the A below it. */
+  function fromCMME(text){
+    const doc = xmlDoc(text), root = doc.documentElement;
+    if (root.localName !== 'Piece') throw new Error('This is not a CMME score.');
+    const ch = (el, tag) => el ? [...el.children].filter(c => c.localName === tag) : [];
+    const c1 = (el, tag) => ch(el, tag)[0] || null;
+    const tx = (el, tag) => { const c = tag ? c1(el, tag) : el; return c ? c.textContent.trim() : ''; };
+    const gd = c1(root, 'GeneralData');
+    const title = tx(gd, 'Title'), source = tx(gd, 'Section');
+    let composer = tx(gd, 'Composer'), attributed = false;
+    { const m = /^\((.*)\)$/.exec(composer); if (m) { composer = m[1].trim(); attributed = true; } }
+    const names = ch(c1(root, 'VoiceData'), 'Voice').map(v => tx(v, 'Name'));
+    const n = Math.max(+tx(c1(root, 'VoiceData'), 'NumVoices') || 0, names.length);
+    const voices = Array.from({length: n}, (_, i) => ({name: names[i] || (i === 0 && n > 1 ? 'Superius' : ''), clef: null, oclef: null, key: 0, keyAlts: null, mets: [], events: []}));
+    const pitchOf = el => {
+      const L = tx(el, 'LetterName').toUpperCase(), o = +tx(el, 'OctaveNum');
+      if (!L || isNaN(o)) return null;
+      return 7 * (o + (L === 'A' || L === 'B' ? 0 : 1)) + LET.indexOf(L);
+    };
+    const len = el => { const l = c1(el, 'Length'); return l ? (+tx(l, 'Num') || 0) / (+tx(l, 'Den') || 1) : 0; };   /* minims */
+    const sections = [], doubles = [], bars = [];
+    let t0 = 0;
+    for (const ms of ch(root, 'MusicSection')) {
+      const mm = c1(ms, 'MensuralMusic');
+      if (!mm) continue;   /* plainchant and other section kinds are not read */
+      let secEnd = t0;
+      for (const vx of ch(mm, 'Voice')) {
+        const vi = (+tx(vx, 'VoiceNum') || 1) - 1, V = voices[vi];
+        if (!V) continue;
+        let t = t0, p = 1, open = false, sig = V.keyAlts || {};
+        const evs = [];
+        const walk = list => { for (const e of list) {
+          const tag = e.localName;
+          if (tag === 'MultiEvent') { walk([...e.children]); continue; }
+          if (tag === 'Clef') {
+            const app = tx(e, 'Appearance'), loc = +tx(e, 'StaffLoc'), pc = c1(e, 'Pitch');
+            if (c1(e, 'Signature') && pc) {
+              const L = tx(pc, 'LetterName').toLowerCase();
+              if (/^Bmol/i.test(app)) sig[L] = -1; else if (/^(Diesis|Sharp)/i.test(app)) sig[L] = 1;
+              if (!V.keyAlts) V.keyAlts = sig;
+            } else if (/^[CFG]$/.test(app) && !V.oclef && loc % 2) V.oclef = app + ((loc + 1) / 2);
+            continue;
+          }
+          if (tag === 'Mensuration') {
+            const sg = c1(e, 'Sign'), num = c1(e, 'Number');
+            let sign = '';
+            if (sg) {
+              sign = tx(sg, 'MainSymbol') === 'O' ? 'O' : 'C';
+              if (c1(sg, 'Dot')) sign += '.';
+              if (+tx(sg, 'Strokes') > 0) sign += '|';
+            }
+            if (num && +tx(num, 'Num')) sign += tx(num, 'Num');
+            if (!sign) continue;
+            const nm = (sign.match(/\d+/) || [''])[0];
+            p = nm === '3' ? 1.5 : nm === '2' ? 2 : 1;   /* as the app reads the sign: written = sounding x p */
+            V.mets.push({t: Math.round(t), sign});
+            continue;
+          }
+          if (tag !== 'Note' && tag !== 'Rest') continue;
+          const d = len(e) * W / 2 / p;
+          if (d <= 0) continue;
+          const ev = {t: Math.round(t), d: Math.round(d)};
+          if (tag === 'Rest') ev.rest = true;
+          else {
+            ev.step = pitchOf(e);
+            if (ev.step === null) { ev.rest = true; delete ev.step; }
+            else {
+              const L = tx(e, 'LetterName').toLowerCase(), ma = c1(e, 'ModernAccidental'), s0 = sig[L] || 0;
+              const a = ma ? Math.max(-1, Math.min(1, Math.round(+tx(ma, 'PitchOffset') || 0))) : 0;
+              ev.alt = a === s0 ? null : a;
+              ev.ed = a !== s0;
+              if (c1(e, 'Colored')) ev.col = true;
+              if (c1(e, 'Signum') || c1(e, 'Corona')) ev.ferm = true;
+              if (c1(e, 'Lig')) ev.ligNext = true;
+              if (tx(e, 'Type') === 'Longa' || tx(e, 'Type') === 'Maxima') ev.longa = true;
+              const mt = c1(e, 'ModernText');
+              if (mt && tx(mt, 'Syllable')) {
+                const end = !!c1(mt, 'WordEnd');
+                ev.syl = (open ? '-' : '') + tx(mt, 'Syllable') + (end ? '' : '-');
+                open = !end;
+              }
+            }
+          }
+          evs.push(ev); t += d;
+        } };
+        walk([...(c1(vx, 'EventList') || vx).children]);
+        /* ligatures: a note marked Lig is joined to the next note */
+        let lig = 0, id = 0;
+        for (let k = 0; k < evs.length; k++) {
+          const e = evs[k];
+          if (e.rest) { lig = 0; continue; }
+          if (!lig && e.ligNext) lig = ++id + vi * 1000;
+          if (lig) e.lig = lig;
+          if (!e.ligNext) lig = 0;
+          delete e.ligNext;
+        }
+        V.events.push(...evs);
+        secEnd = Math.max(secEnd, t);
+      }
+      secEnd = Math.round(secEnd);
+      /* the last long of a section is a final long, whatever it counts; no barlines run through it */
+      let fin = secEnd;
+      for (const V of voices) {
+        const last = [...V.events].reverse().find(e => e.t >= t0 && !e.rest);
+        if (last && last.longa) { last.long = true; fin = Math.min(fin, last.t); }
+      }
+      /* barlines on the breve of each sign, from the top voice */
+      const ref = voices.find(V => V.mets.some(m => m.t >= t0)) || voices[0];
+      const ms0 = ref.mets.filter(m => m.t >= t0 && m.t < secEnd);
+      ms0.forEach((m, k) => {
+        const nm = (m.sign.match(/\d+/) || [''])[0], pp = nm === '3' ? 1.5 : nm === '2' ? 2 : 1;
+        const T = /O/.test(m.sign) || nm === '3' ? 3 : 2, P = /\./.test(m.sign) ? 3 : 2;
+        const br = Math.round(W * T * (P === 3 ? 1.5 : 1) / pp), to = k + 1 < ms0.length ? ms0[k + 1].t : secEnd;
+        for (let b = m.t + br; b < to - 1; b += br) if (b <= fin) bars.push(b);
+        if (to < secEnd) bars.push(to);
+      });
+      if (t0 > 0) { bars.push(t0); doubles.push(t0); }
+      sections.push({t: t0});
+      t0 = secEnd;
+    }
+    for (const V of voices) {
+      V.events.forEach(e => { delete e.longa; });
+      V.events = tidy(V.events);
+      if (V.keyAlts) V.key = -Object.keys(V.keyAlts).length;
+      /* modern clef from the original one: treble for C1, C2 and G clefs, tenor G for the other C clefs, bass for F */
+      V.clef = !V.oclef ? null : /^F/.test(V.oclef) ? 'F4' : /^(G|C1|C2)/.test(V.oclef) ? 'G2' : 'Gv2';
+    }
+    return {title, composer, attributed, source, voices, bars, doubles, rdf: ['@ = coloured (black) note']};
+  }
+
   /* ---------------- **kern ---------------- */
   function recip(ticks){
     const g = gcd(ticks, W), n = ticks / g, d = W / g;
@@ -589,6 +723,7 @@
   function pitchTok(step, alt, keyAlts){
     const oct = Math.floor(step / 7), li = ((step % 7) + 7) % 7, L = LET[li];
     let s = oct >= 4 ? L.toLowerCase().repeat(oct - 3) : L.repeat(4 - oct);
+    if (alt === null) return s;   /* as the key signature has it (CMME) */
     if (alt > 0) s += '#'.repeat(alt);
     else if (alt < 0) s += '-'.repeat(-alt);
     else if (keyAlts[L.toLowerCase()]) s += 'n';
@@ -620,17 +755,28 @@
       }
       return L;
     });
-    const file = vs.map((v, i) => ({v, L: pieces[i], ka: keyAltsOf(v.key), text: v.events.some(e => e.syl)})).reverse();   /* lowest voice first */
+    const file = vs.map((v, i) => ({v, L: pieces[i], ka: v.keyAlts || keyAltsOf(v.key), text: v.events.some(e => e.syl)})).reverse();   /* lowest voice first */
+    /* ligatures (CMME): *lig before the first note of one, *Xlig after its last */
+    const ligStart = file.map(() => new Set()), ligEnd = file.map(() => new Set());
+    file.forEach((x, i) => x.L.forEach((e, k) => {
+      if (!e.lig) return;
+      const a = x.L[k - 1], b = x.L[k + 1];
+      if (!a || a.lig !== e.lig) ligStart[i].add(e);
+      if (!b || b.lig !== e.lig) ligEnd[i].add(e.t + e.d);
+    }));
     const cols = [];
     file.forEach(x => { cols.push({x, text: false}); if (x.text) cols.push({x, text: true}); });
     const line = fn => cols.map(fn).join('\t');
     const out = [];
     const nm = S.title || String(fileName || '').replace(/\.[^.]+$/, '');
-    if (S.composer) out.push('!!!COM: ' + S.composer.replace(/\s+/g, ' '));
+    if (S.composer) out.push((S.attributed ? '!!!COA: ' : '!!!COM: ') + S.composer.replace(/\s+/g, ' '));
     out.push('!!!OTL: ' + nm.replace(/\s+/g, ' '));
+    if (S.source) out.push('!!!SMS: ' + S.source.replace(/\s+/g, ' '));
+    (S.rdf || []).forEach(r => out.push('!!!RDF**kern: ' + r));
     out.push(line(c => c.text ? '**text' : '**kern'));
     out.push(line(c => c.text ? '*' : '*I"' + c.x.v.name.replace(/\s+/g, ' ')));
     out.push(line(c => c.text ? '*' : '*clef' + c.x.v.clef));
+    if (vs.some(v => v.oclef)) out.push(line(c => !c.text && c.x.v.oclef ? '*oclef' + c.x.v.oclef : '*'));
     out.push(line(c => c.text ? '*' : '*k[' + Object.entries(c.x.ka).map(([l, a]) => l + (a > 0 ? '#' : '-')).join('') + ']'));
     const times = new Set([0, ...bars]);
     file.forEach(x => { x.L.forEach(e => times.add(e.t)); x.v.mets.forEach(m => times.add(m.t)); });
@@ -639,17 +785,19 @@
     out.push(line(() => '=1-'));
     let barNo = 1;
     for (const t of sorted) {
-      if (bars.includes(t)) out.push(line(() => '=' + (++barNo)));
+      if (ligEnd.some(s => s.has(t))) out.push(line(c => !c.text && ligEnd[file.indexOf(c.x)].has(t) ? '*Xlig' : '*'));
+      if (bars.includes(t)) { ++barNo; out.push(line(() => (S.doubles || []).includes(t) ? '=||' : '=' + barNo)); }
       if (file.some(x => x.v.mets.some(m => m.t === t))) out.push(line(c => { const m = !c.text && c.x.v.mets.find(m => m.t === t); return m ? '*met(' + m.sign + ')' : '*'; }));
       const row = file.map((x, i) => { const e = x.L[ptr[i]]; if (e && e.t === t) { ptr[i]++; return e; } return null; });
       if (!row.some(Boolean)) continue;
+      if (row.some((e, i) => e && ligStart[i].has(e))) out.push(line(c => { const e = !c.text && row[file.indexOf(c.x)]; return e && ligStart[file.indexOf(c.x)].has(e) ? '*lig' : '*'; }));
       out.push(line(c => {
         const e = row[file.indexOf(c.x)];
         if (!e) return '.';
         if (c.text) return e.syl ? e.syl.replace(/\s+/g, '_') : '.';
         if (e.rest) return recip(e.d) + 'r';
         const tie = e.tieStart && e.tieStop ? '_' : e.tieStart ? '[' : e.tieStop ? ']' : '';
-        return (tie === '[' ? '[' : '') + recip(e.d) + pitchTok(e.step, e.alt || 0, c.x.ka) + (tie === ']' || tie === '_' ? tie : '');
+        return (tie === '[' ? '[' : '') + recip(e.d) + pitchTok(e.step, e.alt === null ? null : e.alt || 0, c.x.ka) + (e.ed ? 'i' : '') + (tie === ']' || tie === '_' ? tie : '') + (e.long ? 'l' : '') + (e.col ? '@' : '') + (e.ferm && !e.tieStart ? ';' : '');
       }));
     }
     out.push(line(() => '=='));
@@ -657,7 +805,7 @@
     return out.join('\n') + '\n';
   }
 
-  const EXT = /\.(musicxml|xml|mxl|mscz|mscx|mid|midi|kar|ly|gabc)$/i;
+  const EXT = /\.(musicxml|xml|mxl|mscz|mscx|mid|midi|kar|ly|gabc|cmme)$/i;
   async function read(file){
     const name = file.name || '', buf = await file.arrayBuffer();
     const ext = (name.match(/\.([^.]+)$/) || [, ''])[1].toLowerCase();
@@ -679,9 +827,10 @@
       S = /\.mscx$/i.test(pick) ? fromMuseScore(text) : fromMusicXML(text);
     } else {
       const text = decodeText(buf);
-      S = ext === 'mscx' || /<museScore\b/.test(text.slice(0, 400)) ? fromMuseScore(text) : fromMusicXML(text);
+      const head = text.slice(0, 800);
+      S = ext === 'mscx' || /<museScore\b/.test(head) ? fromMuseScore(text) : ext === 'cmme' || /<Piece\b[^>]*cmme/i.test(head) ? fromCMME(text) : fromMusicXML(text);
     }
     return toKern(S, name);
   }
-  window.ScoreImport = {accepts: name => EXT.test(name || ''), toKern: read, _: {fromMusicXML, fromMuseScore, fromMidi, fromLilyPond, fromGabc, toKern}};
+  window.ScoreImport = {accepts: name => EXT.test(name || ''), toKern: read, _: {fromMusicXML, fromMuseScore, fromMidi, fromLilyPond, fromGabc, fromCMME, toKern}};
 })();
