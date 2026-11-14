@@ -939,3 +939,6 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 
 .morelinks .linksub{margin:8px 0 2px;font-style:italic;opacity:.75;font-size:.95em}
 #libFeat p.linksub{margin:-4px 0 8px;font-style:italic;color:var(--muted);font-size:14px;line-height:1.3}
+
+/* on the site, the bar's S square sits just left of the Edit pen (set by the page's nav.js) */
+html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))}

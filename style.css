@@ -308,3 +308,23 @@ body.compact .nav a:not(.brand) { padding: .55rem 0 .45rem; }
 @media (max-width: 1290px) {
   body.compact .nav .brand { position: static; justify-content: center; padding: .4rem 1rem; }
 }
+
+/* App and tool pages (nav.js): the bar folds to the left into a small S square while the mouse is lower on the page */
+body.compact .nav .b-s, body.compact .nav .b-rest { display: inline-block; }
+body.compact .nav .b-rest { overflow: hidden; max-width: 14em; vertical-align: bottom; white-space: pre; }
+body.compact.nav-fold .nav { transition: border-color .3s ease; }
+body.compact.nav-fold .nav > ul { max-height: 14rem; transition: max-height .3s ease, opacity .25s ease, transform .3s ease; }
+body.compact.nav-fold .nav .brand { transition: left .3s ease, top .3s ease, border-radius .3s ease, padding .3s ease, box-shadow .3s ease; }
+body.compact.nav-fold .nav .b-rest { transition: max-width .3s ease, opacity .2s ease; }
+body.compact.nav-folded .nav { border-bottom-color: transparent; }
+body.compact.nav-folded .nav > ul { max-height: 0; opacity: 0; transform: translateX(-2.5rem); overflow: hidden; pointer-events: none; }
+body.compact.nav-folded .nav .brand {
+  position: absolute; z-index: 60; display: flex; justify-content: center; align-items: center;
+  left: var(--s-left, 14px); top: var(--s-top, 8px); bottom: auto;
+  min-width: var(--s-size, 40px); height: var(--s-size, 40px); padding: 0;
+  border-radius: 11px; box-shadow: 0 1px 4px rgba(42, 34, 24, .14);
+  font-size: 1.45rem; line-height: 1;
+}
+body.compact.nav-folded .nav .b-rest { max-width: 0; opacity: 0; }
+body.compact.nav-folded .edge .game { border-top-color: transparent; }
+body.compact.nav-folded main.game-page { padding-top: 3.5rem; }
