@@ -687,17 +687,19 @@ if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
 const PRESET_KEYS = ['eq', 'nota', 'clefs', 'bars', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'orient', 'flow'];
 const MENS1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', staff: 'black', lines: '5', paperCol: 'white', size: 1.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', orient: 'portrait', flow: 'vertical'};
 const MENS2 = {...MENS1, clefs: 'mens', size: 1.65, dashes: 'off'};
-const BUILTIN = [{name: 'Preset 1', s: MENS1, fixed: true}, {name: 'Preset 2', s: MENS2, fixed: true}];
-const PKEY = 'scriptorium:presets';
+const CF1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', staff: 'red', lines: '5', paperCol: 'parchment', size: 3.6, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web'};
+const CF2 = {...CF1, clefs: 'mens', dashes: 'off'};
+const IS_CF = APP.id === 'cantus-firmus';
+const BUILTIN = IS_CF ? [{name: 'Preset 1', s: CF1, fixed: true}, {name: 'Preset 2', s: CF2, fixed: true}] : [{name: 'Preset 1', s: MENS1, fixed: true}, {name: 'Preset 2', s: MENS2, fixed: true}];
+const PKEY = IS_CF ? 'scriptorium:presets:cf' : 'scriptorium:presets';
 function presetStore(){ let o = {}; try { o = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch (e) {} return {custom: Array.isArray(o.custom) ? o.custom : [], active: o.active === undefined || o.active === 'Mensural 1' ? 'Preset 1' : o.active === 'Mensural 2' ? 'Preset 2' : o.active}; }
 function presetPut(o){ try { localStorage.setItem(PKEY, JSON.stringify(o)); } catch (e) {} }
 const presetAll = () => [...BUILTIN, ...presetStore().custom];
 function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; }
-if (APP.id !== 'cantus-firmus') { const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } }
+{ const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } }
 /* changing an engraving setting unticks the ticked preset: the settings are now "current settings" of their own */
 const LOOK_KEYS = ['eq', 'nota', 'clefs', 'bars', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
 function presetDrift(){
-  if (APP.id === 'cantus-firmus') return;
   const S = presetStore(); if (!S.active) return;
   const P = presetAll().find(q => q.name === S.active);
   if (P && LOOK_KEYS.every(k => P.s[k] === undefined || P.s[k] === st[k])) return;
