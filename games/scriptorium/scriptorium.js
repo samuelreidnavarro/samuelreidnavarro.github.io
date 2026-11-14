@@ -3903,7 +3903,13 @@ function clearRange(){ if (ed.range) { ed.range = null; return true; } return fa
 function selItems(){
   if (!piece) return [];
   if (ed.range) return rangeVoices().flatMap(v => rangeEvents(v).map(e => ({v, e})));
-  if (ed.picks) return ed.picks.map(p => { const v = piece.voices[p.vi]; const e = v && v.events.find(q => Math.abs(q.t - p.t) < EPS); return e ? {v, e} : null; }).filter(Boolean);
+  /* a picked note or rest is everything written for it (a long rest can be several rests in the file) */
+  if (ed.picks) return ed.picks.flatMap(p => {
+    const v = piece.voices[p.vi]; if (!v) return [];
+    const q = (v.syms || []).find(q => q.src && Math.abs(q.t - p.t) < EPS);
+    if (q) return q.src.map(i => v.events[i]).filter(Boolean).map(e => ({v, e}));
+    const e = v.events.find(q => Math.abs(q.t - p.t) < EPS); return e ? [{v, e}] : [];
+  });
   return [];
 }
 function pickToRange(){
@@ -3914,7 +3920,7 @@ function pickToRange(){
   ed.range = {a: {vi: Math.min(...vis), t: t0, te: t1}, v0: Math.min(...vis), v1: Math.max(...vis), t0, t1};
 }
 function togglePick(vi, s){
-  const cur = ed.picks ? ed.picks.slice() : ed.range ? selItems().filter(x => !x.e.rest).map(x => ({vi: x.v.idx, t: x.e.t})) : [];
+  const cur = ed.picks ? ed.picks.slice() : ed.range ? selItems().map(x => ({vi: x.v.idx, t: x.e.t})) : [];
   if (!ed.picks && !ed.range && ed.sel) { const q = selSym(); if (q) cur.push({vi: ed.sel.vi, t: q.t}); }
   const k = cur.findIndex(p => p.vi === vi && Math.abs(p.t - s.t) < EPS);
   if (k >= 0) cur.splice(k, 1); else cur.push({vi, t: s.t});
@@ -3993,8 +3999,19 @@ function rangeStep(d){
   if (it.length && ed.picks) hear(it[0].e.step, it[0].e.alt);
 }
 /* Delete (and cut): the notes become rests, so the voices stay in step */
-function rangeClear(){
+/* Delete on a selection of several notes and rests (a range, or Ctrl/Cmd-clicked ones, in any voices): the notes
+   become rests first, so the voices stay in step; when only rests are selected they are removed, and in each voice
+   the music after them moves up (Samuel 2026-11-14). One undo step either way. */
+function rangeClear(cut){
   const it = selItems().filter(x => writable(x.v)); if (!it.length) { refuse(); return; }
+  if (!cut && it.every(x => x.e.rest)) {
+    const by = new Map();
+    for (const {v, e} of it) { const i = v.events.indexOf(e); if (i >= 0) { if (!by.has(v)) by.set(v, []); by.get(v).push(i); } }
+    const first = it.reduce((a, x) => !a || x.e.t < a.e.t ? x : a, null), vi = first.v.idx, ei = first.v.events.indexOf(first.e);
+    commit(() => { for (const [v, list] of by) dropEvents(v, list); ed.range = null; ed.picks = null; ed.sel = null; ed.ins = {vi, ei, off: 0, pad: 0}; });
+    showSel();
+    return;
+  }
   commit(() => { for (const {e} of it) { e.rest = true; e.tieStart = e.tieEnd = e.tieMid = false; e.syl = []; e.lig = 0; e.alt = null; e.ed = false; e.long = false; } });
 }
 /* the clipboard: per voice, the events from the start of the range (times relative), kept in localStorage so a passage
@@ -4093,7 +4110,7 @@ document.addEventListener('keydown', e => {
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
   const k = e.key.toLowerCase();
   if (k === 'c' && (ed.range || ed.picks)) { if (window.getSelection && String(window.getSelection())) return; e.preventDefault(); rangeCopy(); }
-  else if (k === 'x' && (ed.range || ed.picks) && ed.on) { e.preventDefault(); if (rangeCopy()) rangeClear(); }
+  else if (k === 'x' && (ed.range || ed.picks) && ed.on) { e.preventDefault(); if (rangeCopy()) rangeClear(true); }
   else if (k === 'v' && ed.on) { e.preventDefault(); rangePaste(); }
   else if (k === 'a' && ed.on) {
     /* select all: every voice, start to end */
