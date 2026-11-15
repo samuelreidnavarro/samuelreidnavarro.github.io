@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mensural rules: checks</title>
+<style>
+  :root { --bg:#faf7f0; --ink:#2a2218; --ok:#2f6b2f; --bad:#a3321f; --line:#ddd2bf; }
+  body { margin:0; padding:20px 16px 60px; background:var(--bg); color:var(--ink); font:16px/1.45 Georgia, serif; }
+  h1 { font-size:24px; margin:0 0 4px; } h2 { font-size:19px; margin:28px 0 8px; }
+  p.note { color:#6b5d48; margin:4px 0 14px; max-width:60em; }
+  table { border-collapse:collapse; width:100%; max-width:980px; font-size:14px; }
+  td, th { border-bottom:1px solid var(--line); padding:5px 8px; text-align:left; vertical-align:top; }
+  .ok { color:var(--ok); font-weight:bold; } .bad { color:var(--bad); font-weight:bold; }
+  code { font-size:13px; }
+  button { font:inherit; padding:5px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; cursor:pointer; }
+  textarea { width:100%; max-width:980px; height:90px; font:13px monospace; }
+  iframe { width:1px; height:1px; border:0; position:absolute; left:-9999px; }
+</style>
+</head>
+<body>
+<h1>Mensural rules: checks</h1>
+<p class="note">Each line is one rule, written as a tiny score; the numbers are each note's written length (a semibrevis = 1).
+Open this page again after any change to the rules: every line should say <span class="ok">pass</span>.</p>
+<div id="sum"></div>
+<table id="rules"><thead><tr><th>Rule</th><th>Notes</th><th>Expected</th><th>Got</th><th></th></tr></thead><tbody></tbody></table>
+
+<h2>Repertoire pieces against their signs</h2>
+<p class="note">For each piece: are the voices equally long, do the barlines fall on the sign's perfections, and how many notes
+would the rules count otherwise than the edition (an editorial choice of the edition, or a gap in the rules).
+Each piece is downloaded from its archive (about 20–60 KB each).</p>
+<textarea id="keys">Jos/Jos2306-Ave_Maria_..._virgo_serena
+Jos/Jos0403a-Missa_Pange_lingua-Kyrie
+Jos/Jos2918-Nymphes_des_bois__Requiem
+Duf/Duf2012-Ave_regina_celorum_III
+Duf/Duf3015-Se_la_face_ay_pale</textarea>
+<p><button id="run">Check these pieces</button> <button id="all">Check every piece in the catalogue…</button></p>
+<table id="rep"><thead><tr><th>Piece</th><th>Signs</th><th>Voices end together</th><th>Barlines off the grid</th><th>Notes the rules count otherwise</th></tr></thead><tbody></tbody></table>
+
+<iframe id="app" src="../../choirbook.html?tests=1"></iframe>
+<script>
+/* Each case: a name, the sign (with ;mp modus perfectus, ;xp maximodus perfectus), the notes as **kern tokens (written as
+   their shapes: the rules recount them), the expected written lengths, and an editorial choice if any. */
+const CASES = [
+  ['Two breves in tempus perfectum: both perfect', 'O', ['0cc', '0dd'], [3, 3]],
+  ['Breve, semibrevis, breve: the first imperfected (a parte post)', 'O', ['0cc', '1dd', '0ee'], [2, 1, 3]],
+  ['Semibrevis, breve, breve: the first breve imperfected (a parte ante)', 'O', ['1cc', '0dd', '0ee'], [1, 2, 3]],
+  ['Two semibreves before a perfect breve: the second altered', 'O', ['0cc', '1dd', '1ee', '0ff'], [3, 1, 2, 3]],
+  ['Three semibreves: a perfection of their own', 'O', ['0cc', '1dd', '1ee', '1ff', '0gg'], [3, 1, 1, 1, 3]],
+  ['Imperfection by a rest', 'O', ['0cc', '1r', '0ee'], [2, 1, 3]],
+  ['Dot of perfection: the breve stays perfect, the next is imperfected', 'O', ['0ccY', '1dd', '0ee'], [3, 1, 2]],
+  ['Tempus imperfectum: breves of two', 'C', ['0cc', '0dd', '1ee'], [2, 2, 1]],
+  ['Dot of augmentation (imperfect level): adds half', 'C', ['1.cc', '2dd'], [1.5, 0.5]],
+  ['Prolatio maior: perfect semibreves of three minims', 'C.', ['1.cc', '1.dd'], [1.5, 1.5]],
+  ['Prolatio maior: semibrevis imperfected by a minima', 'C.', ['1.cc', '2dd', '1.ee'], [1, 0.5, 1.5]],
+  ['Prolatio maior: two minims, the second altered', 'C.', ['1.cc', '2dd', '2ee', '1.ff'], [1.5, 0.5, 1, 1.5]],
+  ['Modus perfectus: a longa of three breves', 'C;mp', ['00.cc', '00.dd'], [6, 6]],
+  ['Modus perfectus: longa imperfected by a breve', 'C;mp', ['00.cc', '0dd', '00.ee'], [4, 2, 6]],
+  ['Modus perfectus and tempus perfectum together', 'O;mp', ['00.cc', '00.dd'], [9, 9]],
+  ['Maximodus perfectus: a maxima of three longae', 'C;xp', ['000cc', '000dd'], [12, 12]],
+  ['Proportion 3/2: breves go in threes', '3/2', ['0cc', '0dd'], [3, 3]],
+  ['Choice: a parte ante first', 'O', ['0cc', '1dd', '0ee'], [3, 1, 2], 'apa'],
+  ['Choice: two semibreves imperfect both breves', 'O', ['0cc', '1dd', '1ee', '0ff'], [2, 1, 1, 2], 'imp2'],
+];
+/* the maximodus case: in C;xp the maxima is 3 longae of 2 breves of 2 semibreves = 12 */
+const kern = (sign, toks) => ['!!!OTL: test', '**kern', '*I"T', '*clefG2', `*met(${sign})`, ...toks, '==', '*-'].join('\n') + '\n';
+const same = (a, b) => a.length === b.length && a.every((x, i) => Math.abs(x - b[i]) < 1e-6);
+function runRules(cb){
+  const tb = document.querySelector('#rules tbody'); let pass = 0;
+  for (const [name, sign, toks, want, opt] of CASES) {
+    let got; try { got = cb.mensTest(kern(sign, toks), opt)[0]; } catch (e) { got = ['error: ' + e.message]; }
+    const ok = Array.isArray(got) && same(got, want); if (ok) pass++;
+    tb.insertAdjacentHTML('beforeend', `<tr><td>${name}${opt ? ' <em>(' + opt + ')</em>' : ''}</td><td><code>${sign}: ${toks.join(' ')}</code></td><td>${want.join(' ')}</td><td>${got.join(' ')}</td><td class="${ok ? 'ok' : 'bad'}">${ok ? 'pass' : 'FAIL'}</td></tr>`);
+  }
+  document.getElementById('sum').innerHTML = `<p><b class="${pass === CASES.length ? 'ok' : 'bad'}">${pass} of ${CASES.length} rules pass.</b></p>`;
+}
+async function check(cb, keys){
+  const tb = document.querySelector('#rep tbody');
+  for (const k of keys) {
+    let row;
+    try {
+      const url = await cb.pieceUrl(k), text = await (await fetch(url)).text();
+      const r = cb.mensCheck(text);
+      row = `<td>${r.title}</td><td>${r.signs.join(', ')}</td><td class="${r.equalEnds ? 'ok' : 'bad'}">${r.equalEnds ? 'yes' : 'no: ' + r.ends.join(' / ')}</td>` +
+        `<td class="${r.barsOffGrid ? 'bad' : 'ok'}">${r.barsOffGrid} of ${r.bars}</td><td class="${r.rulesDiffer ? 'bad' : 'ok'}">${r.rulesDiffer} of ${r.notes}${r.examples.length ? '<br><small>' + r.examples.join('<br>') + '</small>' : ''}</td>`;
+    } catch (e) { row = `<td>${k}</td><td colspan="4" class="bad">could not be read: ${e.message}</td>`; }
+    tb.insertAdjacentHTML('beforeend', `<tr>${row}</tr>`);
+  }
+}
+const app = document.getElementById('app');
+const ready = () => new Promise(res => { const t = setInterval(() => { const cb = app.contentWindow && app.contentWindow.__cb; if (cb && cb.mensTest) { clearInterval(t); res(cb); } }, 200); });
+ready().then(cb => {
+  runRules(cb);
+  document.getElementById('run').onclick = () => check(cb, document.getElementById('keys').value.split('\n').map(s => s.trim()).filter(Boolean));
+  document.getElementById('all').onclick = async () => {
+    const cat = await (await fetch('../../choirbook/catalogue.json')).json();
+    const keys = cat.pieces.map(p => p.k);
+    if (!confirm(`This downloads ${keys.length} pieces, about ${Math.round(keys.length * 40 / 1024)} MB. Go on?`)) return;
+    check(cb, keys);
+  };
+});
+</script>
+</body>
+</html>
