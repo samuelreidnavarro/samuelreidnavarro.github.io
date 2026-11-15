@@ -471,7 +471,7 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
   .viewer.frame::-webkit-scrollbar{display:none}
 }
 /* pages side by side: the row scrolls sideways, the page itself still scrolls up and down */
-.viewer.horiz{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;padding:22px 56px 40px}
+.viewer.horiz{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;padding:22px 20px 40px}
 .viewer.horiz #pages{flex-direction:row;align-items:flex-start;width:max-content;gap:34px}
 .viewer.horiz #pages>.page,.viewer.horiz #pages>.opening{scroll-snap-align:center}
 .pagenav{position:absolute;top:50%;z-index:4;width:46px;height:46px;min-height:0;padding:0;border-radius:50%;transform:translateY(-50%);

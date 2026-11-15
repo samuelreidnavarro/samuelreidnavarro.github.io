@@ -1758,7 +1758,7 @@ const PAPER = {A3: [297, 420], A4: [210, 297], A5: [148, 210]};
 const webFit = () => st.paper === 'web' && st.view === 'choir';
 const isHoriz = () => webFit() || (st.flow === 'horizontal' && st.paper !== 'web');
 function frameSize(){
-  const w = ($('.viewwrap').clientWidth || window.innerWidth) - (window.innerWidth <= 700 ? 60 : 116);
+  const w = ($('.viewwrap').clientWidth || window.innerWidth) - (window.innerWidth <= 700 ? 60 : 40);
   const h = Math.max(320, (wrapEl.classList.contains('fs') ? window.innerHeight : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) || 700) - 60);
   return [Math.max(240, w), h];
 }
@@ -2005,14 +2005,15 @@ function render(){
   document.querySelectorAll('#scrollSeg button').forEach(b => { b.disabled = st.view !== 'score'; b.title = st.view !== 'score' ? 'Only in Score' : b.title; });
   const wide = !!G.web && st.webScroll === 'horizontal' && st.view === 'score';
   const Z = G.web || G.fit ? 1 : Math.max(0.5, Math.min(3, st.zoom || 1));
-  const avail = ($('.viewwrap').clientWidth || window.innerWidth) - (horiz ? (window.innerWidth <= 700 ? 60 : 116) : window.innerWidth <= 700 ? 0 : 40);
+  const avail = ($('.viewwrap').clientWidth || window.innerWidth) - (horiz ? (window.innerWidth <= 700 ? 60 : 40) : window.innerWidth <= 700 ? 0 : 40);
   const pxmm = 96 / 25.4;
   /* side by side, a page (or an opening) fits the height of the window */
   const availH = Math.max(320, (fs ? window.innerHeight : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) || 700) - 60);
   const fitH = horiz ? availH / (G.hmm * pxmm) : Infinity;
   if (st.view === 'choir') {
     const pages = layoutChoir(G);
-    const sc = G.web || G.fit ? 1 : Math.min(1.25, avail / (2 * G.wmm * pxmm), fitH) * Z;
+    /* the opening fills the width of the window whatever its size (a page taller than the window scrolls up and down) */
+    const sc = G.web || G.fit ? 1 : Math.min(2.5, avail / (2 * G.wmm * pxmm)) * Z;
     for (let i = 0; i < pages.length; i += 2) {
       html += `<div class="opening${G.web && 2 * G.wmm * pxmm > avail + 1 ? ' stack' : ''}">`;
       for (const p of pages.slice(i, i + 2)) html += pageDiv(p.svg, G, sc, '');
