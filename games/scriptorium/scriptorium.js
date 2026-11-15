@@ -5380,7 +5380,7 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
     root.style.setProperty('--popbot', Math.round(window.innerHeight - r.top - 2) + 'px');
   };
   const place = btn => {
-    if (mid() && (btn.closest('.transport') || window.matchMedia('(max-width:1100px)').matches)) placeMid(btn);
+    if (window.matchMedia('(max-width:1200px)').matches && (btn.closest('.transport') || window.matchMedia('(max-width:1100px)').matches)) placeMid(btn);
     if (!small() || !btn.closest('.bar')) return;
     const r = btn.getBoundingClientRect(), bar = btn.closest('.bar').getBoundingClientRect();
     document.documentElement.style.setProperty('--poptop', Math.round(r.bottom - bar.top + 6) + 'px');
