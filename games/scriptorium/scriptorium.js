@@ -5252,7 +5252,7 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
 
 /* phones: a top menu opens as a panel across the screen, just below its button (see the media query in the CSS) */
 {
-  const small = () => window.matchMedia('(max-width:700px), (max-height:520px) and (orientation:landscape)').matches;
+  const small = () => window.matchMedia('(max-width:1100px), (max-height:520px) and (orientation:landscape)').matches;
   const place = btn => {
     if (!small()) return;
     const r = btn.getBoundingClientRect(), bar = btn.closest('.bar').getBoundingClientRect();
@@ -5282,6 +5282,11 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
   };
   const mo = new MutationObserver(sync);
   for (const r of rows()) mo.observe(r, {subtree: true, attributes: true, attributeFilter: ['class', 'hidden']});
+  /* with a mouse, the wheel scrolls a row that is too wide sideways */
+  for (const r of rows()) r.addEventListener('wheel', e => {
+    if (r.scrollWidth <= r.clientWidth + 1 || r.classList.contains('popup') || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    r.scrollLeft += e.deltaY; e.preventDefault();
+  }, {passive: false});
 }
 /* start */
 if (H.start) H.start(); else (async () => {
