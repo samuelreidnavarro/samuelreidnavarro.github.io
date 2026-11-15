@@ -76,6 +76,7 @@ ${APP.popsBeforeVoices || ''}
         <div class="popbody"><div class="btns col" id="addList">
           <button class="tb" id="addInc" title="The original clefs, mensuration signs and first notes of every voice, before the staves">Incipit</button>
           <button class="tb" id="addMens" title="Put a mensuration sign at the selected note, in the selected voice or voices only (select several voices to give them all one)">Mensuration sign</button>
+          <button class="tb" id="addClef" title="A new clef at the selected note, in the selected voice or voices only; click it to choose which. Again to take it off">Clef change</button>
           <button class="tb" id="addKey" title="A new key signature at the selected note, in the selected voice or voices only; hover (tap on a phone) it to change it. Again to take it off">Key signature change</button>
           <button class="tb" id="addFerm" title="A fermata over the selected note or notes (again to take it off)">Signum</button>
           <button class="tb" id="addSec" title="A section line through all the staves at the selected note or the caret, apart from the barlines; click it to make it double or take it off">Section line</button>
@@ -480,7 +481,7 @@ function parseKern(text){
   voices.forEach((v, i) => {
     v.end = v.t;
     if (!v.name) v.name = 'Voice ' + (voices.length - i);
-    v.kclef = v.clefs.length ? v.clefs[0].c : null;
+    { const c0 = v.clefs.find(q => q.t < EPS); v.kclef = c0 ? c0.c : null; }
   });
   const titleKey = Object.keys(meta).find(k => k === 'OTL') || Object.keys(meta).find(k => k.startsWith('OTL'));
   let title = (titleKey ? meta[titleKey] : 'Untitled').replace(/\s*\.\.\.\s*/g, ' … ');
@@ -872,9 +873,9 @@ function prepare(){
     v.idx = i;
     v.clef = (vis(i).clef && CLEFS[vis(i).clef]) ? vis(i).clef : chooseClef(v, st.clefs);
     const syms = notate(piece, v, mode);
-    const C = CLEFS[v.clef];
     for (const s of syms) {
-      s.pos = s.rest ? null : s.step - C.bottom;
+      s.clef = clefAt(v, s.t);
+      s.pos = s.rest ? null : s.step - CLEFS[s.clef].bottom;
       const g = s.rest ? SHAPE_REST[s.g] : BLACK ? BLACK_G[s.g] || s.g + 'c' : MODERN ? MOD_G[s.g] || s.g : s.g + (s.col ? 'c' : '');
       s.glyph = g; s.red = BLACK && !s.rest && !!s.col;
       s.hw = s.rest ? (s.g === 'Mx' ? 1.2 : s.g === 'Sm' || s.g === 'F' ? gw(g) : 0.42) : gw(g);
@@ -890,6 +891,8 @@ function prepare(){
       s.left = s.acc ? gw(s.acc) + 0.35 : 0;
       s.vi = i;
       s.keyc = s.t > EPS && !s.cont ? v.keys.find(q => Math.abs(q.t - s.t) < EPS) || null : null;
+      s.clefc = s.t > EPS && !s.cont ? v.clefs.find(q => q.t > EPS && Math.abs(q.t - s.t) < EPS && KERN_CLEF[q.c]) || null : null;
+      if (s.clefc) s.left += clefW(s.clef) + 0.9;
       if (s.keyc) { s.keyN = keyChangeGlyphs(v, s.keyc).length; s.left += s.keyN * 1.0 + 0.9; }
       if (s.mens) s.left += mensW(s.mens) + 1.3;
       s.right = s.hw + (s.dot ? 0.75 : 0);
@@ -920,6 +923,16 @@ function prepare(){
     v.syms = syms;
   });
 }
+/* the clef in force at time t: the voice's own, until a clef change (Add > Clef change, or a *clef inside the music) */
+function clefAt(v, t){
+  let c = v.clef;
+  for (const m of v.clefs) if (m.t > EPS && m.t <= t + EPS && KERN_CLEF[m.c]) c = KERN_CLEF[m.c];
+  return c;
+}
+/* the clef a line starts with: where a clef change stands at the very start of a line, the line starts with the old clef and the change is drawn as such */
+function lineClef(v, t){ return t > EPS && v.clefs.some(m => m.t > EPS && Math.abs(m.t - t) < EPS) ? clefAt(v, t - 0.01) : clefAt(v, t); }
+/* the clef change that governs time t, if there is one (the clef is then edited there, not at the start of the voice) */
+function clefChangeAt(v, t){ let g = null; for (const m of v.clefs) if (m.t > EPS && m.t <= t + EPS && KERN_CLEF[m.c]) g = m; return g; }
 function keyAt(v, t){
   let k = {};
   for (const e of v.keys) if (e.t <= t + EPS) k = e.alts;
@@ -1130,13 +1143,18 @@ const isFlipped = s => (STEMMED[s.g] && s.pos >= 7) || (TAILED[s.g] && s.pos <= 
 
 /* a key change in the middle of a line: naturals for what is cancelled, then the new signature */
 function keyChangeGlyphs(v, kc){
-  const prev = keyAt(v, kc.t - 0.01), out = [], clef = v.clef;
+  const prev = keyAt(v, kc.t - 0.01), out = [], clef = clefAt(v, kc.t);
   const gone = {}; for (const L of Object.keys(prev)) if (!kc.alts[L]) gone[L] = 0;
   const nat = keySigOf(Object.fromEntries(Object.keys(gone).map(L => [L, 0])), clef);
   return [...nat.map(q => ({g: 'na', pos: q.pos})), ...keySigOf(kc.alts, clef)];
 }
 function markSvg(s, X, top){
   let o = '', ox = X - s.left;
+  if (s.clefc) {
+    const cw = clefW(s.clef);
+    o += `<g class="clefhit" data-v="${s.vi}" data-t="${s.t}"><rect x="${f(ox - 0.2)}" y="${f(top - 1.5)}" width="${f(cw + 0.4)}" height="7" fill="transparent"/>${clefSvg(s.clef, ox, top)}</g>`;
+    ox += cw + 0.9;
+  }
   if (s.keyc) {
     const gl = keyChangeGlyphs(piece.voices[s.vi], s.keyc);
     let g = '', x = ox;
@@ -1152,7 +1170,7 @@ function markSvg(s, X, top){
 }
 function symSvg(s, X, top, showNotes){
   /* with the notes hidden, the key change and mensuration sign stay, like the clef */
-  if (!showNotes) return s.keyc || s.mens ? markSvg(s, X, top) : '';
+  if (!showNotes) return s.keyc || s.mens || s.clefc ? markSvg(s, X, top) : '';
   if (s.ligSvg && s.ligX != null) X = s.ligX;   /* a note of a drawn ligature stands where the ligature puts it */
   const hy = s.rest ? top + 0.5 : top + 4 - s.pos * 0.5 - 1;
   return `<g class="${s.id}"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top)}</g>`;
@@ -1160,7 +1178,7 @@ function symSvg(s, X, top, showNotes){
 function symInner(s, X, top){
   let o = '';
   let hx = X;
-  if (s.mens || s.keyc) o += markSvg(s, X, top);
+  if (s.mens || s.keyc || s.clefc) o += markSvg(s, X, top);
   if (s.rest) { o += restSvg(s, hx + s.hw / 2, top); return o; }
   const y = top + 4 - s.pos * 0.5;
   o += ledgers(s.pos, hx, s.hw, top);
@@ -1320,14 +1338,14 @@ function staffLine(o){
   for (let k = st.lines === '4' ? 1 : 0; k < 5; k++) s += hl(x0, x1, top + k, 'staff', 0.12);
   /* clef, key */
   const t0 = o.t0;
-  const clef = v.clef;
+  const clef = lineClef(v, t0), govC = clefChangeAt(v, t0 > EPS && v.clefs.some(m => m.t > EPS && Math.abs(m.t - t0) < EPS) ? t0 - 0.01 : t0);
   /* where the mouse writes notes; on the last line it reaches on to the margin, for adding at the end */
   const hx1 = o.tail ? Math.max(x1, o.tail) : x1;
   /* the times of the line's columns and where they stand, so a click can be turned into a time */
   const tx = []; for (let i = o.from; i < o.to; i++) tx.push(o.cols[i].t + ':' + f(o.xs[i]));
   if (o.tEnd !== undefined && o.tEnd !== null) tx.push(o.tEnd + ':' + f(x1));
   s += `<rect class="stafhit" data-v="${v.idx}" data-tx="${tx.join(',')}" data-top="${f(top)}" data-end="${f(x1)}" data-k0="${o.k0 ?? ''}" data-k1="${o.k1 ?? ''}" x="${f(x0)}" y="${f(top - 2.6)}" width="${f(hx1 - x0)}" height="9.2" fill="transparent"/>`;
-  s += `<g class="clefhit" data-v="${v.idx}"><rect x="${f(x0 + 0.2)}" y="${f(top - 1.5)}" width="${f(clefW(clef) + 0.4)}" height="7" fill="transparent"/>${clefSvg(clef, x0 + 0.5, top)}</g>`;
+  s += `<g class="clefhit" data-v="${v.idx}"${govC ? ` data-t="${govC.t}"` : ''}><rect x="${f(x0 + 0.2)}" y="${f(top - 1.5)}" width="${f(clefW(clef) + 0.4)}" height="7" fill="transparent"/>${clefSvg(clef, x0 + 0.5, top)}</g>`;
   let x = x0 + 0.5 + clefW(clef) + 0.5;
   /* the key signature: hovering it shows arrows, down adds flats, up goes to no accidental and then sharps */
   { const ks = keySig(v, t0, clef), kx = x; let g = '';
@@ -1455,7 +1473,8 @@ function finalBar(x, tops){
 /* ------------------------------------------------------------------ */
 function headerW(v){
   const k = keySig(v, 0, v.clef).length;
-  return 0.5 + clefW(v.clef) + 0.5 + k * 1.0 + 0.6;
+  const cw = Math.max(clefW(v.clef), ...v.clefs.filter(m => m.t > EPS && KERN_CLEF[m.c]).map(m => clefW(KERN_CLEF[m.c])));
+  return 0.5 + cw + 0.5 + k * 1.0 + 0.6;
 }
 /* build lines for voices over [a,b) at width W; returns lines with x positions */
 function buildLines(vlist, a, b, W, opts = {}){
@@ -1501,7 +1520,7 @@ function lineRoom(v, line){
     if (nx && !nx.rest && nx.pos !== null && nx.pos !== undefined) { const y = 4 - nx.pos * 0.5; up(n - 1, y - 1.9 - pad); dn(n - 1, y + 1.9 + pad); }
     /* the clef and the key signature at the line start */
     up(0, -1.3 - pad);
-    for (const k of keySig(v, line.cols[line.from].t, v.clef)) { const y = 4 - k.pos * 0.5; up(0, y - (/fl/.test(k.g) ? 2.1 : 1.6) - pad); dn(0, y + 1.6 + pad); }
+    for (const k of keySig(v, line.cols[line.from].t, lineClef(v, line.cols[line.from].t))) { const y = 4 - k.pos * 0.5; up(0, y - (/fl/.test(k.g) ? 2.1 : 1.6) - pad); dn(0, y + 1.6 + pad); }
     for (let i = line.from; i < line.to; i++) {
       const s = line.cols[i].items.get(v);
       if (!s) continue;
@@ -3488,7 +3507,7 @@ const OPS = {
         const e = v.events[i];
         if (e.rest) {
           let j = i - 1; while (j >= 0 && v.events[j].rest) j--;
-          e.rest = false; e.step = j >= 0 ? v.events[j].step : CLEFS[v.clef || 'c3'].bottom + 4; e.alt = implied(v, e.step, e.t); e.ed = false;
+          e.rest = false; e.step = j >= 0 ? v.events[j].step : CLEFS[clefAt(v, e.t) || 'c3'].bottom + 4; e.alt = implied(v, e.step, e.t); e.ed = false;
         } else { e.rest = true; e.tieStart = e.tieEnd = e.tieMid = false; }
       }
     });
@@ -3662,19 +3681,26 @@ clefPick.innerHTML = CLEF_KEYS.map(k => {
   const short = k === 'flat' ? 'B♭ in the signature' : k ? c[1] : 'As written', label = k === 'flat' ? 'B flat in the signature' : k ? c[2] : 'The clef the piece has (or the old clef that fits, with Old clefs)';
   return `<li role="option" id="clefopt-${k || 'asis'}" data-c="${k}" title="${esc(label)}"${k === 'flat' ? ' class="flatopt"' : !k ? ' class="flatopt asis"' : ''}>${clefIcon(k)}<span>${esc(short)}</span></li>`;
 }).join('');
+/* the clef menu belongs to the start of a voice, or to one clef change in it (dataset.t) */
+const pickT = () => clefPick.dataset.t === undefined || clefPick.dataset.t === '' ? null : +clefPick.dataset.t;
 function markClef(){
-  const vi = +clefPick.dataset.v, v = piece && piece.voices[vi];
-  const cur = v ? vis(vi).clef || '' : '', fl = v && keyAt(v, 0).b === -1;
+  const vi = +clefPick.dataset.v, v = piece && piece.voices[vi], mt = pickT();
+  const cm = v && mt !== null ? v.clefs.find(m => m.t > EPS && eq(m.t, mt)) : null;
+  const cur = cm ? KERN_CLEF[cm.c] || '' : v ? vis(vi).clef || '' : '', fl = v && keyAt(v, 0).b === -1;
   clefPick.querySelectorAll('li').forEach((li, i) => {
     li.classList.toggle('active', i === clefActive);
     li.setAttribute('aria-selected', String(li.dataset.c === 'flat' ? !!fl : li.dataset.c === cur));
   });
   clefPick.setAttribute('aria-activedescendant', clefPick.children[clefActive].id);
 }
-function openClefPick(vi, e){
+function openClefPick(vi, e, t){
   const wr = $('.viewwrap').getBoundingClientRect();
-  clefPick.dataset.v = vi; clefPick.hidden = false;
-  clefActive = Math.max(0, CLEF_KEYS.indexOf(vis(vi).clef || ''));
+  clefPick.dataset.v = vi; clefPick.dataset.t = t === undefined ? '' : t; clefPick.hidden = false;
+  const mid = t !== undefined, cm = mid ? piece.voices[vi].clefs.find(m => m.t > EPS && eq(m.t, t)) : null;
+  /* at a clef change the last choice takes the change away again */
+  const asis = clefPick.querySelector('.asis');
+  if (asis) { asis.querySelector('span').textContent = mid ? 'Take this clef away' : 'As written'; asis.title = mid ? 'No clef change here: the clef before it goes on' : 'The clef the piece has (or the old clef that fits, with Old clefs)'; }
+  clefActive = Math.max(0, CLEF_KEYS.indexOf(mid ? (cm && KERN_CLEF[cm.c]) || '' : vis(vi).clef || ''));
   markClef();
   clefPick.style.left = Math.max(4, Math.min(wr.width - clefPick.offsetWidth - 4, e.clientX - wr.left)) + 'px';
   clefPick.style.top = (e.clientY - wr.top + 10) + 'px';
@@ -3682,7 +3708,16 @@ function openClefPick(vi, e){
 }
 function pickClef(k){
   clefPick.hidden = true;
-  const vi = +clefPick.dataset.v;
+  const vi = +clefPick.dataset.v, mt = pickT();
+  if (mt !== null) {
+    const v = piece.voices[vi];
+    if (!writable(v)) { refuse(); return; }
+    commit(() => {
+      const i = v.clefs.findIndex(m => m.t > EPS && eq(m.t, mt)); if (i < 0) return;
+      if (!k || k === 'flat') v.clefs.splice(i, 1); else v.clefs[i].c = CLEF_KERN[k];
+    });
+    return;
+  }
   if (k === 'flat') VOICE_OPS.flat(vi); else VOICE_OPS.clef(vi, k);
 }
 clefPick.addEventListener('click', e => { const li = e.target.closest('li'); if (li) pickClef(li.dataset.c); });
@@ -3702,7 +3737,6 @@ function staffTarget(rect, e){
   const vi = +rect.dataset.v, top = +rect.dataset.top, v = piece.voices[vi];
   if (!v) return null;
   const pos = Math.max(-8, Math.min(16, Math.round((top + 4 - p.y) * 2)));
-  const step = CLEFS[v.clef].bottom + pos;
   let mode = 'end', k = null;
   if (rect.dataset.k0 !== '') {
     const k0 = +rect.dataset.k0, k1 = +rect.dataset.k1, g = rect.parentNode;
@@ -3715,6 +3749,10 @@ function staffTarget(rect, e){
       if (bb.x + bb.width / 2 <= p.x) { mode = 'after'; k = q; }
     }
   }
+  /* the clef the new note is written in: the one in force at that place */
+  const ref = k !== null ? v.syms[k] : null;
+  const cl = !ref ? clefAt(v, 1e9) : mode === 'before' ? clefAt(v, Math.max(0, ref.t - 0.01)) : ref.clef;
+  const step = CLEFS[cl || v.clef].bottom + pos;
   return {vi, v, top, pos, step, mode, k, x: p.x, end: +rect.dataset.end, g: rect.parentNode};
 }
 /* the writing area under the pointer: the staff itself, or, while editing, a rest on it (a note written there takes the rest's place) */
@@ -3969,6 +4007,25 @@ $('#addFerm').addEventListener('click', () => {
   const all = it.every(x => x.e.ferm);
   commit(() => { for (const {e} of it) e.ferm = !all; });
 });
+/* Add > Clef change: at the selected note, in the selected voice(s) only, any clef; click it to choose. Again takes it off */
+$('#addClef').addEventListener('click', () => {
+  if (!piece) return;
+  const T = mensTargets();
+  if (!T.size) { toast('Select a note first (click it, or put the caret before it); the clef goes there, in that voice.'); return; }
+  if ([...T.keys()].some(vi => !writable(piece.voices[vi]))) { refuse(); return; }
+  if ([...T.values()].some(t => t < EPS)) { toast('At the very start, click the clef itself to change it.'); return; }
+  commit(() => {
+    for (const [vi, t] of T) {
+      const v = piece.voices[vi], k = v.events.findIndex(e => eq(e.t, t));
+      if (k < 0) continue;
+      const had = v.clefs.findIndex(m => m.t > EPS && eq(m.t, t));
+      if (had >= 0) { v.clefs.splice(had, 1); continue; }
+      /* any clef but the one already there; a click on it chooses the right one */
+      const cur = clefAt(v, t - 0.01), opts = ['c1', 'c2', 'c3', 'c4', 'f3', 'bass', 'treble', 'treble8'].filter(c => c !== cur);
+      v.clefs.push({t, c: CLEF_KERN[opts[Math.floor(Math.random() * opts.length)]], ei: k}); v.clefs.sort((a, b) => a.t - b.t);
+    }
+  });
+});
 /* Add > Key signature change: at the selected note, in the selected voice(s) only, one flat more than before (then use the arrows) */
 $('#addKey').addEventListener('click', () => {
   if (!piece) return;
@@ -4163,7 +4220,7 @@ pagesEl.addEventListener('click', e => {
   const kh = e.target.closest && e.target.closest('.keyhit');
   if (kh && piece) { e.stopImmediatePropagation(); e.preventDefault(); openKeyMenu(+kh.dataset.v, kh.dataset.t !== undefined ? +kh.dataset.t : 0, e); return; }
   const ch = e.target.closest && e.target.closest('.clefhit');
-  if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e); return; }
+  if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e, ch.dataset.t !== undefined ? +ch.dataset.t : undefined); return; }
   if (ed.on && typeof noteAt === 'function') {
     const n = noteAt(e);
     if (n && e.shiftKey && (ed.sel || ed.range || ed.picks)) { e.stopImmediatePropagation(); extendRange(n.vi, n.s); return; }
