@@ -881,12 +881,14 @@ function prepare(){
     v.idx = i;
     v.clef = (vis(i).clef && CLEFS[vis(i).clef]) ? vis(i).clef : chooseClef(v, st.clefs);
     const syms = notate(piece, v, mode);
+    /* a voice with no notes yet still shows its staff, clef and sign, and a place where the first note will stand */
+    if (!syms.length) { const m0 = v.mets.find(q => q.t < EPS); syms.push({t: 0, d: 2, rest: true, phantom: true, g: 'B', alt: null, syl: [], src: [], lig: 0, mens: m0 ? m0.sign : null, sign: m0 ? m0.sign : null}); }
     for (const s of syms) {
       s.clef = clefAt(v, s.t);
       s.pos = s.rest ? null : s.step - CLEFS[s.clef].bottom;
       const g = s.rest ? SHAPE_REST[s.g] : BLACK ? BLACK_G[s.g] || s.g + 'c' : MODERN ? MOD_G[s.g] || s.g : s.g + (s.col ? 'c' : '');
       s.glyph = g; s.red = BLACK && !s.rest && !!s.col;
-      s.hw = s.rest ? (s.g === 'Mx' ? 1.2 : s.g === 'Sm' || s.g === 'F' ? gw(g) : 0.42) : gw(g);
+      s.hw = s.phantom ? 1.2 : s.rest ? (s.g === 'Mx' ? 1.2 : s.g === 'Sm' || s.g === 'F' ? gw(g) : 0.42) : gw(g);
       /* accidental before the head (written ones only; key signature ones are implied) */
       s.acc = null; s.edAcc = null;
       if (!s.rest && s.alt !== null && s.alt !== undefined) {
@@ -1181,6 +1183,8 @@ function symSvg(s, X, top, showNotes){
   if (!showNotes) return s.keyc || s.mens || s.clefc ? markSvg(s, X, top) : '';
   if (s.ligSvg && s.ligX != null) X = s.ligX;   /* a note of a drawn ligature stands where the ligature puts it */
   const hy = s.rest ? top + 0.5 : top + 4 - s.pos * 0.5 - 1;
+  /* the place of a first note in an empty voice: nothing drawn but the sign before it and the cursor's place */
+  if (s.phantom) return `<g class="${s.id} phantom"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/>${s.mens ? markSvg(s, X, top) : ''}</g>`;
   return `<g class="${s.id}"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top)}</g>`;
 }
 function symInner(s, X, top){
@@ -1491,6 +1495,7 @@ function buildLines(vlist, a, b, W, opts = {}){
   if (!cols.length && APP.emptyStaves) cols.push({t: 0, items: new Map(), bar: null, left: 0, right: 24, x: 0, clean: true});
   if (!cols.length) return [];
   const hw = Math.max(...vlist.map(headerW));
+  const emptyAll = vlist.every(v => !v.events.length);   /* nothing written yet: the staves run the whole width */
   const indent = opts.indent || 0;
   const avail = W - hw;
   const br = breakLines(cols, avail, avail - indent);
@@ -1508,7 +1513,7 @@ function buildLines(vlist, a, b, W, opts = {}){
     const xs = [];
     for (let i = L.from; i < L.to; i++) xs[i] = startX + (cols[i].x - cols[L.from].x) * k;
     const endX = last ? (allEnd ? xs[L.to - 1] + lastCol.right + 1.2 : Math.max(xs[L.to - 1] + lastCol.right + 2.4, opts.ragged ? 0 : W)) : W;
-    return {cols, from: L.from, to: L.to, xs, x0: ind, x1: last && !opts.fullLast ? Math.min(W, endX + (allEnd ? 0.9 : 0)) : W, last, W, endsPiece: last && allEnd, t0: cols[L.from].t, tEnd: L.to < cols.length ? cols[L.to].t : b};
+    return {cols, from: L.from, to: L.to, xs, x0: ind, x1: last && !opts.fullLast && !emptyAll ? Math.min(W, endX + (allEnd ? 0.9 : 0)) : W, last, W, endsPiece: last && allEnd, t0: cols[L.from].t, tEnd: L.to < cols.length ? cols[L.to].t : b};
   });
 }
 /* vertical room a voice needs in a line */
@@ -2806,11 +2811,11 @@ $('#metaTitle').addEventListener('change', e => setTitle(e.target.value));
 $('#metaComp').addEventListener('change', e => setComposer(e.target.value));
 ['#metaTitle', '#metaComp'].forEach(id => $(id).addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); }));
 
-/* a new score: four voices, a brevis rest each, ready to write in */
+/* a new score: four empty voices, ready to write in */
 function kernOf(title, voices){
   const vs = voices.slice().reverse();
   const L = [`!!!OTL: ${title}`, vs.map(() => '**kern').join('\t'), vs.map(v => `*I"${v[0]}`).join('\t'), vs.map(v => `*clef${v[1]}`).join('\t'),
-    vs.map(() => '*met(C)').join('\t'), vs.map(() => '=1-').join('\t'), vs.map(() => '0r').join('\t'), vs.map(() => '==').join('\t'), vs.map(() => '*-').join('\t')];
+    vs.map(() => '*met(C)').join('\t'), vs.map(() => '==').join('\t'), vs.map(() => '*-').join('\t')];
   return L.join('\n') + '\n';
 }
 async function newScore(){
