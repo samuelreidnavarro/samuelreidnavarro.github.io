@@ -5000,15 +5000,14 @@ function selStart(){
   if (ed.ins) { const v = piece.voices[ed.ins.vi]; if (v) { const e = v.events[ed.ins.ei]; return (e ? e.t : v.end) + (ed.ins.off || 0); } }
   return 0;
 }
-/* Pause keeps the place: Play goes on from there, unless the selection or the caret has been moved meanwhile */
-let heldAt = null, heldSel = '';
+/* Play always starts from the last selected note (or the beginning), never where Pause stopped (Samuel 2026-11-15) */
+let heldAt = null;
 function togglePlayHold(){
-  const sid = () => JSON.stringify([ed.sel, ed.ins, ed.range && [ed.range.t0, ed.range.t1, ed.range.v0, ed.range.v1], ed.picks]);
-  if (play) { heldAt = playPos(); heldSel = sid(); selClicked = false; stopPlay(); }
-  else { const at = heldAt !== null && heldAt < piece.end - EPS && sid() === heldSel && !selClicked ? heldAt : undefined; heldAt = null; selClicked = false; startPlay(at); }
+  selClicked = false; heldAt = null;
+  if (play) stopPlay(); else startPlay();
 }
 /* A click on a note is a new start point, even on the note that is already selected: while playing, the music goes on from it at once;
-   after a pause, Play starts there instead of resuming where it stopped */
+   after a pause, Play starts there */
 let selClicked = false;
 pagesEl.addEventListener('pointerdown', e => {
   if (e.button || !e.target.closest || !e.target.closest('g[class^="n"]')) return;
