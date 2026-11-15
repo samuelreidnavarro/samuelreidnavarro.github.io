@@ -280,7 +280,7 @@
   function clearDot(o){ o = o || mdot; document.querySelectorAll('#pages .' + o.cls).forEach(g => g.remove()); o.g = null; o.drawn = ''; o.el = null; }
   /* the dot stands on the column of the note of the sung voice that sounds now (or the one selected, or its first note) */
   function drawDot(){ drawDotAt(mdot, mic.snap, mic.shown, st.micShow); }
-  function drawDotAt(o, snap, shown, on){
+  function drawDotAt(o, snap, shown, on, extra){
     const vi = singIdx(), v = vi >= 0 ? piece.voices[vi] : null;
     if (!on || !v || !v.syms || !v.syms.length || snap === null || shown === null) { if (o.drawn) clearDot(o); return; }
     const t = nowT();
@@ -297,16 +297,30 @@
     if (!r) for (const r2 of par.querySelectorAll('rect.stafhit[data-v="' + vi + '"]')) r = r2;
     if (!r) return;
     const top = +r.dataset.top, bb = el.getBBox();
-    const m = snap, sp = spellMidi(m), pos = sp.s - CLEFS[v.clef].bottom;
-    const sym = v.syms[k], sig = keyAt(v, sym.t)[LETTERS[sp.L]] || 0;
-    const acc = sp.alt === sig ? '' : sp.alt < 0 ? 'fl' : sp.alt > 0 ? 'sh' : 'na';
-    const rr = 0.5, aw = acc ? gw(acc) + 0.25 : 0;
-    /* on the note's own column: directly above or below it, at the height of the sung pitch */
-    const cx = sym.hw ? bb.x + sym.hw / 2 : bb.x + bb.width / 2, x = cx - rr - aw;
-    const cents = st.micFlex ? Math.max(-50, Math.min(50, (shown - m) * 100)) : 0;
-    const y = top + 4 - pos * 0.5, yd = y - cents / 100 * 0.5;
-    const s = ledgers(pos, cx - rr, 2 * rr, top) + (acc ? use(acc, x, y) : '') +
-      `<ellipse class="micdot" cx="${f(cx)}" cy="${f(yd)}" rx="${rr + 0.04}" ry="${f(rr * 0.86)}"/>`;
+    /* one dot, or several when more than one key is held (the keyboard shows every key held, the microphone one pitch) */
+    const sym = v.syms[k], rr = 0.5, clefB = CLEFS[sym.clef || v.clef].bottom;
+    const items = [...new Set([snap, ...(extra || [])])].sort((a, b) => a - b).map(m => {
+      const sp = spellMidi(m), pos = sp.s - clefB, sig = keyAt(v, sym.t)[LETTERS[sp.L]] || 0;
+      return {m, pos, acc: sp.alt === sig ? '' : sp.alt < 0 ? 'fl' : sp.alt > 0 ? 'sh' : 'na', off: 0, col: 0};
+    });
+    /* notes a step apart cannot stand on one line: the upper one moves aside; accidentals queue to the left */
+    for (let i = 1; i < items.length; i++) if (items[i].pos - items[i - 1].pos <= 1 && items[i - 1].off === 0) items[i].off = 1;
+    const used = [];
+    for (const it of items.slice().reverse()) {
+      if (!it.acc) continue;
+      while (used.some(q => q.col === it.col && Math.abs(q.pos - it.pos) < 5)) it.col++;
+      used.push(it);
+    }
+    /* on the note's own column: directly above or below it, at the height of the pitch */
+    const cx = sym.hw ? bb.x + sym.hw / 2 : bb.x + bb.width / 2;
+    let s = '';
+    for (const it of items) {
+      const aw = it.acc ? gw(it.acc) + 0.25 : 0, x = cx - rr - aw - it.col * (aw + 0.1), nx = cx + it.off * 2 * rr;
+      const cents = st.micFlex && items.length === 1 ? Math.max(-50, Math.min(50, (shown - it.m) * 100)) : 0;
+      const y = top + 4 - it.pos * 0.5, yd = y - cents / 100 * 0.5;
+      s += ledgers(it.pos, nx - rr, 2 * rr, top) + (it.acc ? use(it.acc, x, y) : '') +
+        `<ellipse class="micdot" cx="${f(nx)}" cy="${f(yd)}" rx="${rr + 0.04}" ry="${f(rr * 0.86)}"/>`;
+    }
     if (s === o.drawn && o.el === el && o.g && o.g.isConnected) return;
     if (o.g) o.g.remove();
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -553,7 +567,7 @@
   /* a key of the keyboard (computer, screen or MIDI) during a recording: it is written into the take, not at the caret */
   const kheld = [];
   function showKey(){
-    if (kheld.length) drawDotAt(kdot, kheld[kheld.length - 1], kheld[kheld.length - 1], st.kbdShow);
+    if (kheld.length) drawDotAt(kdot, kheld[kheld.length - 1], kheld[kheld.length - 1], st.kbdShow, kheld.slice(0, -1));
     else clearDot(kdot);
   }
   H.keyNote = (m, on) => {
