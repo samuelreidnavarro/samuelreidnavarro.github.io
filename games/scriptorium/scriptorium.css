@@ -1075,3 +1075,13 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
 @media (hover:hover){ #openRecent .rdel{opacity:.35} #openRecent .rrow:hover .rdel{opacity:1} }
 #toast.act{pointer-events:auto;display:flex;align-items:center;gap:14px}
 #toast .toastact{background:transparent;border:1px solid currentColor;color:inherit;border-radius:5px;padding:3px 10px;font:inherit;font-size:15px;cursor:pointer;min-height:0;height:auto}
+/* the key signature menu: All voices | Only this voice, then the signatures */
+#keyMenu{display:grid;grid-template-columns:repeat(5,58px);gap:2px;padding:6px;z-index:25}
+#keyMenu[hidden]{display:none}
+#keyMenu li{justify-content:center;padding:8px 2px;font-size:15px;text-align:center}
+#keyMenu li.mscope{grid-column:1/-1;flex-direction:row;justify-content:flex-start;align-items:center;gap:8px;padding:4px 6px 8px;border-bottom:1px solid var(--line);border-radius:4px 4px 0 0;margin-bottom:2px;cursor:default}
+#keyMenu li.mscope[hidden]{display:none}
+#keyMenu li.mscope:hover{background:none}
+#keyMenu .mslab{color:var(--muted);font-size:13px}
+#keyMenu .mscope .seg{display:inline-flex;gap:2px}
+#keyMenu .mscope .tb{font-size:14px;padding:4px 10px;min-height:0;height:auto}

@@ -3857,12 +3857,16 @@ $('#addInc').addEventListener('click', () => {
 });
 /* On a touch screen nothing waits for a hover: a tap on the key signature (or on the place for a mensuration sign) shows its arrows or outline, a second tap uses them */
 const touchOnly = () => window.matchMedia('(hover:none)').matches;
+/* the key signature that showed its arrows when the finger came down (a tap beside it, on the clef, still counts as on it) */
+let ksWasOn = null;
+document.addEventListener('pointerdown', e => { ksWasOn = pagesEl.querySelector('.keyhit.ks-on'); }, true);
 document.addEventListener('pointerdown', e => { if (!e.target.closest || !e.target.closest('.keyhit,.mensadd')) pagesEl.querySelectorAll('.ks-on,.mensadd.on').forEach(g => g.classList.remove('ks-on', 'on')); });
 pagesEl.addEventListener('click', e => {
   if (touchOnly() && piece && e.target.closest) {
     let kh = e.target.closest('.keyhit');
     /* the key signature is a small target next to the clef and the mensuration sign: a finger lands on whichever is nearer, so look for a key signature just under the finger */
     if (!kh && !e.target.closest('.ksarr,.mensadd')) for (const q of pagesEl.querySelectorAll('.keyhit')) { const r = q.querySelector('rect').getBoundingClientRect(); if (e.clientX >= r.left - 3 && e.clientX <= r.right + 3 && e.clientY >= r.top && e.clientY <= r.bottom) { kh = q; break; } }
+    if (kh && !e.target.closest('.ksarr') && (kh.classList.contains('ks-on') || kh === ksWasOn)) { e.stopImmediatePropagation(); e.preventDefault(); openKeyMenu(+kh.dataset.v, kh.dataset.t !== undefined ? +kh.dataset.t : 0, e); return; }
     if (kh && !e.target.closest('.ksarr')) { const was = kh.classList.contains('ks-on'); pagesEl.querySelectorAll('.ks-on,.mensadd.on').forEach(g => g.classList.remove('ks-on', 'on')); if (!was) kh.classList.add('ks-on'); e.stopImmediatePropagation(); e.preventDefault(); return; }
     const mq = e.target.closest('.mensadd');
     if (mq && !mq.classList.contains('on')) { pagesEl.querySelectorAll('.ks-on,.mensadd.on').forEach(g => g.classList.remove('ks-on', 'on')); mq.classList.add('on'); e.stopImmediatePropagation(); e.preventDefault(); return; }
@@ -3883,6 +3887,46 @@ pagesEl.addEventListener('click', e => {
 const FLATS = 'beadgcf', SHARPS = 'fcgdaeb';
 const fifthsOfAlts = a => { const n = Object.values(a).filter(x => x > 0).length, m = Object.values(a).filter(x => x < 0).length; return n || -m; };
 function altsOfFifths(n){ const o = {}; if (n > 0) SHARPS.slice(0, n).split('').forEach(l => { o[l] = 1; }); if (n < 0) FLATS.slice(0, -n).split('').forEach(l => { o[l] = -1; }); return o; }
+/* The key signature menu (Samuel 2026-11-14: per voice, like the mensuration sign): a click on a key signature (a
+   second tap on a phone) opens it, with All voices | Only this voice on top, then the signatures. The choice of
+   scope stays for the arrows too. */
+let keyOnly = false;
+try { keyOnly = localStorage.getItem(APP.store + ':keyonly') === '1'; } catch (e) {}
+const keyMenu = document.createElement('ul');
+keyMenu.id = 'keyMenu'; keyMenu.className = 'menu'; keyMenu.setAttribute('role', 'listbox'); keyMenu.hidden = true;
+keyMenu.setAttribute('aria-label', 'Key signature');
+const KEY_OPTS = [-4, -3, -2, -1, 0, 1, 2, 3, 4];
+const keyName = n => n === 0 ? 'None' : Math.abs(n) + (n < 0 ? ' ♭' : ' ♯');
+keyMenu.innerHTML = `<li class="flatopt mscope" data-n="" role="presentation"><span class="mslab">Change</span><span class="seg" role="group" aria-label="Which voices the signature changes in"><button type="button" class="tb" data-kscope="all">All voices</button><button type="button" class="tb" data-kscope="one">Only <span class="kvn">this voice</span></button></span></li>` +
+  KEY_OPTS.map(n => `<li role="option" data-n="${n}" title="${n === 0 ? 'No sharps or flats' : Math.abs(n) + (n < 0 ? ' flat' : ' sharp') + (Math.abs(n) > 1 ? 's' : '')}"><span>${keyName(n)}</span></li>`).join('');
+$('.viewwrap').appendChild(keyMenu);
+let keyAtMenu = null;
+function keyScopeSync(){ keyMenu.querySelectorAll('[data-kscope]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.kscope === 'one') === keyOnly))); }
+function openKeyMenu(vi, t, e){
+  const v = piece.voices[vi]; if (!v) return;
+  keyAtMenu = {vi, t};
+  const mid = t > EPS, cur = fifthsOfAlts(keyAt(v, mid ? t : 0));
+  keyMenu.querySelector('.kvn').textContent = v.name || 'this voice';
+  /* a change in the middle of the piece belongs to its voice: no scope there */
+  keyMenu.querySelector('.mscope').hidden = mid;
+  keyScopeSync();
+  keyMenu.querySelectorAll('li[data-n]').forEach(li => li.setAttribute('aria-selected', String(li.dataset.n !== '' && +li.dataset.n === cur)));
+  const wr = $('.viewwrap').getBoundingClientRect();
+  keyMenu.hidden = false; mensMenu.hidden = true; clefPick.hidden = true;
+  keyMenu.style.left = Math.max(4, Math.min(wr.width - keyMenu.offsetWidth - 4, e.clientX - wr.left)) + 'px';
+  keyMenu.style.top = (e.clientY - wr.top + 10) + 'px';
+}
+keyMenu.addEventListener('click', e => {
+  const sc = e.target.closest('[data-kscope]');
+  if (sc) { keyOnly = sc.dataset.kscope === 'one'; try { localStorage.setItem(APP.store + ':keyonly', keyOnly ? '1' : '0'); } catch (err) {} keyScopeSync(); return; }
+  const li = e.target.closest('li[data-n]'); if (!li || li.dataset.n === '' || !keyAtMenu || !piece) return;
+  keyMenu.hidden = true;
+  const {vi, t} = keyAtMenu, v = piece.voices[vi]; if (!v) return;
+  const cur = fifthsOfAlts(keyAt(v, t > EPS ? t : 0)), n = +li.dataset.n;
+  if (n !== cur) keyStep(vi, n - cur, t > EPS ? t : undefined);
+});
+document.addEventListener('pointerdown', e => { if (!keyMenu.hidden && !e.target.closest('#keyMenu') && !e.target.closest('.keyhit')) keyMenu.hidden = true; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') keyMenu.hidden = true; }, true);
 function keyStep(vi, dir, t){
   const v = piece.voices[vi]; if (!v) return;
   if (!writable(v)) { refuse(); return; }
@@ -3900,19 +3944,21 @@ function keyStep(vi, dir, t){
       if (JSON.stringify(prevAlts) === JSON.stringify(k.alts)) v.keys.splice(v.keys.indexOf(k), 1);
       return;
     }
-    for (const q of piece.voices) {
+    for (const q of keyOnly ? [v] : piece.voices) {
       if (!writable(q)) continue;
       let k = q.keys.find(m => eq(m.t, 0));
       if (!k) { k = {t: 0, alts: {}, ei: 0}; q.keys.unshift(k); }
       k.alts = altsOfFifths(n); delete k.raw;
     }
   });
-  toast(n === 0 ? 'No sharps or flats in the signature' : Math.abs(n) + (n < 0 ? ' flat' : ' sharp') + (Math.abs(n) > 1 ? 's' : '') + ' in the signature');
+  toast((n === 0 ? 'No sharps or flats in the signature' : Math.abs(n) + (n < 0 ? ' flat' : ' sharp') + (Math.abs(n) > 1 ? 's' : '') + ' in the signature') + (mid ? '' : keyOnly ? ', in ' + (v.name || 'this voice') + ' only.' : ', in all voices. Click the signature to change one voice only.'));
 }
 pagesEl.addEventListener('click', e => {
   const ka = e.target.closest && e.target.closest('.ksarr');
   if (ka && piece && window.matchMedia('(hover:none)').matches && !ka.closest('.keyhit').classList.contains('ks-on')) { e.stopImmediatePropagation(); e.preventDefault(); pagesEl.querySelectorAll('.ks-on,.mensadd.on').forEach(g => g.classList.remove('ks-on', 'on')); ka.closest('.keyhit').classList.add('ks-on'); return; }
   if (ka && piece) { e.stopImmediatePropagation(); e.preventDefault(); const kh = ka.closest('.keyhit'); keyStep(+kh.dataset.v, +ka.dataset.ks, kh.dataset.t !== undefined ? +kh.dataset.t : undefined); return; }
+  const kh = e.target.closest && e.target.closest('.keyhit');
+  if (kh && piece) { e.stopImmediatePropagation(); e.preventDefault(); openKeyMenu(+kh.dataset.v, kh.dataset.t !== undefined ? +kh.dataset.t : 0, e); return; }
   const ch = e.target.closest && e.target.closest('.clefhit');
   if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e); return; }
   if (ed.on && typeof noteAt === 'function') {
