@@ -312,7 +312,9 @@
       used.push(it);
     }
     /* on the note's own column: directly above or below it, at the height of the pitch */
-    const cx = sym.hw ? bb.x + sym.hw / 2 : bb.x + bb.width / 2;
+    /* exactly in the middle of the selection cursor of that note (not of the whole group, which may hold a sign or a clef before it) */
+    const sb = el.querySelector('rect.selbg');
+    const cx = sb ? +sb.getAttribute('x') + +sb.getAttribute('width') / 2 : sym.hw ? bb.x + sym.hw / 2 : bb.x + bb.width / 2;
     let s = '';
     for (const it of items) {
       const aw = it.acc ? gw(it.acc) + 0.25 : 0, x = cx - rr - aw - it.col * (aw + 0.1), nx = cx + it.off * 2 * rr;
