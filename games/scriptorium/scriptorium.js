@@ -261,6 +261,30 @@ const GLY = {"Mx":{"d":"M2.456 -0.684H2.42C2.396 -0.684 2.38 -0.664 2.38 -0.64V-
 }
 GLY.F2 = {d: GLY.F.d + 'M0.708 -2.62L1.268 -1.5C1.28 -1.48 1.304 -1.464 1.328 -1.464C1.336 -1.464 1.344 -1.468 1.356 -1.472C1.38 -1.484 1.392 -1.508 1.392 -1.532C1.392 -1.544 1.388 -1.552 1.384 -1.56L0.708 -2.91Z', b: GLY.F.b};
 for (const k of ['Mx','L','B','S','M']) GLY[k + 'c'] = {d: GLY[k].d.slice(0, GLY[k].d.indexOf('Z') + 1), b: GLY[k].b};
+/* the semifusa (Samuel 2026-11-15): one flag (or hook) more than the fusa. White: a black head with two flags (the black
+   fusa's shape); black notation: three flags; modern: a sixteenth; its rest: the fusa rest with a second hook */
+function shiftPath(d, dy){
+  const out = []; let cmd = '', k = 0;
+  const per = {M: 2, L: 2, C: 2, S: 2, Q: 2, T: 2, H: 1, V: 1, A: 7, Z: 0};
+  for (const tok of d.match(/[A-Za-z]|-?\d*\.?\d+(?:e-?\d+)?/g)) {
+    if (/[A-Za-z]/.test(tok)) { cmd = tok.toUpperCase(); k = 0; out.push(tok); continue; }
+    let v = +tok;
+    const n = per[cmd] || 2;
+    if ((cmd === 'V') || (cmd === 'A' && k % 7 === 6) || (n === 2 && k % 2 === 1)) v += dy;
+    out.push((Math.round(v * 1000) / 1000).toString()); k++;
+  }
+  return out.join(' ').replace(/ ([A-Za-z]) /g, '$1').replace(/^([A-Za-z]) /, '$1').replace(/ ([A-Za-z])$/, '$1');
+}
+{
+  const flag2 = GLY.F2.d.slice(GLY.F.d.length);
+  GLY.Sf = {d: GLY.F2.d, b: GLY.F2.b};
+  GLY.F3 = {d: GLY.F2.d + shiftPath(flag2, 0.45), b: GLY.F2.b};
+  const flagU = 'M1.13 -3.5H1.25C1.33 -2.8 2.15 -2.45 1.9 -1.25C1.86 -2.15 1.45 -2.45 1.25 -2.55Z';
+  const flagD = 'M0.05 3.5H0.17C0.25 2.8 1.07 2.45 0.82 1.25C0.78 2.15 0.37 2.45 0.17 2.55Z';
+  GLY.nX = {d: GLY.nE.d + shiftPath(flagU, 0.6), b: GLY.nE.b};
+  GLY.nXd = {d: GLY.nEd.d + shiftPath(flagD, -0.6), b: GLY.nEd.b};
+  GLY.rSf = {d: shiftPath(GLY.rF.d, -0.32) + GLY.rF.d, b: [GLY.rF.b[0], GLY.rF.b[1] - 0.32, GLY.rF.b[2], GLY.rF.b[3]]};
+}
 
 const NATSC = 1.3;   /* the natural sign is drawn a little larger than its glyph (Samuel 2026-11-14) */
 const gw = k => (GLY[k].b[2] - GLY[k].b[0]) * (k === 'na' ? NATSC : 1);
@@ -333,8 +357,8 @@ const MENS_CLEFS = ['c1','c2','c3','c4','f3','bass','treble'];
 const KERN_CLEF = {G1:'g1', G2:'treble', Gv2:'treble8', G2v:'treble8', F4:'bass', F3:'f3', C1:'c1', C2:'c2', C3:'c3', C4:'c4', C5:'c5'};
 const LETTERS = 'cdefgab';
 const ACCG = {'-1':'fl', '0':'na', '1':'sh'};
-const SHAPE_REST = {Mx:'rL', L:'rL', B:'rB', S:'rS', M:'rM', Sm:'rSm', F:'rF'};
-const STEMMED = {M:1, Sm:1, F:1, Mc:1};
+const SHAPE_REST = {Mx:'rL', L:'rL', B:'rB', S:'rS', M:'rM', Sm:'rSm', F:'rF', Sf:'rSf'};
+const STEMMED = {M:1, Sm:1, F:1, Sf:1, Mc:1};
 const TAILED = {L:1, Lc:1, Mx:1, Mxc:1};
 
 /* ------------------------------------------------------------------ */
@@ -523,7 +547,7 @@ function metAt(v, t){
 /* values in written semibreves for a mensuration */
 function valueTable(T, P){
   const S = P === 3 ? 1.5 : 1, B = T * S, L = 2 * B;
-  return [['Mx', 2 * L], ['L', L], ['B', B], ['S', S], ['M', 0.5], ['Sm', 0.25], ['F', 0.125]];
+  return [['Mx', 2 * L], ['L', L], ['B', B], ['S', S], ['M', 0.5], ['Sm', 0.25], ['F', 0.125], ['Sf', 0.0625]];
 }
 function shapeReal(w, T, P){
   const tab = valueTable(T, P), S = tab[3][1];
@@ -535,7 +559,7 @@ function shapeReal(w, T, P){
     const imperfectLevel = g === 'B' ? T === 2 : g === 'S' ? P === 2 : true;
     if (imperfectLevel && eq(w, v * 1.5)) return {g, dot:true};
   }
-  for (const [g, v] of tab) if (eq(w * 1.5, v) && g !== 'Sm' && g !== 'F') return {g, col:true};
+  for (const [g, v] of tab) if (eq(w * 1.5, v) && g !== 'Sm' && g !== 'F' && g !== 'Sf') return {g, col:true};
   /* last resort, before splitting into tied notes: a dot of addition even on a perfect value */
   for (const [g, v] of tab) if (eq(w, v * 1.5)) return {g, dot:true};
   return null;
@@ -548,12 +572,12 @@ function shapeAlt(w, T, P){
 /* a note the source writes black (CMME): the white shape it is two thirds of (the usual coloration), three quarters of
    (minor colour: a black breve with a black semibreve), or the same value blackened (semibreves in a hemiola under 3) */
 function shapeCol(w, T, P){
-  const tab = valueTable(T, P).filter(([g]) => g !== 'Sm' && g !== 'F');
+  const tab = valueTable(T, P).filter(([g]) => g !== 'Sm' && g !== 'F' && g !== 'Sf');
   for (const f of [1.5, 4 / 3, 1]) for (const [g, v] of tab) if (eq(w * f, v) && (f !== 1 || g !== 'M')) return {g, col:true};
   return null;
 }
 function shapeFake(d){
-  const tab = [['Mx', 8], ['L', 4], ['B', 2], ['S', 1], ['M', 0.5], ['Sm', 0.25], ['F', 0.125]];
+  const tab = [['Mx', 8], ['L', 4], ['B', 2], ['S', 1], ['M', 0.5], ['Sm', 0.25], ['F', 0.125], ['Sf', 0.0625]];
   for (const [g, v] of tab) if (eq(d, v)) return {g};
   for (const [g, v] of tab) if (eq(d, v * 1.5)) return {g, dot:true};
   for (const [g, v] of tab) if (eq(d, v * 1.75)) return {g, dot:true, dot2:true};
@@ -583,7 +607,7 @@ function decompose(w, T, P){
    - alteration: the second of two such smaller notes before a perfect note is doubled;
    - a dot adds half of an imperfect value; on a perfect note it would be a dot of division, which is not written yet.
    Notes are shapes, so changing the sign or a neighbour re-counts them. Coloured notes, rests and notes of unknown shape keep their length. */
-const MENS_RANK = {Mx: 0, L: 1, B: 2, S: 3, M: 4, Sm: 5, F: 6};
+const MENS_RANK = {Mx: 0, L: 1, B: 2, S: 3, M: 4, Sm: 5, F: 6, Sf: 7};
 const mensRulesOn = () => !!(piece && piece.meta && piece.meta.MENS === 'rules');
 /* the length of a shape in the sign standing at t, before perfection and the rest (written value, a minim = 0.5), and in sounding value */
 function nomW(g, T, P){ const r = valueTable(T, P).find(x => x[0] === g); return r ? r[1] : null; }
@@ -939,7 +963,7 @@ function styleApply(snap){
 }
 const save = () => { presetDrift(); styleNote(); try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} if (window.Organ) Organ.saveShared(); };
 /* playback, metronome and sound: shared/organ.js, the same engine as the CantusFirmus app's */
-const UNIT_NAMES = {Mx: 'Maxima', L: 'Longa', B: 'Brevis', S: 'Semibrevis', M: 'Minima', Sm: 'Semiminima', F: 'Fusa'};
+const UNIT_NAMES = {Mx: 'Maxima', L: 'Longa', B: 'Brevis', S: 'Semibrevis', M: 'Minima', Sm: 'Semiminima', F: 'Fusa', Sf: 'Semifusa'};
 let play = false;
 Organ.init(st, {
   save: () => save(), replay: () => restartPlay(), toast: m => toast(m), playing: on => { play = on; setPlayIcon(on); document.documentElement.classList.toggle('playing', on); },
@@ -965,7 +989,7 @@ let pieceKey = null;
 /* black notation (Samuel 2026-11-14): a switch per piece, kept in st.black by piece key; in mensural notation the notes are
    filled, the semiminima gets a flag (the fusa two) and coloured notes are red */
 if (!st.black || typeof st.black !== 'object') st.black = {};
-const BLACK_G = {Mx: 'Mxc', L: 'Lc', B: 'Bc', S: 'Sc', M: 'Mc', Sm: 'F', F: 'F2'};
+const BLACK_G = {Mx: 'Mxc', L: 'Lc', B: 'Bc', S: 'Sc', M: 'Mc', Sm: 'F', F: 'F2', Sf: 'F3'};
 let BLACK = false;
 const isBlack = () => st.nota === 'real' && !!(st.black && st.black[pieceKey]);
 /* the Notation choice: White and Modern for every piece, Black for this piece only */
@@ -976,7 +1000,7 @@ function blackSync(){
   const h = document.getElementById('headSeg'); if (h) h.classList.toggle('dim', st.nota !== 'fake');
 }
 /* modern note heads (Samuel 2026-11-14), in modern notation */
-const MOD_G = {Mx: 'nL', L: 'nL', B: 'nB', S: 'nS', M: 'nM', Sm: 'nQ', F: 'nE'};
+const MOD_G = {Mx: 'nL', L: 'nL', B: 'nB', S: 'nS', M: 'nM', Sm: 'nQ', F: 'nE', Sf: 'nX'};
 let MODERN = false;
 const cache = {};
 
@@ -1029,7 +1053,7 @@ function prepare(){
       s.pos = s.rest ? null : s.step - CLEFS[s.clef].bottom;
       const g = s.rest ? SHAPE_REST[s.g] : BLACK ? BLACK_G[s.g] || s.g + 'c' : MODERN ? MOD_G[s.g] || s.g : s.g + (s.col ? 'c' : '');
       s.glyph = g; s.red = BLACK && !s.rest && !!s.col;
-      s.hw = s.phantom ? 1.2 : s.rest ? (s.g === 'Mx' ? 1.2 : s.g === 'Sm' || s.g === 'F' ? gw(g) : 0.42) : gw(g);
+      s.hw = s.phantom ? 1.2 : s.rest ? (s.g === 'Mx' ? 1.2 : s.g === 'Sm' || s.g === 'F' || s.g === 'Sf' ? gw(g) : 0.42) : gw(g);
       /* accidental before the head (written ones only; key signature ones are implied) */
       s.acc = null; s.edAcc = null;
       if (!s.rest && s.alt !== null && s.alt !== undefined) {
@@ -1416,10 +1440,10 @@ function ligShape(G, top){
   for (let i = 0; i < n; i++) { if (pairAt[i]) { units.push([i, i + 1]); i++; } else units.push([i]); }
   const X = new Array(n);
   let x = G[0][1];
-  const dotW = i => G[i][0].dot ? 0.8 : 0;   /* a dot stands to the right of its note, where the next note makes room for it */
+  /* the notes stay joined whatever their dots (a dot never opens a ligature: Samuel 2026-11-15) */
   for (const u of units) {
-    if (u.length === 2) { X[u[0]] = x; X[u[1]] = x + 1.3; x += 2.6 + dotW(u[1]); }
-    else { X[u[0]] = x; x += LIG_W[gs[u[0]]] + dotW(u[0]); }
+    if (u.length === 2) { X[u[0]] = x; X[u[1]] = x + 1.3; x += 2.6; }
+    else { X[u[0]] = x; x += LIG_W[gs[u[0]]]; }
   }
   const parts = G.map(() => '');
   const TL = 3.548;
@@ -1432,13 +1456,16 @@ function ligShape(G, top){
     else parts[i] += ligV(xa, Math.min(Y[i], Y[i - 1]) - 0.686, Math.max(Y[i], Y[i - 1]) + 0.686);
     if (j === n - 1) parts[j] += ligV(xb - 0.12, Y[j] - 0.686, Y[j] + 0.686);
   });
-  /* dots: to the right of their note, always on a space (a line note: the space above it, a space note: that space).
-     The first note of an oblique has the slanted body to its right, so its dot stands above the body, in the space diagonally up and right. */
+  /* dots, always on a space. The last note's dot stands after it (a line note: the space above, a space note: its own space);
+     inside the ligature the note after it is joined on, so the dot stands over the joint, in the space diagonally up and right */
   G.forEach(([q], i) => {
     if (!q.dot) return;
-    const u = units.find(w => w.includes(i)), first = u.length === 2 && u[0] === i, line = q.pos % 2 === 0;
-    const dy = first ? (line ? Y[i] - 0.5 : Y[i] - 1) : (line ? Y[i] - 0.5 : Y[i]);
-    const dx = first ? X[i] + 1.3 : X[u[u.length - 1]] + (u.length === 2 ? 1.3 : LIG_W[gs[i]]) + 0.4;
+    const line = q.pos % 2 === 0, last = i === n - 1;
+    const u = units.find(w => w.includes(i)), w = u.length === 2 ? 1.3 : LIG_W[gs[i]];
+    /* over the joint: the space above the higher of the two notes there */
+    const hi = !last && Y[i + 1] < Y[i] ? i + 1 : i, hiLine = G[hi][0].pos % 2 === 0;
+    const dy = last ? (line ? Y[i] - 0.5 : Y[i]) : (hiLine ? Y[hi] - 0.5 : Y[hi] - 1);
+    const dx = last ? X[i] + w + 0.4 : X[i] + w - 0.35;   /* inside: just left of the joint, clear of the next note */
     parts[i] += `<circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.2"/>`;
   });
   /* stems */
@@ -3500,7 +3527,7 @@ if (ed.nav === 'follow') ed.nav = 'M';
    has been used it comes and goes with note input */
 try { const b = localStorage.getItem(APP.store + ':edbar'); ed.bar = b === null ? undefined : b === '1'; } catch (e) { ed.bar = undefined; }
 const barOpen = () => ed.bar === undefined ? !!(ed.on || ed.sel || ed.range || ed.picks) : ed.bar;
-const VALS = [['Mx', 8], ['L', 4], ['B', 2], ['S', 1], ['M', 0.5], ['Sm', 0.25], ['F', 0.125]];
+const VALS = [['Mx', 8], ['L', 4], ['B', 2], ['S', 1], ['M', 0.5], ['Sm', 0.25], ['F', 0.125], ['Sf', 0.0625]];
 /* A rest drawn on its own may be only part of an event (a rest of three breves is drawn as a long and a breve): the event is cut
    where the drawing is cut, so that rest can be selected, resized or deleted alone. Nothing is heard or seen to change.
    Returns true when events were cut. */
@@ -3681,7 +3708,7 @@ function caretTime(v){
   return ei < v.events.length ? rt(v.events[ei].t + (ed.ins.off || 0)) : rt(v.end + (ed.ins.pad || 0));
 }
 /* the caret's own step (Caret step in the edit bar): a value of its own, or the note value being entered */
-const NAV_KEYS = ['Mx', 'L', 'B', 'S', 'M', 'Sm', 'F'];
+const NAV_KEYS = ['Mx', 'L', 'B', 'S', 'M', 'Sm', 'F', 'Sf'];
 function navVal(){ return ed.nav && ed.nav !== 'follow' && VALS.some(x => x[0] === ed.nav) ? ed.nav : ed.val; }
 function navGrid(v, T){ return rt(VALS.find(x => x[0] === navVal())[1] / propAt(v, Math.min(T, v.end))); }
 /* Alt with the arrows: the caret moves on a grid of the value chosen for entering, also into the middle of a note */
@@ -4487,14 +4514,15 @@ pagesEl.addEventListener('click', e => {
   if (kh && piece) { e.stopImmediatePropagation(); e.preventDefault(); openKeyMenu(+kh.dataset.v, kh.dataset.t !== undefined ? +kh.dataset.t : 0, e); return; }
   const ch = e.target.closest && e.target.closest('.clefhit');
   if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e, ch.dataset.t !== undefined ? +ch.dataset.t : undefined); return; }
-  if (ed.on && typeof noteAt === 'function') {
+  /* a click on a note selects it, in any mode (the staff's writing area lies over the notes: look underneath it too) */
+  if (typeof noteAt === 'function') {
     const n = noteAt(e);
     if (n && e.shiftKey && (ed.sel || ed.range || ed.picks)) { e.stopImmediatePropagation(); extendRange(n.vi, n.s); return; }
     if (n && (e.ctrlKey || e.metaKey) && (ed.sel || ed.range || ed.picks)) { e.stopImmediatePropagation(); togglePick(n.vi, n.s); return; }
     /* Alt-click: what was copied is pasted there */
-    if (n && e.altKey) { e.stopImmediatePropagation(); ed.range = null; ed.picks = null; ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1}; rangePaste(); return; }
-    const off = n && !e.shiftKey ? offPitch(n, e) : null;
-    if (n && (!n.s.rest || e.shiftKey) && !off) {
+    if (n && e.altKey && ed.on) { e.stopImmediatePropagation(); ed.range = null; ed.picks = null; ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1}; rangePaste(); return; }
+    const off = ed.on && n && !e.shiftKey ? offPitch(n, e) : null;
+    if (n && (!ed.on || !n.s.rest || e.shiftKey) && !off) {
       e.stopImmediatePropagation();
       ed.range = null; ed.picks = null;
       if (n.s.rest) n.s = pickRest(n.vi, n.s);
@@ -4537,6 +4565,16 @@ const clampStep = s => Math.max(STEP_MIN, Math.min(STEP_MAX, Math.round(s)));
 const ACC_ALT = {b: -1, n: 0, '#': 1}, ACC_OF = {fl: 'b', na: 'n', sh: '#'};
 const valKey = s => VALS.some(x => x[0] === s.g) ? s.g : 'S';
 const accOf = s => ACC_OF[s.acc] || ACC_OF[s.edAcc] || '';
+/* is this note coloured: as the white notation would draw it, whichever notation is on (Modern draws no coloration) */
+function isColoured(s){
+  if (!s || s.rest || !piece) return false;
+  if (st.nota === 'real') return !!s.col;
+  const v = piece.voices.find(q => q.syms && q.syms.includes(s)); if (!v) return !!s.col;
+  const e = v.events[s.src[0]]; if (!e) return false;
+  if (e.colH) return true;
+  const total = s.src.reduce((a, i) => a + v.events[i].d, 0), mi = mensInfo(metAt(v, e.t)), sh = shapeReal(rt(total * mi.p), mi.T, mi.P);
+  return !!(sh && sh.col);
+}
 function hear(step, alt){
   if (st.audition === false || play || step === null || step === undefined) return;
   if (alt === null || alt === undefined) { const v = anyVoice() || (piece && piece.voices[0]); alt = v ? implied(v, step, 0) : 0; }   /* as the key signature has it */
@@ -4899,7 +4937,7 @@ const CBA = {
     return {selected: !!s, signSel: mensOpen(), dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
       acc: ta && {r: ta.rest, a: accOf(ta), p: ta.dot, ed: !!ta.edAcc}, canAcc: !!(ed.on || ed.sel || ed.range || ed.picks), armAcc: ed.accArm || '', armDot: !!ed.dotArm,
       target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc, lig: !!t.lig}, ligOn: ligSelOn(), edArm: !!ed.edArm, ovr: !!ed.ovr,
-      col: s && !s.rest ? !!s.col : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
+      col: s && !s.rest ? isColoured(s) : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
       hasNotes: !!(piece && piece.voices.length), durs: ed.range || ed.picks ? ['B'] : xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : []), range: !!(ed.range || ed.picks)};
   },
   setDur(k){
@@ -4964,7 +5002,8 @@ const CBA = {
   },
   moveCaret: dir => moveCaret(dir),
   nav: () => ed.nav || 'M',
-  setNav(k){ ed.nav = NAV_KEYS.includes(k) ? k : 'S'; try { localStorage.setItem(APP.store + ':nav', ed.nav); } catch (e) {} syncEdit(); toast('Grid: ' + ({Mx:'maxima',L:'longa',B:'brevis',S:'semibrevis',M:'minima',Sm:'semiminima',F:'fusa'})[ed.nav] + '. The arrow keys move the caret by this.'); },
+  semifusa: true,
+  setNav(k){ ed.nav = NAV_KEYS.includes(k) ? k : 'S'; try { localStorage.setItem(APP.store + ':nav', ed.nav); } catch (e) {} syncEdit(); toast('Grid: ' + ({Mx:'maxima',L:'longa',B:'brevis',S:'semibrevis',M:'minima',Sm:'semiminima',F:'fusa',Sf:'semifusa'})[ed.nav] + '. The arrow keys move the caret by this.'); },
   /* coloration: the selected note turns black (two thirds of its value) or white again; with nothing selected,
      the notes entered from now on are coloured, until it is pressed again */
   toggleCol(){
@@ -4972,7 +5011,7 @@ const CBA = {
     const s = selSym(), v = curVoice();
     if (!s || s.rest) { ed.colArm = !ed.colArm; syncEdit(); toast(ed.colArm ? 'Coloration: the notes you enter now are black, two thirds of their value.' : 'Coloration off.'); return; }
     if (!v) return;
-    const on = !s.col, first = s.src[0];
+    const on = !isColoured(s), first = s.src[0];
     commit(() => {
       const e = v.events[first];
       const total = s.src.reduce((a, i) => a + v.events[i].d, 0);
@@ -5259,7 +5298,7 @@ function glyphIcon(k, minBox){
   return `<svg viewBox="${f(cx - box / 2)} ${f(cy - box / 2)} ${f(box)} ${f(box)}" aria-hidden="true"><path d="${GLY[k].d}"/></svg>`;
 }
 /* the note value and Grid icons are drawn in the notation in use (Samuel 2026-11-15): white, black or modern */
-const VKEYS = ['Mx', 'L', 'B', 'S', 'M', 'Sm', 'F'];
+const VKEYS = ['Mx', 'L', 'B', 'S', 'M', 'Sm', 'F', 'Sf'];
 function styledKey(k){
   if (!VKEYS.includes(k)) return k;
   const black = isBlack(), modern = st.nota === 'fake' && st.heads !== 'old';
@@ -5786,7 +5825,7 @@ if (H.start) H.start(); else (async () => {
   buildPieceList().then(syncUI);
   if (/[?&]print=1/.test(location.search)) setTimeout(() => window.print(), 600);
 })();
-window.__cb = Object.assign({st, get piece(){ return piece; }, render, parseKern, notate, ed, writeKern, CBA, insertEvent, undo, redo, startPlay, get pieceKey(){ return pieceKey; }}, H.expose ? H.expose() : {});
+window.__cb = Object.assign({st, get ed(){ return ed; }, noteAt, get piece(){ return piece; }, render, parseKern, notate, ed, writeKern, CBA, insertEvent, undo, redo, startPlay, get pieceKey(){ return pieceKey; }}, H.expose ? H.expose() : {});
 })();
 
 /* Acknowledgments: a panel over the viewing area; the text is the one of choirbook-acknowledgements.html. It opens by itself

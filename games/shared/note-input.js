@@ -18,8 +18,10 @@
 */
 (function(){
 'use strict';
-const DKEYS = ['Mx', 'L', 'B', 'S', 'M', 'Sm', 'F'];
-const DNAME = {Mx: 'Maxima', L: 'Longa', B: 'Brevis', S: 'Semibrevis', M: 'Minima', Sm: 'Semiminima', F: 'Fusa'};
+const DKEYS = ['Mx', 'L', 'B', 'S', 'M', 'Sm', 'F', 'Sf'];
+const DNAME = {Mx: 'Maxima', L: 'Longa', B: 'Brevis', S: 'Semibrevis', M: 'Minima', Sm: 'Semiminima', F: 'Fusa', Sf: 'Semifusa'};
+/* the values an app offers: the semifusa only where the app draws it (A.semifusa) */
+const dkeys = A => A && A.semifusa ? DKEYS : DKEYS.slice(0, 7);
 const ACC = {
   'b': {g: 'fl', name: 'Flat',    key: '-'},
   'n': {g: 'na', name: 'Natural', key: 'N'},
@@ -154,7 +156,7 @@ function build(host, o){
 /* the glyph buttons; iconSVG(glyphKey, minBox) comes from the app (both draw the same glyphs) */
 function fill(A, iconSVG){
   const durBtns = $('#durBtns');
-  DKEYS.forEach((k, ix) => {
+  dkeys(A).forEach((k, ix) => {
     const b = document.createElement('button');
     b.className = 'ib'; b.dataset.d = k;
     b.title = `${DNAME[k]} (${ix + 1})`;
@@ -226,7 +228,7 @@ function fill(A, iconSVG){
     pop.innerHTML = '<button class="tb popbtn" id="navSum" aria-haspopup="true" aria-label="Grid step" title="Grid step: how far the arrow keys move the caret. It can go on past the last note, into empty space, to write a new one"></button>' +
       '<div class="popbody"><div class="btns col" id="navBtns" role="group" aria-label="Grid step"></div></div>';
     const nb = pop.querySelector('#navBtns');
-    DKEYS.forEach(k => {
+    dkeys(A).forEach(k => {
       const b = document.createElement('button');
       b.className = 'tb navv'; b.dataset.n = k; b.title = DNAME[k]; b.setAttribute('aria-label', DNAME[k]);
       b.innerHTML = '<span class="navg">' + iconSVG(k, 2.7) + '</span><span>' + DNAME[k] + '</span>';
@@ -329,7 +331,7 @@ function wire(A){
       if (k === '=' || k === '+' || k === '#') { e.preventDefault(); A.toggleAcc('#'); return; }
       if ((k === '0' && A.toggleEdit) || ((k === 'n' || k === 'N') && !A.toggleEdit && edit)) { e.preventDefault(); A.toggleAcc('n'); return; }
       if (k === '.') { e.preventDefault(); A.toggleDot(); return; }
-      if (/^[1-7]$/.test(k)) { e.preventDefault(); A.setDur(DKEYS[Number(k) - 1]); return; }
+      if (/^[1-8]$/.test(k) && Number(k) <= dkeys(A).length) { e.preventDefault(); A.setDur(DKEYS[Number(k) - 1]); return; }
     }
     /* what can be changed on a selected note is changed in any mode: rest, coloration, ligature */
     if (!edit && sel) {
