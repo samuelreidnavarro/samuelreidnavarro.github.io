@@ -6,7 +6,7 @@
      arrows, Delete, the note values 1 to 7, R, Ctrl+Z ...) keep doing what they did.
    - on a phone or tablet the piano is played with the fingers; it scrolls sideways.
    - a MIDI keyboard plays whenever one is plugged in (once the browser has been allowed to use it).
-   The notes sound in the sound of the selected voice (its sound in the Mixer). In Edit mode each key also writes its
+   The notes sound in the sound of the selected voice (its sound in the Mixer). In note input each key also writes its
    note at the caret, in the note value chosen, as typing a letter name does. */
 (window.SCRIPTORIUM = window.SCRIPTORIUM || {}).addons = (window.SCRIPTORIUM.addons || []).concat([function(){
   const play0 = $('#play'); if (!play0) return;
@@ -24,7 +24,7 @@
   const K = {on: false, w: WHITES.indexOf(60), base: 60, baseVi: -1, held: new Map(), midi: null, midiAsked: false, inputs: []};
 
   /* ---------- the button, at the left of the playback row ---------- */
-  play0.insertAdjacentHTML('afterend', '<div class="podg" id="podKbd"><div class="pop" id="popKbd"><button class="ib" id="kbdBtn" aria-pressed="false" aria-haspopup="true" aria-controls="kbd" aria-label="Keyboard" title="Keyboard: play the notes, and write them in Edit mode. On a computer the letter keys play it (A S D F … white keys, W E T Y … black keys; Z X octave, C V one key; Escape closes)">'
+  play0.insertAdjacentHTML('afterend', '<div class="podg" id="podKbd"><div class="pop" id="popKbd"><button class="ib" id="kbdBtn" aria-pressed="false" aria-haspopup="true" aria-controls="kbd" aria-label="Keyboard" title="Keyboard: play the notes, and write them in note input (N). On a computer the letter keys play it (A S D F … white keys, W E T Y … black keys; Z X octave, C V one key; Escape closes)">'
     + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.2 5.2h17.6a.9.9 0 0 1 .9.9v11.8a.9.9 0 0 1-.9.9H3.2a.9.9 0 0 1-.9-.9V6.1a.9.9 0 0 1 .9-.9Zm.6 1.5v10.6h3.3v-4.1H6.2V6.7Zm4.8 0v6.5h-.9v4.1h4.1v-4.1h-.9V6.7Zm4.7 0v6.5h-.9v4.1h3.3V6.7Zm4.8 0h-1.9v6.5h-.9v4.1h2.8Z"/></svg><span class="singchev" aria-hidden="true"><svg class="chev" viewBox="0 0 12 12"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></span></button>'
     + '<div class="popbody"><div class="btns col" role="group" aria-label="Keyboard options"><button class="tb" id="kbdShow" data-keep aria-pressed="true" title="The key you play shows as a faint red dot on the selected staff">Show pitch on staff</button></div></div></div></div>');
   $('#kbdShow').setAttribute('aria-pressed', st.kbdShow === false ? 'false' : 'true');
@@ -126,7 +126,7 @@
     }
     return pc === 3 || pc === 10 ? above : below;
   }
-  /* in Edit mode a key writes its note at the caret (as typing its letter does), in the value chosen */
+  /* in note input a key writes its note at the caret (as typing its letter does), in the value chosen */
   function write(m){
     if (!ed.on || !piece || !CBA.guard()) return;
     const v = curVoice(); if (!v) return;
@@ -270,8 +270,8 @@
     const added = now.filter(n => !K.inputs.includes(n));
     K.inputs = now;
     btn.classList.toggle('midi', now.length > 0);
-    btn.title = (now.length ? 'MIDI keyboard: ' + now.join(', ') + '. ' : '') + 'Keyboard: play the notes, and write them in Edit mode. On a computer the letter keys play it (A S D F … white keys, W E T Y … black keys; Z X octave; Escape closes)';
-    if (added.length) toast('MIDI keyboard connected: ' + added.join(', ') + '. It plays in the sound of the selected voice, and writes notes in Edit mode.');
+    btn.title = (now.length ? 'MIDI keyboard: ' + now.join(', ') + '. ' : '') + 'Keyboard: play the notes, and write them in note input (N). On a computer the letter keys play it (A S D F … white keys, W E T Y … black keys; Z X octave; Escape closes)';
+    if (added.length) toast('MIDI keyboard connected: ' + added.join(', ') + '. It plays in the sound of the selected voice, and writes notes in note input.');
   }
   /* asked for the first time when the keyboard button is pressed; later visits connect by themselves */
   function midiStart(ask){

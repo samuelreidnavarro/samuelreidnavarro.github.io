@@ -28,7 +28,7 @@ const escH = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>'
 
   <section class="tools" aria-label="View">
     <div class="bar">
-      <div class="podg split" id="editPod"><button class="ib" id="editBtn" aria-pressed="false" aria-label="Edit" title="Edit mode: write, change and remove notes (Escape leaves it)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17.3 14.8 6l3.2 3.2L6.7 20.5 3 21Zm13.7-12.6 1.4-1.4a1.5 1.5 0 0 1 2.1 0l1.1 1.1a1.5 1.5 0 0 1 0 2.1l-1.4 1.4Z"/></svg></button><button class="ib edmore" id="editMore" aria-expanded="false" aria-controls="editBar" aria-label="Editing tools" title="Show or hide the editing tools"><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button></div>
+      <div class="podg split" id="editPod"><button class="ib" id="editBtn" aria-pressed="false" aria-label="Note input" title="Note input: write, change and remove notes (N; Escape leaves it)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17.3 14.8 6l3.2 3.2L6.7 20.5 3 21Zm13.7-12.6 1.4-1.4a1.5 1.5 0 0 1 2.1 0l1.1 1.1a1.5 1.5 0 0 1 0 2.1l-1.4 1.4Z"/></svg></button><button class="ib edmore" id="editMore" aria-expanded="false" aria-controls="editBar" aria-label="Editing tools" title="Show or hide the editing tools"><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button></div>
 ${APP.popsBeforeVoices || ''}
       <div class="podg"><div class="pop" id="popVoices">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Voices<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
@@ -491,7 +491,11 @@ function parseKern(text){
   /* top voice first */
   const vs = voices.slice().reverse();
   const end = Math.max(...vs.map(v => v.end));
-  return {title, composer, attributed: !meta.COM && !!meta.COA, voices: vs, bars: bars.filter(b => b.t < end - EPS), sections, end, meta, barNums};
+  const res = {title, composer, attributed: !meta.COM && !!meta.COA, voices: vs, bars: bars.filter(b => b.t < end - EPS), sections, end, meta, barNums};
+  /* a score with mensuration signs but no barlines at all (one written here) gets them by itself, at every perfection */
+  if (!res.bars.length && !meta.BARS && end > EPS && vs.some(v => v.mets.length)) meta.BARS = 'auto';
+  autoRebar(res);
+  return res;
 }
 
 /* ------------------------------------------------------------------ */
@@ -967,7 +971,9 @@ function columns(vlist, a, b, withLyrics){
   const map = new Map();
   const col = t => { const k = rt(t); let c = map.get(k); if (!c) { c = {t: k, items: new Map(), bar: null}; map.set(k, c); } return c; };
   for (const v of vlist) for (const s of v.syms) if (s.t >= a - EPS && s.t < b - EPS) col(s.t).items.set(v, s);
-  for (const br of piece.bars) if (br.t > a + EPS && br.t < b - EPS) col(br.t).bar = br.type;
+  /* no barlines past the end of the music shown (a voice with nothing written yet has none) */
+  const vend = Math.max(0, ...vlist.map(v => v.end));
+  for (const br of piece.bars) if (br.t > a + EPS && br.t < b - EPS && br.t < vend - EPS) col(br.t).bar = br.type;
   const cols = [...map.values()].sort((x, y) => x.t - y.t);
   /* spacing */
   const lastX = new Map(), lastD = new Map(), lastSyl = new Map();
@@ -1943,11 +1949,14 @@ function layoutChoir(G){
   };
   const openings = [];
   let a = 0, guard = 0;
-  while (a < piece.end - EPS && guard++ < 500) {
+  /* a new score with nothing written yet still gets its opening: empty staves, ready for notes (as the Score view shows them) */
+  const blank = !(piece.end > EPS);
+  while ((blank ? openings.length === 0 : a < piece.end - EPS) && guard++ < 500) {
     const top = G.M + (openings.length === 0 ? tb.h : 0) + 0.4;
     const caps = new Map();
     sides.forEach(side => capacity(side, top, openings.length === 0).forEach((c, k) => caps.set(side[k], c)));
     const fits = b => vlist.every(v => heightNeeded(v, a, b) <= caps.get(v));
+    if (blank) { openings.push({a: 0, b: 1, top, caps}); break; }
     let lo = cands.findIndex(t => t > a + EPS);
     if (lo < 0) break;
     let hi = cands.length - 1, best = lo;
@@ -2751,7 +2760,7 @@ const VOICE_OPS = {
     if (where === 'above') shiftVis(0, 1);
     vis(where === 'above' ? 0 : n).clef = clef; save();
     commit(() => { if (where === 'above') piece.voices.unshift(v); else piece.voices.push(v); });
-    toast('A new voice at the top. Drag it by ⠿ to put it in its place; Edit, then click its staff to write.');
+    toast('A new voice at the top. Drag it by ⠿ to put it in its place; press N (note input), then click its staff to write.');
   },
   remove(i){
     if (piece.voices.length < 2) { toast('A score keeps at least one voice.'); return; }
@@ -2814,7 +2823,7 @@ $('#metaComp').addEventListener('change', e => setComposer(e.target.value));
 /* a new score: four empty voices, ready to write in */
 function kernOf(title, voices){
   const vs = voices.slice().reverse();
-  const L = [`!!!OTL: ${title}`, vs.map(() => '**kern').join('\t'), vs.map(v => `*I"${v[0]}`).join('\t'), vs.map(v => `*clef${v[1]}`).join('\t'),
+  const L = [`!!!OTL: ${title}`, '!!!BARS: auto', vs.map(() => '**kern').join('\t'), vs.map(v => `*I"${v[0]}`).join('\t'), vs.map(v => `*clef${v[1]}`).join('\t'),
     vs.map(() => '*met(C)').join('\t'), vs.map(() => '==').join('\t'), vs.map(() => '*-').join('\t')];
   return L.join('\n') + '\n';
 }
@@ -3056,7 +3065,7 @@ libEl.addEventListener('click', e => {
 });
 /* the note-input tools (shared/note-input.js, the same as CantusFirmus) go in before the pop-overs are wired */
 NoteInput.build($('#editBar'), {what: 'voice', whole: 'the whole voice'});
-/* the Add menu belongs to the edit controls: it shows when Edit is on */
+/* the Add menu belongs to the note input controls: it shows when note input is on */
 { const pod = $('#popAdd').parentNode; $('#editBar').appendChild(pod); }
 /* pop-overs: hover, or click to keep open */
 function closePops(except){ document.querySelectorAll('.pop.open').forEach(p => { if (p !== except) { p.classList.remove('open'); p.querySelector('button').setAttribute('aria-expanded', 'false'); } }); }
@@ -3191,6 +3200,28 @@ function modZones(P){
   });
   return Z.length ? Z : null;
 }
+/* Scores written here (New score) keep their barlines by themselves (Samuel 2026-11-15): one at every perfection of the
+   mensuration sign, as in the repertoire (a breve under C, three semibreves under O). A section line or a double bar
+   put in by hand stays; the single barlines are laid again from the signs each time the score is written. */
+function autoRebar(P){
+  if (!P.meta || P.meta.BARS !== 'auto') return;
+  const cuts = [...new Set([0, ...P.voices.flatMap(v => v.mets.map(m => rt(m.t)))])].filter(t => t < P.end - EPS).sort((a, b) => a - b);
+  const grid = [];
+  cuts.forEach((a, i) => {
+    const b = i + 1 < cuts.length ? cuts[i + 1] : P.end;
+    /* the highest voice that has a sign there */
+    let m = null;
+    for (const v of P.voices) { for (const q of v.mets) if (q.t <= a + EPS && q.sign) m = q; if (m) break; }
+    if (!m) return;
+    const mi = mensInfo(m.sign), len = rt(mi.T * (mi.P === 3 ? 1.5 : 1) / mi.p);
+    if (!(len > EPS)) return;
+    if (a > EPS && eq(m.t, a)) grid.push(rt(a));
+    for (let k = Math.max(1, Math.ceil((a - m.t) / len - 1e-6)); ; k++) { const t = rt(m.t + k * len); if (t >= b - EPS) break; if (t > a - EPS) grid.push(t); }
+  });
+  const bars = P.bars.filter(br => br.type !== 'single');
+  for (const t of grid) if (t > EPS && t < P.end - EPS && !bars.some(br => eq(br.t, t))) bars.push({t, type: 'single'});
+  P.bars = bars.sort((a, b) => a.t - b.t);
+}
 function modRebar(P){
   const Z = modZones(P); if (!Z) return;
   const inZ = t => Z.some(z => t >= z.a - EPS && t < z.b - EPS);
@@ -3225,6 +3256,7 @@ function writeKern(P){
   const vs = P.voices.slice().reverse();          /* file order: lowest voice first */
   P.voices.forEach(retime);
   P.end = Math.max(...P.voices.map(v => v.end));
+  autoRebar(P);
   modRebar(P);
   const out = [];
   for (const [k, val] of Object.entries(P.meta)) out.push(`!!!${k}: ${val}`);
@@ -3319,15 +3351,15 @@ function writeKern(P){
 /* ------------------------------------------------------------------ */
 /* As in CantusFirmus: after a note is entered nothing stays selected; the cursor (ins) moves on to where the next
    note goes, and the arrows, accidentals, dot and Delete act on the selected note or else on the note just entered. */
-const ed = {on: false, sel: null, ins: null, inRest: false, undo: [], redo: [], val: 'S'};   /* sel, ins: {vi, ei}; val: the value to enter */
+const ed = {on: false, sel: null, ins: null, inRest: false, undo: [], redo: [], val: 'S', accArm: null, accEd: false, dotArm: false};   /* sel, ins: {vi, ei}; val: the value to enter */
 const EKEY = k => APP.store + ':edit:' + k;
 /* Insert or Overwrite, kept per app */
 try { ed.ovr = localStorage.getItem(APP.store + ':ovr') === '1'; } catch (e) { ed.ovr = false; }
 try { ed.nav = localStorage.getItem(APP.store + ':nav') || 'M'; } catch (e) { ed.nav = 'M'; }
 /* the Grid is its own value (Samuel 2026-11-15): the number keys and the note value no longer change it; 'Same as note value' is gone */
 if (ed.nav === 'follow') ed.nav = 'M';
-/* the editing tools row is shown or hidden by the arrow beside the pen, apart from Edit mode itself; until the arrow
-   has been used it comes and goes with Edit mode */
+/* the editing tools row is shown or hidden by the arrow beside the pen, apart from note input itself; until the arrow
+   has been used it comes and goes with note input */
 try { const b = localStorage.getItem(APP.store + ':edbar'); ed.bar = b === null ? undefined : b === '1'; } catch (e) { ed.bar = undefined; }
 const barOpen = () => ed.bar === undefined ? ed.on : ed.bar;
 const VALS = [['Mx', 8], ['L', 4], ['B', 2], ['S', 1], ['M', 0.5], ['Sm', 0.25], ['F', 0.125]];
@@ -3370,6 +3402,15 @@ function commit(mutate){
   mutate();
   if (H.commitEnd) H.commitEnd(hc);
   const text = writeKern(piece);
+  /* writing cuts a note that crosses a barline into two tied notes: what is selected, and the caret, move on by those */
+  const cut = (vi, ei) => {
+    const v = piece.voices[vi]; if (!v) return ei;
+    const bt = piece.bars.map(b => b.t); let n = 0;
+    for (let j = 0; j < ei && j < v.events.length; j++) { const e = v.events[j], z = rt(e.t + e.d); n += bt.filter(t => t > e.t + EPS && t < z - EPS).length; }
+    return ei + n;
+  };
+  if (ed.sel) ed.sel = {vi: ed.sel.vi, ei: cut(ed.sel.vi, ed.sel.ei)};
+  if (ed.ins) ed.ins = Object.assign({}, ed.ins, {ei: cut(ed.ins.vi, ed.ins.ei)});
   ed.undo.push(before); ed.redo = [];
   applyText(text);
 }
@@ -3422,10 +3463,20 @@ function insertEvent(vi, at, step, isRest, pad = 0, alt){
   const t = at < v.events.length ? rt(v.events[at].t + off) : rt(v.end + (pad > EPS ? pad : 0));
   /* alt: a sharp, flat or natural of its own (the keyboard's black and white keys); otherwise the signature's */
   const imp = isRest ? null : implied(v, step, t);
-  const alt0 = isRest ? null : alt === undefined ? imp : alt === 0 && !imp ? null : alt;
-  const d = rt(val / propAt(v, t) * (ed.colArm ? 2 / 3 : 1));
+  /* a flat, sharp, natural or dot pressed before the note: this note takes it (once) */
+  let altU = alt, armedAcc = false;
+  if (!isRest && alt === undefined && ed.accArm) {
+    const cur = imp || 0;
+    altU = ed.accArm === 'n' ? 0 : ed.accArm === '#' ? Math.min(1, cur + 1) : Math.max(-1, cur - 1);
+    armedAcc = true;
+  }
+  const alt0 = isRest ? null : altU === undefined ? imp : altU === 0 && !imp ? null : altU;
+  const edAcc = armedAcc && !!ed.accEd && alt0 !== null;
+  const dotted = !isRest && !!ed.dotArm;
+  if (!isRest) { ed.accArm = null; ed.accEd = false; ed.dotArm = false; }
+  const d = rt(val / propAt(v, t) * (ed.colArm ? 2 / 3 : 1) * (dotted ? 1.5 : 1));
   commit(() => {
-    const e = {d, rest: !!isRest, step, alt: alt0, ed: false, syl: [], t};
+    const e = {d, rest: !!isRest, step, alt: alt0, ed: edAcc, syl: [], t};
     /* past the end: a rest up to the place clicked */
     if (pad > EPS && at >= v.events.length) { v.events.push({d: rt(pad), rest: true, alt: null, ed: false, syl: [], t: v.end}); at = v.events.length; }
     let k = at;
@@ -3689,7 +3740,7 @@ function showSel(scroll){
   if (scroll && first) bringIntoView(first);
   syncEdit();
 }
-/* clicking a note selects it (in any view); with Edit off it only marks where Play starts */
+/* clicking a note selects it (in any view); with note input off it only marks where Play starts */
 pagesEl.addEventListener('click', e => {
   const g = e.target.closest('g[class^="n"]');
   if (!g || !piece) { if ((ed.sel || ed.range || ed.picks) && !ed.on) { ed.sel = null; ed.range = null; ed.picks = null; showSel(); } return; }
@@ -4305,7 +4356,7 @@ pagesEl.addEventListener('click', e => {
       showSel(); return;
     }
   }
-  /* outside Edit mode a click on a staff selects it, even an empty one: the keyboard (its pitch dot and its notes) then goes to that staff */
+  /* outside note input a click on a staff selects it, even an empty one: the keyboard (its pitch dot and its notes) then goes to that staff */
   if (!ed.on && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && piece) {
     const r0 = e.target.closest && e.target.closest('rect.stafhit');
     if (r0) {
@@ -4355,6 +4406,55 @@ function targetSym(){
   if (ed.ins && ed.ins.off > EPS) return symAt(ed.ins.vi, ed.ins.ei);
   if (ed.ins && ed.ins.ei > 0) return symAt(ed.ins.vi, ed.ins.ei - 1);
   return null;
+}
+/* what a flat, sharp, natural, dot or Ed. acts on (as in Dorico): the selected note; with note input and no selection, the note
+   under the caret (a rest does not count); else nothing, and the next note written takes it */
+function accTarget(){
+  if (ed.sel) return selSym();
+  if (ed.on && ed.ins && !ed.range && !ed.picks) {
+    const v = piece && piece.voices[ed.ins.vi];
+    if (v && ed.ins.ei < v.events.length) { const q = symAt(ed.ins.vi, ed.ins.ei); return q && !q.rest ? q : null; }
+  }
+  return null;
+}
+/* the value a note or rest can take, one shape each (no ties), in the mensuration where it stands: [d ...] from the shortest up.
+   A note: plain values, and dotted ones where the sign allows (minima, dotted minima, semibrevis, dotted semibrevis, brevis ...);
+   a rest has no dot. Coloration is its own button, so coloured shapes are not on the ladder. */
+function valueLadder(v, t, rest){
+  const out = new Set();
+  if (notaNow() === 'fake') {
+    const mi = mensInfo(metAt(v, t));
+    for (const [, val] of VALS) { out.add(rt(val / mi.p)); if (!rest) out.add(rt(val * 1.5 / mi.p)); }
+  } else {
+    const mi = mensInfo(metAt(v, t)), tab = valueTable(mi.T, mi.P), S = tab[3][1];
+    const cand = [];
+    for (const [, val] of tab) { cand.push(val); if (!rest) cand.push(val * 1.5); }
+    if (!rest) { if (mi.T === 3) cand.push(2 * S); if (mi.P === 3) cand.push(1); }
+    for (const w of cand) { const sh = shapeReal(rt(w), mi.T, mi.P); if (sh && !sh.col) out.add(rt(w / mi.p)); }
+  }
+  return [...out].sort((a, b) => a - b);
+}
+/* Cmd+Shift+Right and Left: the selected note or rest (or the one under the caret) takes the next longer or shorter value */
+function stretch(dir){
+  if (!piece) return;
+  const s = ed.sel ? selSym() : (ed.on && ed.ins && !ed.range && !ed.picks ? symAt(ed.ins.vi, ed.ins.ei) : null);
+  if (!s) return;
+  const vi = ed.sel ? ed.sel.vi : ed.ins.vi, v = piece.voices[vi];
+  if (!v || !writable(v)) { refuse(); return; }
+  const src = s.src, first = src[0];
+  const total = rt(src.reduce((a, i) => a + v.events[i].d, 0));
+  const ladder = valueLadder(v, v.events[first].t, s.rest);
+  const nx = dir > 0 ? ladder.find(d => d > total + EPS) : ladder.slice().reverse().find(d => d < total - EPS);
+  if (nx === undefined) { toast(dir > 0 ? 'That is the longest value there is.' : 'That is the shortest value there is.'); return; }
+  commit(() => {
+    const e = v.events[first];
+    e.d = nx; e.tieStart = e.tieEnd = e.tieMid = false; e.long = false; e.colH = false;
+    dropEvents(v, src.slice(1));
+    if (ed.ovr) ovrResize(v, first, total);
+  });
+  const q = ed.sel ? selSym() : null;
+  if (q) ed.val = valKey(q);
+  showSel(true); syncEdit();
 }
 function insertionIndex(v){
   const s = selSym();
@@ -4630,14 +4730,17 @@ function ligSelOn(){
 /* what the shared note-input tools (shared/note-input.js) need from this app */
 const CBA = {
   edit: () => ed.on,
-  /* Escape leaves Edit mode (the selection stays, so Delete still works on it) */
+  /* Escape leaves note input (the selection stays, so Delete still works on it) */
   exitEdit(){ if (ed.on) setEdit(false); },
-  /* Delete and Backspace also work outside Edit mode, on what is selected (a note, a rest, a range) */
+  /* Delete and Backspace also work outside note input, on what is selected (a note, a rest, a range) */
   canDelete: () => !!(ed.on || ed.sel || ed.range || ed.picks),
   guard(){ return H.guard ? H.guard() : true; },
+  hasSel: () => !!(ed.sel || ed.range || ed.picks),
+  toggleEdit(){ if (piece) setEdit(!ed.on); },
   state(){
-    const s = selSym(), t = targetSym(), v = curVoice();
+    const s = selSym(), t = targetSym(), v = curVoice(), ta = accTarget();
     return {selected: !!s, signSel: mensOpen(), dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
+      acc: ta && {r: ta.rest, a: accOf(ta), p: ta.dot, ed: !!ta.edAcc}, canAcc: !!(ed.on || ed.sel || ed.range || ed.picks), armAcc: ed.accArm || '', armDot: !!ed.dotArm,
       target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc, lig: !!t.lig}, ligOn: ligSelOn(), edArm: !!ed.edArm, ovr: !!ed.ovr,
       col: s && !s.rest ? !!s.col : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
       hasNotes: !!(piece && piece.voices.length), durs: ed.range || ed.picks ? ['B'] : xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : []), range: !!(ed.range || ed.picks)};
@@ -4654,21 +4757,41 @@ const CBA = {
   },
   toggleAcc(a){
     if (!CBA.guard()) return;
-    const t = targetSym(), v = curVoice(); if (!t || t.rest) return;
+    /* as in the 16th century a sharp sign raises the note a semitone from where it stands, a flat sign lowers it: a flat in the signature plus a sharp makes a natural, a sharp plus a flat makes a natural (never a double sign) */
+    const to = (v, e) => {
+      const cur = e.alt !== null && e.alt !== undefined ? e.alt : (implied(v, e.step, e.t) || 0);
+      return a === 'n' ? 0 : a === '#' ? Math.min(1, cur + 1) : Math.max(-1, cur - 1);
+    };
+    /* several notes selected: all of them (all of them already have it: it comes off) */
+    if (ed.range || ed.picks) {
+      const it = selItems().filter(x => writable(x.v) && !x.e.rest); if (!it.length) return;
+      const has = x => { const q = symAt(x.v.idx, x.v.events.indexOf(x.e)); return !!q && accOf(q) === a; };
+      const off = it.every(has), edit = !!ed.edArm && !off; ed.edArm = false;
+      commit(() => { for (const x of it) { x.e.alt = off ? implied(x.v, x.e.step, x.e.t) : to(x.v, x.e); x.e.ed = edit; } });
+      return;
+    }
+    const t = accTarget(), v = curVoice();
+    if (!t) {
+      /* nothing selected and nothing under the caret: the next note written takes it (pressing it again takes it back) */
+      if (!ed.on) return;
+      ed.accEd = !!ed.edArm && ed.accArm !== a; ed.edArm = false;
+      ed.accArm = ed.accArm === a ? null : a;
+      syncEdit();
+      return;
+    }
+    if (t.rest || !v) return;
     const off = accOf(t) === a;
     const edit = !!ed.edArm && !off; ed.edArm = false;
-    /* as in the 16th century a sharp sign raises the note a semitone from where it stands, a flat sign lowers it: a flat in the signature plus a sharp makes a natural, a sharp plus a flat makes a natural (never a double sign) */
     commit(() => { for (const i of t.src) {
       const e = v.events[i], cur = e.alt !== null && e.alt !== undefined ? e.alt : (implied(v, e.step, e.t) || 0);
-      const to = a === 'n' ? 0 : a === '#' ? Math.min(1, cur + 1) : Math.max(-1, cur - 1);
-      e.alt = off || (a !== 'n' && to === cur && e.alt !== null && e.alt !== undefined) ? implied(v, e.step, e.t) : to; e.ed = edit;
+      e.alt = off || (a !== 'n' && to(v, e) === cur && e.alt !== null && e.alt !== undefined) ? implied(v, e.step, e.t) : to(v, e); e.ed = edit;
     } });
     const e = curVoice().events[t.src[0]]; if (e) hear(e.step, e.alt);
   },
   /* Ed.: the selected note's accidental becomes editorial (or written again); with none, the next accidental entered is editorial */
   toggleEd(){
     if (!CBA.guard()) return;
-    const t = targetSym(), v = curVoice();
+    const t = accTarget(), v = curVoice();
     if (t && !t.rest && v && accOf(t)) {
       const e0 = v.events[t.src[0]], on = !e0.ed;
       commit(() => { for (const i of t.src) v.events[i].ed = on; });
@@ -4742,12 +4865,16 @@ const CBA = {
   },
   toggleDot(){
     if (!CBA.guard()) return;
-    const t = targetSym(), v = curVoice(); if (!t || t.rest) return;
+    if (ed.range || ed.picks) return;
+    const t = accTarget(), v = curVoice();
+    if (!t) { if (ed.on) { ed.dotArm = !ed.dotArm; syncEdit(); } return; }   /* the next note written is dotted */
+    if (t.rest || !v) return;
     commit(() => {
       const e = v.events[t.src[0]];
       const total = t.src.reduce((a, i) => a + v.events[i].d, 0);
       e.d = rt(t.dot ? total / 1.5 : total * 1.5); e.tieStart = e.tieEnd = e.tieMid = false;
       dropEvents(v, t.src.slice(1));
+      if (ed.ovr) ovrResize(v, t.src[0], total);
     });
   },
   stepPitch(d){
@@ -4836,13 +4963,19 @@ const CBA = {
   xform: () => ({names: piece ? piece.voices.map((v, i) => v.name || 'Voice ' + (i + 1)) : [], target: xfTarget(), range: !!(ed.range || ed.picks)}),
   /* Dorico's keys for the selection and the cursor; true when handled */
   key(e){
-    if (!ed.on || !piece) return false;
+    if (!piece) return false;
     const k = e.key, mod = e.ctrlKey || e.metaKey, has = !!(ed.sel || ed.range || ed.picks);
     if (!/^Arrow/.test(k)) return false;
+    if (!ed.on && !has) return false;
+    const horiz = k === 'ArrowLeft' || k === 'ArrowRight';
+    /* Cmd+Shift+Right or Left: the note or rest takes the next longer or shorter value */
+    if (horiz && e.shiftKey && mod && !e.altKey) { if (CBA.guard()) stretch(k === 'ArrowRight' ? 1 : -1); return true; }
     if (e.shiftKey && !e.altKey && !mod && has) return extendBy(k);
-    if ((k === 'ArrowLeft' || k === 'ArrowRight') && (e.altKey || mod) && has) { if (CBA.guard()) moveSelection(k === 'ArrowLeft' ? -1 : 1); return true; }
+    /* Cmd (or Alt) with Left and Right: the selection moves along, in any mode */
+    if (horiz && (e.altKey || mod) && has) { if (CBA.guard()) moveSelection(k === 'ArrowLeft' ? -1 : 1); return true; }
+    if (!ed.on) return false;
     if ((k === 'ArrowUp' || k === 'ArrowDown') && mod && !e.altKey && !has && ed.ins) return caretStaff(k === 'ArrowUp' ? -1 : 1);
-    if ((k === 'ArrowLeft' || k === 'ArrowRight') && !e.shiftKey && !e.altKey && !mod && (!has || ed.sel)) { moveCaret(k === 'ArrowLeft' ? -1 : 1); return true; }
+    if (horiz && !e.shiftKey && !e.altKey && !mod && (!has || ed.sel)) { moveCaret(k === 'ArrowLeft' ? -1 : 1); return true; }
     return false;
   },
   setXform(t){ ed.xf = t; },
@@ -4901,7 +5034,7 @@ function drawCaret(scroll){
   });
 }
 /* with the mouse, as in CantusFirmus: right-click turns a note into a rest and removes a rest; drag a note up or down */
-/* the note under the pointer: in Edit the staff's writing area lies on top, so look underneath it too */
+/* the note under the pointer: in note input the staff's writing area lies on top, so look underneath it too */
 function noteAt(e){
   let g = null;
   for (const el of document.elementsFromPoint(e.clientX, e.clientY)) { const q = el.closest && el.closest('#pages g[class^="n"]'); if (q) { g = q; break; } }
@@ -4984,7 +5117,8 @@ NoteInput.wire(CBA);
 /* edit mode is always caret mode: the caret stands at the start until a note is clicked */
 function setEdit(on){
   ed.on = on; clearGhost();
-  /* entering Edit mode takes the selection away: the caret stands just before what was selected (Samuel 2026-11-14) */
+  if (!on) { ed.accArm = null; ed.accEd = false; ed.dotArm = false; ed.edArm = false; }
+  /* entering note input takes the selection away: the caret stands just before what was selected (Samuel 2026-11-14) */
   if (ed.on && piece && (ed.sel || ed.range || ed.picks)) {
     let at = null;
     if (ed.sel) at = {vi: ed.sel.vi, ei: ed.sel.ei};
@@ -5317,7 +5451,7 @@ function fsWake(){
 viewerEl.addEventListener('scroll', fsWake, {passive: true});
 $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
 
-/* the controls rest: after 3 s without the mouse moving, the top collapses into the Edit button and the arrow icon, and the
+/* the controls rest: after 3 s without the mouse moving, the top collapses into the Note input button and the arrow icon, and the
    bottom into Play and the volume; moving the mouse brings them back.
    On a touch screen nothing rests by itself: the controls stay until a tap on a blank place of the score hides them (and another tap, or a
    touch of any control, brings them back); a mouse moving over the page makes it behave as above again. */

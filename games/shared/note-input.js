@@ -1,7 +1,7 @@
 /* Note input: the editing tools shared by the CantusFirmus and ChoirBook apps.
    Both apps load this one file, so they have the same buttons, the same keys and the same behaviour.
    Each app hands over an adapter A with:
-     A.edit()                  true while the Edit button is on
+     A.edit()                  true while note input is on (the pen)
      A.state()                 {selected, dur, rest, target: {r, a, p} | null, canUndo, canRedo, hasNotes, durs: [value keys]}
                                target is the note the arrows, accidentals and dot act on: the selected note, or else the
                                note just entered (left of the cursor). a is '' | 'b' | 'n' | '#'
@@ -10,6 +10,9 @@
      A.mutate(fn)              one undoable change
      A.pitched()               the notes that transpose (not rests), each {s, alter}; A.setPitch(h, s, alter)
                                (alter null: no sharp or flat of its own, the signature applies)
+     A.toggleEdit()            (optional) N turns note input on and off; the natural then moves to the 0 key
+     A.hasSel()                (optional) true when a note, a rest or a range is selected: the keys for accidentals, dot and
+                               note values then work outside note input too
      A.range                   [lowest step, highest step]
      A.toast(msg)
 */
@@ -175,7 +178,7 @@ function fill(A, iconSVG){
   Object.entries(ACC).forEach(([a, X]) => {
     const b = document.createElement('button');
     b.className = 'ib'; b.dataset.a = a;
-    b.title = `${X.name} (${X.key})`;
+    b.title = `${X.name} (${a === 'n' && A.toggleEdit ? '0' : X.key})`;
     b.setAttribute('aria-label', X.name);
     b.innerHTML = iconSVG(X.g, 2.9);
     b.addEventListener('click', () => A.toggleAcc(a));
@@ -302,7 +305,7 @@ function wire(A){
     if (A.key && A.key(e)) { e.preventDefault(); return; }
     if (edit && mod && (k === 'z' || k === 'Z')) { e.preventDefault(); e.shiftKey ? A.redo() : A.undo(); return; }
     if (edit && mod && (k === 'y' || k === 'Y')) { e.preventDefault(); A.redo(); return; }
-    /* a selected note (or range) is moved up and down by the arrows in Edit mode, and outside it too */
+    /* a selected note (or range) is moved up and down by the arrows in note input, and outside it too */
     if ((edit || (A.canDelete && A.canDelete())) && (k === 'ArrowUp' || k === 'ArrowDown')) {
       e.preventDefault();
       A.stepPitch((k === 'ArrowUp' ? 1 : -1) * (e.shiftKey || mod ? 7 : 1));
@@ -313,18 +316,25 @@ function wire(A){
     if (k === ' ') { e.preventDefault(); A.togglePlay(); return; }
     if (tag === 'BUTTON' && k === 'Enter') return;
     if (k === 'ArrowLeft' || k === 'ArrowRight') { e.preventDefault(); A.moveSel(k === 'ArrowLeft' ? -1 : 1); return; }
-    /* Escape leaves Edit mode first (where the app has one to leave), and then clears the selection */
+    /* Escape leaves note input first (where the app has one to leave), and then clears the selection */
     if (k === 'Escape') { if (edit && A.exitEdit) A.exitEdit(); else A.deselect(); return; }
     if ((k === 'Backspace' || k === 'Delete') && !edit && A.canDelete && A.canDelete()) { e.preventDefault(); A.deleteTarget(); return; }
+    /* N: note input on and off, as in Dorico (the natural is then on 0) */
+    if ((k === 'n' || k === 'N') && A.toggleEdit && !e.shiftKey) { e.preventDefault(); A.toggleEdit(); return; }
+    /* a selected note is changed in any mode: accidentals, dot and note value (in note input, with nothing selected, they are
+       for the note the caret stands on, or else for the next note written) */
+    const sel = A.hasSel ? A.hasSel() : false;
+    if (edit || sel) {
+      if (k === '-' || k === '_') { e.preventDefault(); A.toggleAcc('b'); return; }
+      if (k === '=' || k === '+' || k === '#') { e.preventDefault(); A.toggleAcc('#'); return; }
+      if ((k === '0' && A.toggleEdit) || ((k === 'n' || k === 'N') && !A.toggleEdit && edit)) { e.preventDefault(); A.toggleAcc('n'); return; }
+      if (k === '.') { e.preventDefault(); A.toggleDot(); return; }
+      if (/^[1-7]$/.test(k)) { e.preventDefault(); A.setDur(DKEYS[Number(k) - 1]); return; }
+    }
     if (!edit) return;
     if (/^[a-gA-G]$/.test(k)) { e.preventDefault(); A.typeNote(k.toUpperCase()); return; }
     if (k === 'r' || k === 'R') { e.preventDefault(); A.typeRest(); return; }
-    if (/^[1-7]$/.test(k)) { e.preventDefault(); A.setDur(DKEYS[Number(k) - 1]); return; }
     if (k === 'Backspace' || k === 'Delete') { e.preventDefault(); A.deleteTarget(); return; }
-    if (k === '-' || k === '_') { e.preventDefault(); A.toggleAcc('b'); return; }
-    if (k === '=' || k === '+' || k === '#') { e.preventDefault(); A.toggleAcc('#'); return; }
-    if (k === 'n' || k === 'N') { e.preventDefault(); A.toggleAcc('n'); return; }
-    if (k === '.') { e.preventDefault(); A.toggleDot(); return; }
     if ((k === 'i' || k === 'I') && A.toggleOverwrite) { e.preventDefault(); A.toggleOverwrite(); return; }
     if ((k === 'k' || k === 'K') && A.toggleCol) { e.preventDefault(); A.toggleCol(); return; }
     if ((k === 'l' || k === 'L') && A.toggleLig) { e.preventDefault(); A.toggleLig(); return; }
@@ -337,13 +347,15 @@ function sync(A){
   const sb = document.querySelector('#durBtns button[data-d="' + S.dur + '"]');
   if (sb) $('#durSum').innerHTML = sb.innerHTML + CHEV;
   setPressed($('#restBtn'), S.rest);
+  /* the accidentals, dot and Ed. act on the selected note, or the note under the caret, or (nothing there) the next note written */
+  const ta = S.acc !== undefined ? S.acc : t, can = S.canAcc !== undefined ? S.canAcc : !!t;
   document.querySelectorAll('#accBtns button[data-a]').forEach(b => {
-    setPressed(b, !!t && !t.r && t.a === b.dataset.a);
-    b.disabled = !t || t.r;
+    setPressed(b, ta ? !ta.r && ta.a === b.dataset.a : S.armAcc === b.dataset.a);
+    b.disabled = !can || (!!ta && ta.r);
   });
-  setPressed($('#dotBtn'), !!t && !t.r && !!t.p);
-  if ($('#edBtn')) setPressed($('#edBtn'), !!S.edArm || (!!t && !t.r && !!t.a && !!t.ed));
-  $('#dotBtn').disabled = !t || t.r;
+  setPressed($('#dotBtn'), ta ? !ta.r && !!ta.p : !!S.armDot);
+  if ($('#edBtn')) setPressed($('#edBtn'), !!S.edArm || (!!ta && !ta.r && !!ta.a && !!ta.ed));
+  $('#dotBtn').disabled = !can || (!!ta && ta.r);
   const cb = $('#colBtn'); if (cb) setPressed(cb, !!S.col);
   const lb = $('#ligBtn'); if (lb) { setPressed(lb, !!S.ligOn); lb.disabled = !(S.range || (t && !t.r && t.lig)); }
   if (A.nav && $('#navSum')) {
