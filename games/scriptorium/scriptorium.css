@@ -1109,7 +1109,8 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
 .kbd[hidden]{display:none}
 html.embedded .kbd{position:absolute;bottom:auto;top:calc(var(--tpTop,0px) - var(--kbh,104px) - 8px)}
 html.kbd-on .wrap{padding-bottom:calc(var(--tph,56px) + var(--kbh,104px) + 30px)}
-.kbd-oct{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0 2px;color:var(--muted);font-size:14px}
+.kbd-oct{display:grid;grid-template-columns:auto auto auto;align-items:center;justify-items:center;align-content:center;gap:6px 2px;padding:0 2px;color:var(--muted);font-size:14px}
+.kbd-ol{font-size:12px;font-variant-numeric:oldstyle-nums}
 .kbd-oct .ib{width:30px;height:26px;min-height:0;border-radius:7px}
 .kbd-oct .ib svg{width:16px;height:16px}
 #kbdLab{font-variant-numeric:oldstyle-nums;color:var(--text)}
@@ -1141,3 +1142,15 @@ html.dark .kk.blk{background:#0E0B08}
   .kk.wht{border-radius:0 0 4px 4px}
 }
 .kbd.short{--kh:60px}
+
+/* ================= Microphone and Record (sing.js): two icon buttons beside the keyboard button ================= */
+#podSing #mic,#podSing #recGo{display:inline-flex;align-items:center;justify-content:center;gap:0;width:auto;min-width:var(--h,34px);padding:0 6px}
+#podSing #mic svg,#podSing #recGo svg{width:20px;height:20px;margin:0}
+#recGo .recring{fill:none;stroke:currentColor;stroke-width:1.7}
+#recGo .reccore{fill:var(--accent)}
+#recGo[aria-pressed="true"] .reccore{fill:var(--accent-ink);animation:recblink 1s steps(2) infinite}
+#popRec .singchev{display:inline-flex;align-items:center;margin:0 -4px 0 1px;padding:4px 2px;border-radius:6px}
+#popRec .singchev .chev{width:11px;height:11px}
+#popRec .popbody,#popSing .popbody{min-width:15em}
+@media (hover:hover) and (pointer:fine){ #podSing .singchev{display:none} }
+@media (min-width:701px){ html.ctl-bot-idle #podSing{opacity:.8;transition:opacity .35s ease} html.ctl-bot-idle #podSing:hover,html.ctl-bot-idle #podSing:focus-within{opacity:1} }
