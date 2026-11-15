@@ -28,6 +28,7 @@
   document.body.insertAdjacentHTML('beforeend', '<div class="kbd" id="kbd" role="group" aria-label="Keyboard" hidden>'
     + '<div class="kbd-oct" id="kbdOct"><button class="ib" id="kbdDn" aria-label="Octave down" title="Octave down (Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12 17 6.2Z"/></svg></button>'
     + '<span id="kbdLab"></span><button class="ib" id="kbdUp" aria-label="Octave up" title="Octave up (X)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button></div>'
+    + '<div class="kbd-size"><label for="kbdW">Width</label><input type="range" id="kbdW" min="20" max="56" step="1" aria-label="Width of the keys"></div>'
     + '<div class="kbd-scroll" id="kbdScroll"><div class="kbd-keys" id="kbdKeys"></div></div></div>');
   const box = $('#kbd'), keysEl = $('#kbdKeys'), scroller = $('#kbdScroll');
   {
@@ -145,8 +146,25 @@
   function fit(){
     const win = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--win')) || window.innerHeight;
     box.classList.toggle('short', win < 520);
+    width();
     document.documentElement.style.setProperty('--kbh', box.offsetHeight + 'px');
   }
+  /* phones: the piano runs from edge to edge, and the slider sets how wide the keys are (kept in this browser) */
+  const phone = () => window.matchMedia && matchMedia('(max-width:700px),(pointer:coarse)').matches;
+  const KW = 'scriptorium:kbdW';
+  let kw = 28; try { kw = Math.max(20, Math.min(56, +localStorage.getItem(KW) || 28)); } catch (e) {}
+  function width(){
+    if (phone()) { box.style.setProperty('--kw', kw + 'px'); box.style.setProperty('--bw', Math.round(kw * 0.64) + 'px'); }
+    else { box.style.removeProperty('--kw'); box.style.removeProperty('--bw'); }
+    $('#kbdW').value = kw;
+  }
+  $('#kbdW').addEventListener('input', e => {
+    /* the key in the middle of the screen stays there */
+    const mid = (scroller.scrollLeft + scroller.clientWidth / 2) / (keysEl.offsetWidth || 1);
+    kw = +e.target.value; width();
+    scroller.scrollLeft = mid * keysEl.offsetWidth - scroller.clientWidth / 2;
+    try { localStorage.setItem(KW, String(kw)); } catch (e2) {}
+  });
   if (window.ResizeObserver) new ResizeObserver(() => { if (!box.hidden) { document.documentElement.style.setProperty('--kbh', box.offsetHeight + 'px'); if (window.__dockPlace) window.__dockPlace(); } }).observe(box);
   window.addEventListener('message', () => { if (!box.hidden) setTimeout(fit, 0); });
   window.addEventListener('resize', () => { if (!box.hidden) fit(); });

@@ -1130,8 +1130,14 @@ html.kbd-on .wrap{padding-bottom:calc(var(--tph,56px) + var(--kbh,104px) + 30px)
 @media (hover:hover){ .kk.wht:hover{background:#F1E6D0} .kk.blk:hover{background:#4A3C2C} }
 html.dark .kk.wht{background:#E9DCC3;border-color:#3A3027}
 html.dark .kk.blk{background:#0E0B08}
+.kbd-size{display:none}
 @media (max-width:700px),(pointer:coarse){
-  .kbd{--kw:28px;--bw:18px;--kh:82px;left:10px;max-width:calc(100vw - 20px);padding:5px}
+  /* phones: edge to edge, the width slider in a thin line above the keys */
+  .kbd{--kw:28px;--bw:18px;--kh:82px;left:0;right:0;max-width:none;flex-direction:column;gap:2px;padding:3px 0 0;border-radius:0;border-left:0;border-right:0}
   .kbd-oct{display:none}
+  .kbd-size{display:flex;align-items:center;justify-content:flex-end;gap:8px;height:22px;padding:0 12px;color:var(--muted);font-size:13px}
+  .kbd-size input[type=range]{width:130px;height:18px;margin:0}
+  .kbd-scroll{border-radius:0}
+  .kk.wht{border-radius:0 0 4px 4px}
 }
 .kbd.short{--kh:60px}
