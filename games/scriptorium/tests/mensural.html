@@ -35,7 +35,7 @@ Jos/Jos2918-Nymphes_des_bois__Requiem
 Duf/Duf2012-Ave_regina_celorum_III
 Duf/Duf3015-Se_la_face_ay_pale</textarea>
 <p><button id="run">Check these pieces</button> <button id="all">Check every piece in the catalogue…</button></p>
-<table id="rep"><thead><tr><th>Piece</th><th>Signs</th><th>Voices end together</th><th>Barlines off the grid</th><th>Notes the rules count otherwise</th></tr></thead><tbody></tbody></table>
+<table id="rep"><thead><tr><th>Piece</th><th>Signs</th><th>Voices end together</th><th>Barlines off the grid</th><th>Notes the rules count otherwise</th><th>…with the other readings (a.p.a. / both imperfect)</th></tr></thead><tbody></tbody></table>
 
 <iframe id="app" src="../../choirbook.html?tests=1"></iframe>
 <script>
@@ -79,11 +79,11 @@ async function check(cb, keys){
   for (const k of keys) {
     let row;
     try {
-      const url = await cb.pieceUrl(k), text = await (await fetch(url)).text();
-      const r = cb.mensCheck(text);
+      const url = new URL(await cb.pieceUrl(k), app.contentWindow.location.href).href, text = await (await fetch(url)).text();
+      const r = cb.mensCheck(text), ra = cb.mensCheck(text, 'apa'), rb = cb.mensCheck(text, 'imp2');
       row = `<td>${r.title}</td><td>${r.signs.join(', ')}</td><td class="${r.equalEnds ? 'ok' : 'bad'}">${r.equalEnds ? 'yes' : 'no: ' + r.ends.join(' / ')}</td>` +
-        `<td class="${r.barsOffGrid ? 'bad' : 'ok'}">${r.barsOffGrid} of ${r.bars}</td><td class="${r.rulesDiffer ? 'bad' : 'ok'}">${r.rulesDiffer} of ${r.notes}${r.examples.length ? '<br><small>' + r.examples.join('<br>') + '</small>' : ''}</td>`;
-    } catch (e) { row = `<td>${k}</td><td colspan="4" class="bad">could not be read: ${e.message}</td>`; }
+        `<td class="${r.barsOffGrid ? 'bad' : 'ok'}">${r.barsOffGrid} of ${r.bars}</td><td class="${r.rulesDiffer ? 'bad' : 'ok'}">${r.rulesDiffer} of ${r.notes}${r.examples.length ? '<br><small>' + r.examples.join('<br>') + '</small>' : ''}</td><td>${ra.rulesDiffer} / ${rb.rulesDiffer}</td>`;
+    } catch (e) { row = `<td>${k}</td><td colspan="5" class="bad">could not be read: ${e.message}</td>`; }
     tb.insertAdjacentHTML('beforeend', `<tr>${row}</tr>`);
   }
 }

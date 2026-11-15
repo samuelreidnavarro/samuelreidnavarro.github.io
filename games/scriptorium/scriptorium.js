@@ -754,7 +754,7 @@ function mensTest(text, opt){
     return P.voices.map(v => { mensurate(v); retime(v); return v.events.map(e => rt(e.d * mensInfo(metAt(v, e.t)).p)); });
   } finally { piece = keep; }
 }
-function mensCheck(text){
+function mensCheck(text, opt){
   const keep = piece;
   try {
     const P = parseKern(text); piece = P;
@@ -768,7 +768,7 @@ function mensCheck(text){
       const mi = mensInfo(m.sign), len = mi.T * (mi.P === 3 ? 1.5 : 1) / mi.p, k = (b.t - m.t) / len;
       if (Math.abs(k - Math.round(k)) > 1e-6) out.barsOffGrid++;
     }
-    const Q = parseKern(text); piece = Q; Q.meta.MENS = 'rules';
+    const Q = parseKern(text); piece = Q; Q.meta.MENS = 'rules'; if (opt) Q.meta.MENSOPT = opt; else delete Q.meta.MENSOPT;
     Q.voices.forEach(v => {
       const before = logicalNotes(v).map(it => ({t: it.e.t, d: it.d}));
       mensurate(v); retime(v);
