@@ -359,6 +359,7 @@ function parseNoteTok(tok){
   ev.tieStart = tok.includes('['); ev.tieEnd = tok.includes(']'); ev.tieMid = tok.includes('_');
   ev.ferm = tok.includes(';');
   ev.colH = tok.includes('@');   /* coloured as written (CMME), user signifier */
+  ev.altd = tok.includes('~');   /* altered: its value doubled by the mensural rules (written here) */
   ev.long = /l/.test(rest.replace(/[a-gA-G]/g, ''));
   ev.tupS = tok.includes('V'); ev.tupE = tok.includes('Z');
   const pm = rest.match(/([a-gA-G])\1*/);
@@ -539,6 +540,11 @@ function shapeReal(w, T, P){
   for (const [g, v] of tab) if (eq(w, v * 1.5)) return {g, dot:true};
   return null;
 }
+/* an altered note is written as the shape half its value (alteration is not marked in white or black notation) */
+function shapeAlt(w, T, P){
+  for (const [g, v] of valueTable(T, P)) if (eq(w, 2 * v)) return {g};
+  return null;
+}
 /* a note the source writes black (CMME): the white shape it is two thirds of (the usual coloration), three quarters of
    (minor colour: a black breve with a black semibreve), or the same value blackened (semibreves in a hemiola under 3) */
 function shapeCol(w, T, P){
@@ -565,6 +571,137 @@ function decompose(w, T, P){
     out.push(pick); r -= pick[1];
   }
   return out;
+}
+
+/* ------------------------------------------------------------------ */
+/* The mensural rules (Samuel 2026-11-15), for scores written here (!!!MENS: rules)   */
+/* A note is written as a shape; how long it sounds follows from the sign and from what stands around it:
+   - perfection: in tempus perfectum a breve is three semibreves, in prolatio maior a semibrevis three minims (modus is always
+     imperfect here: a longa is two breves);
+   - imperfection: a perfect note followed (a.p.p., the usual) or else preceded (a.p.a.) by the one smaller value that makes a third,
+     is imperfected, loses a third;
+   - alteration: the second of two such smaller notes before a perfect note is doubled;
+   - a dot adds half of an imperfect value; on a perfect note it would be a dot of division, which is not written yet.
+   Notes are shapes, so changing the sign or a neighbour re-counts them. Coloured notes, rests and notes of unknown shape keep their length. */
+const MENS_RANK = {Mx: 0, L: 1, B: 2, S: 3, M: 4, Sm: 5, F: 6};
+const mensRulesOn = () => !!(piece && piece.meta && piece.meta.MENS === 'rules');
+/* the length of a shape in the sign standing at t, before perfection and the rest (written value, a minim = 0.5), and in sounding value */
+function nomW(g, T, P){ const r = valueTable(T, P).find(x => x[0] === g); return r ? r[1] : null; }
+/* is this shape a perfect one in the sign standing at t (a breve in tempus perfectum, a semibrevis in prolatio maior) */
+function perfectShape(v, t, g){ const mi = mensInfo(metAt(v, t)); return (g === 'B' && mi.T === 3) || (g === 'S' && mi.P === 3); }
+function nomD(v, t, g){ const mi = mensInfo(metAt(v, t)), w = nomW(g, mi.T, mi.P); return rt(w / mi.p); }
+/* the written shape of an event, as it now stands in its sign: {g, dot} or null (coloured, tied oddly or of no shape: kept as it is) */
+function shapeOfEvent(e, mi){
+  if (e.colH || e.long || e.tupS || e.tupE) return null;
+  const w = rt(e.d * mi.p), tab = valueTable(mi.T, mi.P);
+  if (e.rest) { const r = tab.find(x => eq(w, x[1])); return r ? {g: r[0], rest: true} : null; }
+  if (e.altd) { const a = shapeAlt(w, mi.T, mi.P); return a ? {g: a.g, altd: true} : null; }
+  const sh = shapeReal(w, mi.T, mi.P);
+  if (!sh || sh.col) return null;
+  return {g: sh.g, dot: !!sh.dot};
+}
+/* one voice: tied parts (made by the barlines) are one note again, then every note takes its value from its shape and its neighbours.
+   `map` is returned: where each old event went (so the selection and the caret can follow). */
+function logicalNotes(v){
+  const ev = v.events, n = ev.length, L = [];
+  for (let i = 0; i < n; i++) {
+    const e = ev[i], it = {i, parts: [i], e, d: e.d};
+    if (!e.rest && e.tieStart && !e.tieEnd) {
+      let j = i + 1;
+      while (j < n && !ev[j].rest && ev[j].step === e.step) {
+        it.parts.push(j); it.d = rt(it.d + ev[j].d);
+        if (ev[j].tieEnd && !ev[j].tieStart) { j++; break; }
+        j++;
+      }
+      i = j - 1;
+    }
+    L.push(it);
+  }
+  return L;
+}
+function mensurate(v){
+  retime(v);
+  const ev = v.events, n = ev.length;
+  const map = new Array(n + 1);
+  /* 1. logical notes: tied parts joined */
+  const L = logicalNotes(v);
+  /* 2. shapes, in the sign each note stands under (or, after a sign change, the one it was written under: e._sh) */
+  const zones = [];
+  let cur = null;
+  for (const it of L) {
+    const t = it.e.t, sign = metAt(v, t);
+    const key = sign || '';
+    if (!cur || cur.key !== key) { cur = {key, mi: mensInfo(sign), items: []}; zones.push(cur); }
+    const mi = cur.mi;
+    it.mi = mi;
+    const sh = it.e._sh !== undefined ? it.e._sh : shapeOfEvent(Object.assign({}, it.e, {d: it.d}), it.e._shmi || mi);
+    it.sh = sh;
+    it.rigid = !sh;
+    it.val = sh ? (nomW(sh.g, mi.T, mi.P) * (sh.dot ? 1.5 : 1)) : rt(it.d * mi.p);
+    it.rank = sh ? MENS_RANK[sh.g] : -1;
+    it.altd = false;
+    cur.items.push(it);
+  }
+  /* 3. perfection, imperfection and alteration, zone by zone: the semibrevis level first (prolatio), then the breve (tempus) */
+  for (const z of zones) {
+    const mi = z.mi, tab = valueTable(mi.T, mi.P), S = tab[3][1];
+    const levels = [];
+    if (mi.P === 3) levels.push({g: 'S', rank: 3, perf: S, imp: 2 * 0.5, u: 0.5});
+    if (mi.T === 3) levels.push({g: 'B', rank: 2, perf: 3 * S, imp: 2 * S, u: S});
+    for (const lv of levels) {
+      const it = z.items;
+      const cand = x => !x.rigid && !x.sh.rest && x.sh.g === lv.g && !x.sh.dot && !x.sh.altd;
+      const lower = x => x.rank > lv.rank;
+      let prev = null, run = [];
+      const settle = next => {
+        if (!run.length) return;
+        const r = run.reduce((a, x) => a + x.val, 0), m = r / lv.u;
+        if (Math.abs(m - Math.round(m)) < 1e-6) {
+          const k = Math.round(m) % 3;
+          if (k === 1) {
+            if (prev && !prev.done) { prev.val = lv.imp; prev.done = true; }
+            else if (next && !next.done) { next.val = lv.imp; next.done = true; }
+          } else if (k === 2) {
+            const last = run[run.length - 1];
+            if (next && !last.rigid && !last.sh.rest && !last.sh.dot && Math.abs(last.val - lv.u) < 1e-6) { last.val = 2 * lv.u; last.altd = true; }
+          }
+        }
+        run = [];
+      };
+      for (const x of it) {
+        if (cand(x)) { x.val = lv.perf; x.done = false; settle(x); prev = x; }
+        else if (lower(x) && !x.rigid) run.push(x);
+        else { settle(null); prev = null; }
+      }
+      settle(null);
+    }
+  }
+  /* 4. written back; tied parts leave */
+  const out = [];
+  for (const z of zones) for (const it of z.items) {
+    const e = it.e;
+    if (!it.rigid) { e.d = rt(it.val / it.mi.p); e.altd = !!it.altd; }
+    else e.d = it.d;
+    e.kd = e.d;
+    delete e._sh; delete e._shmi;
+    if (it.parts.length > 1) { e.tieStart = e.tieEnd = e.tieMid = false; for (const j of it.parts.slice(1)) e.ferm = e.ferm || ev[j].ferm; }
+    out.push(it);
+  }
+  const keep = [];
+  for (const it of out) { for (const j of it.parts) map[j] = keep.length; keep.push(it.e); }
+  map[n] = keep.length;
+  const marks = [...v.mets, ...v.keys, ...v.clefs];
+  for (const m of marks) m.ei = m.ei >= 0 && m.ei < map.length ? map[m.ei] : m.ei;
+  v.events = keep;
+  return map;
+}
+/* the shapes of a voice, kept on its events for the moment before a sign changes (they are what the notes were written as) */
+function stashShapes(v){
+  for (const it of logicalNotes(v)) { const mi = mensInfo(metAt(v, it.e.t)); it.e._sh = shapeOfEvent(Object.assign({}, it.e, {d: it.d}), mi); }
+}
+function mensurateAll(){
+  if (!mensRulesOn()) return null;
+  return piece.voices.map(v => { const m = mensurate(v); retime(v); return m; });
 }
 
 /* Turn a voice's events into drawable symbols for the chosen notation */
@@ -651,7 +788,7 @@ function notate(piece, v, mode){
       }
       continue;
     }
-    const sh = (e.colH && shapeCol(w, mi.T, mi.P)) || shapeReal(w, mi.T, mi.P);
+    const sh = (e.altd && shapeAlt(w, mi.T, mi.P)) || (e.colH && shapeCol(w, mi.T, mi.P)) || shapeReal(w, mi.T, mi.P);
     if (!sh) { pushSplit(out, base, w, mi.T, mi.P, false, mi.p); continue; }
     const pos = rt(((rt(e.t - segStart) * mi.p) % (mi.T * (mi.P === 3 ? 1.5 : 1))));
     out.push(Object.assign(base, {g: sh.g, dot: !!sh.dot, col: !!sh.col, imp: !!sh.imp, w, pos}));
@@ -2823,7 +2960,7 @@ $('#metaComp').addEventListener('change', e => setComposer(e.target.value));
 /* a new score: four empty voices, ready to write in */
 function kernOf(title, voices){
   const vs = voices.slice().reverse();
-  const L = [`!!!OTL: ${title}`, '!!!BARS: auto', vs.map(() => '**kern').join('\t'), vs.map(v => `*I"${v[0]}`).join('\t'), vs.map(v => `*clef${v[1]}`).join('\t'),
+  const L = [`!!!OTL: ${title}`, '!!!BARS: auto', '!!!MENS: rules', vs.map(() => '**kern').join('\t'), vs.map(v => `*I"${v[0]}`).join('\t'), vs.map(v => `*clef${v[1]}`).join('\t'),
     vs.map(() => '*met(C)').join('\t'), vs.map(() => '==').join('\t'), vs.map(() => '*-').join('\t')];
   return L.join('\n') + '\n';
 }
@@ -3165,6 +3302,7 @@ function noteTok(e, tie){
   if (e.long) s += 'l';
   if (e.ferm) s += ';';
   if (e.colH && !e.rest) s += '@';
+  if (e.altd && !e.rest) s += '~';
   return s;
 }
 function retime(v){
@@ -3401,6 +3539,12 @@ function commit(mutate){
   const hc = H.commitStart ? H.commitStart() : null;
   mutate();
   if (H.commitEnd) H.commitEnd(hc);
+  /* a score with the mensural rules: every note is counted again from its shape (tied parts joined first) */
+  const maps = mensurateAll();
+  if (maps) {
+    if (ed.sel && maps[ed.sel.vi]) ed.sel = {vi: ed.sel.vi, ei: Math.min(maps[ed.sel.vi][Math.min(ed.sel.ei, maps[ed.sel.vi].length - 1)], Math.max(0, piece.voices[ed.sel.vi].events.length - 1))};
+    if (ed.ins && maps[ed.ins.vi]) ed.ins = Object.assign({}, ed.ins, {ei: maps[ed.ins.vi][Math.min(ed.ins.ei, maps[ed.ins.vi].length - 1)]});
+  }
   const text = writeKern(piece);
   /* writing cuts a note that crosses a barline into two tied notes: what is selected, and the caret, move on by those */
   const cut = (vi, ei) => {
@@ -3472,9 +3616,10 @@ function insertEvent(vi, at, step, isRest, pad = 0, alt){
   }
   const alt0 = isRest ? null : altU === undefined ? imp : altU === 0 && !imp ? null : altU;
   const edAcc = armedAcc && !!ed.accEd && alt0 !== null;
-  const dotted = !isRest && !!ed.dotArm;
+  let dotted = !isRest && !!ed.dotArm;
+  if (dotted && mensRulesOn() && perfectShape(v, t, ed.val)) { dotted = false; toast('In perfect time a dot divides, it does not add: not written yet, so this note has no dot.'); }
   if (!isRest) { ed.accArm = null; ed.accEd = false; ed.dotArm = false; }
-  const d = rt(val / propAt(v, t) * (ed.colArm ? 2 / 3 : 1) * (dotted ? 1.5 : 1));
+  const d = mensRulesOn() ? rt(nomD(v, t, ed.val) * (ed.colArm ? 2 / 3 : 1) * (dotted ? 1.5 : 1)) : rt(val / propAt(v, t) * (ed.colArm ? 2 / 3 : 1) * (dotted ? 1.5 : 1));
   commit(() => {
     const e = {d, rest: !!isRest, step, alt: alt0, ed: edAcc, syl: [], t};
     /* past the end: a rest up to the place clicked */
@@ -3574,7 +3719,7 @@ const OPS = {
     const val = VALS.find(x => x[0] === g)[1];
     commit(() => {
       const e = v.events[src[0]], was = src.reduce((a, i) => a + v.events[i].d, 0);
-      e.d = rt(val / propAt(v, e.t)); e.tieStart = e.tieEnd = e.tieMid = false; e.long = g === 'L' && e.long;
+      e.d = mensRulesOn() ? nomD(v, e.t, g) : rt(val / propAt(v, e.t)); e.altd = false; e.tieStart = e.tieEnd = e.tieMid = false; e.long = g === 'L' && e.long;
       dropEvents(v, src.slice(1));
       if (ed.ovr) ovrResize(v, src[0], was);
     });
@@ -4016,6 +4161,8 @@ function setMens(sign, justThis){
   const targets = only ? [vi] : piece.voices.map((v, i) => i).filter(i => i === vi || piece.voices[i].mets.some(m => eq(m.t, t)) || piece.voices[i].events.some(e => eq(e.t, t)));
   if (targets.some(i => !writable(piece.voices[i])) && only) { refuse(); return; }
   commit(() => {
+    /* with the mensural rules the notes are shapes: they keep theirs under the new sign and are counted again */
+    if (mensRulesOn()) for (const i of targets) stashShapes(piece.voices[i]);
     for (const i of targets) {
       const v = piece.voices[i];
       if (!writable(v)) continue;
@@ -4422,7 +4569,15 @@ function accTarget(){
    a rest has no dot. Coloration is its own button, so coloured shapes are not on the ladder. */
 function valueLadder(v, t, rest){
   const out = new Set();
-  if (notaNow() === 'fake') {
+  if (mensRulesOn()) {
+    /* the shapes (how long each sounds is counted by the rules): a dot only where the level is imperfect */
+    const mi = mensInfo(metAt(v, t));
+    for (const [g, w] of valueTable(mi.T, mi.P)) {
+      out.add(rt(w / mi.p));
+      const perfectLevel = (g === 'B' && mi.T === 3) || (g === 'S' && mi.P === 3);
+      if (!rest && !perfectLevel) out.add(rt(w * 1.5 / mi.p));
+    }
+  } else if (notaNow() === 'fake') {
     const mi = mensInfo(metAt(v, t));
     for (const [, val] of VALS) { out.add(rt(val / mi.p)); if (!rest) out.add(rt(val * 1.5 / mi.p)); }
   } else {
@@ -4442,13 +4597,15 @@ function stretch(dir){
   const vi = ed.sel ? ed.sel.vi : ed.ins.vi, v = piece.voices[vi];
   if (!v || !writable(v)) { refuse(); return; }
   const src = s.src, first = src[0];
-  const total = rt(src.reduce((a, i) => a + v.events[i].d, 0));
+  let total = rt(src.reduce((a, i) => a + v.events[i].d, 0));
+  /* under the rules the note is its shape (an imperfect breve is a breve): the steps start from the shape's own length */
+  if (mensRulesOn()) { const mi = mensInfo(metAt(v, v.events[first].t)), sh = shapeOfEvent(Object.assign({}, v.events[first], {d: total}), mi); if (sh) total = rt(nomW(sh.g, mi.T, mi.P) * (sh.dot ? 1.5 : 1) / mi.p); }
   const ladder = valueLadder(v, v.events[first].t, s.rest);
   const nx = dir > 0 ? ladder.find(d => d > total + EPS) : ladder.slice().reverse().find(d => d < total - EPS);
   if (nx === undefined) { toast(dir > 0 ? 'That is the longest value there is.' : 'That is the shortest value there is.'); return; }
   commit(() => {
     const e = v.events[first];
-    e.d = nx; e.tieStart = e.tieEnd = e.tieMid = false; e.long = false; e.colH = false;
+    e.d = nx; e.tieStart = e.tieEnd = e.tieMid = false; e.long = false; e.colH = false; e.altd = false;
     dropEvents(v, src.slice(1));
     if (ed.ovr) ovrResize(v, first, total);
   });
@@ -4869,10 +5026,13 @@ const CBA = {
     const t = accTarget(), v = curVoice();
     if (!t) { if (ed.on) { ed.dotArm = !ed.dotArm; syncEdit(); } return; }   /* the next note written is dotted */
     if (t.rest || !v) return;
+    if (mensRulesOn() && !t.dot && perfectShape(v, t.t, t.g)) { toast('In perfect time a dot divides, it does not add: not written yet.'); return; }
     commit(() => {
       const e = v.events[t.src[0]];
       const total = t.src.reduce((a, i) => a + v.events[i].d, 0);
-      e.d = rt(t.dot ? total / 1.5 : total * 1.5); e.tieStart = e.tieEnd = e.tieMid = false;
+      if (mensRulesOn()) { const mi = mensInfo(metAt(v, e.t)), nm = nomW(t.g, mi.T, mi.P) / mi.p; e.d = rt(t.dot ? nm : nm * 1.5); }
+      else e.d = rt(t.dot ? total / 1.5 : total * 1.5);
+      e.altd = false; e.tieStart = e.tieEnd = e.tieMid = false;
       dropEvents(v, t.src.slice(1));
       if (ed.ovr) ovrResize(v, t.src[0], total);
     });
