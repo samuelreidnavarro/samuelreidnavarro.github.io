@@ -486,6 +486,27 @@ function audition(midi, len, reg, gain){
   audio.aud = voice(ctx, audDest(ctx, gain), f, now + 0.01, now + d, reg);
   audio.audInfo = {f, t1: now + d};
 }
+/* a note held down on a keyboard (the computer's, the one on the screen, or a MIDI keyboard): it sounds until unhold();
+   also while the music plays, to play along */
+function hold(midi, reg, gain){
+  const ctx = ensureAudio();
+  if (!ctx) return null;
+  const now = ctx.currentTime;
+  const v = voice(ctx, audDest(ctx, gain), freq(midi), now + 0.005, now + 600, reg);
+  (audio.held || (audio.held = new Set())).add(v);
+  return v;
+}
+function unhold(v){
+  if (!v || !audio.ctx) return;
+  const now = audio.ctx.currentTime, r = Math.max(0.03, (S.rel || 10) / 1000);
+  try {
+    v.g.gain.cancelScheduledValues(now);
+    v.g.gain.setValueAtTime(v.g.gain.value, now);
+    v.g.gain.setTargetAtTime(0, now, r / 3);
+    v.osc.stop(now + r + 0.1);
+  } catch (e) {}
+  if (audio.held) audio.held.delete(v);
+}
 /* A woodblock-like tick for the metronome */
 function metroClick(ctx, dest, t){
   const o = ctx.createOscillator(), g = ctx.createGain();
@@ -506,7 +527,7 @@ function soundGroups(){
     ['Synthesised organ', Object.entries(REGISTERS).filter(([k]) => !isSampled(k)).map(([k, v]) => [k, v.name])]];
 }
 const soundName = k => SAMPLED[k] ? SAMPLED[k].name : REGISTERS[k] ? REGISTERS[k].name : '';
-Object.assign(Organ, {soundGroups, soundName, Sampler, voice, isSampled, TEMPER, tempDev, syncTemper, ensureAudio, roomLevel, masterLevel, REGISTERS, FEET, padDraw, organAmps, Synth, silence, TUNE, buildTune, syncTune, testTone, audition, metroClick, freq});
+Object.assign(Organ, {soundGroups, soundName, Sampler, voice, isSampled, TEMPER, tempDev, syncTemper, ensureAudio, roomLevel, masterLevel, REGISTERS, FEET, padDraw, organAmps, Synth, silence, TUNE, buildTune, syncTune, testTone, audition, hold, unhold, metroClick, freq});
 
 /* ------------------------------------------------------------------ */
 /* Mensural reading (the same in both apps)                            */

@@ -3338,14 +3338,16 @@ const refuse = () => { if (H.refuse) H.refuse(); };
    Overwrite: the new note takes the place of what stood there for its length; a note it covers only partly keeps
    what is left as a rest, so the other voices stay where they are. */
 function shiftMarks(v, from, by){ for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > from || (by > 0 && m.ei === from && from > 0)) m.ei += by; }
-function insertEvent(vi, at, step, isRest, pad = 0){
+function insertEvent(vi, at, step, isRest, pad = 0, alt){
   const v = piece.voices[vi]; if (!v) return;
   if (!writable(v)) { refuse(); return; }
   const val = VALS.find(x => x[0] === ed.val)[1];
   let off = 0;
   if (!ed.sel && ed.ins && ed.ins.vi === vi && ed.ins.ei === at && at < v.events.length && ed.ins.off > EPS && ed.ins.off < v.events[at].d - EPS) off = ed.ins.off;
   const t = at < v.events.length ? rt(v.events[at].t + off) : rt(v.end + (pad > EPS ? pad : 0));
-  const alt0 = isRest ? null : implied(v, step, t);
+  /* alt: a sharp, flat or natural of its own (the keyboard's black and white keys); otherwise the signature's */
+  const imp = isRest ? null : implied(v, step, t);
+  const alt0 = isRest ? null : alt === undefined ? imp : alt === 0 && !imp ? null : alt;
   const d = rt(val / propAt(v, t) * (ed.colArm ? 2 / 3 : 1));
   commit(() => {
     const e = {d, rest: !!isRest, step, alt: alt0, ed: false, syl: [], t};
