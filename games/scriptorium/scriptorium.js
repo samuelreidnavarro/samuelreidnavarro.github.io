@@ -5271,10 +5271,13 @@ viewerEl.addEventListener('scroll', fsWake, {passive: true});
 $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
 
 /* the controls rest: after 3 s without the mouse moving, the top collapses into the Edit button and the arrow icon, and the
-   bottom into Play and the volume; moving the mouse brings them back. */
+   bottom into Play and the volume; moving the mouse brings them back.
+   On a touch screen nothing rests by itself: the controls stay until a tap on a blank place of the score hides them (and another tap, or a
+   touch of any control, brings them back); a mouse moving over the page makes it behave as above again. */
 {
   const root = document.documentElement;
-  let timer = 0, topOn = true, botOn = true;
+  let timer = 0, topOn = true, botOn = true, wasOn = true;
+  let touchMode = !!(window.matchMedia && matchMedia('(hover:none)').matches);
   const wide = () => window.innerWidth > 700;
   const hold = () => {
     if (!$('#handPop').hidden || document.querySelector('.pop.open, .pop:hover') || document.querySelector('.pop:has(:focus-visible)') || !libEl.hidden || !$('#tpSide').hidden) return true;
@@ -5287,19 +5290,29 @@ $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
     root.classList.toggle('ctl-top-idle', !t); root.classList.toggle('ctl-bot-idle', !b);
   };
   const rest = () => {
-    if (!wide() || root.classList.contains('focus')) return;
+    if (!wide() || touchMode || root.classList.contains('focus')) return;
     if (hold()) { timer = setTimeout(rest, 1000); return; }
     apply(false, false);
   };
-  const wake = () => {
+  const wake = e => {
     clearTimeout(timer);
-    if (!wide()) { apply(true, true); return; }
+    const pt = e && e.pointerType;
+    if (pt === 'mouse' || pt === 'pen' || (e && e.type === 'wheel')) touchMode = false;
+    else if (pt === 'touch' || (e && e.type === 'touchstart')) touchMode = true;
     apply(true, true);
-    timer = setTimeout(rest, 3000);
+    if (wide() && !touchMode) timer = setTimeout(rest, 3000);
   };
   ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(t => document.addEventListener(t, wake, {passive: true}));
   window.addEventListener('resize', () => wake());
-  timer = setTimeout(rest, 3000);
+  /* a tap on a blank place of the score: the controls go (and come back with the next tap) */
+  const NOT_BLANK = 'button, a, input, select, textarea, label, .pop, .library, .menu, #tpSide, .tools, .transport, .pagenav, .clefhit, .keyhit, .menshit, .mensadd, .markbar, #handBox, .handpop, #clefMenu, #keyMenu, #mensMenu, g[class^="n"]';
+  const blank = t => !!(t && t.closest && t.closest('.viewwrap') && !t.closest(NOT_BLANK) && !(ed.on && t.closest('rect.stafhit')));
+  document.addEventListener('pointerdown', () => { wasOn = topOn || botOn; }, true);
+  document.addEventListener('click', e => {
+    if (!touchMode || !wide() || !blank(e.target)) return;
+    if (wasOn) apply(false, false); else apply(true, true);
+  });
+  if (!touchMode) timer = setTimeout(rest, 3000);
 }
 
 /* the playback row stays at the bottom of the browser window. Alone it is simply fixed there; in the site's frame (which is as
