@@ -3798,6 +3798,20 @@ function staffTarget(rect, e){
   const step = CLEFS[cl || v.clef].bottom + pos;
   return {vi, v, top, pos, step, mode, k, x: p.x, end: +rect.dataset.end, g: rect.parentNode};
 }
+/* The staff a note stands on, and whether the pointer is at another pitch than the note's own: there (with a mouse) a click writes a
+   note at that pitch, next to this one, instead of selecting it (a second above or below it, say); on the note's own pitch it selects. */
+function staffOfNote(n){
+  const m = /^n(\d+)-(\d+)/.exec(n.g.getAttribute('class') || ''); if (!m) return null;
+  const k = +m[2]; let r = null;
+  for (const r2 of n.g.parentNode.querySelectorAll('rect.stafhit[data-v="' + n.vi + '"]')) if (r2.dataset.k0 !== '' && +r2.dataset.k0 <= k && k <= +r2.dataset.k1) r = r2;
+  return r;
+}
+function offPitch(n, e){
+  if (!n || n.s.rest || n.s.pos === null || n.s.pos === undefined || !window.matchMedia('(hover:hover) and (pointer:fine)').matches) return null;
+  const rect = staffOfNote(n); if (!rect) return null;
+  const tg = staffTarget(rect, e);
+  return tg && tg.pos !== n.s.pos ? {rect, tg} : null;
+}
 /* the writing area under the pointer: the staff itself, or, while editing, a rest on it (a note written there takes the rest's place) */
 function stafFor(el){
   if (!el || !el.closest || !piece) return null;
@@ -3857,10 +3871,11 @@ function clearGhost(){ if (ghostEl) { ghostEl.remove(); ghostEl = null; } }
 pagesEl.addEventListener('pointermove', e => {
   if (!ed.on || e.pointerType !== 'mouse' || !piece) { clearGhost(); return; }
   const on = noteAt(e);
-  if (on && !on.s.rest) { clearGhost(); return; }   /* over a note: it is clicked, dragged or right-clicked */
-  const rect = stafFor(e.target);
+  const off = on && !on.s.rest ? offPitch(on, e) : null;
+  if (on && !on.s.rest && !off) { clearGhost(); return; }   /* over a note, at its own pitch: it is clicked, dragged or right-clicked */
+  const rect = off ? off.rect : stafFor(e.target);
   if (!rect) { clearGhost(); return; }
-  const tg = staffTarget(rect, e); if (!tg) { clearGhost(); return; }
+  const tg = off ? off.tg : staffTarget(rect, e); if (!tg) { clearGhost(); return; }
   const tp = timePlace(rect, tg); if (tp) tg.x = tp.x;
   const g = ed.val, w = ed.inRest ? 0.42 : gw(g), x = tg.x - w / 2, y = tg.top + 4 - tg.pos * 0.5;
   const flip = (STEMMED[g] && tg.pos >= 7) || (TAILED[g] && tg.pos <= -1);
@@ -4280,7 +4295,8 @@ pagesEl.addEventListener('click', e => {
     if (n && (e.ctrlKey || e.metaKey) && (ed.sel || ed.range || ed.picks)) { e.stopImmediatePropagation(); togglePick(n.vi, n.s); return; }
     /* Alt-click: what was copied is pasted there */
     if (n && e.altKey) { e.stopImmediatePropagation(); ed.range = null; ed.picks = null; ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1}; rangePaste(); return; }
-    if (n && (!n.s.rest || e.shiftKey)) {
+    const off = n && !e.shiftKey ? offPitch(n, e) : null;
+    if (n && (!n.s.rest || e.shiftKey) && !off) {
       e.stopImmediatePropagation();
       ed.range = null; ed.picks = null;
       if (n.s.rest) n.s = pickRest(n.vi, n.s);
@@ -4301,10 +4317,11 @@ pagesEl.addEventListener('click', e => {
       }
     }
   }
-  const rect = ed.on && !e.shiftKey ? stafFor(e.target) : null;
+  const offN = ed.on && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey ? offPitch(noteAt(e), e) : null;
+  const rect = offN ? offN.rect : ed.on && !e.shiftKey ? stafFor(e.target) : null;
   if (rect) {
     e.stopImmediatePropagation();
-    const tg = staffTarget(rect, e); if (!tg) return;
+    const tg = offN ? offN.tg : staffTarget(rect, e); if (!tg) return;
     clearGhost(); ed.range = null; ed.picks = null;
     const tp = timePlace(rect, tg);
     if (tp) {
