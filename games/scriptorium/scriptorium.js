@@ -651,6 +651,13 @@ function notate(piece, v, mode){
     const pos = rt(((rt(e.t - segStart) * mi.p) % (mi.T * (mi.P === 3 ? 1.5 : 1))));
     out.push(Object.assign(base, {g: sh.g, dot: !!sh.dot, col: !!sh.col, imp: !!sh.imp, w, pos}));
   }
+  /* each rest drawn is an object of its own: it belongs to the events that lie under it (three rests in a row are drawn as three,
+     or as a long and a breve, and each can be selected, resized or deleted alone) */
+  for (const q of out) {
+    if (!q.rest || !q.src || !q.src.length) continue;
+    const own = q.src.filter(k => ev[k] && ev[k].t < q.t + q.d - EPS && ev[k].t + ev[k].d > q.t + EPS);
+    if (own.length) q.src = own;
+  }
   /* fake mensural: number the triplets once per group of three units */
   if (mode === 'fake') {
     for (let i = 0; i < out.length; i++) {
@@ -3318,6 +3325,33 @@ if (ed.nav === 'follow') ed.nav = 'S';
 try { const b = localStorage.getItem(APP.store + ':edbar'); ed.bar = b === null ? undefined : b === '1'; } catch (e) { ed.bar = undefined; }
 const barOpen = () => ed.bar === undefined ? ed.on : ed.bar;
 const VALS = [['Mx', 8], ['L', 4], ['B', 2], ['S', 1], ['M', 0.5], ['Sm', 0.25], ['F', 0.125]];
+/* A rest drawn on its own may be only part of an event (a rest of three breves is drawn as a long and a breve): the event is cut
+   where the drawing is cut, so that rest can be selected, resized or deleted alone. Nothing is heard or seen to change.
+   Returns true when events were cut. */
+function isolateRest(v, s){
+  if (!v || !s || !s.rest) return false;
+  let cut = false;
+  for (const at of [s.t, rt(s.t + s.d)]) {
+    const i = v.events.findIndex(e => e.rest && e.t < at - EPS && e.t + e.d > at + EPS);
+    if (i < 0) continue;
+    const e = v.events[i], d1 = rt(at - e.t), d2 = rt(e.d - d1);
+    const b = Object.assign({}, e, {t: at, d: d2, kd: d2, syl: []});
+    e.d = d1; e.kd = d1; e.ferm = false;
+    v.events.splice(i + 1, 0, b);
+    for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > i) m.ei++;
+    cut = true;
+  }
+  return cut;
+}
+/* select a rest drawn on its own (cutting the events under it first, if need be) */
+function pickRest(vi, s){
+  const v = piece.voices[vi];
+  if (isolateRest(v, s)) {
+    render();
+    s = v.syms.find(q => q.rest && eq(q.t, s.t) && eq(q.d, s.d)) || v.syms.find(q => q.rest && eq(q.t, s.t)) || s;
+  }
+  return s;
+}
 function selSym(){
   if (!ed.sel || !piece) return null;
   const v = piece.voices[ed.sel.vi];
@@ -3572,7 +3606,7 @@ const OPS = {
     if (!ed.sel) return;
     const v = curVoice(), s = selSym();
     const k = v.syms.indexOf(s) + dir;
-    if (k >= 0 && k < v.syms.length) ed.sel = {vi: ed.sel.vi, ei: v.syms[k].src[0]};
+    if (k >= 0 && k < v.syms.length) { const t = v.syms[k].rest ? pickRest(ed.sel.vi, v.syms[k]) : v.syms[k]; ed.sel = {vi: ed.sel.vi, ei: t.src[0]}; }
     showSel(true);
   },
   xform(kind){
@@ -4231,6 +4265,7 @@ pagesEl.addEventListener('click', e => {
     if (n && (!n.s.rest || e.shiftKey)) {
       e.stopImmediatePropagation();
       ed.range = null; ed.picks = null;
+      if (n.s.rest) n.s = pickRest(n.vi, n.s);
       ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1};
       if (!n.s.rest) hear(n.s.step, n.s.alt);
       showSel(); return;
