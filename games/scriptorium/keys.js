@@ -128,7 +128,16 @@
   }
   /* in note input a key writes its note at the caret (as typing its letter does), in the value chosen */
   function write(m){
-    if (!ed.on || !piece || !CBA.guard()) return;
+    if (!piece || !CBA.guard()) return;
+    /* outside note input a key changes the pitch of the note that is selected (nothing else is written) */
+    if (!ed.on) {
+      const s = selSym(), v = curVoice();
+      if (!s || s.rest || !v || ed.range || ed.picks) return;
+      const sp = spell(m, v, v.events[s.src[0]].t);
+      if (sp.step < STEP_MIN || sp.step > STEP_MAX) { toast('That note is outside the range that can be written.'); return; }
+      commit(() => { for (const i of s.src) CBA.setPitch({e: v.events[i], v}, sp.step, sp.alt); });
+      return;
+    }
     const v = curVoice(); if (!v) return;
     const idx = insertionIndex(v), t = v.events[idx] ? v.events[idx].t : v.end;
     const sp = spell(m, v, t);

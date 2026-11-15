@@ -3361,7 +3361,7 @@ if (ed.nav === 'follow') ed.nav = 'M';
 /* the editing tools row is shown or hidden by the arrow beside the pen, apart from note input itself; until the arrow
    has been used it comes and goes with note input */
 try { const b = localStorage.getItem(APP.store + ':edbar'); ed.bar = b === null ? undefined : b === '1'; } catch (e) { ed.bar = undefined; }
-const barOpen = () => ed.bar === undefined ? ed.on : ed.bar;
+const barOpen = () => ed.bar === undefined ? !!(ed.on || ed.sel || ed.range || ed.picks) : ed.bar;
 const VALS = [['Mx', 8], ['L', 4], ['B', 2], ['S', 1], ['M', 0.5], ['Sm', 0.25], ['F', 0.125]];
 /* A rest drawn on its own may be only part of an event (a rest of three breves is drawn as a long and a breve): the event is cut
    where the drawing is cut, so that rest can be selected, resized or deleted alone. Nothing is heard or seen to change.
@@ -4712,9 +4712,9 @@ document.addEventListener('keydown', e => {
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
   const k = e.key.toLowerCase();
   if (k === 'c' && (ed.range || ed.picks)) { if (window.getSelection && String(window.getSelection())) return; e.preventDefault(); rangeCopy(); }
-  else if (k === 'x' && (ed.range || ed.picks) && ed.on) { e.preventDefault(); if (rangeCopy()) rangeClear(true); }
-  else if (k === 'v' && ed.on) { e.preventDefault(); rangePaste(); }
-  else if (k === 'a' && ed.on) {
+  else if (k === 'x' && (ed.range || ed.picks)) { e.preventDefault(); if (rangeCopy()) rangeClear(true); }
+  else if (k === 'v' && (ed.on || ed.sel || ed.range || ed.picks)) { e.preventDefault(); rangePaste(); }
+  else if (k === 'a') {
     /* select all: every voice, start to end */
     e.preventDefault();
     const end = Math.max(...piece.voices.map(v => v.end)); if (!(end > 0)) return;
@@ -5044,7 +5044,6 @@ function noteAt(e){
   return s && s.src ? {vi: +m[1], s, g} : null;
 }
 pagesEl.addEventListener('contextmenu', e => {
-  if (!ed.on) return;
   const n = noteAt(e); if (!n) return;
   e.preventDefault(); clearGhost();
   /* on a Mac, Ctrl-click arrives as a right-click: it adds to the selection, as Ctrl/Cmd-click does */
@@ -5054,7 +5053,7 @@ pagesEl.addEventListener('contextmenu', e => {
 });
 let noteDrag = null;
 pagesEl.addEventListener('pointerdown', e => {
-  if (!ed.on || e.button !== 0 || e.pointerType !== 'mouse' || e.shiftKey) return;
+  if (e.button !== 0 || e.pointerType !== 'mouse' || e.shiftKey) return;
   const n = noteAt(e); if (!n || n.s.rest) return;
   if (!writable(piece.voices[n.vi])) return;
   const m = n.g.getScreenCTM(); if (!m) return;

@@ -331,6 +331,12 @@ function wire(A){
       if (k === '.') { e.preventDefault(); A.toggleDot(); return; }
       if (/^[1-7]$/.test(k)) { e.preventDefault(); A.setDur(DKEYS[Number(k) - 1]); return; }
     }
+    /* what can be changed on a selected note is changed in any mode: rest, coloration, ligature */
+    if (!edit && sel) {
+      if (k === 'r' || k === 'R') { const S = A.state(); if (S.selected) { e.preventDefault(); A.setRestMode(!S.rest); } return; }
+      if ((k === 'k' || k === 'K') && A.toggleCol) { e.preventDefault(); A.toggleCol(); return; }
+      if ((k === 'l' || k === 'L') && A.toggleLig) { e.preventDefault(); A.toggleLig(); return; }
+    }
     if (!edit) return;
     if (/^[a-gA-G]$/.test(k)) { e.preventDefault(); A.typeNote(k.toUpperCase()); return; }
     if (k === 'r' || k === 'R') { e.preventDefault(); A.typeRest(); return; }

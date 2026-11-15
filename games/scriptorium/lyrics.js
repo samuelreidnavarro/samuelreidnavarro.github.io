@@ -230,8 +230,7 @@
     const vs = new Set(it.map(x => x.v));
     commit(() => { for (const {e} of it) { e.syl = e.syl.slice(); e.syl[verse] = undefined; } for (const v of vs) relink(v, verse); trimVerses(); });
   });
-  /* lyrics are edited in Edit: a click on a syllable (or L) outside it turns Edit on */
-  function editOn(){ if (ed.on) return; ed.on = true; clearGhost(); syncEdit(); postHeight(); }
+  /* lyrics are edited in any mode: a click on a syllable, or L on a selected note, opens its field */
   /* a click on any syllable opens it. The staff below reaches up over the line of words with its writing area,
      so look under the pointer (and before the engine's own click handlers, which would write a note there) */
   function lyricAt(e){
@@ -259,7 +258,7 @@
   document.addEventListener('click', e => {
     const h = lyrHit(e); if (!h) return;
     e.stopImmediatePropagation(); e.preventDefault();
-    editOn(); open(h.vi, h.ei);
+    open(h.vi, h.ei);
   }, true);
   /* L with one note selected (Shift+L also with only the caret); with several notes selected L stays Ligature */
   document.addEventListener('keydown', e => {
@@ -268,8 +267,7 @@
     if ((e.key !== 'l' && e.key !== 'L') || e.ctrlKey || e.metaKey || e.altKey || ed.range || ed.picks) return;
     if (!ed.sel && !(e.shiftKey && ed.on)) return;
     e.preventDefault(); e.stopImmediatePropagation();
-    const p = startAt(); if (p) { editOn(); open(p.vi, p.ei); }
+    const p = startAt(); if (p) open(p.vi, p.ei);
   }, true);
-  /* leaving Edit closes the field (and a click elsewhere, opening another score, blurs it first) */
-  $('#editBtn').addEventListener('click', () => { if (!ed.on && L.inp) close(true); });
+
 }]);
