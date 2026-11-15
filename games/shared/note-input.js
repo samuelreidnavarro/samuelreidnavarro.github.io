@@ -302,7 +302,8 @@ function wire(A){
     if (A.key && A.key(e)) { e.preventDefault(); return; }
     if (edit && mod && (k === 'z' || k === 'Z')) { e.preventDefault(); e.shiftKey ? A.redo() : A.undo(); return; }
     if (edit && mod && (k === 'y' || k === 'Y')) { e.preventDefault(); A.redo(); return; }
-    if (edit && (k === 'ArrowUp' || k === 'ArrowDown')) {
+    /* a selected note (or range) is moved up and down by the arrows in Edit mode, and outside it too */
+    if ((edit || (A.canDelete && A.canDelete())) && (k === 'ArrowUp' || k === 'ArrowDown')) {
       e.preventDefault();
       A.stepPitch((k === 'ArrowUp' ? 1 : -1) * (e.shiftKey || mod ? 7 : 1));
       return;

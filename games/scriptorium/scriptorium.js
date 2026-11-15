@@ -3323,9 +3323,9 @@ const ed = {on: false, sel: null, ins: null, inRest: false, undo: [], redo: [], 
 const EKEY = k => APP.store + ':edit:' + k;
 /* Insert or Overwrite, kept per app */
 try { ed.ovr = localStorage.getItem(APP.store + ':ovr') === '1'; } catch (e) { ed.ovr = false; }
-try { ed.nav = localStorage.getItem(APP.store + ':nav') || 'S'; } catch (e) { ed.nav = 'S'; }
+try { ed.nav = localStorage.getItem(APP.store + ':nav') || 'M'; } catch (e) { ed.nav = 'M'; }
 /* the Grid is its own value (Samuel 2026-11-15): the number keys and the note value no longer change it; 'Same as note value' is gone */
-if (ed.nav === 'follow') ed.nav = 'S';
+if (ed.nav === 'follow') ed.nav = 'M';
 /* the editing tools row is shown or hidden by the arrow beside the pen, apart from Edit mode itself; until the arrow
    has been used it comes and goes with Edit mode */
 try { const b = localStorage.getItem(APP.store + ':edbar'); ed.bar = b === null ? undefined : b === '1'; } catch (e) { ed.bar = undefined; }
@@ -4666,7 +4666,7 @@ const CBA = {
     toast(ed.ovr ? 'Overwrite: a new note takes the place of what stands there, so the other voices stay in step.' : 'Insert: a new note pushes the music after it along.');
   },
   moveCaret: dir => moveCaret(dir),
-  nav: () => ed.nav || 'S',
+  nav: () => ed.nav || 'M',
   setNav(k){ ed.nav = NAV_KEYS.includes(k) ? k : 'S'; try { localStorage.setItem(APP.store + ':nav', ed.nav); } catch (e) {} syncEdit(); toast('Grid: ' + ({Mx:'maxima',L:'longa',B:'brevis',S:'semibrevis',M:'minima',Sm:'semiminima',F:'fusa'})[ed.nav] + '. The arrow keys move the caret by this.'); },
   /* coloration: the selected note turns black (two thirds of its value) or white again; with nothing selected,
      the notes entered from now on are coloured, until it is pressed again */
