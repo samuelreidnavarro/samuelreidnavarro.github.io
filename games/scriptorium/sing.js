@@ -10,6 +10,7 @@
   if (st.micNotate === undefined) st.micNotate = true;
   if (st.micPhones === undefined) st.micPhones = false;
   if (st.micDia === undefined) st.micDia = false;
+  if (st.micShow === undefined) st.micShow = true;
   if (st.micLag === undefined) st.micLag = 0;
   if (st.micCal === undefined) st.micCal = null;
 
@@ -23,6 +24,8 @@
   function singIdx(){
     if (!piece) return -1;
     const ok = (v, k) => v.abbr !== 'sung' && vis(k).on;
+    /* the staff selected (Samuel 2026-11-15: the pitch shows on the selected staff) */
+    { const v = anyVoice(); if (v && ok(v, piece.voices.indexOf(v))) return piece.voices.indexOf(v); }
     let i = piece.voices.findIndex((v, k) => ok(v, k) && vis(k).play !== true);
     if (i < 0) { const v = anyVoice(); if (v && v.abbr !== 'sung') i = piece.voices.indexOf(v); }
     if (i < 0) i = piece.voices.findIndex(ok);
@@ -274,7 +277,7 @@
   /* the dot stands on the column of the note of the sung voice that sounds now (or the one selected, or its first note) */
   function drawDot(){
     const vi = singIdx(), v = vi >= 0 ? piece.voices[vi] : null;
-    if (!v || !v.syms || !v.syms.length || mic.snap === null || mic.shown === null) { if (mic.drawn) clearDot(); return; }
+    if (!st.micShow || !v || !v.syms || !v.syms.length || mic.snap === null || mic.shown === null) { if (mic.drawn) clearDot(); return; }
     const t = nowT();
     let k = -1;
     if (t !== null) k = v.syms.findIndex(s => s.t <= t + EPS && t < s.t + s.d - EPS);
@@ -309,18 +312,19 @@
   /* ---------------- writing out the singing (experimental) ---------------- */
   /* While the music plays with Sing on, each semiminima gets the note sung for most of it, or a rest; equal neighbours
      join into longer notes, and the result is written as a voice of its own, "Sung", under the music. */
-  const take = {on: false, frames: [], sig: '', from: 0, done: 0, before: null, last: 0, timer: 0};
-  const takeShown = () => take.on && mic.on && st.micNotate;
+  const take = {on: false, armed: false, frames: [], keys: [], open: new Map(), sig: '', from: 0, done: 0, before: null, last: 0, timer: 0};
+  const takeShown = () => take.on && st.micNotate;
+  const keyed = () => take.keys.length > 0 || take.open.size > 0;
   /* a take cut short (the microphone turned off while the music plays): what it already wrote stays, and Undo takes it away */
   function takeKeep(){
     if (!take.on || !take.sig || !take.before || !piece) return;
     const text = writeKern(piece);
     if (text !== take.before) { ed.undo.push(take.before); ed.redo = []; piece.text = text; syncEdit(); }
   }
-  function takeClear(){ take.on = false; take.frames = []; take.sig = ''; take.before = null; take.self = undefined; take.vi = undefined; take.ref = null; clearTimeout(take.timer); }
+  function takeClear(){ take.on = false; take.frames = []; take.keys = []; take.open = new Map(); take.wasKeyed = false; take.sig = ''; take.before = null; take.self = undefined; take.vi = undefined; take.ref = null; clearTimeout(take.timer); }
   function takeStart(fromU){
     takeClear();
-    if (!mic.on || !st.micNotate || !piece) return;
+    if (!take.armed || !st.micNotate || !piece) return;
     take.on = true; take.from = fromU; take.done = Math.floor(fromU * 2 + 1e-6); take.stopU = undefined;
     take.before = piece.text || writeKern(piece);
   }
@@ -333,7 +337,7 @@
   }
   function takeRecord(now, m, q, rms){
     const T = audio.timeline;
-    if (!takeShown() || !T) { mic.onset = false; return; }
+    if (!takeShown() || !T || keyed()) { mic.onset = false; return; }
     const c = T.spm / 2, u = (now - takeLag(audio.ctx) - T.origin) / c;
     if (u >= take.from) {
       let v = m !== null && q < 0.3 && rms >= 0.12 * mic.peak ? m : null;
@@ -347,7 +351,9 @@
     mic.onset = false;
   }
   function takeFinish(stopU, c){
-    if (!takeShown() || !take.frames.length) { take.on = false; return; }
+    for (const [m, u0] of take.open) take.keys.push({u0, u1: stopU, m});
+    take.open = new Map();
+    if (!takeShown() || (!take.frames.length && !take.keys.length)) { take.on = false; return; }
     take.stopU = stopU;
     takeQuantize(true, c);
     take.on = false;
@@ -412,9 +418,20 @@
   }
   /* the sung notes as {a, b, m}: beginning and end in semiminimae from the start of the piece, midi pitch */
   function takeNotes(last, c){
-    const segs = takeSegments(take.frames, c);
-    const est = st.micCal !== null ? null : takeDelay(segs, c), d = st.micCal !== null ? 0 : est !== null ? est : st.micLag / c;
-    if (last && est !== null) { st.micLag = Math.round((st.micLag * 0.4 + est * c * 0.6) * 1000) / 1000; save(); }
+    let segs, d, lastU;
+    if (keyed()) {
+      /* played on a keyboard: the keys as pressed, a little earlier by the time the organ takes to be heard */
+      const T = audio.timeline, nowU = T && audio.ctx ? (audio.ctx.currentTime - T.origin) / c : 0;
+      segs = take.keys.concat([...take.open].map(([m, u0]) => ({u0, u1: nowU, m}))).filter(g => g.u1 > g.u0).sort((a, b) => a.u0 - b.u0);
+      d = ((audio.ctx && (audio.ctx.outputLatency || 0) + (audio.ctx.baseLatency || 0)) || 0) / c;
+      lastU = segs.length ? Math.max(...segs.map(g => g.u1)) : 0;
+    } else {
+      segs = takeSegments(take.frames, c);
+      const est = st.micCal !== null ? null : takeDelay(segs, c);
+      d = st.micCal !== null ? 0 : est !== null ? est : st.micLag / c;
+      if (last && est !== null) { st.micLag = Math.round((st.micLag * 0.4 + est * c * 0.6) * 1000) / 1000; save(); }
+      lastU = take.frames.length ? take.frames[take.frames.length - 1].u : 0;
+    }
     const ev = [];
     let lo = Math.floor(take.from + 1e-6);
     const nlen = k => k < segs.length ? (segs[k + 1] ? segs[k + 1].u0 : segs[k].u1) - segs[k].u0 : 0;
@@ -423,7 +440,7 @@
       let b = Math.max(a + 0.5, takeSnap(g.u1 + 0.15 - d, len, a + 0.5));
       const nx = segs[i + 1];
       if (nx) { const na = takeSnap(nx.u0 - d, nlen(i + 1), a + 0.5); if (na - b <= 1) b = na; }
-      else if (last && take.stopU !== undefined && take.frames[take.frames.length - 1].u - g.u1 < 0.6) b = Math.max(b, Math.round(take.stopU));
+      else if (last && take.stopU !== undefined && lastU - g.u1 < 0.6) b = Math.max(b, Math.round(take.stopU));
       const p = ev[ev.length - 1];
       if (p && a < p.b) p.b = a;
       if (p && p.b <= p.a) ev.pop();
@@ -502,7 +519,7 @@
         const before = take.before;
         if (before && before !== text) { ed.undo.push(before); ed.redo = []; }
         applyText(text);
-        toast(`What you sang is written in ${take.self ? 'the ' + ref.name : 'the Sung voice'}. Undo takes it away.`);
+        toast(`What you ${keyed() || take.wasKeyed ? 'played' : 'sang'} is written in ${take.self ? 'the ' + ref.name : 'the Sung voice'}. Undo takes it away.`);
       } else {
         const P = parseKern(text); P.text = text; piece = P;
         render();
@@ -517,11 +534,43 @@
 
   /* ---------------- the engine's playback, and the menu ---------------- */
   H.playSpec = spec => {
-    spec.onStart = T => { if (mic.on) takeStart(Math.max(0, (T.t0 - T.origin) / (T.spm / 2))); };
-    spec.onStop = (now, T) => { if (take.on) takeFinish((Math.min(now, T.end) - T.origin) / (T.spm / 2), T.spm / 2); };
+    spec.onStart = T => { if (take.armed) takeStart(Math.max(0, (T.t0 - T.origin) / (T.spm / 2))); };
+    spec.onStop = (now, T) => { if (take.on) takeFinish((Math.min(now, T.end) - T.origin) / (T.spm / 2), T.spm / 2); recDisarm(); };
   };
+  /* a key of the keyboard (computer, screen or MIDI) during a recording: it is written into the take, not at the caret */
+  H.keyNote = (m, on) => {
+    const T = audio.timeline;
+    if (!take.on || !st.micNotate || !T || !audio.ctx) return false;
+    const c = T.spm / 2, u = (audio.ctx.currentTime - T.origin) / c;
+    if (u < take.from) return true;
+    if (on) take.open.set(m, u);
+    else if (take.open.has(m)) { take.keys.push({u0: take.open.get(m), u1: u, m}); take.open.delete(m); take.wasKeyed = true; }
+    takeQuantize(false, c);
+    return true;
+  };
+  /* Record: the music plays (from where Play would start) and what is sung or played is written out; pressed again, it stops */
+  function recSync(){ pressed($('#recGo'), take.armed); pressed($('#mic'), mic.on); }
+  function recDisarm(){
+    if (!take.armed) return;
+    take.armed = false;
+    if (take.micByRec) { take.micByRec = false; if (mic.on) micStop(); }
+    recSync();
+  }
+  async function recGo(){
+    if (take.armed) { if (play) togglePlayHold(); recDisarm(); return; }
+    if (!piece) return;
+    if (!st.micNotate) { toast('Turn on “Notate what I sing” (hover over Record) for Record to write the music out.'); return; }
+    take.armed = true; recSync();
+    /* the microphone, unless the notes come from a keyboard (one open on the screen, or a MIDI keyboard) */
+    const K = window.ScriptoriumKeyboard, keys = K && (K.state.on || (K.state.inputs || []).length);
+    if (!keys && !mic.on) { await micStart(); take.micByRec = mic.on; }
+    if (!take.armed) return;
+    if (play) { const T = audio.timeline; if (T) takeStart(Math.max(0, (audio.ctx.currentTime - T.origin) / (T.spm / 2))); }
+    else togglePlayHold();
+    recSync();
+  }
   const syncSing = () => {
-    pressed($('#micFlex'), st.micFlex); pressed($('#micPhones'), st.micPhones); pressed($('#micNotate'), st.micNotate); pressed($('#micDia'), st.micDia);
+    pressed($('#micFlex'), st.micFlex); pressed($('#micPhones'), st.micPhones); pressed($('#micNotate'), st.micNotate); pressed($('#micDia'), st.micDia); pressed($('#micShow'), st.micShow);
     $('#micLat').value = st.micCal === null ? '' : Math.round(st.micCal * 1000);
   };
   /* one button: pressed, the microphone goes on or off; its arrow (or hovering) opens the options */
@@ -533,7 +582,27 @@
     }
     if (mic.on) micStop(); else micStart();
   });
-  $('#popSing').addEventListener('mouseenter', syncSing);
+  /* the menus stay inside the window (on a phone the buttons stand near its left edge, the menus are wide) */
+  function fitPop(p){
+    const b = p.querySelector('.popbody'); b.style.transform = '';
+    requestAnimationFrame(() => {
+      const r = b.getBoundingClientRect(), over = r.right - (window.innerWidth - 8);
+      if (over > 0 && r.width) b.style.transform = `translateX(${-Math.min(over, Math.max(0, r.left - 8))}px)`;
+    });
+  }
+  ['#popSing', '#popRec'].forEach(id => {
+    $(id).addEventListener('mouseenter', () => { syncSing(); fitPop($(id)); });
+    $(id).addEventListener('click', () => setTimeout(() => fitPop($(id)), 0));
+  });
+  $('#recGo').addEventListener('click', e => {
+    if (e.target.closest('.singchev')) {
+      if (window.matchMedia && matchMedia('(hover:hover)').matches) return;
+      const p = $('#popRec'), open = !p.classList.contains('open');
+      closePops(p); p.classList.toggle('open', open); syncSing(); return;
+    }
+    recGo(); e.currentTarget.blur();
+  });
+  $('#micShow').addEventListener('click', () => { st.micShow = !st.micShow; if (!st.micShow) clearDot(); else if (!mic.on) micStart(); save(); syncSing(); });
   /* Ctrl+Z / Ctrl+Shift+Z also outside Edit, so a take that replaced the one before can be undone */
   document.addEventListener('keydown', e => {
     if (ed.on || !(e.ctrlKey || e.metaKey) || (e.key !== 'z' && e.key !== 'Z' && e.key !== 'y' && e.key !== 'Y')) return;
@@ -612,7 +681,7 @@
       recCleanup();
       if (!blob.size) return;
       const name = (piece && piece.title) || APP.name;
-      try { await dbDo('readwrite', o => o.add({name, at: Date.now(), mime, dur, blob})); toast('Recorded. It is in the Sing menu.'); }
+      try { await dbDo('readwrite', o => o.add({name, at: Date.now(), mime, dur, blob})); toast('Recorded. It is in the Record menu.'); }
       catch (e) { toast('The recording could not be kept in this browser.'); }
       recList();
     };
@@ -624,7 +693,7 @@
     if (rec.dest && audio.master) try { audio.master.disconnect(rec.dest); } catch (e) {}
     if (rec.stream) rec.stream.getTracks().forEach(t => t.stop());
     rec.stream = rec.src = rec.dest = null; rec.on = false;
-    pressed($('#recBtn'), false); $('#recBtn').lastChild.textContent = 'Record';
+    pressed($('#recBtn'), false); $('#recBtn').lastChild.textContent = 'Record audio';
   }
   function recStop(){ if (rec.mr && rec.mr.state !== 'inactive') rec.mr.stop(); else recCleanup(); }
   function recPlayStop(){ if (rec.audio) { rec.audio.pause(); rec.audio = null; } if (rec.url) { URL.revokeObjectURL(rec.url); rec.url = null; } rec.playing = null; }

@@ -137,28 +137,38 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
   <section class="transport" aria-label="Playback and sound">
     <div class="tp-main">
     <button id="play" aria-label="Play" title="Play (space bar)"><svg viewBox="0 0 14 14" aria-hidden="true"><path id="playIcon" d="M2 1 13 7 2 13Z"/></svg><span>Play</span></button>
-    <div class="tp-stack">
-    <div class="podg" id="podModes">
-    <button id="loop" aria-pressed="false" title="Repeat until stopped; adds a repeat sign at the end">Loop</button>
+    <div class="podg" id="podSing">
     <div class="pop" id="popSing">
-      <button id="mic" aria-pressed="false" aria-haspopup="true" title="Sing along: the microphone shows the note you sing as a faint red dot on the staff. Hover (or the arrow) for options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.6a3.4 3.4 0 0 0 3.4-3.4V5.4a3.4 3.4 0 0 0-6.8 0v5.8a3.4 3.4 0 0 0 3.4 3.4Zm6-3.5a6 6 0 0 1-12 0H4.3a7.7 7.7 0 0 0 6.8 7.6V22h1.8v-3.3a7.7 7.7 0 0 0 6.8-7.6Z"/></svg><span>Sing</span><span class="singchev" aria-label="Sing options"><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></span></button>
+      <button class="ib" id="mic" aria-pressed="false" aria-haspopup="true" aria-label="Microphone" title="Microphone: the note you sing shows as a faint red dot on the selected staff. Hover (on a phone: the arrow) for its options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.6a3.4 3.4 0 0 0 3.4-3.4V5.4a3.4 3.4 0 0 0-6.8 0v5.8a3.4 3.4 0 0 0 3.4 3.4Zm6-3.5a6 6 0 0 1-12 0H4.3a7.7 7.7 0 0 0 6.8 7.6V22h1.8v-3.3a7.7 7.7 0 0 0 6.8-7.6Z"/></svg><span class="singchev" aria-hidden="true"><svg class="chev" viewBox="0 0 12 12"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></span></button>
       <div class="popbody">
-        <div class="btns col" role="group" aria-label="Sing options">
+        <div class="btns col" role="group" aria-label="Microphone options">
         <button class="tb" id="micFlex" data-keep aria-pressed="true" title="On: the dot follows your exact pitch, a little above or below its note when you are sharp or flat. Off: it sits on the nearest note">Flexible pitch</button>
         <button class="tb" id="micDia" data-keep aria-pressed="false" title="What you sing is written with the notes of the scale only (B or B flat as your voice has it), never a chromatic note">Diatonic</button>
-        <button class="tb" id="micNotate" data-keep aria-pressed="true" title="While the music plays, what you sing is written out as a voice of its own, Sung. Singing again replaces it; Ctrl+Z brings the earlier one back">Notate what I sing</button>
         <button class="tb" id="micPhones" data-keep aria-pressed="false" title="On: no filtering, so unisons and octaves with the organ show too. Off: the organ is filtered out of what the microphone hears, for singing along through speakers">Headphones</button>
         </div>
         <div class="latrow" title="The time from the organ sounding to your voice reaching the microphone, so what you sing is written in the right place. Empty: worked out by itself">
           <label for="micLat">Latency</label><input type="number" id="micLat" min="0" max="600" step="1" inputmode="numeric" placeholder="auto"><span>ms</span>
           <button class="tb" id="micClap" data-keep title="Eight clicks: clap with each one, and the latency is measured">Clap test</button>
         </div>
+      </div>
+    </div>
+    <div class="pop" id="popRec">
+      <button class="ib" id="recGo" aria-pressed="false" aria-haspopup="true" aria-label="Record" title="Record: the music plays and what you sing (or play on the keyboard) is written out as a staff of its own. Press again to stop. Hover (on a phone: the arrow) for its options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle class="recring" cx="12" cy="12" r="8.2"/><circle class="reccore" cx="12" cy="12" r="5"/></svg><span class="singchev" aria-hidden="true"><svg class="chev" viewBox="0 0 12 12"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></span></button>
+      <div class="popbody">
+        <div class="btns col" role="group" aria-label="Record options">
+        <button class="tb" id="micNotate" data-keep aria-pressed="true" title="While the music plays, what you sing, or play on the keyboard, is written out as a staff of its own, Sung. Recording again replaces it; Ctrl+Z brings the earlier one back">Notate what I sing</button>
+        <button class="tb" id="micShow" data-keep aria-pressed="true" title="The note you sing shows as a faint red dot on the selected staff, without writing it">Show pitch on staff</button>
+        </div>
         <div class="recbox">
-          <button class="tb" id="recBtn" data-keep aria-pressed="false" title="Record yourself (with the organ too when Headphones is on). Press again to stop; the recording is kept below, in this browser"><span class="recdot"></span>Record</button>
+          <button class="tb" id="recBtn" data-keep aria-pressed="false" title="Record yourself (with the organ too when Headphones is on). Press again to stop; the recording is kept below, in this browser"><span class="recdot"></span>Record audio</button>
           <div id="recList" class="reclist"></div>
         </div>
       </div>
     </div>
+    </div>
+    <div class="tp-stack">
+    <div class="podg" id="podModes">
+    <button id="loop" aria-pressed="false" title="Repeat until stopped; adds a repeat sign at the end">Loop</button>
     <div class="pop" id="popMetro">
       <button class="tb popbtn" id="metro" aria-haspopup="true" title="How the beat is shown or heard">Metronome<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
       <div class="popbody"><div class="btns col" id="beatList" role="group" aria-label="Beat">
@@ -3024,7 +3034,7 @@ function shutPop(p){
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 }
 document.querySelectorAll('#openList, #exportList, #sendList').forEach(l => l.addEventListener('click', e => { if (e.target.closest('button') && !e.target.closest('[data-keep]')) shutPop(l.closest('.pop')); }));
-document.querySelectorAll('.pop > button:not(#mic)').forEach(b => b.addEventListener('click', () => {
+document.querySelectorAll('.pop > button:not(#mic):not(#recGo)').forEach(b => b.addEventListener('click', () => {
   if (canHover()) return;
   const p = b.parentNode, open = !p.classList.contains('open');
   closePops(p); setLib(false); p.classList.toggle('open', open); b.setAttribute('aria-expanded', String(open));

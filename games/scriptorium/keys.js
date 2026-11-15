@@ -1,7 +1,8 @@
 /* Scriptorium add-on: playing and writing notes from a keyboard (Samuel 2026-11-15).
    The keyboard button at the left of the playback row opens a small piano above it:
-   - on a computer the letter keys play it: A S D F G H J K L ; are the white keys (C to E), W E T Y U O P the black
-     ones, as on a piano. Z and X move it an octave down or up. Escape closes it. Keys it does not use (space, the
+   - on a computer the letter keys play it: A S D F G H J K L ; ' are the white keys, the row above the black ones
+     between them, as on a piano. Z and X move it an octave down or up, C and V one white key down or up (so A can be
+     any white note; the white keys stay on the A S D F row). Escape closes it. Keys it does not use (space, the
      arrows, Delete, the note values 1 to 7, R, Ctrl+Z ...) keep doing what they did.
    - on a phone or tablet the piano is played with the fingers; it scrolls sideways.
    - a MIDI keyboard plays whenever one is plugged in (once the browser has been allowed to use it).
@@ -12,22 +13,30 @@
   const LO = 36, HI = 84;                         /* the piano on the screen: C2 to C6 */
   const WHITE = [0, 2, 4, 5, 7, 9, 11], isBlack = m => [1, 3, 6, 8, 10].includes(((m % 12) + 12) % 12);
   const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'B♭', 'B'];
-  /* the computer's keys, by their place on the keyboard (so they work the same on QWERTZ and AZERTY), in semitones above the C */
-  const CODES = {KeyA: 0, KeyW: 1, KeyS: 2, KeyE: 3, KeyD: 4, KeyF: 5, KeyT: 6, KeyG: 7, KeyY: 8, KeyH: 9, KeyU: 10, KeyJ: 11,
-    KeyK: 12, KeyO: 13, KeyL: 14, KeyP: 15, Semicolon: 16};
-  const LABEL = {}; for (const [c, n] of Object.entries(CODES)) LABEL[n] = c === 'Semicolon' ? ';' : c.slice(3);
+  /* the computer's keys, by their place on the keyboard (so they work the same on QWERTZ and AZERTY): the home row is
+     the white keys from the one on A; a key of the row above stands between two of them and plays the black key there, if there is one */
+  const HOME = ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon', 'Quote'];
+  const TOP = ['KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP', 'BracketLeft'];
+  const CAP = c => c === 'Semicolon' ? ';' : c === 'Quote' ? '\'' : c === 'BracketLeft' ? '[' : c.slice(3);
+  const WHITES = []; for (let m = 0; m < 128; m++) if (!isBlack(m)) WHITES.push(m);
+  const LETTER = m => 'CDEFGAB'[WHITE.indexOf(((m % 12) + 12) % 12)] + (Math.floor(m / 12) - 1);
   const hoverable = () => window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches;
-  const K = {on: false, base: 60, baseVi: -1, held: new Map(), midi: null, midiAsked: false, inputs: []};
+  const K = {on: false, w: WHITES.indexOf(60), base: 60, baseVi: -1, held: new Map(), midi: null, midiAsked: false, inputs: []};
 
   /* ---------- the button, at the left of the playback row ---------- */
-  play0.insertAdjacentHTML('afterend', '<div class="podg" id="podKbd"><button class="ib" id="kbdBtn" aria-pressed="false" aria-controls="kbd" aria-label="Keyboard" title="Keyboard: play the notes, and write them in Edit mode. On a computer the letter keys play it (A S D F … white keys, W E T Y … black keys; Z X octave; Escape closes)">'
+  play0.insertAdjacentHTML('afterend', '<div class="podg" id="podKbd"><button class="ib" id="kbdBtn" aria-pressed="false" aria-controls="kbd" aria-label="Keyboard" title="Keyboard: play the notes, and write them in Edit mode. On a computer the letter keys play it (A S D F … white keys, W E T Y … black keys; Z X octave, C V one key; Escape closes)">'
     + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.2 5.2h17.6a.9.9 0 0 1 .9.9v11.8a.9.9 0 0 1-.9.9H3.2a.9.9 0 0 1-.9-.9V6.1a.9.9 0 0 1 .9-.9Zm.6 1.5v10.6h3.3v-4.1H6.2V6.7Zm4.8 0v6.5h-.9v4.1h4.1v-4.1h-.9V6.7Zm4.7 0v6.5h-.9v4.1h3.3V6.7Zm4.8 0h-1.9v6.5h-.9v4.1h2.8Z"/></svg></button></div>');
   const btn = $('#kbdBtn');
 
   /* ---------- the piano ---------- */
   document.body.insertAdjacentHTML('beforeend', '<div class="kbd" id="kbd" role="group" aria-label="Keyboard" hidden>'
-    + '<div class="kbd-oct" id="kbdOct"><button class="ib" id="kbdDn" aria-label="Octave down" title="Octave down (Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12 17 6.2Z"/></svg></button>'
-    + '<span id="kbdLab"></span><button class="ib" id="kbdUp" aria-label="Octave up" title="Octave up (X)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button></div>'
+    + '<div class="kbd-oct" id="kbdOct">'
+    + '<button class="ib" id="kbdSl" aria-label="One key down" title="One white key down (C)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12 17 6.2Z"/></svg></button>'
+    + '<span id="kbdLab" title="The note on A"></span>'
+    + '<button class="ib" id="kbdSr" aria-label="One key up" title="One white key up (V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button>'
+    + '<button class="ib" id="kbdDn" aria-label="Octave down" title="Octave down (Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.4 4.6 5 12l7.4 7.4 1.6-1.6L8.2 12 14 6.2ZM19.4 4.6 12 12l7.4 7.4 1.6-1.6L15.2 12 21 6.2Z"/></svg></button>'
+    + '<span class="kbd-ol">8ve</span>'
+    + '<button class="ib" id="kbdUp" aria-label="Octave up" title="Octave up (X)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.6 4.6 19 12l-7.4 7.4-1.6-1.6 5.8-5.8L10 6.2ZM4.6 4.6 12 12l-7.4 7.4L3 17.8 8.8 12 3 6.2Z"/></svg></button></div>'
     + '<div class="kbd-size"><label for="kbdW">Width</label><input type="range" id="kbdW" min="20" max="56" step="1" aria-label="Width of the keys"></div>'
     + '<div class="kbd-scroll" id="kbdScroll"><div class="kbd-keys" id="kbdKeys"></div></div></div>');
   const box = $('#kbd'), keysEl = $('#kbdKeys'), scroller = $('#kbdScroll');
@@ -57,19 +66,31 @@
   }
   function follow(){
     const v = voiceNow(), vi = v ? v.idx : -1;
-    if (vi !== K.baseVi) { K.baseVi = vi; K.base = baseFor(v); labels(); }
+    if (vi !== K.baseVi) { K.baseVi = vi; setW(WHITES.indexOf(baseFor(v))); labels(); }
+  }
+  /* the white key under A (an index into WHITES), kept so that the whole home row stays on the screen's piano */
+  const W_MIN = WHITES.indexOf(LO), W_MAX = WHITES.indexOf(HI) - HOME.length + 1;
+  function setW(w){ K.w = Math.max(W_MIN, Math.min(W_MAX, w)); K.base = WHITES[K.w]; }
+  /* the note a computer key plays now, or undefined */
+  function codeMidi(code){
+    const h = HOME.indexOf(code);
+    if (h >= 0) return WHITES[K.w + h];
+    const t = TOP.indexOf(code);
+    if (t >= 0) { const a = WHITES[K.w + t], b = WHITES[K.w + t + 1]; return b - a === 2 ? a + 1 : undefined; }
+    return undefined;
   }
   function labels(){
-    $('#kbdLab').textContent = 'C' + (K.base / 12 - 1);
-    const show = hoverable();
+    $('#kbdLab').textContent = LETTER(K.base);
+    const show = hoverable(), lab = {};
+    for (const c of HOME.concat(TOP)) { const m = codeMidi(c); if (m !== undefined) lab[m] = CAP(c); }
     keysEl.querySelectorAll('.kk').forEach(el => {
-      const n = +el.dataset.m - K.base, i = el.querySelector('i');
-      const has = show && n >= 0 && n <= 16;
-      i.textContent = has ? LABEL[n] : '';
+      const m = +el.dataset.m, i = el.querySelector('i'), has = show && lab[m] !== undefined;
+      i.textContent = has ? lab[m] : '';
       el.classList.toggle('inr', has);
     });
-    $('#kbdDn').disabled = K.base <= LO; $('#kbdUp').disabled = K.base >= HI - 12;
-    reveal(K.base, K.base + 16);
+    $('#kbdDn').disabled = K.w - 7 < W_MIN; $('#kbdUp').disabled = K.w + 7 > W_MAX;
+    $('#kbdSl').disabled = K.w <= W_MIN; $('#kbdSr').disabled = K.w >= W_MAX;
+    reveal(K.base, WHITES[K.w + HOME.length - 1]);
   }
   /* the keys being played stay in sight on a narrow screen */
   function reveal(m0, m1){
@@ -80,12 +101,14 @@
     if (x0 >= sl && x1 <= sl + sw) return;
     scroller.scrollLeft = x1 - x0 > sw ? x0 - 8 : Math.max(0, (x0 + x1) / 2 - sw / 2);
   }
-  function octave(d){
-    const nb = Math.max(LO, Math.min(HI - 12, K.base + 12 * d));
-    if (nb === K.base) return;
-    K.base = nb; labels();
-    toast('Keyboard: A plays C' + (K.base / 12 - 1) + '.');
+  /* Z X: an octave; C V: one white key, so A can be any white note */
+  function shift(n){
+    const w0 = K.w; setW(K.w + n);
+    if (K.w === w0) return;
+    labels();
+    toast('Keyboard: A plays ' + LETTER(K.base) + '.');
   }
+  const octave = d => shift(7 * d);
 
   /* ---------- a note: how it is written ---------- */
   /* black keys: the sharp or flat the signature has, else C♯ E♭ F♯ G♯ B♭, as the music of the time mostly writes them */
@@ -119,11 +142,12 @@
     const s = sound();
     K.held.set(src + m, Organ.hold(m, s.reg, s.gain));
     const el = keyEl(m); if (el) el.classList.add('on');
-    write(m);
+    if (!(H.keyNote && H.keyNote(m, true))) write(m);
   }
   function up(m, src){
     const v = K.held.get(src + m); if (v === undefined) return;
     K.held.delete(src + m); Organ.unhold(v);
+    if (H.keyNote) H.keyNote(m, false);
     if (![...K.held.keys()].some(k => k.endsWith(':' + m) || k === src + m)) { const el = keyEl(m); if (el) el.classList.remove('on'); }
   }
   function allUp(){ for (const k of [...K.held.keys()]) up(+k.split(':')[1], k.split(':')[0] + ':'); }
@@ -137,7 +161,7 @@
     else {
       K.baseVi = -2; follow(); labels();
       fit();
-      if (hoverable() && !K.told) { K.told = true; toast('Keyboard: A S D F G H J K L ; are the white keys, W E T Y U O P the black ones. Z and X change the octave; Escape closes it.'); }
+      if (hoverable() && !K.told) { K.told = true; toast('Keyboard: A S D F G H J K L ; are the white keys, W E T Y U O P the black ones. Z X change the octave, C V move it by one key; Escape closes it.'); }
     }
     if (window.__dockPlace) window.__dockPlace();
     postHeight();
@@ -171,6 +195,8 @@
   btn.addEventListener('click', () => { midiStart(true); setOn(!K.on); btn.blur(); });
   $('#kbdDn').addEventListener('click', e => { octave(-1); e.currentTarget.blur(); });
   $('#kbdUp').addEventListener('click', e => { octave(1); e.currentTarget.blur(); });
+  $('#kbdSl').addEventListener('click', e => { shift(-1); e.currentTarget.blur(); });
+  $('#kbdSr').addEventListener('click', e => { shift(1); e.currentTarget.blur(); });
 
   /* fingers and the mouse: a press sounds at once; it writes the note when let go, unless the finger moved on to scroll */
   const touches = new Map();
@@ -178,15 +204,17 @@
     const el = e.target.closest('.kk'); if (!el) return;
     e.preventDefault();
     const m = +el.dataset.m, s = sound();
-    touches.set(e.pointerId, {m, v: Organ.hold(m, s.reg, s.gain), x: e.clientX});
+    const taking = !!(H.keyNote && H.keyNote(m, true));
+    touches.set(e.pointerId, {m, v: Organ.hold(m, s.reg, s.gain), x: e.clientX, taking});
     el.classList.add('on');
-    if (e.pointerType === 'mouse') { follow(); write(m); touches.get(e.pointerId).done = true; }
+    if (e.pointerType === 'mouse') { if (!taking) { follow(); write(m); } touches.get(e.pointerId).done = true; }
   });
   const lift = (e, cancel) => {
     const p = touches.get(e.pointerId); if (!p) return;
     touches.delete(e.pointerId); Organ.unhold(p.v);
     const el = keyEl(p.m); if (el && ![...K.held.keys()].some(k => k.endsWith(':' + p.m))) el.classList.remove('on');
-    if (!cancel && !p.done && Math.abs(e.clientX - p.x) < 12) { follow(); write(p.m); }
+    if (H.keyNote) H.keyNote(p.m, false);
+    if (!cancel && !p.done && !p.taking && Math.abs(e.clientX - p.x) < 12) { follow(); write(p.m); }
   };
   keysEl.addEventListener('pointerup', e => lift(e, false));
   keysEl.addEventListener('pointercancel', e => lift(e, true));
@@ -201,11 +229,14 @@
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); setOn(false); return; }
     if (e.shiftKey) return;   /* Shift+L (lyrics) and the Shift keys keep their meaning */
-    if (e.code === 'KeyZ' || e.code === 'KeyX') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) octave(e.code === 'KeyZ' ? -1 : 1); return; }
-    const n = CODES[e.code]; if (n === undefined) return;
+    const sh = {KeyZ: -7, KeyX: 7, KeyC: -1, KeyV: 1}[e.code];
+    if (sh) { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) shift(sh); return; }
+    if (!HOME.includes(e.code) && !TOP.includes(e.code)) return;
+    /* a key of the black row with no black key under it is silent (it does not fall through to a shortcut) */
     e.preventDefault(); e.stopImmediatePropagation();
-    if (e.repeat) return;
-    down(K.base + n, 'k' + e.code + ':');
+    const m = codeMidi(e.code);
+    if (e.repeat || m === undefined) return;
+    down(m, 'k' + e.code + ':');
   }, true);
   window.addEventListener('keyup', e => {
     for (const k of [...K.held.keys()]) if (k.startsWith('k' + e.code + ':')) up(+k.split(':')[1], k.split(':')[0] + ':');
