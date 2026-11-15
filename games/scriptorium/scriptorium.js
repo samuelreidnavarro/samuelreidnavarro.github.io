@@ -5253,15 +5253,35 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
 /* phones: a top menu opens as a panel across the screen, just below its button (see the media query in the CSS) */
 {
   const small = () => window.matchMedia('(max-width:1100px), (max-height:520px) and (orientation:landscape)').matches;
+  /* medium windows: a menu keeps its own size, opens under (top row) or over (bottom row) its button, on the side of the button
+     that has the room, and is only made smaller where the window is too narrow for it */
+  const mid = () => window.matchMedia('(min-width:701px) and (max-width:1200px)').matches;
+  const fitLeft = (r, w) => {
+    const vw = document.documentElement.clientWidth, rightHalf = (r.left + r.right) / 2 > vw / 2;
+    return Math.round(Math.max(8, Math.min(rightHalf ? r.right + 6 - w : r.left - 6, vw - 8 - w)));
+  };
+  const natural = pb => {   /* the menu's width as it will be drawn, measured while it is out of sight */
+    const old = pb.style.cssText; pb.style.cssText += ';display:block !important;visibility:hidden !important';
+    const w = pb.getBoundingClientRect().width; pb.style.cssText = old; return w;
+  };
+  const placeMid = btn => {
+    const root = document.documentElement, r = btn.getBoundingClientRect(), vw = root.clientWidth;
+    const pop = btn.closest('.pop'), pb = pop && pop.querySelector(':scope > .popbody');
+    if (pb) root.style.setProperty('--popl', fitLeft(r, Math.min(natural(pb), vw - 4) - 20) + 'px');
+    root.style.setProperty('--libl', fitLeft(r, Math.min(760, vw - 16)) + 'px');
+    root.style.setProperty('--popbot', Math.round(window.innerHeight - r.top - 2) + 'px');
+  };
   const place = btn => {
-    if (!small()) return;
+    if (mid() && (btn.closest('.transport') || window.matchMedia('(max-width:1100px)').matches)) placeMid(btn);
+    if (!small() || !btn.closest('.bar')) return;
     const r = btn.getBoundingClientRect(), bar = btn.closest('.bar').getBoundingClientRect();
     document.documentElement.style.setProperty('--poptop', Math.round(r.bottom - bar.top + 6) + 'px');
     document.documentElement.style.setProperty('--popabs', Math.round(r.bottom + 6) + 'px');
     document.documentElement.style.setProperty('--win', window.innerHeight + 'px');
   };
-  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.bar .popbtn'); if (b) place(b); }, true);
-  document.addEventListener('pointerenter', e => { const b = e.target.closest && e.target.closest('.bar .popbtn'); if (b) place(b); }, true);
+  const popBtn = e => e.target.closest && e.target.closest('.bar .popbtn, .transport .pop > button');
+  document.addEventListener('click', e => { const b = popBtn(e); if (b) place(b); }, true);
+  document.addEventListener('pointerenter', e => { const b = popBtn(e); if (b) place(b); }, true);
 }
 /* phones: while a menu of a sideways-scrolling row is open, the row stops being a scroll box (Safari on the iPhone cuts off, or hides,
    fixed menus inside one); the buttons keep their place, and the row scrolls again, where it was, once the menu closes */

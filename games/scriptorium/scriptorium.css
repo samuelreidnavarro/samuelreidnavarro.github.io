@@ -863,8 +863,8 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 @media print{#pages .mensadd{display:none}}
 #pages .incipit{opacity:.9}
 
-/* Phones (portrait and landscape) and medium windows: the menus of the top bars open as one panel across the screen, below their button, scrolling when tall */
-@media (max-width:1100px), (max-height:520px) and (orientation:landscape){
+/* Phones (portrait and landscape): the menus of the top bars open as one panel across the screen, below their button, scrolling when tall */
+@media (max-width:700px), (max-height:520px) and (orientation:landscape){
   .bar{position:relative}
   .bar .podg:has(.pop.open),.bar .podg:has(.pop:hover),.bar .podg:has(:focus-visible){transform:none !important;filter:none !important}
   .bar .pop,.bar .podg,.bar .libwrap{position:static !important}
@@ -1013,8 +1013,15 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
   .tools .grow{display:flex;flex:none;margin-left:auto;gap:12px}
   .tools .bar .spacer{flex:1 0 16px;height:auto}
   .tools .vsep{display:block}
-  .tools .bar .popbody{position:fixed !important;top:var(--popabs,64px) !important;left:8px !important;right:8px !important;bottom:auto !important}
-  #libPod .library{position:fixed;left:8px;right:8px;top:var(--popabs,64px);width:auto}
+  /* the menus keep their own size and open under their button (smaller only where the window is too narrow for them); a transparent margin round them
+     counts as part of the menu for the mouse, so the pointer never drops out of it at an edge, and no gap lies between the button and the menu */
+  .tools .bar .popbody{position:fixed !important;top:calc(var(--popabs,64px) - 14px) !important;left:calc(var(--popl,18px) - 10px) !important;right:auto !important;bottom:auto !important;
+    width:max-content !important;max-width:calc(100vw - 4px) !important;max-height:calc(var(--win,100vh) - var(--popabs,64px) - 24px);overflow-y:auto;overflow-x:hidden;box-sizing:border-box;
+    padding:6px;border:10px solid transparent;border-top-width:6px;border-radius:18px;background-clip:padding-box;overscroll-behavior:contain;
+    box-shadow:inset 0 0 0 1px var(--line),0 12px 28px -22px rgba(0,0,0,.4)}
+  .bar .podg:has(.pop.open),.bar .podg:has(.pop:hover),.bar .podg:has(:focus-visible){transform:none !important;filter:none !important}
+  .bar .podg,.bar .libwrap,.bar .pop{backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
+  #libPod .library{position:fixed;left:var(--libl,8px);right:auto;top:var(--popabs,64px);width:min(760px,calc(100vw - 16px))}
   /* the whole strip, gaps between the buttons included, belongs to the row: the wheel and a swipe there scroll it */
   .tools .bar,.tools .grow{pointer-events:auto}
 }
@@ -1025,12 +1032,14 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
 @media (max-width:1200px), (max-height:520px) and (orientation:landscape){
   html .tp-stack,html .transport .podg{transform:none !important}
 }
-/* menus that open away from their button: they stay a moment after the pointer leaves, so crossing the gap does not close them */
 @media (max-width:1200px){
   .transport{pointer-events:auto}
 }
-@media (max-width:1200px), (max-height:520px) and (orientation:landscape){
-  .tools .bar .popbody,.transport .popbody{transition:display .01s .35s allow-discrete;overscroll-behavior:contain}
+/* the bottom menus too keep their own size, open straight above their button, and have a margin for the mouse all round */
+@media (min-width:701px) and (max-width:1200px){
+  .transport .popbody{position:fixed;top:auto !important;bottom:calc(var(--popbot,60px) - 6px) !important;left:calc(var(--popl,18px) - 10px) !important;right:auto !important;
+    width:max-content !important;max-width:calc(100vw - 4px) !important;box-sizing:border-box;padding:6px;border:10px solid transparent;border-bottom-width:6px;border-radius:18px;background-clip:padding-box;overscroll-behavior:contain;
+    box-shadow:inset 0 0 0 1px var(--line),0 12px 28px -22px rgba(0,0,0,.4)}
 }
 /* a row with an open menu is no scroll box for the moment (see scriptorium.js), shifted to where it was scrolled */
 @media (max-width:1100px), (max-height:520px) and (orientation:landscape){
