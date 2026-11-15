@@ -1018,6 +1018,13 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
   /* the whole strip, gaps between the buttons included, belongs to the row: the wheel and a swipe there scroll it */
   .tools .bar,.tools .grow{pointer-events:auto}
 }
+/* where menus open away from their button, the resting controls only fade: a sliding button group would carry its menu along and the menu would drift out from under the pointer */
+@media (min-width:701px) and (max-width:1100px), (max-height:520px) and (orientation:landscape){
+  html .tools .bar>.podg,html .tools .grow>.podg{transform:none !important}
+}
+@media (max-width:1200px), (max-height:520px) and (orientation:landscape){
+  html .tp-stack,html .transport .podg{transform:none !important}
+}
 /* menus that open away from their button: they stay a moment after the pointer leaves, so crossing the gap does not close them */
 @media (max-width:1200px){
   .transport{pointer-events:auto}
