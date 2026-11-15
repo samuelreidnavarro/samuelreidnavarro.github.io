@@ -1152,5 +1152,17 @@ html.dark .kk.blk{background:#0E0B08}
 #popRec .singchev{display:inline-flex;align-items:center;margin:0 -4px 0 1px;padding:4px 2px;border-radius:6px}
 #popRec .singchev .chev{width:11px;height:11px}
 #popRec .popbody,#popSing .popbody{min-width:15em}
-@media (hover:hover) and (pointer:fine){ #podSing .singchev{display:none} }
+@media (hover:hover) and (pointer:fine){ #podSing .singchev,#podKbd .singchev{display:none} }
 @media (min-width:701px){ html.ctl-bot-idle #podSing{opacity:.8;transition:opacity .35s ease} html.ctl-bot-idle #podSing:hover,html.ctl-bot-idle #podSing:focus-within{opacity:1} }
+#podKbd #kbdBtn{display:inline-flex;align-items:center;justify-content:center;gap:0;width:auto;min-width:var(--h,34px);padding:0 6px}
+#popKbd .singchev{display:inline-flex;align-items:center;margin:0 -4px 0 1px;padding:4px 2px;border-radius:6px}
+#popKbd .singchev .chev{width:11px;height:11px}
+#popKbd .popbody{min-width:13em}
+#micNotate,#recAudio{width:100%;display:flex;align-items:center;justify-content:flex-start;gap:8px}
+#micNotate svg{width:18px;height:18px;fill:currentColor;flex:none}
+#recAudio .recdot{width:10px;height:10px;border-radius:50%;background:var(--accent);flex:none}
+#recAudio[aria-pressed="true"] .recdot{background:var(--accent-ink)}
+.kdot{opacity:.5;pointer-events:none}
+.kdot .micdot,.kdot use{fill:var(--pen)}
+.kdot .ledger{stroke:var(--pen)}
+@media (hover:hover) and (pointer:fine){ #podKbd #popKbd .singchev{display:none} }

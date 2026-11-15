@@ -24,8 +24,11 @@
   const K = {on: false, w: WHITES.indexOf(60), base: 60, baseVi: -1, held: new Map(), midi: null, midiAsked: false, inputs: []};
 
   /* ---------- the button, at the left of the playback row ---------- */
-  play0.insertAdjacentHTML('afterend', '<div class="podg" id="podKbd"><button class="ib" id="kbdBtn" aria-pressed="false" aria-controls="kbd" aria-label="Keyboard" title="Keyboard: play the notes, and write them in Edit mode. On a computer the letter keys play it (A S D F … white keys, W E T Y … black keys; Z X octave, C V one key; Escape closes)">'
-    + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.2 5.2h17.6a.9.9 0 0 1 .9.9v11.8a.9.9 0 0 1-.9.9H3.2a.9.9 0 0 1-.9-.9V6.1a.9.9 0 0 1 .9-.9Zm.6 1.5v10.6h3.3v-4.1H6.2V6.7Zm4.8 0v6.5h-.9v4.1h4.1v-4.1h-.9V6.7Zm4.7 0v6.5h-.9v4.1h3.3V6.7Zm4.8 0h-1.9v6.5h-.9v4.1h2.8Z"/></svg></button></div>');
+  play0.insertAdjacentHTML('afterend', '<div class="podg" id="podKbd"><div class="pop" id="popKbd"><button class="ib" id="kbdBtn" aria-pressed="false" aria-haspopup="true" aria-controls="kbd" aria-label="Keyboard" title="Keyboard: play the notes, and write them in Edit mode. On a computer the letter keys play it (A S D F … white keys, W E T Y … black keys; Z X octave, C V one key; Escape closes)">'
+    + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.2 5.2h17.6a.9.9 0 0 1 .9.9v11.8a.9.9 0 0 1-.9.9H3.2a.9.9 0 0 1-.9-.9V6.1a.9.9 0 0 1 .9-.9Zm.6 1.5v10.6h3.3v-4.1H6.2V6.7Zm4.8 0v6.5h-.9v4.1h4.1v-4.1h-.9V6.7Zm4.7 0v6.5h-.9v4.1h3.3V6.7Zm4.8 0h-1.9v6.5h-.9v4.1h2.8Z"/></svg><span class="singchev" aria-hidden="true"><svg class="chev" viewBox="0 0 12 12"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></span></button>'
+    + '<div class="popbody"><div class="btns col" role="group" aria-label="Keyboard options"><button class="tb" id="kbdShow" data-keep aria-pressed="true" title="The key you play shows as a faint red dot on the selected staff">Show pitch on staff</button></div></div></div></div>');
+  $('#kbdShow').setAttribute('aria-pressed', st.kbdShow === false ? 'false' : 'true');
+  $('#popKbd').addEventListener('mouseenter', () => { if (window.__sing) window.__sing.syncSing(); });
   const btn = $('#kbdBtn');
 
   /* ---------- the piano ---------- */
@@ -192,7 +195,14 @@
   if (window.ResizeObserver) new ResizeObserver(() => { if (!box.hidden) { document.documentElement.style.setProperty('--kbh', box.offsetHeight + 'px'); if (window.__dockPlace) window.__dockPlace(); } }).observe(box);
   window.addEventListener('message', () => { if (!box.hidden) setTimeout(fit, 0); });
   window.addEventListener('resize', () => { if (!box.hidden) fit(); });
-  btn.addEventListener('click', () => { midiStart(true); setOn(!K.on); btn.blur(); });
+  btn.addEventListener('click', e => {
+    if (e.target.closest('.singchev')) {
+      if (window.matchMedia && matchMedia('(hover:hover)').matches) return;   /* with a mouse the menu follows the pointer */
+      const p = $('#popKbd'), open = !p.classList.contains('open');
+      closePops(p); p.classList.toggle('open', open); return;
+    }
+    midiStart(true); setOn(!K.on); btn.blur();
+  });
   $('#kbdDn').addEventListener('click', e => { octave(-1); e.currentTarget.blur(); });
   $('#kbdUp').addEventListener('click', e => { octave(1); e.currentTarget.blur(); });
   $('#kbdSl').addEventListener('click', e => { shift(-1); e.currentTarget.blur(); });

@@ -145,6 +145,7 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
         <button class="tb" id="micFlex" data-keep aria-pressed="true" title="On: the dot follows your exact pitch, a little above or below its note when you are sharp or flat. Off: it sits on the nearest note">Flexible pitch</button>
         <button class="tb" id="micDia" data-keep aria-pressed="false" title="What you sing is written with the notes of the scale only (B or B flat as your voice has it), never a chromatic note">Diatonic</button>
         <button class="tb" id="micPhones" data-keep aria-pressed="false" title="On: no filtering, so unisons and octaves with the organ show too. Off: the organ is filtered out of what the microphone hears, for singing along through speakers">Headphones</button>
+        <button class="tb" id="micShow" data-keep aria-pressed="true" title="The note you sing shows as a faint red dot on the selected staff">Show pitch on staff</button>
         </div>
         <div class="latrow" title="The time from the organ sounding to your voice reaching the microphone, so what you sing is written in the right place. Empty: worked out by itself">
           <label for="micLat">Latency</label><input type="number" id="micLat" min="0" max="600" step="1" inputmode="numeric" placeholder="auto"><span>ms</span>
@@ -156,11 +157,10 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
       <button class="ib" id="recGo" aria-pressed="false" aria-haspopup="true" aria-label="Record" title="Record: the music plays and what you sing (or play on the keyboard) is written out as a staff of its own. Press again to stop. Hover (on a phone: the arrow) for its options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle class="recring" cx="12" cy="12" r="8.2"/><circle class="reccore" cx="12" cy="12" r="5"/></svg><span class="singchev" aria-hidden="true"><svg class="chev" viewBox="0 0 12 12"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></span></button>
       <div class="popbody">
         <div class="btns col" role="group" aria-label="Record options">
-        <button class="tb" id="micNotate" data-keep aria-pressed="true" title="While the music plays, what you sing, or play on the keyboard, is written out as a staff of its own, Sung. Recording again replaces it; Ctrl+Z brings the earlier one back">Notate what I sing</button>
-        <button class="tb" id="micShow" data-keep aria-pressed="true" title="The note you sing shows as a faint red dot on the selected staff, without writing it">Show pitch on staff</button>
+        <button class="tb" id="micNotate" data-keep aria-pressed="true" title="Record writes out what you sing and what you play on the keyboard, while the music plays, as staves of their own (Sung, Played). Recording again replaces them; Ctrl+Z brings the earlier ones back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17.3 14.8 6l3.2 3.2L6.7 20.5 3 21Zm13.7-12.6 1.4-1.4a1.5 1.5 0 0 1 2.1 0l1.1 1.1a1.5 1.5 0 0 1 0 2.1l-1.4 1.4Z"/></svg>Notate</button>
+        <button class="tb" id="recAudio" data-keep aria-pressed="false" title="Record keeps your voice as a sound recording (with the organ too when Headphones is on), in this browser. The recordings are listed below"><span class="recdot"></span>Record audio</button>
         </div>
         <div class="recbox">
-          <button class="tb" id="recBtn" data-keep aria-pressed="false" title="Record yourself (with the organ too when Headphones is on). Press again to stop; the recording is kept below, in this browser"><span class="recdot"></span>Record audio</button>
           <div id="recList" class="reclist"></div>
         </div>
       </div>

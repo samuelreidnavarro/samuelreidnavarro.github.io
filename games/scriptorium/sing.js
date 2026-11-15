@@ -11,6 +11,8 @@
   if (st.micPhones === undefined) st.micPhones = false;
   if (st.micDia === undefined) st.micDia = false;
   if (st.micShow === undefined) st.micShow = true;
+  if (st.kbdShow === undefined) st.kbdShow = true;
+  if (st.recAudio === undefined) st.recAudio = false;
   if (st.micLag === undefined) st.micLag = 0;
   if (st.micCal === undefined) st.micCal = null;
 
@@ -23,11 +25,11 @@
   /* the first shown voice whose Playback is off; else the voice being edited; else the top voice */
   function singIdx(){
     if (!piece) return -1;
-    const ok = (v, k) => v.abbr !== 'sung' && vis(k).on;
+    const ok = (v, k) => v.abbr !== 'sung' && v.abbr !== 'played' && vis(k).on;
     /* the staff selected (Samuel 2026-11-15: the pitch shows on the selected staff) */
     { const v = anyVoice(); if (v && ok(v, piece.voices.indexOf(v))) return piece.voices.indexOf(v); }
     let i = piece.voices.findIndex((v, k) => ok(v, k) && vis(k).play !== true);
-    if (i < 0) { const v = anyVoice(); if (v && v.abbr !== 'sung') i = piece.voices.indexOf(v); }
+    if (i < 0) { const v = anyVoice(); if (v && v.abbr !== 'sung' && v.abbr !== 'played') i = piece.voices.indexOf(v); }
     if (i < 0) i = piece.voices.findIndex(ok);
     return i;
   }
@@ -273,11 +275,14 @@
     const T = audio.timeline; if (!T || !audio.ctx) return null;
     return Math.max(0, (audio.ctx.currentTime - T.origin) / T.spm / 2);
   }
-  function clearDot(){ document.querySelectorAll('#pages .mic').forEach(g => g.remove()); mic.drawn = ''; mic.el = null; }
+  /* two kinds of dot: the sung pitch (class mic) and the key played on the keyboard (class kdot) */
+  const mdot = {g: null, el: null, drawn: '', cls: 'mic'}, kdot = {g: null, el: null, drawn: '', cls: 'kdot'};
+  function clearDot(o){ o = o || mdot; document.querySelectorAll('#pages .' + o.cls).forEach(g => g.remove()); o.g = null; o.drawn = ''; o.el = null; }
   /* the dot stands on the column of the note of the sung voice that sounds now (or the one selected, or its first note) */
-  function drawDot(){
+  function drawDot(){ drawDotAt(mdot, mic.snap, mic.shown, st.micShow); }
+  function drawDotAt(o, snap, shown, on){
     const vi = singIdx(), v = vi >= 0 ? piece.voices[vi] : null;
-    if (!st.micShow || !v || !v.syms || !v.syms.length || mic.snap === null || mic.shown === null) { if (mic.drawn) clearDot(); return; }
+    if (!on || !v || !v.syms || !v.syms.length || snap === null || shown === null) { if (o.drawn) clearDot(o); return; }
     const t = nowT();
     let k = -1;
     if (t !== null) k = v.syms.findIndex(s => s.t <= t + EPS && t < s.t + s.d - EPS);
@@ -285,28 +290,28 @@
     if (k < 0 && t !== null && t >= piece.end - EPS) k = v.syms.length - 1;
     if (k < 0) k = 0;
     const el = document.querySelector('#pages g.n' + vi + '-' + k);
-    if (!el) { if (mic.drawn) clearDot(); return; }
+    if (!el) { if (o.drawn) clearDot(o); return; }
     const par = el.parentNode;
     let r = null;
     for (const r2 of par.querySelectorAll('rect.stafhit[data-v="' + vi + '"]')) if (r2.dataset.k0 !== '' && +r2.dataset.k0 <= k && k <= +r2.dataset.k1) r = r2;
     if (!r) for (const r2 of par.querySelectorAll('rect.stafhit[data-v="' + vi + '"]')) r = r2;
     if (!r) return;
     const top = +r.dataset.top, bb = el.getBBox();
-    const m = mic.snap, sp = spellMidi(m), pos = sp.s - CLEFS[v.clef].bottom;
+    const m = snap, sp = spellMidi(m), pos = sp.s - CLEFS[v.clef].bottom;
     const sym = v.syms[k], sig = keyAt(v, sym.t)[LETTERS[sp.L]] || 0;
     const acc = sp.alt === sig ? '' : sp.alt < 0 ? 'fl' : sp.alt > 0 ? 'sh' : 'na';
     const rr = 0.5, aw = acc ? gw(acc) + 0.25 : 0;
     /* on the note's own column: directly above or below it, at the height of the sung pitch */
     const cx = sym.hw ? bb.x + sym.hw / 2 : bb.x + bb.width / 2, x = cx - rr - aw;
-    const cents = st.micFlex ? Math.max(-50, Math.min(50, (mic.shown - m) * 100)) : 0;
+    const cents = st.micFlex ? Math.max(-50, Math.min(50, (shown - m) * 100)) : 0;
     const y = top + 4 - pos * 0.5, yd = y - cents / 100 * 0.5;
     const s = ledgers(pos, cx - rr, 2 * rr, top) + (acc ? use(acc, x, y) : '') +
       `<ellipse class="micdot" cx="${f(cx)}" cy="${f(yd)}" rx="${rr + 0.04}" ry="${f(rr * 0.86)}"/>`;
-    if (s === mic.drawn && mic.el === el && mic.g && mic.g.isConnected) return;
-    if (mic.g) mic.g.remove();
+    if (s === o.drawn && o.el === el && o.g && o.g.isConnected) return;
+    if (o.g) o.g.remove();
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.setAttribute('class', 'mic'); g.innerHTML = s; par.appendChild(g);
-    mic.g = g; mic.el = el; mic.drawn = s;
+    g.setAttribute('class', o.cls); g.innerHTML = s; par.appendChild(g);
+    o.g = g; o.el = el; o.drawn = s;
   }
 
   /* ---------------- writing out the singing (experimental) ---------------- */
@@ -314,7 +319,6 @@
      join into longer notes, and the result is written as a voice of its own, "Sung", under the music. */
   const take = {on: false, armed: false, frames: [], keys: [], open: new Map(), sig: '', from: 0, done: 0, before: null, last: 0, timer: 0};
   const takeShown = () => take.on && st.micNotate;
-  const keyed = () => take.keys.length > 0 || take.open.size > 0;
   /* a take cut short (the microphone turned off while the music plays): what it already wrote stays, and Undo takes it away */
   function takeKeep(){
     if (!take.on || !take.sig || !take.before || !piece) return;
@@ -337,7 +341,7 @@
   }
   function takeRecord(now, m, q, rms){
     const T = audio.timeline;
-    if (!takeShown() || !T || keyed()) { mic.onset = false; return; }
+    if (!takeShown() || !T) { mic.onset = false; return; }
     const c = T.spm / 2, u = (now - takeLag(audio.ctx) - T.origin) / c;
     if (u >= take.from) {
       let v = m !== null && q < 0.3 && rms >= 0.12 * mic.peak ? m : null;
@@ -417,9 +421,9 @@
     return null;
   }
   /* the sung notes as {a, b, m}: beginning and end in semiminimae from the start of the piece, midi pitch */
-  function takeNotes(last, c){
+  function takeNotes(last, c, kind){
     let segs, d, lastU;
-    if (keyed()) {
+    if (kind === 'k') {
       /* played on a keyboard: the keys as pressed, a little earlier by the time the organ takes to be heard */
       const T = audio.timeline, nowU = T && audio.ctx ? (audio.ctx.currentTime - T.origin) / c : 0;
       segs = take.keys.concat([...take.open].map(([m, u0]) => ({u0, u1: nowU, m}))).filter(g => g.u1 > g.u0).sort((a, b) => a.u0 - b.u0);
@@ -450,14 +454,14 @@
     return ev;
   }
   /* the Sung voice: rests up to the first sung note, the sung notes with rests between, rests to the end */
-  function sungVoice(ev, ref){
+  function sungVoice(ev, ref, name, abbr){
     const kclef = (() => {
       const steps = ev.map(e => spellMidi(e.m).s);
       if (!steps.length) return ref.kclef || 'Gv2';
       const med = median(steps);
       return med >= 33 ? 'G2' : med >= 24 ? 'Gv2' : 'F4';
     })();
-    const v = {name: 'Sung', abbr: 'sung', kclef, events: [], mets: [], keys: [], clefs: [{t: 0, c: kclef, ei: 0}], verses: 0, t: 0};
+    const v = {name: name || 'Sung', abbr: abbr || 'sung', kclef, events: [], mets: [], keys: [], clefs: [{t: 0, c: kclef, ei: 0}], verses: 0, t: 0};
     for (const m of ref.mets) v.mets.push({t: m.t, sign: m.sign, ei: 0, _t: m.t});
     for (const k of ref.keys) if (eq(k.t, 0)) v.keys.push({t: 0, alts: Object.assign({}, k.alts), raw: k.raw, ei: 0});
     if (!v.mets.length) v.mets.push({t: 0, sign: 'C', ei: 0, _t: 0});
@@ -494,24 +498,32 @@
   /* write the Sung voice into the piece: live (no undo) while the music plays, once more with undo at the end */
   function takeQuantize(last, c){
     if (!piece) return;
-    const ev = takeNotes(last, c);
-    const sig = ev.map(e => [e.a, e.b, e.m].join(':')).join(' ');
+    /* what the microphone heard (staff Sung) and what the keyboard played (staff Played), each its own staff */
+    const kinds = [['m', 'Sung', 'sung'], ['k', 'Played', 'played']]
+      .map(([k, name, abbr]) => ({k, name, abbr, ev: (k === 'k' ? take.keys.length || take.open.size : take.frames.length) ? takeNotes(last, c, k) : []}))
+      .filter(x => x.ev.length);
+    const sig = kinds.map(x => x.k + x.ev.map(e => [e.a, e.b, e.m].join(':')).join(' ')).join('|');
     if (sig === take.sig && !last) return;
     take.sig = sig;
+    if (!kinds.length) return;
     const write = () => {
       const vi = take.vi !== undefined ? take.vi : singIdx(); if (vi < 0 || !piece.voices[vi]) return;
       const ref = piece.voices[vi];
-      /* a voice with no notes yet (CantusFirmus's Contrapunctus, a new voice) is written into itself; otherwise into Sung */
-      if (take.self === undefined) { take.self = !ref.events.some(e => !e.rest); take.vi = vi; take.ref = ref; }
-      const nv = sungVoice(ev, take.ref);
-      let si;
-      if (take.self) {
-        nv.name = ref.name; nv.abbr = ref.abbr; nv.kclef = ref.kclef; nv.clefs = [{t: 0, c: ref.kclef || nv.kclef, ei: 0}];
-        piece.voices[vi] = nv; si = vi;
-      } else {
-        si = piece.voices.findIndex(v => v.abbr === 'sung');
-        if (si < 0) { piece.voices.splice(vi + 1, 0, nv); si = vi + 1; shiftVis(si, 1); vis(si).play = false; }
-        else piece.voices[si] = nv;
+      /* a voice with no notes yet (CantusFirmus's Contrapunctus, a new voice) is written into itself; otherwise into its own staff */
+      if (take.self === undefined) { take.self = !ref.events.some(e => !e.rest) && kinds.length === 1; take.vi = vi; take.ref = ref; }
+      for (const x of kinds) {
+        const nv = sungVoice(x.ev, take.ref, x.name, x.abbr);
+        if (take.self) {
+          nv.name = ref.name; nv.abbr = ref.abbr; nv.kclef = ref.kclef; nv.clefs = [{t: 0, c: ref.kclef || nv.kclef, ei: 0}];
+          piece.voices[vi] = nv;
+        } else {
+          const si = piece.voices.findIndex(v => v.abbr === x.abbr);
+          if (si >= 0) piece.voices[si] = nv;
+          else {
+            const after = x.abbr === 'played' ? Math.max(vi, piece.voices.findIndex(v => v.abbr === 'sung')) : vi;
+            piece.voices.splice(after + 1, 0, nv); shiftVis(after + 1, 1); vis(after + 1).play = false;
+          }
+        }
       }
       save();
       const text = writeKern(piece);
@@ -519,7 +531,8 @@
         const before = take.before;
         if (before && before !== text) { ed.undo.push(before); ed.redo = []; }
         applyText(text);
-        toast(`What you ${keyed() || take.wasKeyed ? 'played' : 'sang'} is written in ${take.self ? 'the ' + ref.name : 'the Sung voice'}. Undo takes it away.`);
+        const what = kinds.map(x => x.k === 'k' ? 'played' : 'sang').join(' and ');
+        toast(`What you ${what} is written in ${take.self ? 'the ' + ref.name : kinds.length > 1 ? 'the Sung and Played voices' : 'the ' + kinds[0].name + ' voice'}. Undo takes it away.`);
       } else {
         const P = parseKern(text); P.text = text; piece = P;
         render();
@@ -538,30 +551,42 @@
     spec.onStop = (now, T) => { if (take.on) takeFinish((Math.min(now, T.end) - T.origin) / (T.spm / 2), T.spm / 2); recDisarm(); };
   };
   /* a key of the keyboard (computer, screen or MIDI) during a recording: it is written into the take, not at the caret */
+  const kheld = [];
+  function showKey(){
+    if (kheld.length) drawDotAt(kdot, kheld[kheld.length - 1], kheld[kheld.length - 1], st.kbdShow);
+    else clearDot(kdot);
+  }
   H.keyNote = (m, on) => {
+    const i = kheld.indexOf(m);
+    if (on && i < 0) kheld.push(m); else if (!on && i >= 0) kheld.splice(i, 1);
+    showKey(); setTimeout(showKey, 30);   /* once more after a note written at the caret has been drawn */
     const T = audio.timeline;
     if (!take.on || !st.micNotate || !T || !audio.ctx) return false;
     const c = T.spm / 2, u = (audio.ctx.currentTime - T.origin) / c;
     if (u < take.from) return true;
     if (on) take.open.set(m, u);
-    else if (take.open.has(m)) { take.keys.push({u0: take.open.get(m), u1: u, m}); take.open.delete(m); take.wasKeyed = true; }
+    else if (take.open.has(m)) { take.keys.push({u0: take.open.get(m), u1: u, m}); take.open.delete(m); }
     takeQuantize(false, c);
     return true;
   };
-  /* Record: the music plays (from where Play would start) and what is sung or played is written out; pressed again, it stops */
-  function recSync(){ pressed($('#recGo'), take.armed); pressed($('#mic'), mic.on); }
+  /* Record does what its menu has ticked: Notate (the music plays, and what you sing and what you play is written out as staves)
+     and/or Record audio (your voice is kept as a sound recording). Pressed again, it stops. */
+  function recSync(){ pressed($('#recGo'), take.armed || rec.on); pressed($('#mic'), mic.on); }
   function recDisarm(){
     if (!take.armed) return;
     take.armed = false;
     if (take.micByRec) { take.micByRec = false; if (mic.on) micStop(); }
+    if (rec.on) recStop();
     recSync();
   }
   async function recGo(){
-    if (take.armed) { if (play) togglePlayHold(); recDisarm(); return; }
+    if (take.armed || rec.on || rec.busy) { if (play) togglePlayHold(); recDisarm(); if (rec.on) recStop(); return; }
     if (!piece) return;
-    if (!st.micNotate) { toast('Turn on “Notate what I sing” (hover over Record) for Record to write the music out.'); return; }
+    if (!st.micNotate && !st.recAudio) { toast('Choose what Record does: hover over it and tick Notate or Record audio.'); return; }
+    if (st.recAudio) await recStart();
+    if (!st.micNotate) { recSync(); return; }
     take.armed = true; recSync();
-    /* the microphone, unless the notes come from a keyboard (one open on the screen, or a MIDI keyboard) */
+    /* what is active is notated: the microphone, and/or the keyboard (open on the screen, or a MIDI keyboard); with neither, the microphone goes on */
     const K = window.ScriptoriumKeyboard, keys = K && (K.state.on || (K.state.inputs || []).length);
     if (!keys && !mic.on) { await micStart(); take.micByRec = mic.on; }
     if (!take.armed) return;
@@ -570,7 +595,7 @@
     recSync();
   }
   const syncSing = () => {
-    pressed($('#micFlex'), st.micFlex); pressed($('#micPhones'), st.micPhones); pressed($('#micNotate'), st.micNotate); pressed($('#micDia'), st.micDia); pressed($('#micShow'), st.micShow);
+    pressed($('#micFlex'), st.micFlex); pressed($('#micPhones'), st.micPhones); pressed($('#micNotate'), st.micNotate); pressed($('#micDia'), st.micDia); pressed($('#micShow'), st.micShow); pressed($('#recAudio'), st.recAudio); pressed($('#kbdShow'), st.kbdShow);
     $('#micLat').value = st.micCal === null ? '' : Math.round(st.micCal * 1000);
   };
   /* one button: pressed, the microphone goes on or off; its arrow (or hovering) opens the options */
@@ -686,18 +711,20 @@
       recList();
     };
     rec.mr.start(1000); rec.t0 = performance.now(); rec.on = true;
-    pressed($('#recBtn'), true); $('#recBtn').lastChild.textContent = 'Stop recording';
+    recSync();
   }
   function recCleanup(){
     if (rec.src) try { rec.src.disconnect(); } catch (e) {}
     if (rec.dest && audio.master) try { audio.master.disconnect(rec.dest); } catch (e) {}
     if (rec.stream) rec.stream.getTracks().forEach(t => t.stop());
     rec.stream = rec.src = rec.dest = null; rec.on = false;
-    pressed($('#recBtn'), false); $('#recBtn').lastChild.textContent = 'Record audio';
+    recSync();
   }
   function recStop(){ if (rec.mr && rec.mr.state !== 'inactive') rec.mr.stop(); else recCleanup(); }
   function recPlayStop(){ if (rec.audio) { rec.audio.pause(); rec.audio = null; } if (rec.url) { URL.revokeObjectURL(rec.url); rec.url = null; } rec.playing = null; }
-  $('#recBtn').addEventListener('click', () => { if (rec.on) recStop(); else recStart(); });
+  $('#recAudio').addEventListener('click', () => { st.recAudio = !st.recAudio; save(); syncSing(); });
+  /* the keyboard's popover is made by keys.js, after this file: found by delegation */
+  document.addEventListener('click', e => { if (e.target.closest('#kbdShow')) { st.kbdShow = !st.kbdShow; save(); syncSing(); showKey(); } });
   $('#recList').addEventListener('click', async e => {
     const b = e.target.closest('button'), row = e.target.closest('.recitem'); if (!b || !row) return;
     e.stopPropagation();
@@ -726,5 +753,5 @@
   });
   recList();
   syncSing();
-  window.__sing = {mic, take, rec, recAll, singIdx, sungVoice, takeNotes, spellMidi, drawDot};
+  window.__sing = {syncSing, mic, take, rec, recAll, singIdx, sungVoice, takeNotes, spellMidi, drawDot};
 }]);
