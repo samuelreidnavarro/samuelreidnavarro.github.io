@@ -223,10 +223,6 @@ function fill(A, iconSVG){
     pop.innerHTML = '<button class="tb popbtn" id="navSum" aria-haspopup="true" aria-label="Grid step" title="Grid step: how far the arrow keys move the caret. It can go on past the last note, into empty space, to write a new one"></button>' +
       '<div class="popbody"><div class="btns col" id="navBtns" role="group" aria-label="Grid step"></div></div>';
     const nb = pop.querySelector('#navBtns');
-    const own = document.createElement('button');
-    own.className = 'tb'; own.dataset.n = 'follow'; own.textContent = 'Same as note value';
-    own.addEventListener('click', () => A.setNav('follow'));
-    nb.appendChild(own);
     DKEYS.forEach(k => {
       const b = document.createElement('button');
       b.className = 'tb navv'; b.dataset.n = k; b.title = DNAME[k]; b.setAttribute('aria-label', DNAME[k]);
@@ -350,7 +346,7 @@ function sync(A){
   const cb = $('#colBtn'); if (cb) setPressed(cb, !!S.col);
   const lb = $('#ligBtn'); if (lb) { setPressed(lb, !!S.ligOn); lb.disabled = !(S.range || (t && !t.r && t.lig)); }
   if (A.nav && $('#navSum')) {
-    const n = A.nav(), src = document.querySelector('#durBtns button[data-d="' + (n === 'follow' ? S.dur : n) + '"]');
+    const n = A.nav(), src = document.querySelector('#navBtns button[data-n="' + n + '"] .navg');
     $('#navSum').innerHTML = '<span class="navlab">Grid</span>' + (src ? src.innerHTML : '') + CHEV;
     document.querySelectorAll('#navBtns button').forEach(b => setPressed(b, b.dataset.n === n));
   }

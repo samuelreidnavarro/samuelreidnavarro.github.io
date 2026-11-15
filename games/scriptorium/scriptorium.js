@@ -857,6 +857,7 @@ const decoder = document.createElement('textarea');
 function prepare(){
   const mode = st.nota;
   BLACK = isBlack(); MODERN = st.nota === 'fake' && st.heads !== 'old'; blackSync();
+  try { iconsSync(); } catch (e) {}   /* the note value icons in the notation in use (defined with the edit tools, later) */
   piece.voices.forEach((v, i) => {
     v.idx = i;
     v.clef = (vis(i).clef && CLEFS[vis(i).clef]) ? vis(i).clef : chooseClef(v, st.clefs);
@@ -3277,7 +3278,9 @@ const ed = {on: false, sel: null, ins: null, inRest: false, undo: [], redo: [], 
 const EKEY = k => APP.store + ':edit:' + k;
 /* Insert or Overwrite, kept per app */
 try { ed.ovr = localStorage.getItem(APP.store + ':ovr') === '1'; } catch (e) { ed.ovr = false; }
-try { ed.nav = localStorage.getItem(APP.store + ':nav') || 'follow'; } catch (e) { ed.nav = 'follow'; }
+try { ed.nav = localStorage.getItem(APP.store + ':nav') || 'S'; } catch (e) { ed.nav = 'S'; }
+/* the Grid is its own value (Samuel 2026-11-15): the number keys and the note value no longer change it; 'Same as note value' is gone */
+if (ed.nav === 'follow') ed.nav = 'S';
 /* the editing tools row is shown or hidden by the arrow beside the pen, apart from Edit mode itself; until the arrow
    has been used it comes and goes with Edit mode */
 try { const b = localStorage.getItem(APP.store + ':edbar'); ed.bar = b === null ? undefined : b === '1'; } catch (e) { ed.bar = undefined; }
@@ -3410,7 +3413,7 @@ function caretTime(v){
   return ei < v.events.length ? rt(v.events[ei].t + (ed.ins.off || 0)) : rt(v.end + (ed.ins.pad || 0));
 }
 /* the caret's own step (Caret step in the edit bar): a value of its own, or the note value being entered */
-const NAV_KEYS = ['follow', 'Mx', 'L', 'B', 'S', 'M', 'Sm', 'F'];
+const NAV_KEYS = ['Mx', 'L', 'B', 'S', 'M', 'Sm', 'F'];
 function navVal(){ return ed.nav && ed.nav !== 'follow' && VALS.some(x => x[0] === ed.nav) ? ed.nav : ed.val; }
 function navGrid(v, T){ return rt(VALS.find(x => x[0] === navVal())[1] / propAt(v, Math.min(T, v.end))); }
 /* Alt with the arrows: the caret moves on a grid of the value chosen for entering, also into the middle of a note */
@@ -4528,8 +4531,8 @@ const CBA = {
     toast(ed.ovr ? 'Overwrite: a new note takes the place of what stands there, so the other voices stay in step.' : 'Insert: a new note pushes the music after it along.');
   },
   moveCaret: dir => moveCaret(dir),
-  nav: () => ed.nav || 'follow',
-  setNav(k){ ed.nav = NAV_KEYS.includes(k) ? k : 'follow'; try { localStorage.setItem(APP.store + ':nav', ed.nav); } catch (e) {} syncEdit(); toast(ed.nav === 'follow' ? 'Grid step: the same as the note value.' : 'Caret step: ' + ({Mx:'maxima',L:'longa',B:'brevis',S:'semibrevis',M:'minima',Sm:'semiminima',F:'fusa'})[ed.nav] + '. The arrow keys move the caret by this.'); },
+  nav: () => ed.nav || 'S',
+  setNav(k){ ed.nav = NAV_KEYS.includes(k) ? k : 'S'; try { localStorage.setItem(APP.store + ':nav', ed.nav); } catch (e) {} syncEdit(); toast('Grid: ' + ({Mx:'maxima',L:'longa',B:'brevis',S:'semibrevis',M:'minima',Sm:'semiminima',F:'fusa'})[ed.nav] + '. The arrow keys move the caret by this.'); },
   /* coloration: the selected note turns black (two thirds of its value) or white again; with nothing selected,
      the notes entered from now on are coloured, until it is pressed again */
   toggleCol(){
@@ -4800,12 +4803,29 @@ function syncEdit(){
   $('#editBar').hidden = !barOpen();
   $('#editMore').setAttribute('aria-expanded', String(barOpen()));
   document.body.classList.toggle('editing', ed.on);
+  iconsSync();
   if (piece) NoteInput.sync(CBA);
 }
 function glyphIcon(k, minBox){
   const b = GLY[k].b, cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
   const box = Math.max(minBox, b[2] - b[0] + 0.5, b[3] - b[1] + 0.5);
   return `<svg viewBox="${f(cx - box / 2)} ${f(cy - box / 2)} ${f(box)} ${f(box)}" aria-hidden="true"><path d="${GLY[k].d}"/></svg>`;
+}
+/* the note value and Grid icons are drawn in the notation in use (Samuel 2026-11-15): white, black or modern */
+const VKEYS = ['Mx', 'L', 'B', 'S', 'M', 'Sm', 'F'];
+function styledKey(k){
+  if (!VKEYS.includes(k)) return k;
+  const black = isBlack(), modern = st.nota === 'fake' && st.heads !== 'old';
+  const g = black ? BLACK_G[k] || k + 'c' : modern ? MOD_G[k] || k : k;
+  return GLY[g] ? g : k;
+}
+let iconStyle = '';
+function iconsSync(){
+  const key = notaNow() + (st.heads || '');
+  if (key === iconStyle) return;
+  iconStyle = key;
+  document.querySelectorAll('#durBtns button[data-d]').forEach(b => { b.innerHTML = glyphIcon(styledKey(b.dataset.d), 2.7); });
+  document.querySelectorAll('#navBtns button[data-n] .navg').forEach(sp => { sp.innerHTML = glyphIcon(styledKey(sp.closest('button').dataset.n), 2.7); });
 }
 NoteInput.fill(CBA, glyphIcon);
 NoteInput.wire(CBA);
