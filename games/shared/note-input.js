@@ -308,10 +308,10 @@ function wire(A){
     /* a selected note (or range) is moved up and down by the arrows in note input, and outside it too */
     if ((edit || (A.canDelete && A.canDelete())) && (k === 'ArrowUp' || k === 'ArrowDown')) {
       e.preventDefault();
-      A.stepPitch((k === 'ArrowUp' ? 1 : -1) * (e.shiftKey || mod ? 7 : 1));
+      A.stepPitch((k === 'ArrowUp' ? 1 : -1) * (e.shiftKey || mod || e.altKey ? 7 : 1));
       return;
     }
-    if (edit && e.altKey && !mod && (k === 'ArrowLeft' || k === 'ArrowRight') && A.moveCaret) { e.preventDefault(); A.moveCaret(k === 'ArrowLeft' ? -1 : 1); return; }
+    if (edit && (e.altKey || mod) && (k === 'ArrowLeft' || k === 'ArrowRight') && A.moveCaret) { e.preventDefault(); A.moveCaret(k === 'ArrowLeft' ? -1 : 1); return; }
     if (mod || e.altKey) return;
     if (k === ' ') { e.preventDefault(); A.togglePlay(); return; }
     if (tag === 'BUTTON' && k === 'Enter') return;

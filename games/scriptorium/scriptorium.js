@@ -4969,13 +4969,16 @@ const CBA = {
     if (!ed.on && !has) return false;
     const horiz = k === 'ArrowLeft' || k === 'ArrowRight';
     /* Cmd+Shift+Right or Left: the note or rest takes the next longer or shorter value */
-    if (horiz && e.shiftKey && mod && !e.altKey) { if (CBA.guard()) stretch(k === 'ArrowRight' ? 1 : -1); return true; }
-    if (e.shiftKey && !e.altKey && !mod && has) return extendBy(k);
-    /* Cmd (or Alt) with Left and Right: the selection moves along, in any mode */
-    if (horiz && (e.altKey || mod) && has) { if (CBA.guard()) moveSelection(k === 'ArrowLeft' ? -1 : 1); return true; }
+    const cmd = mod || e.altKey;   /* Cmd and Option do the same with the arrows */
+    if (horiz && e.shiftKey && cmd) { if (CBA.guard()) stretch(k === 'ArrowRight' ? 1 : -1); return true; }
+    if (e.shiftKey && !cmd && has) return extendBy(k);
+    /* Cmd (or Option) with Left and Right: the selection moves along, in any mode */
+    if (horiz && cmd && has) { if (CBA.guard()) moveSelection(k === 'ArrowLeft' ? -1 : 1); return true; }
     if (!ed.on) return false;
-    if ((k === 'ArrowUp' || k === 'ArrowDown') && mod && !e.altKey && !has && ed.ins) return caretStaff(k === 'ArrowUp' ? -1 : 1);
-    if (horiz && !e.shiftKey && !e.altKey && !mod && (!has || ed.sel)) { moveCaret(k === 'ArrowLeft' ? -1 : 1); return true; }
+    if ((k === 'ArrowUp' || k === 'ArrowDown') && cmd && !has && ed.ins) return caretStaff(k === 'ArrowUp' ? -1 : 1);
+    /* Cmd or Option with Left and Right and only the caret: it moves on the grid, also into a note */
+    if (horiz && cmd && !e.shiftKey && !has && ed.ins) { moveCaret(k === 'ArrowLeft' ? -1 : 1); return true; }
+    if (horiz && !e.shiftKey && !cmd && (!has || ed.sel)) { moveCaret(k === 'ArrowLeft' ? -1 : 1); return true; }
     return false;
   },
   setXform(t){ ed.xf = t; },
