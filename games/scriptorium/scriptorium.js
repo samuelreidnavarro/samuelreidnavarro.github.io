@@ -2932,8 +2932,10 @@ if ($('#myBtn')) $('#myBtn').addEventListener('click', e => { e.stopPropagation(
   const mouse = () => window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches;
   const wrap = libEl.closest('.libwrap') || libEl.parentNode;
   let tOpen = 0, tShut = 0;
+  /* in a narrower window the big panel would cover the page the moment the pointer passes: there it opens on a click only */
+  const narrow = () => window.matchMedia('(max-width:1100px)').matches;
   const hoverOpen = (btn, mode) => btn && btn.addEventListener('mouseenter', () => {
-    if (!mouse()) return;
+    if (!mouse() || narrow()) return;
     clearTimeout(tOpen);
     tOpen = setTimeout(() => { if (btn.matches(':hover') && (libEl.hidden || libEl.dataset.mode !== mode)) setLib(true, mode); }, 260);
   });
