@@ -54,6 +54,9 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Ligatures</span><div class="btns" id="ligSeg" role="group" aria-label="Ligatures"><button class="tb" data-v="on" title="Ligatures drawn as ligatures (in mensural notation)">On</button><button class="tb" data-v="off" title="The notes of a ligature written one by one, under a bracket">Off</button></div>
           <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
           <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Through the staff</button></div>
+          <label class="lab" for="bnumSel">Bar numbers</label><select id="bnumSel" title="Bar numbers above the staff, placed by time: they work with the barlines hidden too"><option value="off">None</option><option value="line">At the start of every line</option><option value="1">Every bar</option><option value="2">Every 2 bars</option><option value="4">Every 4 bars</option><option value="5">Every 5 bars</option><option value="10">Every 10 bars</option></select>
+          <label class="lab bnx" for="bunitSel">A bar is</label><select class="bnx" id="bunitSel" title="What one bar is when counting"><option value="bar">From barline to barline</option><option value="mens">A breve of the mensuration sign</option><option value="S">A semibreve</option><option value="B">A breve</option><option value="Bp">A perfect breve (dotted)</option><option value="L">A long</option><option value="Lp">A perfect long</option></select>
+          <span class="lab bnx">Bar numbers over</span><div class="btns bnx" id="bposSeg" role="group" aria-label="Bar numbers over"><button class="tb" data-v="top" title="Above the highest staff of each system">Top staff</button><button class="tb" data-v="all" title="Above every staff">Every staff</button></div>
           <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
           <span class="lab">Staff lines</span><div class="btns" id="linesSeg" role="group" aria-label="Staff lines"><button class="tb" data-v="5">Five</button><button class="tb" data-v="4">Four</button></div>
           <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
@@ -427,6 +430,8 @@ function parseKern(text){
           v.keys.push({t: v.t, alts, raw: m[1], ei: v.events.length});
         }
         else if ((m = s.match(/^\*met\((.*)\)$/))) v.mets.push({t: v.t, sign: m[1], ei: v.events.length});
+        /* the modern equivalent of the sign before it (our own tandem, e.g. *mod(3/1)): printed in modern notation, and the barlines follow it */
+        else if ((m = s.match(/^\*mod\((.*)\)$/))) { const q = v.mets[v.mets.length - 1]; if (q && eq(q.t, v.t) && m[1]) q.mod = m[1]; }
         else if ((m = s.match(/^\*M(\d+)\/(\d+)$/))) v.lastM = +m[1] / +m[2];
         else if (s === '*lig') { v.ligN = (v.ligN || 0) + 1; v.ligOn = v.ligN; }
         else if (s === '*Xlig') v.ligOn = 0;
@@ -592,6 +597,8 @@ function notate(piece, v, mode){
     if (sign !== curSign) {
       const changed = v.mets.find(m => eq(m.t, e.t) || (m.t > (i ? evs[i - 1].t : -1) + EPS && m.t <= e.t + EPS));
       if (changed && changed.sign) mens = changed.sign;
+      /* Modern notation prints the sign's modern equivalent, when it has one, as a time signature */
+      if (mode === 'fake' && changed && changed.mod && /^[^/]{1,4}\/[^/]{1,4}$/.test(changed.mod)) mens = 'M:' + changed.mod;
       curSign = sign; segStart = e.t;
     }
     const mi = mensInfo(sign);
@@ -700,7 +707,7 @@ let DOCK = null;     /* where the site page says the browser window is, when emb
 const KEY = APP.store + ':v1';
 const st = {
   inc: {}, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on', heads: 'modern',
-  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1,
+  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
   ...(APP.defaults || {})
 };
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
@@ -715,10 +722,10 @@ if (st.bars === 'mstrich') st.bars = 'full';
 /* barlines now stand in each staff only; everyone starts again from those */
 if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
 /* presets (shared by the apps through the browser): the two built-in ones and the ones Samuel saves; one of them opens every score */
-const PRESET_KEYS = ['eq', 'nota', 'heads', 'clefs', 'bars', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'orient', 'flow'];
-const MENS1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', staff: 'black', lines: '5', paperCol: 'white', size: 1.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', orient: 'portrait', flow: 'vertical'};
+const PRESET_KEYS = ['eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'orient', 'flow'];
+const MENS1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'black', lines: '5', paperCol: 'white', size: 1.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', orient: 'portrait', flow: 'vertical'};
 const MENS2 = {...MENS1, clefs: 'mens', size: 1.65, dashes: 'off'};
-const CF1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', staff: 'red', lines: '5', paperCol: 'parchment', size: 3.6, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web'};
+const CF1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', lines: '5', paperCol: 'parchment', size: 3.6, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web'};
 const CF2 = {...CF1, clefs: 'mens', dashes: 'off'};
 const IS_CF = APP.id === 'cantus-firmus';
 const BUILTIN = IS_CF ? [{name: 'Preset 1', s: CF1, fixed: true}, {name: 'Preset 2', s: CF2, fixed: true}] : [{name: 'Preset 1', s: MENS1, fixed: true}, {name: 'Preset 2', s: MENS2, fixed: true}];
@@ -729,7 +736,7 @@ const presetAll = () => [...BUILTIN, ...presetStore().custom];
 function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; }
 { const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } }
 /* changing an engraving setting unticks the ticked preset: the settings are now "current settings" of their own */
-const LOOK_KEYS = ['eq', 'nota', 'heads', 'clefs', 'bars', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
+const LOOK_KEYS = ['eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
 function presetDrift(){
   const S = presetStore(); if (!S.active) return;
   const P = presetAll().find(q => q.name === S.active);
@@ -910,6 +917,7 @@ function keyAt(v, t){
 function mensW(sign){
   if (st.mens === 'off') return 0;
   const s = sign || '';
+  if (s.startsWith('M:')) return Math.max(...s.slice(2).split('/').map(x => x.length)) * 1.25 + 0.4;
   const hasShape = /[CO]/.test(s), num = (s.match(/\d+/) || [''])[0];
   return (hasShape ? 2.2 : 0) + (num ? 1.2 * num.length + (hasShape ? 0.3 : 0) : 0);
 }
@@ -1029,11 +1037,16 @@ const NUMPATH = {
   '4': 'M0.95 2.3L0.95 0L0 1.6L1.3 1.6',
   '6': 'M1 0.2C0.3 0 0 1 0.1 1.7C0.15 2.6 1.1 2.5 1.1 1.7C1.1 1.1 0.3 1 0.1 1.7',
   '9': 'M0.1 2.1C0.8 2.3 1.1 1.3 1 0.6C0.95 -0.2 0 -0.1 0 0.6C0 1.2 0.8 1.3 1 0.6',
-  '1': 'M0.2 0.5L0.7 0L0.7 2.3M0.2 2.3L1.2 2.3'
+  '1': 'M0.2 0.5L0.7 0L0.7 2.3M0.2 2.3L1.2 2.3',
+  '0': 'M0.6 0C0.1 0 0 0.6 0 1.15C0 1.7 0.1 2.3 0.6 2.3C1.1 2.3 1.2 1.7 1.2 1.15C1.2 0.6 1.1 0 0.6 0Z',
+  '5': 'M1.1 0L0.25 0L0.15 1C0.45 0.8 1.1 0.75 1.1 1.5C1.1 2.4 0.25 2.45 0.05 2',
+  '7': 'M0.05 0L1.2 0L0.5 2.3',
+  '8': 'M0.6 1.1C0.1 1 0.1 0 0.6 0C1.1 0 1.1 1 0.6 1.1C0 1.2 0 2.3 0.6 2.3C1.2 2.3 1.2 1.2 0.6 1.1Z'
 };
 function mensSvg(sign, x, top){
   if (st.mens === 'off') return '';
   const s = sign || '';
+  if (s.startsWith('M:')) return timeSigSvg(s.slice(2).split('/'), x, top);
   const hasC = /C/.test(s), hasO = /O/.test(s), stroke = /\|/.test(s), dot = /\./.test(s), rev = /r/.test(s);
   const num = (s.match(/\d+/) || [''])[0];
   const cy = top + 2, r = 1.05;
@@ -1054,6 +1067,20 @@ function mensSvg(sign, x, top){
       o += d ? `<path d="${d}" transform="translate(${f(nx + i * 1.2)} ${f(cy - 1.1)}) scale(0.9)" ${a}/>` : `<text x="${f(nx + i * 1.2)}" y="${f(cy + 1.05)}" font-size="3">${ch}</text>`;
     });
   }
+  return o;
+}
+/* a modern time signature: the two numbers, one over the other, each filling half the staff */
+function timeSigSvg(rows, x, top){
+  const W = Math.max(...rows.map(r => r.length)) * 1.25;
+  let o = '';
+  rows.forEach((r, k) => {
+    const x0 = x + 0.2 + (W - r.length * 1.25) / 2, y0 = top + k * 2;
+    [...r].forEach((ch, i) => {
+      const d = NUMPATH[ch];
+      o += d ? `<path d="${d}" transform="translate(${f(x0 + i * 1.25)} ${f(y0 + 0.05)}) scale(0.95 0.82)" fill="none" class="ms" stroke-width="0.34" stroke-linecap="round" stroke-linejoin="round"/>`
+        : `<text x="${f(x0 + i * 1.25 + 0.6)}" y="${f(y0 + 1.75)}" font-size="2.5" font-weight="bold" text-anchor="middle">${esc(ch)}</text>`;
+    });
+  });
   return o;
 }
 function ledgers(pos, x, w, top){
@@ -1502,6 +1529,58 @@ function lineRoom(v, line){
 function nextSym(v, t){
   return v.syms.find(s => s.t >= t - EPS) || null;
 }
+/* Bar numbers (Samuel 2026-11-15): Engraving > Bar numbers (Off, at the start of every line, every bar, every 2, 4, 5 or 10)
+   counted in barlines or in a value chosen (semibreve, breve, perfect breve, long, perfect long, or the breve of the
+   mensuration sign). They stand at the place in time, so they work with the barlines hidden or with none at all. */
+const BAR_STARTS = new WeakMap();
+function barStarts(){
+  const key = st.bunit || 'bar', c = BAR_STARTS.get(piece);
+  if (c && c.key === key) return c.list;
+  const end = piece.end, list = [0];
+  const fixed = {S: 1, B: 2, Bp: 3, L: 4, Lp: 9}[key];
+  if (fixed) for (let t = fixed; t < end - EPS; t = rt(t + fixed)) list.push(t);
+  else if (key === 'bar' && piece.bars.length) for (const b of piece.bars) { if (b.t > EPS && b.t < end - EPS && !eq(b.t, list[list.length - 1])) list.push(b.t); }
+  else {
+    /* the breve of the sign in the highest voice (perfect under O, imperfect under C), from every change of sign */
+    const v = piece.voices[0], cuts = [...new Set([0, ...v.mets.map(m => rt(m.t))])].sort((a, b) => a - b);
+    cuts.forEach((a, i) => {
+      const b = i + 1 < cuts.length ? cuts[i + 1] : end, mi = mensInfo(metAt(v, a)), per = valueTable(mi.T, mi.P)[2][1] / mi.p;
+      if (a > EPS && !eq(a, list[list.length - 1])) list.push(a);
+      for (let t = rt(a + per); t < b - EPS; t = rt(t + per)) list.push(t);
+    });
+  }
+  BAR_STARTS.set(piece, {key, list});
+  return list;
+}
+/* the numbers a line shows: [{n, t, ci, x, start}] (ci: the column under it, for the room above the staff) */
+function barNumbersFor(line){
+  if (!st.bnum || st.bnum === 'off' || !piece) return [];
+  const L = barStarts(), out = [];
+  const t0 = line.t0, t1 = line.tEnd !== undefined ? line.tEnd : Infinity, cols = line.cols;
+  const at = t => {
+    let i = line.from; while (i + 1 < line.to && cols[i + 1].t <= t + EPS) i++;
+    const c = cols[i];
+    if (eq(c.t, t)) return {ci: i - line.from, x: line.xs[i] - c.left - (st.bars === 'full' ? 0.85 : 0.6)};
+    /* inside a note: between its column and the next, in proportion to the time */
+    const nx = i + 1 < line.to ? line.xs[i + 1] : line.x1, nt = i + 1 < line.to ? cols[i + 1].t : t1;
+    return {ci: i - line.from, x: line.xs[i] + (nx - line.xs[i]) * Math.min(1, (t - c.t) / Math.max(EPS, nt - c.t))};
+  };
+  if (st.bnum === 'line') {
+    if (t0 < EPS) return [];
+    let n = 0; for (const t of L) if (t <= t0 + EPS) n++;
+    return [{n, t: t0, ci: 0, x: line.x0 + 0.15, start: true}];
+  }
+  const every = +st.bnum || 1;
+  L.forEach((t, k) => {
+    const n = k + 1;
+    if (n === 1 || n % every || t < t0 - EPS || t >= t1 - EPS) return;
+    if (eq(t, t0)) out.push({n, t, ci: 0, x: line.x0 + 0.15, start: true});
+    else out.push(Object.assign({n, t}, at(t)));
+  });
+  return out;
+}
+/* how high a bar number stands above a staff (from its top line), given what the music has there */
+const barNumY = (room, ci) => Math.min(-0.9, room.lo[ci] ?? -0.9) - 0.45;
 function sectionLabels(line, top, W){
   let s = '';
   for (const sec of piece.sections) {
@@ -1573,7 +1652,11 @@ function drawSystem(vlist, line, y, opts = {}){
     for (let i = 0; i < A.hiS.length; i++) d = Math.max(d, (A.hiS[i] - 4) + -B.loS[i]);
     return d + gap;
   });
+  /* bar numbers: above the top staff, or above every staff; they get room of their own where the music leaves none */
+  const bnums = barNumbersFor(line), bnAll = st.bpos === 'all' && vlist.length > 1;
+  if (bnums.length && bnAll) vlist.forEach((v, k) => { if (k) for (const q of bnums) need[k] = Math.max(need[k], (rooms[k - 1].hiS[q.ci] ?? 4) - 4 - barNumY(rooms[k], q.ci) + 1.4); });
   if (st.eq === 'on' && vlist.length > 1) { const D = Math.max(...need.slice(1)); for (let k = 1; k < need.length; k++) need[k] = D; }
+  if (bnums.length) yy += Math.max(0, Math.max(...bnums.map(q => -barNumY(rooms[0], q.ci) + 1.4)) - rooms[0].above);
   yy += rooms[0].above;
   vlist.forEach((v, k) => {
     if (k) yy += need[k] + 4;
@@ -1629,6 +1712,9 @@ function drawSystem(vlist, line, y, opts = {}){
     if (br && (br.type === 'double' || br.type === 'sec')) { s += barSvg(br.type, line.x1 - 0.4, tops, single, segs); s += secHit(br.t, line.x1 - 0.4, tops); }
   }
   if (line.endsPiece) s += finalBar(line.x1 - 0.9, tops);
+  for (const q of bnums) (bnAll ? tops : tops.slice(0, 1)).forEach((top, k) => {
+    s += `<text class="barnum" x="${f(q.x)}" y="${f(top + barNumY(rooms[k], q.ci))}" font-size="1.6" font-style="italic" text-anchor="${q.start ? 'start' : 'middle'}">${q.n}</text>`;
+  });
   /* left edge: a thin line joining the staves in score */
   if (vlist.length > 1 && opts.join) s += vl(line.x0, tops[0], tops[tops.length - 1] + 4, 'barl', 0.14);
   return {svg: s, h: yy - y, tops};
@@ -2403,7 +2489,9 @@ function segInit(id, key, after){
 }
 function syncUI(){
   if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
-  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#mensSeg': 'mens', '#scrollSeg': 'webScroll', '#eqSeg': 'eq'};
+  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#mensSeg': 'mens', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#bposSeg': 'bpos'};
+  $('#bnumSel').value = st.bnum || 'off'; $('#bunitSel').value = st.bunit || 'bar';
+  document.querySelectorAll('.bnx').forEach(el => { el.hidden = !st.bnum || st.bnum === 'off'; });
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
   for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).value = st[k];
   blackSync();
@@ -2541,7 +2629,8 @@ segInit('#eqSeg', 'eq'); segInit('#viewList', 'view'); $('#notaSeg').addEventLis
   if (b.dataset.v === 'fake') st.nota = 'fake';
   else { st.nota = 'real'; if (pieceKey) { if (b.dataset.v === 'black') st.black[pieceKey] = 1; else delete st.black[pieceKey]; } }
   save(); syncUI(); render();
-}); segInit('#headSeg', 'heads'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars');
+}); segInit('#headSeg', 'heads'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars'); segInit('#bposSeg', 'bpos');
+[['#bnumSel', 'bnum'], ['#bunitSel', 'bunit']].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; save(); syncUI(); render(); }));
 segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#edSeg', 'ed');
  segInit('#ligSeg', 'lig'); segInit('#mensSeg', 'mens'); segInit('#scrollSeg', 'webScroll', () => { viewerEl.scrollLeft = 0; });
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
@@ -2562,7 +2651,7 @@ function restVoice(name, clef, like){
   for (let k = 0; k + 1 < cuts.length; k++) {
     let r = rt(cuts[k + 1] - cuts[k]), t = cuts[k];
     const m = like && like.mets.find(x => eq(x.t, cuts[k]));
-    if (m) v.mets.push({t, sign: m.sign, ei: v.events.length});
+    if (m) v.mets.push(Object.assign({t, sign: m.sign, ei: v.events.length}, m.mod ? {mod: m.mod} : {}));
     while (r > EPS) { const d = r >= 2 - EPS ? 2 : r >= 1 - EPS ? 1 : r; v.events.push({d, kd: d, rest: true, t, syl: []}); t = rt(t + d); r = rt(r - d); }
   }
   if (!like || !like.mets.length) v.mets.push({t: 0, sign: 'C', ei: 0});
@@ -3030,10 +3119,67 @@ function retime(v){
   const at = ei => ei < v.events.length ? v.events[ei].t : v.end;
   for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) m.t = at(m.ei);
 }
+/* The modern equivalent of a mensuration sign (Samuel 2026-11-15): two numbers typed in the sign's menu, e.g. 3/1 or 3/4,
+   kept as *mod(3/1) after the *met. Modern notation prints it as a time signature, and from that sign on the barlines
+   fall every so many whole notes (as written in Modern notation, so a proportion sign's values count as written). Where
+   no sign has one, the barlines stay exactly as the file has them. */
+function modLen(mod, sign){
+  const m = String(mod || '').match(/^\s*(\d+(?:\s*\+\s*\d+)*)\s*\/\s*(\d+)\s*$/);
+  if (!m) return 0;
+  const n = m[1].split('+').reduce((a, x) => a + (+x || 0), 0), d = +m[2];
+  return n > 0 && d > 0 ? n / d / mensInfo(sign).p : 0;
+}
+/* the stretches of the piece where a modern equivalent rules the barlines: [{a, b, len, at}] (at: where its sign starts), or null */
+function modZones(P){
+  if (!P.voices.some(v => v.mets.some(m => modLen(m.mod, m.sign)))) return null;
+  const cuts = [...new Set([0, ...P.voices.flatMap(v => v.mets.map(m => rt(m.t)))])].filter(t => t < P.end - EPS).sort((a, b) => a - b);
+  const Z = [];
+  cuts.forEach((a, i) => {
+    const b = i + 1 < cuts.length ? cuts[i + 1] : P.end;
+    /* the highest voice whose sign there has a modern equivalent */
+    for (const v of P.voices) {
+      let m = null; for (const q of v.mets) if (q.t <= a + EPS) m = q;
+      const len = m && modLen(m.mod, m.sign);
+      if (len) { Z.push({a, b, len, at: m.t}); break; }
+    }
+  });
+  return Z.length ? Z : null;
+}
+function modRebar(P){
+  const Z = modZones(P); if (!Z) return;
+  const inZ = t => Z.some(z => t >= z.a - EPS && t < z.b - EPS);
+  const grid = [];
+  for (const z of Z) {
+    if (z.a > EPS && eq(z.at, z.a)) grid.push(rt(z.a));   /* a barline before the new time signature */
+    const k0 = Math.ceil((z.a - z.at) / z.len - 1e-6);
+    for (let k = Math.max(1, k0); ; k++) { const t = rt(z.at + k * z.len); if (t >= z.b - EPS) break; if (t > z.a - EPS) grid.push(t); }
+    if (z.b < P.end - EPS && !inZ(z.b)) grid.push(rt(z.b));
+  }
+  const onGrid = t => grid.some(g => eq(g, t));
+  /* notes tied over a barline that is no longer there become one note again (the writer ties them anew at the new barlines) */
+  for (const v of P.voices) {
+    const ev = v.events, marks = [...v.mets, ...v.keys, ...v.clefs];
+    for (let i = ev.length - 1; i > 0; i--) {
+      const a = ev[i - 1], b = ev[i];
+      if (a.rest || b.rest || a.step !== b.step || !(a.tieStart || a.tieMid) || !(b.tieEnd || b.tieMid) || !eq(a.t + a.d, b.t)) continue;
+      if (!inZ(b.t) || onGrid(b.t) || marks.some(m => m.ei === i)) continue;
+      const inc = !!((a.tieEnd && !a.tieStart) || a.tieMid), out = !!((b.tieStart && !b.tieEnd) || b.tieMid);
+      a.d = rt(a.d + b.d); a.ferm = a.ferm || b.ferm;
+      a.tieStart = !inc && out; a.tieEnd = inc && !out; a.tieMid = inc && out;
+      ev.splice(i, 1);
+      for (const m of marks) if (m.ei > i) m.ei--;
+    }
+    retime(v);
+  }
+  const bars = P.bars.filter(br => br.type !== 'single' || !inZ(br.t));
+  for (const t of grid) if (!bars.some(br => eq(br.t, t))) bars.push({t, type: 'single'});
+  P.bars = bars.filter(br => br.t > EPS && br.t < P.end - EPS).sort((a, b) => a.t - b.t);
+}
 function writeKern(P){
   const vs = P.voices.slice().reverse();          /* file order: lowest voice first */
   P.voices.forEach(retime);
   P.end = Math.max(...P.voices.map(v => v.end));
+  modRebar(P);
   const out = [];
   for (const [k, val] of Object.entries(P.meta)) out.push(`!!!${k}: ${val}`);
   const cols = [];
@@ -3089,7 +3235,11 @@ function writeKern(P){
     if (vs.some(v => [...ligE.get(v)].some(x => eq(x, t)))) out.push(line(c => c.text < 0 && [...ligE.get(c.v)].some(x => eq(x, t)) ? '*Xlig' : '*'));
     const bar = P.bars.find(b => eq(b.t, t) && !eq(t, P.end));
     if (bar) out.push(line(() => bar.type === 'double' ? '=||' : bar.type === 'sec' ? '=!' : '='));
-    for (const kind of ['clef', 'key', 'met']) {
+    for (const kind of ['clef', 'key', 'met', 'mod']) {
+      if (kind === 'mod') {
+        if (vs.some(v => markersAt(v, t).met.some(m => m.mod))) out.push(line(c => { const m = c.text < 0 && markersAt(c.v, t).met.find(q => q.mod); return m ? `*mod(${m.mod})` : '*'; }));
+        continue;
+      }
       const any = vs.some(v => markersAt(v, t)[kind].length);
       if (!any) continue;
       out.push(line(c => {
@@ -3672,6 +3822,7 @@ function mensIcon(sg){
   return `<svg viewBox="-0.3 -1.9 4.9 8.8" aria-hidden="true">${lines}<g fill="currentColor" stroke="none">${mensSvg(sg, 0.2, 0)}</g></svg>`;
 }
 mensMenu.innerHTML = `<li class="flatopt mscope" data-m="" role="presentation"><span class="mslab">Change</span><span class="seg" role="group" aria-label="Which voices the sign changes in"><button type="button" class="tb" data-scope="all" aria-pressed="true">All voices</button><button type="button" class="tb" data-scope="one" aria-pressed="false">Only <span class="mvn">this voice</span></button></span><input type="checkbox" id="mensDiff" hidden></li>` + MENS_MENU.map(([sg, name]) => `<li role="option" data-m="${esc(sg)}" title="${esc(name)}">${mensIcon(sg)}<span>${esc(sg.replace('r', ' rev.'))}</span></li>`).join('') +
+  `<li class="flatopt mmod" role="presentation" title="What Modern notation prints for this sign, as a time signature; from here on the barlines fall where it says. Leave both empty for none (the barlines then stay as the file has them)."><span class="mslab">Modern equivalent</span><span class="mmodf"><input id="modN" type="text" inputmode="numeric" maxlength="6" autocomplete="off" aria-label="Modern equivalent: upper number"><span class="mmsl">/</span><input id="modD" type="text" inputmode="numeric" maxlength="3" autocomplete="off" aria-label="Modern equivalent: lower number"></span><button type="button" class="tb" id="modOk">Set</button></li>` +
   `<li class="flatopt mdel" data-m="-" role="option" title="Remove this mensuration sign (or press Delete)"><span>Delete the sign</span></li>` +
   '';
 /* All voices | Only this voice, at the top of the menu (Samuel 2026-11-14: one voice's sign must be easy to change) */
@@ -3685,6 +3836,7 @@ function openMensMenu(vi, t, e){
   mensScope(false);
   mensMenu.querySelector('.mvn').textContent = v.name || 'this voice';
   mensMenu.querySelectorAll('li[data-m]').forEach(li => li.setAttribute('aria-selected', String(!!li.dataset.m && li.dataset.m === cur)));
+  modFill(v, t);
   mensMenu.hidden = false; clefPick.hidden = true;
   mensMenu.style.left = Math.max(4, Math.min(wr.width - mensMenu.offsetWidth - 4, e.clientX - wr.left)) + 'px';
   mensMenu.style.top = (e.clientY - wr.top + 10) + 'px';
@@ -3711,15 +3863,49 @@ function setMens(sign){
     }
   });
 }
+/* the modern equivalent's two fields: filled from the sign, with the usual equivalent shown faintly as a hint */
+const MOD_HINT = {'O': '3/1', 'C': '2/1', 'O|': '3/1', 'C|': '2/1', 'O.': '9/2', 'C.': '6/2', 'Cr': '2/1', '3': '3/1', 'O3': '3/1', 'C3': '3/1', 'C|3': '3/1', 'C2': '2/1'};
+function modFill(v, t){
+  let m = null; for (const q of v.mets) if (q.t <= t + EPS) m = q;
+  const [n, d] = String(m && m.mod || '').split('/');
+  const [hn, hd] = (MOD_HINT[m ? m.sign : 'C'] || '2/1').split('/');
+  $('#modN').value = n || ''; $('#modD').value = d || '';
+  $('#modN').placeholder = hn; $('#modD').placeholder = hd;
+}
+function setMod(){
+  if (!mensAt || !piece) return;
+  const n = $('#modN').value.trim(), d = $('#modD').value.trim();
+  if (!!n !== !!d) { toast('Type both numbers (for example 3 and 1), or leave both empty for none.'); ($('#' + (n ? 'modD' : 'modN'))).focus(); return; }
+  if (n && !modLen(n + '/' + d, 'C')) toast('Printed as typed. The barlines follow it only when both are numbers (the upper may be a sum, like 3+2).');
+  const mod = n ? n.replace(/\s+/g, '') + '/' + d.replace(/\s+/g, '') : '';
+  const {vi, t} = mensAt, only = $('#mensDiff').checked;
+  const targets = only ? [vi] : piece.voices.map((v, i) => i).filter(i => i === vi || piece.voices[i].mets.some(m => eq(m.t, t)));
+  if (targets.some(i => !writable(piece.voices[i])) && only) { refuse(); return; }
+  mensMenu.hidden = true;
+  commit(() => {
+    for (const i of targets) {
+      const v = piece.voices[i]; if (!writable(v)) continue;
+      const m = v.mets.find(x => eq(x.t, t)); if (!m) continue;
+      if (mod) m.mod = mod; else delete m.mod;
+    }
+  });
+}
+$('#modOk').addEventListener('click', setMod);
+['#modN', '#modD'].forEach(id => $(id).addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter') { e.preventDefault(); setMod(); }
+  else if (e.key === 'Escape') mensMenu.hidden = true;
+  else if (e.key === '/' && id === '#modN') { e.preventDefault(); $('#modD').focus(); $('#modD').select(); }
+}));
 mensMenu.addEventListener('click', e => {
   const sc = e.target.closest('[data-scope]'); if (sc) { mensScope(sc.dataset.scope === 'one'); return; }
-  if (e.target.closest('.mscope')) return;
+  if (e.target.closest('.mscope') || e.target.closest('.mmod')) return;
   const li = e.target.closest('li[data-m]'); if (li && li.dataset.m) setMens(li.dataset.m);
 });
 document.addEventListener('pointerdown', e => { if (!mensMenu.hidden && !e.target.closest('#mensMenu') && !e.target.closest('.menshit')) mensMenu.hidden = true; });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') mensMenu.hidden = true;
-  else if ((e.key === 'Delete' || e.key === 'Backspace') && !mensMenu.hidden && mensAt) { e.preventDefault(); e.stopPropagation(); setMens('-'); }
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && !mensMenu.hidden && mensAt && !(e.target && e.target.closest && e.target.closest('input'))) { e.preventDefault(); e.stopPropagation(); setMens('-'); }
 }, true);
 /* Add > Add mensuration sign: at the selected note of the selected voice(s) only; Add incipit: before the staves */
 function mensTargets(){

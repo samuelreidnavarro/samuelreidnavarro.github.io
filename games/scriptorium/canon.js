@@ -126,7 +126,7 @@
         v.events.push(x);
       }
       const place = ei => ei <= 0 ? 0 : lead + ei;
-      v.mets = dux.mets.map(m => ({t: 0, sign: m.sign, ei: place(m.ei)}));
+      v.mets = dux.mets.map(m => Object.assign({t: 0, sign: m.sign, ei: place(m.ei)}, m.mod ? {mod: m.mod} : {}));
       if (!v.mets.length) v.mets.push({t: 0, sign: 'C', ei: 0});
       if (C.mode !== 'exact') v.keys = dux.keys.map(m => ({t: 0, alts: Object.assign({}, m.alts), raw: m.raw, ei: place(m.ei)}));
       v.kclef = modernClef(v.events.filter(e => !e.rest).map(e => e.step), prev && prev.kclef);

@@ -1085,3 +1085,14 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
 #keyMenu .mslab{color:var(--muted);font-size:13px}
 #keyMenu .mscope .seg{display:inline-flex;gap:2px}
 #keyMenu .mscope .tb{font-size:14px;padding:4px 10px;min-height:0;height:auto}
+/* bar numbers (Engraving > Bar numbers) and the modern equivalent of a mensuration sign */
+.staffset .bnx[hidden]{display:none !important}
+.staffset select{min-width:0;max-width:100%}
+.barnum{pointer-events:none}
+#mensMenu li.mmod{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:6px;padding:6px 6px 4px;border-top:1px solid var(--line);border-radius:0;margin-top:2px;cursor:default;text-align:left}
+#mensMenu li.mmod:hover{background:none}
+#mensMenu .mmodf{display:inline-flex;align-items:center;gap:3px}
+#mensMenu .mmodf input{width:42px;height:30px;min-height:0;box-sizing:border-box;padding:0 4px;text-align:center;font:inherit;font-size:16px;color:var(--text);background:var(--ground);border:1px solid var(--line);border-radius:6px}
+#mensMenu .mmodf input::placeholder{color:var(--muted);opacity:.55}
+#mensMenu .mmsl{color:var(--muted);font-size:16px}
+#mensMenu .mmod .tb{font-size:14px;padding:4px 10px;min-height:0;height:auto}
