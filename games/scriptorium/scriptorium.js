@@ -5284,6 +5284,7 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
   for (const r of rows()) mo.observe(r, {subtree: true, attributes: true, attributeFilter: ['class', 'hidden']});
   /* with a mouse, the wheel scrolls a row that is too wide sideways */
   for (const r of rows()) r.addEventListener('wheel', e => {
+    if (e.target.closest && e.target.closest('.popbody, .library')) return;   /* a menu scrolls itself, not the row */
     if (r.scrollWidth <= r.clientWidth + 1 || r.classList.contains('popup') || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
     r.scrollLeft += e.deltaY; e.preventDefault();
   }, {passive: false});
