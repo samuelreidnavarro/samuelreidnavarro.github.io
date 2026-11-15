@@ -1185,9 +1185,10 @@ html.kbd-on .wrap{padding-bottom:calc(var(--tph,56px) + var(--kbh,104px) + 30px)
 .kk{position:absolute;top:0;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;touch-action:pan-x}
 .kk.wht{width:var(--kw);height:100%;background:#FBF4E8;border:1px solid var(--line);border-radius:0 0 5px 5px;padding-bottom:5px;z-index:1}
 .kk.blk{width:var(--bw);height:58%;background:#2A2218;border-radius:0 0 4px 4px;z-index:2;padding-bottom:4px;box-shadow:inset 0 -3px 0 rgba(255,255,255,.08)}
-.kk i{font-style:normal;font-size:12px;line-height:1;color:var(--muted);font-family:inherit}
+.kk i{font-style:normal;font-size:12px;line-height:1;min-height:12px;color:var(--muted);font-family:inherit}
 .kk.blk i{color:#D6C8B0}
-.kk b{font-weight:400;font-size:10.5px;color:var(--muted);margin-top:3px;font-variant-numeric:oldstyle-nums}
+/* the octave name (C4) stands above the row of letters (A S D F ...), which all sit at one height */
+.kk b{order:-1;font-weight:400;font-size:10.5px;color:var(--muted);margin-bottom:3px;font-variant-numeric:oldstyle-nums}
 .kk.wht.inr{background:#FFFDF7}
 .kk.wht.inr i{color:var(--accent)}
 .kk.on.wht,.kk.on.wht.inr{background:var(--accent);border-color:var(--accent)}
