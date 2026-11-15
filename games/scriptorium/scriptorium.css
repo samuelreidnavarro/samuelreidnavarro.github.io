@@ -16,7 +16,7 @@
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--ground);color:var(--text);
   font:400 19px/1.45 "IM Fell English","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif}
-.wrap{max-width:none;margin:0 auto;padding:22px clamp(14px,2.6vw,44px) 40px}
+.wrap{max-width:none;margin:0 auto;padding:22px clamp(8px,1.4vw,24px) 40px}
 header.top{display:flex;flex-wrap:wrap;gap:14px 32px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
 h1{font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif;font-weight:400;font-size:clamp(2.2rem,4.4vw,3.2rem);line-height:1.02;margin:0;letter-spacing:-.012em}
 .lede{margin:.4rem 0 0;color:var(--muted);font-style:italic;max-width:62ch}
@@ -467,11 +467,11 @@ html.dark .popbody,html.dark .menu,html.dark .library{box-shadow:0 14px 34px -10
 /* pages below each other: an invisible frame, as wide as a page and as tall as the window, that scrolls through
    the pages when the pointer is on the music; beside it, the website scrolls (to the controls below) */
 @media (min-width:701px){
-  .viewer.frame{height:var(--vh,calc(100vh - 220px));max-height:var(--vh,calc(100vh - 220px));min-height:120px;overflow-y:auto;overflow-x:hidden;margin:0 auto;padding:14px 0 26px;scrollbar-width:none}
+  .viewer.frame{height:var(--vh,calc(100vh - 220px));max-height:var(--vh,calc(100vh - 220px));min-height:120px;overflow-y:auto;overflow-x:hidden;margin:0 auto;padding:14px 0 40px;scrollbar-width:none}
   .viewer.frame::-webkit-scrollbar{display:none}
 }
 /* pages side by side: the row scrolls sideways, the page itself still scrolls up and down */
-.viewer.horiz{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;padding:22px 64px 34px}
+.viewer.horiz{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;padding:22px 56px 40px}
 .viewer.horiz #pages{flex-direction:row;align-items:flex-start;width:max-content;gap:34px}
 .viewer.horiz #pages>.page,.viewer.horiz #pages>.opening{scroll-snap-align:center}
 .pagenav{position:absolute;top:50%;z-index:4;width:46px;height:46px;min-height:0;padding:0;border-radius:50%;transform:translateY(-50%);

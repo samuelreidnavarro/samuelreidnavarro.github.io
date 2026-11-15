@@ -1758,7 +1758,7 @@ const PAPER = {A3: [297, 420], A4: [210, 297], A5: [148, 210]};
 const webFit = () => st.paper === 'web' && st.view === 'choir';
 const isHoriz = () => webFit() || (st.flow === 'horizontal' && st.paper !== 'web');
 function frameSize(){
-  const w = ($('.viewwrap').clientWidth || window.innerWidth) - (window.innerWidth <= 700 ? 60 : 140);
+  const w = ($('.viewwrap').clientWidth || window.innerWidth) - (window.innerWidth <= 700 ? 60 : 116);
   const h = Math.max(320, (wrapEl.classList.contains('fs') ? window.innerHeight : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) || 700) - 60);
   return [Math.max(240, w), h];
 }
@@ -1766,13 +1766,13 @@ function pageGeom(){
   if (webFit()) {
     const [fw, fh] = frameSize(), pw = fw >= 660 ? fw / 2 : fw, mm = 96 / 25.4;
     const w = pw / mm, h = fh / mm, sp = st.size * 1.2;
-    return {fit: true, wmm: w, hmm: h, sp, W: w / sp, H: h / sp, M: Math.min(w, 297) * 0.065 / sp};
+    return {fit: true, wmm: w, hmm: h, sp, W: w / sp, H: h / sp, M: Math.min(w, 297) * 0.04 / sp};
   }
   if (st.paper === 'web') {
     const avail = Math.max(240, ($('.viewwrap').clientWidth || window.innerWidth) - (window.innerWidth <= 700 ? 0 : 40));
     /* the two pages of an opening side by side, or one below the other on a narrow screen */
     const w = (st.view === 'choir' && avail >= 660 ? avail / 2 : avail) / (96 / 25.4), sp = st.size * 1.2, H = 100000;
-    return {web: true, wmm: w, hmm: H * sp, sp, W: w / sp, H, M: Math.min(w, 297) * 0.065 / sp};
+    return {web: true, wmm: w, hmm: H * sp, sp, W: w / sp, H, M: Math.min(w, 297) * 0.04 / sp};
   }
   let [w, h] = PAPER[st.paper] || PAPER.A4;
   if (st.orient === 'landscape') [w, h] = [h, w];
@@ -2005,7 +2005,7 @@ function render(){
   document.querySelectorAll('#scrollSeg button').forEach(b => { b.disabled = st.view !== 'score'; b.title = st.view !== 'score' ? 'Only in Score' : b.title; });
   const wide = !!G.web && st.webScroll === 'horizontal' && st.view === 'score';
   const Z = G.web || G.fit ? 1 : Math.max(0.5, Math.min(3, st.zoom || 1));
-  const avail = ($('.viewwrap').clientWidth || window.innerWidth) - (horiz ? (window.innerWidth <= 700 ? 60 : 140) : window.innerWidth <= 700 ? 0 : 40);
+  const avail = ($('.viewwrap').clientWidth || window.innerWidth) - (horiz ? (window.innerWidth <= 700 ? 60 : 116) : window.innerWidth <= 700 ? 0 : 40);
   const pxmm = 96 / 25.4;
   /* side by side, a page (or an opening) fits the height of the window */
   const availH = Math.max(320, (fs ? window.innerHeight : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) || 700) - 60);
