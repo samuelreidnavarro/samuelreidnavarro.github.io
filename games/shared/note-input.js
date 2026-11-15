@@ -352,7 +352,7 @@ function sync(A){
   }
   const ob = $('#ovrBtn'); if (ob) { ob.textContent = S.ovr ? 'Overwrite' : 'Insert'; setPressed(ob, !!S.ovr); }
   $('#stepUp').disabled = $('#stepDown').disabled = (!t || t.r) && !S.range;
-  $('#del').disabled = !t && !S.range;
+  $('#del').disabled = !t && !S.range && !S.signSel;
   $('#selPrev').disabled = $('#selNext').disabled = !S.hasNotes;
   $('#undo').disabled = !S.canUndo;
   $('#redo').disabled = !S.canRedo;

@@ -3790,6 +3790,8 @@ function staffTarget(rect, e){
       if (bb.x + bb.width / 2 <= p.x) { mode = 'after'; k = q; }
     }
   }
+  /* the place of a first note in an empty voice stands for no event: a note goes to the end, which is the start */
+  if (k !== null && v.syms[k] && !(v.syms[k].src && v.syms[k].src.length)) { mode = 'end'; k = null; }
   /* the clef the new note is written in: the one in force at that place */
   const ref = k !== null ? v.syms[k] : null;
   const cl = !ref ? clefAt(v, 1e9) : mode === 'before' ? clefAt(v, Math.max(0, ref.t - 0.01)) : ref.clef;
@@ -3924,6 +3926,8 @@ mensMenu.innerHTML = `<li class="flatopt mscope" data-m="" role="presentation"><
 /* All voices | Only this voice, at the top of the menu (Samuel 2026-11-14: one voice's sign must be easy to change) */
 function mensScope(one){ $('#mensDiff').checked = one; mensMenu.querySelectorAll('[data-scope]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.scope === 'one') === one))); }
 let mensAt = null;
+/* a mensuration sign is selected while its menu is open: the trash button then takes away that sign */
+const mensOpen = () => { try { return !mensMenu.hidden && !!mensAt; } catch (err) { return false; } };
 function openMensMenu(vi, t, e){
   const wr = $('.viewwrap').getBoundingClientRect();
   const v = piece.voices[vi]; if (!v) return;
@@ -3936,10 +3940,11 @@ function openMensMenu(vi, t, e){
   mensMenu.hidden = false; clefPick.hidden = true;
   mensMenu.style.left = Math.max(4, Math.min(wr.width - mensMenu.offsetWidth - 4, e.clientX - wr.left)) + 'px';
   mensMenu.style.top = (e.clientY - wr.top + 10) + 'px';
+  syncEdit();
 }
-function setMens(sign){
+function setMens(sign, justThis){
   if (!mensAt || !piece) return;
-  const {vi, t} = mensAt, only = $('#mensDiff').checked;
+  const {vi, t} = mensAt, only = justThis || $('#mensDiff').checked;
   mensMenu.hidden = true;
   const del = sign === '-';
   const targets = only ? [vi] : piece.voices.map((v, i) => i).filter(i => i === vi || piece.voices[i].mets.some(m => eq(m.t, t)) || piece.voices[i].events.some(e => eq(e.t, t)));
@@ -3954,7 +3959,9 @@ function setMens(sign){
       let prev = null; for (const q of v.mets) if (q.t < t - EPS) prev = q.sign;
       if (prev !== null && prev === sign) { if (m) v.mets = v.mets.filter(x => x !== m); continue; }
       if (m) { m.sign = sign; continue; }
-      const k = v.events.findIndex(e => eq(e.t, t));
+      /* in a voice with no notes yet the sign stands at the start, before the first note to come */
+      let k = v.events.findIndex(e => eq(e.t, t));
+      if (k < 0 && t < EPS && !v.events.length) k = 0;
       if (k >= 0) { v.mets.push({t, sign, ei: k}); v.mets.sort((a, b) => a.t - b.t); }
     }
   });
@@ -3998,10 +4005,15 @@ mensMenu.addEventListener('click', e => {
   if (e.target.closest('.mscope') || e.target.closest('.mmod')) return;
   const li = e.target.closest('li[data-m]'); if (li && li.dataset.m) setMens(li.dataset.m);
 });
-document.addEventListener('pointerdown', e => { if (!mensMenu.hidden && !e.target.closest('#mensMenu') && !e.target.closest('.menshit')) mensMenu.hidden = true; });
+document.addEventListener('pointerdown', e => { if (!mensMenu.hidden && !e.target.closest('#mensMenu') && !e.target.closest('.menshit') && !e.target.closest('#del')) mensMenu.hidden = true; });
+/* the trash button, while a sign is selected (its menu open), takes away that one sign, in its voice only */
+document.addEventListener('click', e => {
+  if (!e.target.closest || !e.target.closest('#del') || mensMenu.hidden || !mensAt) return;
+  e.preventDefault(); e.stopImmediatePropagation(); setMens('-', true);
+}, true);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') mensMenu.hidden = true;
-  else if ((e.key === 'Delete' || e.key === 'Backspace') && !mensMenu.hidden && mensAt && !(e.target && e.target.closest && e.target.closest('input'))) { e.preventDefault(); e.stopPropagation(); setMens('-'); }
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && !mensMenu.hidden && mensAt && !(e.target && e.target.closest && e.target.closest('input'))) { e.preventDefault(); e.stopPropagation(); setMens('-', true); }
 }, true);
 /* Add > Add mensuration sign: at the selected note of the selected voice(s) only; Add incipit: before the staves */
 function mensTargets(){
@@ -4275,6 +4287,18 @@ pagesEl.addEventListener('click', e => {
       ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1};
       if (!n.s.rest) hear(n.s.step, n.s.alt);
       showSel(); return;
+    }
+  }
+  /* outside Edit mode a click on a staff selects it, even an empty one: the keyboard (its pitch dot and its notes) then goes to that staff */
+  if (!ed.on && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && piece) {
+    const r0 = e.target.closest && e.target.closest('rect.stafhit');
+    if (r0) {
+      const tg = staffTarget(r0, e);
+      if (tg) {
+        const {at} = eventIndexFor(tg);
+        ed.range = null; ed.picks = null; ed.sel = null; ed.ins = {vi: tg.vi, ei: at, off: 0, pad: 0};
+        showSel(); syncEdit();
+      }
     }
   }
   const rect = ed.on && !e.shiftKey ? stafFor(e.target) : null;
@@ -4596,7 +4620,7 @@ const CBA = {
   guard(){ return H.guard ? H.guard() : true; },
   state(){
     const s = selSym(), t = targetSym(), v = curVoice();
-    return {selected: !!s, dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
+    return {selected: !!s, signSel: mensOpen(), dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
       target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc, lig: !!t.lig}, ligOn: ligSelOn(), edArm: !!ed.edArm, ovr: !!ed.ovr,
       col: s && !s.rest ? !!s.col : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
       hasNotes: !!(piece && piece.voices.length), durs: ed.range || ed.picks ? ['B'] : xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : []), range: !!(ed.range || ed.picks)};
