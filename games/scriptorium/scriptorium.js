@@ -106,7 +106,7 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
               <div class="btns duo"><button class="tb" id="lyBtn" title="LilyPond (.ly), in modern notation: one staff per voice, with the lyrics">Download LilyPond</button><button class="tb" id="mscBtn" title="MuseScore (.mscz), in modern notation, one staff per voice, with the lyrics">Download MuseScore</button></div>
               <div class="btns duo"><button class="tb" id="midBtn" title="MIDI (.mid), one track per voice, with the lyrics">Download MIDI</button><button class="tb" id="gabcBtn" title="GABC (.gabc), chant for Gregorio: one voice, the one you are editing (else the top one), with its syllables">Download GABC</button></div>
               <button class="tb" id="keepBtn" title="Keep a copy of this piece, with your changes, in ${esc(L.mine)}"${APP.keep === false ? ' hidden' : ''}>Save to ${esc(L.mine)}</button>
-              <div class="btns duo"><button class="tb" id="printBtn" title="Print, or save as PDF in the print window">Download PDF</button><button class="tb" id="svgBtn" title="The page you see, as an SVG picture">Download SVG</button></div>
+              <div class="btns duo"><button class="tb" id="printBtn" title="A PDF of the whole score, at the paper size chosen in View (A3, A4, A5)">Download PDF</button><button class="tb" id="svgBtn" title="The page you see, as an SVG picture">Download SVG</button></div>
               <div class="btns duo"><button class="tb" id="pngBtn" title="The page you see, as a PNG picture">Download PNG</button><button class="tb" id="linkBtn" title="A link that opens this score, with your changes, for anyone">Copy link</button></div>
             </div></div>
           </div>
@@ -3376,6 +3376,8 @@ function unreadable(ext){
   return what + fix + ' ' + APP.name + ' opens MuseScore (.mscz, .mscx), MusicXML (.musicxml, .mxl, .xml), MIDI (.mid), LilyPond (.ly), GABC (.gabc), CMME (.cmme.xml) and **kern (.krn).';
 }
 $('#printBtn').addEventListener('click', () => {
+  /* Download PDF: a PDF file at once, at the paper size chosen in View (no print window) */
+  if (window.__share && window.__share.pdf) { window.__share.pdf(); return; }
   if (EMBED && !pieceKey.startsWith('file:')) { window.open(APP.page + '?print=1', '_blank'); return; }
   window.print();
 });
