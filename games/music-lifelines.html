@@ -11,6 +11,8 @@
   --sea:#DFE5EA; --land:#FAF9F5; --coast:#B9BFC6; --border:#C9CCCF; --gold:#D4A62A;
   /* role pigments: lapis, vermilion */
   --composer:#2B48A6; --theorist:#C03E1C; --troubadour:#2C7A4B; --on-role:#FFFFFF;
+  /* lineup: one colour per person being compared */
+  --lu1:#2B48A6; --lu2:#C03E1C; --lu3:#2C7A4B; --lu4:#B07812; --lu5:#7B3F9E; --lu6:#167F8A;
   --shadow:0 10px 30px rgba(27,30,37,.12), 0 1px 3px rgba(27,30,37,.08);
   --f-ui:"Alegreya Sans","Gill Sans","Segoe UI",system-ui,sans-serif;
   --f-sc:"Alegreya Sans SC","Alegreya Sans","Gill Sans",system-ui,sans-serif;
@@ -22,6 +24,7 @@
     --rule:#2A2E37; --wash:#1F232B; --grid:rgba(231,232,235,.055); --grid-strong:rgba(231,232,235,.15);
     --sea:#0B0E12; --land:#20252E; --coast:#3E4552; --border:#363C48; --gold:#EBC45C;
     --composer:#8AA4FF; --theorist:#FF8B65; --troubadour:#6DCC94; --on-role:#101216;
+  --lu1:#8AA4FF; --lu2:#FF8B65; --lu3:#6DCC94; --lu4:#E8B94F; --lu5:#C49AF0; --lu6:#5CCAD4;
     --shadow:0 10px 30px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.4);
     color-scheme:dark;
   }
@@ -31,6 +34,7 @@
   --rule:#2A2E37; --wash:#1F232B; --grid:rgba(231,232,235,.055); --grid-strong:rgba(231,232,235,.15);
     --sea:#0B0E12; --land:#20252E; --coast:#3E4552; --border:#363C48; --gold:#EBC45C;
   --composer:#8AA4FF; --theorist:#FF8B65; --troubadour:#6DCC94; --on-role:#101216;
+  --lu1:#8AA4FF; --lu2:#FF8B65; --lu3:#6DCC94; --lu4:#E8B94F; --lu5:#C49AF0; --lu6:#5CCAD4;
   --shadow:0 10px 30px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.4);
   color-scheme:dark;
 }
@@ -55,15 +59,9 @@ button{font:inherit;color:inherit}
 .tab .n{font-size:12.5px;opacity:.75;font-variant-numeric:tabular-nums}
 .tab[aria-selected="true"]{background:var(--ink);color:var(--surface)}
 .tools{display:flex;align-items:center;gap:8px;margin-left:auto}
-.impctl{display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--muted);white-space:nowrap;padding:3px 10px 3px 10px;border:1px solid var(--rule);border-radius:8px;background:var(--bg)}
-.impctl input{width:84px;margin:0;accent-color:var(--ink);cursor:pointer}
-.impctl output{display:inline-flex;align-items:baseline;gap:5px;min-width:2.1em;color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
-.impctl output small{font-weight:400;color:var(--muted);font-size:12px}
-@media (max-width:1560px){ .brand .sub{display:none} .impctl .lbl{display:none} .impctl::before{content:"\2605";font-size:13px;color:var(--muted)} .search input{width:136px} }
-.info .impdots{letter-spacing:2px;color:var(--rc)}
-.info .impdots i{font-style:normal;color:var(--rule)}
+@media (max-width:1560px){ .brand .sub{display:none} }
 .search{position:relative}
-.search input{width:150px;max-width:42vw;font:inherit;font-size:14.5px;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:8px;padding:6px 10px 6px 30px}
+.search input{width:190px;max-width:42vw;font:inherit;font-size:14.5px;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:8px;padding:6px 10px 6px 30px}
 .search input::placeholder{color:var(--faint)}
 .search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:var(--faint);fill:none;stroke-width:2}
 .btn{appearance:none;border:1px solid var(--rule);background:var(--surface);border-radius:8px;padding:6px 12px;font-size:14.5px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
@@ -78,6 +76,53 @@ button{font:inherit;color:inherit}
 .pill:hover .x{color:var(--ink)}
 .linkbtn{appearance:none;border:0;background:none;color:var(--muted);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-size:13.5px;padding:2px 4px}
 .linkbtn:hover{color:var(--ink)}
+
+/* search suggestions */
+.suggest{position:fixed;top:0;left:0;width:min(340px,calc(100vw - 16px));max-height:min(420px,70vh);overflow-y:auto;margin:0;padding:4px;list-style:none;background:var(--surface);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);z-index:40}
+.suggest li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:center;gap:4px 9px;padding:6px 8px;border-radius:7px;cursor:pointer}
+.suggest li[aria-selected="true"],.suggest li:hover{background:var(--wash)}
+.suggest .sw{width:10px;height:10px;border-radius:3px}
+.suggest .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.suggest .nm small{color:var(--muted);font-size:12.5px;margin-left:6px;font-variant-numeric:tabular-nums}
+.suggest .add{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.suggest li[aria-selected="true"] .add,.suggest li:hover .add{color:var(--ink)}
+.suggest .in .add{color:var(--ink);font-weight:700}
+.suggest .full .add{opacity:.6}
+.suggest .more{display:block;padding:6px 8px;color:var(--muted);font-size:12.5px;cursor:default}
+.suggest .more:hover{background:none}
+
+/* lineup: people picked to be compared */
+.lineup{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 16px;border-bottom:1px solid var(--rule);background:var(--surface);font-size:13.5px}
+.lineup .lab{font-family:var(--f-sc);font-weight:700;letter-spacing:.06em;color:var(--muted);margin-right:4px}
+.luchip{display:inline-flex;align-items:stretch;border:1.5px solid var(--c);border-radius:999px;background:color-mix(in srgb, var(--c) 9%, var(--surface));overflow:hidden}
+.luchip button{appearance:none;border:0;background:none;cursor:pointer;color:var(--ink);font-size:13.5px}
+.luchip .go{display:inline-flex;align-items:center;gap:6px;padding:2px 4px 2px 9px}
+.luchip .go::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
+.luchip .go small{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.luchip .x{padding:0 9px 0 5px;color:var(--faint);font-size:16px;line-height:1}
+.luchip .x:hover{color:var(--ink)}
+.luchip .go:hover{text-decoration:underline;text-underline-offset:2px}
+.lineup .luonly{margin-left:6px}
+.lineup .luonly[aria-pressed="true"]{color:var(--ink);font-weight:700}
+.info .lubtn{appearance:none;display:inline-flex;align-items:center;gap:5px;font-size:13px;line-height:1.2;padding:3px 10px;border-radius:999px;cursor:pointer;color:var(--ink);background:var(--surface);border:1.5px dashed color-mix(in srgb, var(--rc) 60%, var(--rule))}
+.info .lubtn:hover{background:color-mix(in srgb, var(--rc) 16%, var(--surface))}
+.info .lubtn.on{border-style:solid;font-weight:700}
+.info .lurow{margin-top:10px}
+
+/* lineup on the map panel: everyone on one time scale */
+.cmp{position:relative;margin:6px 0 4px;cursor:pointer}
+.cmp .row{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;margin-bottom:7px}
+.cmp .who{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;line-height:1.2}
+.cmp .who b{color:var(--c);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmp .who span{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.cmp .track{position:relative;height:12px;border-radius:3px;background:var(--wash)}
+.cmp .span{position:absolute;top:0;bottom:0;border-radius:3px;overflow:hidden}
+.cmp .seg{position:absolute;top:0;bottom:0;background:var(--c);opacity:.45;border-right:1px solid var(--surface)}
+.cmp .seg.alt{opacity:.7}
+.cmp .seg.unk{background:repeating-linear-gradient(45deg,var(--c) 0 2px,transparent 2px 5px);opacity:.35}
+.cmp .cur{position:absolute;top:-2px;bottom:-2px;width:2px;margin-left:-1px;background:var(--ink);pointer-events:none;border-radius:1px}
+.cmp-ax{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;margin-bottom:6px}
+.cmp-ax b{color:var(--ink)}
 
 /* stage */
 .surface{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;position:relative;cursor:grab;user-select:none;-webkit-user-select:none}
@@ -98,7 +143,10 @@ button{font:inherit;color:inherit}
   -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 var(--fi,0px),#000 calc(100% - var(--fo,0px)),transparent 100%);
           mask-image:linear-gradient(90deg,transparent 0,#000 var(--fi,0px),#000 calc(100% - var(--fo,0px)),transparent 100%)}
 .person:not(.sel):hover .fill{filter:brightness(1.12) saturate(1.05)}
-.lanes.searching .person:not(.hit):not(.sel){opacity:.38}
+.lanes.searching .person:not(.hit):not(.sel):not(.lu){opacity:.38}
+.lanes.comparing .person:not(.lu):not(.hit):not(.sel){opacity:.3}
+.person.lu{z-index:2}
+.person.lu .fill{box-shadow:none}
 .person.hit{z-index:2}
 .person.hit .bar{outline:2px solid var(--ink);outline-offset:1px;border-radius:4px}
 .name{position:absolute;left:0;top:0;height:18px;margin:0;border:0;background:none;padding:0 6px;cursor:pointer;
@@ -190,10 +238,7 @@ button{font:inherit;color:inherit}
   .brand h1{font-size:20px}
   .brand .sub{display:none}
   .tabs{order:3;flex-basis:100%}
-  .search input{width:140px}
-  .impctl .lbl{display:none}
-  .impctl::before{content:"\2605";font-size:13px;color:var(--muted)}
-  .impctl input{width:74px}
+  .search input{width:150px}
 }
 @media (prefers-reduced-motion: reduce){
   .person,.bar{transition:none}
@@ -233,6 +278,8 @@ button{font:inherit;color:inherit}
 .mp-list .what{color:var(--muted)}
 .mp-list .sym{display:inline-block;width:1.1em;color:var(--muted)}
 .mp-list button.one{grid-template-columns:minmax(0,1fr)}
+.mp-list li.nowev{background:var(--wash);border-radius:4px}
+.mp-list li.nowev .yr{color:var(--ink);font-weight:700}
 .mp-list .sw{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:1px}
 .mp-empty{color:var(--muted);font-size:14px;padding:10px 0}
 .mp-back{appearance:none;border:0;background:none;color:var(--muted);cursor:pointer;font-size:13.5px;padding:6px 0;text-decoration:underline;text-underline-offset:2px}
@@ -310,13 +357,13 @@ button{font:inherit;color:inherit}
     <div class="modes" role="tablist" aria-label="View"><button class="mode" type="button" role="tab" data-mode="timeline" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17h18M6 13h7M9 9h9M5 5h6"/></svg>Timeline</button><button class="mode" type="button" role="tab" data-mode="map" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>Map</button></div>
     <nav class="tabs" id="tabs" role="tablist" aria-label="Show"></nav>
     <div class="tools">
-      <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-        <input id="q" type="search" placeholder="Search" autocomplete="off" aria-label="Search names"></label>
-      <label class="impctl" title="Importance compared with contemporaries (a subjective 1–5 score; every century has the same number at each level). Shows people at or above this level, the most important lowest on screen; zooming in reveals the lesser names too. Searching shows everyone.">
-        <span class="lbl">Importance</span><input id="imp" type="range" min="1" max="5" step="1" value="3" aria-label="Minimum importance shown"><output id="impOut" for="imp">3+</output></label>
+      <div class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <input id="q" type="search" placeholder="Search or add to lineup" autocomplete="off" aria-label="Search names" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggest">
+        <ul class="suggest" id="suggest" role="listbox" aria-label="Matching people" hidden></ul></div>
       <button class="btn" id="filtersBtn" type="button" aria-haspopup="dialog">Filters <span class="badge" id="badge"></span></button>
     </div>
   </header>
+  <div class="lineup" id="lineup" hidden></div>
   <div class="activebar" id="activebar" hidden></div>
 
   <div class="surface" id="surface">
@@ -7075,6 +7122,7 @@ const gctx=gridC.getContext("2d"), actx=axisC.getContext("2d"), octx=ovC.getCont
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const rich = s => esc(s).replace(/\*(.+?)\*/g, "<i>$1</i>");
 const norm = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const nameHit = (p, q) => p.search.includes(q) || (q.length > 2 && p.search2.includes(q.replace(/[^a-z0-9]/g, "")));
 const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
 const YS = y => y < 0 ? `${Math.round(-y)} BC` : String(y);   // year as text
 const PARTICLE = /^(de|da|dal|dall'|del|della|dei|di|du|des|van|von|der|den|ten|le|la|y|e|do|dos|das)$/i;
@@ -7134,25 +7182,21 @@ const ordinal = n => n + (n%100>=11 && n%100<=13 ? "th" : ({1:"st",2:"nd",3:"rd"
 
 /* ===================== STATE ===================== */
 const view = { x0:1370, ppy:6 };
-const state = { role:"all", q:"", imp:3, f:{ genres:new Set(), origin:new Set(), langs:new Set(), areas:new Set() } };
+const state = { role:"all", q:"", f:{ genres:new Set(), origin:new Set(), langs:new Set(), areas:new Set() } };
 let mode = "timeline";
 let W = 0, H = 0, dpr = 1, colors = {}, selected = null, packedPpy = 0, laneTop = [], laneExtra = [];
 const byId = {};
 
-// Importance: the slider sets the level shown when zoomed out; zooming in lowers it step by step.
-let curImp = 3, pinP = null;
-function zoomBonus(){
-  if (mode === "map") return !MW ? 0 : mv.k >= 6 ? 2 : mv.k >= 2.6 ? 1 : 0;
-  if (!W) return 0;
-  const span = W / view.ppy;
-  return span <= 90 ? 2 : span <= 260 ? 1 : 0;
-}
-function effImp(){ return Math.max(1, state.imp - zoomBonus()); }
+let pinP = null;
+// Lineup: people picked to be compared side by side, each with a colour of their own (slot 1–6)
+const LU_MAX = 6, lineup = [];
+let luOnly = false;
 function vals(p, key){ return key === "origin" ? [p.origin] : (p[key] || []); }
 function matches(p, skipKey, roleOverride){
   const role = roleOverride ?? state.role;
+  if (p.lu) return roleOverride == null || role === "all" || p.roles.includes(role);
+  if (luOnly && lineup.length) return false;
   if (role !== "all" && !p.roles.includes(role)) return false;
-  if (p.imp < curImp && !p.hit && p !== pinP && p !== selected && p !== mapSel) return false;
   for (const f of FACETS){
     if (f.key === skipKey) continue;
     const set = state.f[f.key];
@@ -7176,6 +7220,7 @@ for (const p of PEOPLE){
   p.areas = p.areas.map(a => a === "England" ? "British Isles" : a);
   p.g = geom(p);
   p.search = norm(p.name + " " + p.label);
+  p.search2 = p.search.replace(/[^a-z0-9]/g, "");   // "dufay" finds "Du Fay"
   byId[p.id] = p;
   const el = document.createElement("div");
   el.className = "person fresh"; el.dataset.id = p.id;
@@ -7210,7 +7255,6 @@ function buildInfo(p){
     if (p.d) rows += `<dt>Died</dt><dd>${fmt(p.d)}${at(p.d)}</dd>`;
   }
   rows += `<dt>Origin</dt><dd>${esc(p.nat)}</dd>` + (p.places.length ? `<dt>Worked</dt><dd>${p.places.map(esc).join("; ")}</dd>` : "");
-  rows += `<dt>Rank</dt><dd title="Importance ${p.imp} of 5 compared with others of the same century (subjective); used by the Importance slider"><span class="impdots">${"●".repeat(p.imp)}<i>${"●".repeat(5 - p.imp)}</i></span> <span class="pl">· ${p.imp}/5 among contemporaries</span></dd>`;
   const tags = p.genres.map(g => `<span>${esc(g)}</span>`).join("") + (p.langs.length ? `<span class="lang">${esc(p.langs.join(", "))}</span>` : "");
   const extLinks = [
     L.wiki  ? ext(wikiURL(L.wiki, L.wikiLang), L.wikiLang ? `Wikipedia (${WIKI_LANG[L.wikiLang] || L.wikiLang})` : "Wikipedia") : "",
@@ -7231,8 +7275,9 @@ function buildInfo(p){
     : `<span class="who">${esc(p.name)}</span>`;
   c.innerHTML = `<div class="band">${who}</div><button class="x" type="button" aria-label="Close">×</button>
     <div class="cols"><div>${p.roles.length > 1 || p.roles[0] !== "composer" ? `<div class="roles">${roles}</div>` : ""}<dl>${rows}</dl></div>
-    <div><p class="what">${rich(p.text)}</p><div class="tags">${tags}</div>${extLinks ? `<div class="ext">${extLinks}</div>` : ""}</div>${treat}</div>`;
+    <div><p class="what">${rich(p.text)}</p><div class="tags">${tags}</div>${extLinks ? `<div class="ext">${extLinks}</div>` : ""}<div class="lurow">${luButton(p)}</div></div>${treat}</div>`;
   c.querySelector(".x").addEventListener("click", e => { e.stopPropagation(); deselect(); p.nm.focus({preventScroll:true}); });
+  c.querySelector(".lubtn").addEventListener("click", e => { e.stopPropagation(); toggleLineup(p, mode !== "map"); });
   return c;
 }
 function select(p){
@@ -7288,17 +7333,21 @@ function pack(){
     if (!p.visible) continue;
     const w = Math.max(4, (p.g.end - p.g.start) * ppy);
     p.ps = p.g.start; p.pe = p.g.start + extentPx(p, w) / ppy + gap;
-    const inWin = p === selected || (p.pe >= packLo && p.ps <= packHi);
+    const inWin = p === selected || p.lu || (p.pe >= packLo && p.ps <= packHi);
     if (p.nowin !== !inWin){ p.el.classList.toggle("nowin", !inWin); p.nowin = !inWin; if (inWin) p.off = null; }
     if (inWin) vis.push(p); else p.lane = null;
   }
   // Tight packing that still favours the important: the most important are placed first, each in the
   // lowest row where it fits, and everyone else fills the holes, so there are no needless gaps.
-  vis.sort((a,b) => b.imp - a.imp || a.ps - b.ps || a.pe - b.pe);
+  // people in the lineup get the bottom rows to themselves, one each, in lineup order
   const rows = [];
+  for (const p of lineup) if (vis.includes(p)){ p.lane = rows.length; rows.push([p.ps, p.pe]); }
+  const nRes = rows.length;
+  vis.sort((a,b) => b.imp - a.imp || a.ps - b.ps || a.pe - b.pe);
   for (const p of vis){
+    if (p.lu) continue;
     let lane = -1;
-    for (let i = 0; i < rows.length && lane < 0; i++){
+    for (let i = nRes; i < rows.length && lane < 0; i++){
       const r = rows[i]; let free = true;
       for (let j = 0; j < r.length; j += 2) if (r[j] < p.pe && r[j+1] > p.ps){ free = false; break; }
       if (free) lane = i;
@@ -7309,7 +7358,7 @@ function pack(){
   // rows with nobody in the years on screen move to the top, so the view has no empty rows
   if (!wide){
     const a = view.x0, b = view.x0 + span;
-    const seen = rows.map(r => { for (let j = 0; j < r.length; j += 2) if (r[j+1] > a && r[j] < b) return 1; return 0; });
+    const seen = rows.map((r, i) => { if (i < nRes) return 2; for (let j = 0; j < r.length; j += 2) if (r[j+1] > a && r[j] < b) return 1; return 0; });
     const order = rows.map((_, i) => i).sort((i, j) => seen[j] - seen[i] || i - j), to = [];
     order.forEach((old, i) => to[old] = i);
     for (const p of vis) p.lane = to[p.lane];
@@ -7409,7 +7458,7 @@ function draw(){
   clampView();
   const steps = pickSteps();
   drawGrid(steps); drawAxis(steps); drawOverview(); place();
-  saveSoon(); checkImp();
+  saveSoon();
   if (windowStale()) scheduleRepack(220);
 }
 function pickSteps(){
@@ -7611,6 +7660,7 @@ function readColors(){
   for (const k of ["bg","surface","ink","muted","faint","rule","wash","grid","grid-strong","sea","land","coast","border","gold"])
     colors[k] = cs.getPropertyValue("--" + k).trim();
   for (const r in ROLES) colors[r] = cs.getPropertyValue(ROLES[r].color).trim() || colors.ink;
+  for (let i = 1; i <= LU_MAX; i++) colors["lu" + i] = cs.getPropertyValue("--lu" + i).trim() || colors.ink;
 }
 function resize(){
   dpr = Math.min(window.devicePixelRatio || 1, 2.5);
@@ -7866,7 +7916,7 @@ function applySearch(){
   const q = norm(state.q);
   hits = [];
   for (const p of PEOPLE){
-    p.hit = !!q && p.search.includes(q);
+    p.hit = !!q && nameHit(p, q);
     p.el.classList.toggle("hit", p.hit);
     if (p.hit) hits.push(p);
   }
@@ -7884,7 +7934,6 @@ function showHits(){
 }
 function applyFilters(){
   const jump = applySearch();
-  curImp = effImp(); updateImpOut();
   let shown = 0;
   for (const p of PEOPLE){
     const v = matches(p);
@@ -7906,20 +7955,6 @@ function applyFilters(){
   if (jump) showHits();
 }
 
-// importance slider
-const impEl = $("imp"), impOut = $("impOut");
-function updateImpOut(){
-  const zoomed = curImp < state.imp;
-  impOut.innerHTML = zoomed ? `${curImp}+<small>zoom</small>` : `${state.imp}+`;
-  impOut.title = zoomed ? `Set to ${state.imp}+; zoomed in, so ${curImp}+ is shown here` : "";
-}
-impEl.addEventListener("input", () => { state.imp = +impEl.value; applyFilters(); });
-let impTimer = 0;
-function checkImp(){   // called after zooming: re-filter when the zoom crosses a level
-  if (effImp() === curImp) return;
-  clearTimeout(impTimer); impTimer = setTimeout(() => { if (effImp() !== curImp) applyFilters(); }, 160);
-}
-
 // drawer
 const drawer = $("drawer"), backdrop = $("backdrop");
 function openDrawer(){ renderFacets(); drawer.hidden = false; backdrop.hidden = false; $("drawerClose").focus(); }
@@ -7927,6 +7962,178 @@ function closeDrawer(){ drawer.hidden = true; backdrop.hidden = true; $("filters
 $("filtersBtn").addEventListener("click", openDrawer);
 $("drawerClose").addEventListener("click", closeDrawer);
 backdrop.addEventListener("click", closeDrawer);
+
+/* ===================== LINEUP ===================== */
+const lineupEl = $("lineup");
+const cssCol = p => p.lu ? `var(--lu${p.lu})` : `var(${ROLES[p.roles[0]].color})`;
+function luButton(p){
+  return p.lu ? `<button type="button" class="lubtn on" aria-pressed="true">✓ In lineup · remove</button>`
+              : `<button type="button" class="lubtn" aria-pressed="false"${lineup.length >= LU_MAX ? ` disabled title="The lineup holds ${LU_MAX} people"` : ""}>+ Add to lineup</button>`;
+}
+function paintLu(p){
+  p.el.classList.toggle("lu", !!p.lu);
+  if (p.lu){ p.el.style.setProperty("--rc", `var(--lu${p.lu})`); p.el.style.removeProperty("--rc2"); }
+  else {
+    p.el.style.setProperty("--rc", `var(${ROLES[p.roles[0]].color})`);
+    if (p.roles[1]) p.el.style.setProperty("--rc2", `var(${ROLES[p.roles[1]].color})`);
+  }
+}
+function addLu(p){
+  if (p.lu || lineup.length >= LU_MAX) return false;
+  const used = new Set(lineup.map(q => q.lu));
+  let k = 1; while (used.has(k)) k++;
+  p.lu = k; lineup.push(p); paintLu(p);
+  return true;
+}
+function removeLu(p){
+  const i = lineup.indexOf(p); if (i < 0) return;
+  lineup.splice(i, 1); p.lu = 0; paintLu(p);
+}
+function lineupChanged(focus){
+  if (!lineup.length) luOnly = false;
+  lanesEl.classList.toggle("comparing", lineup.length > 0);
+  renderLineup();
+  if (selected && selected.info){ const p = selected; deselect(true); select(p); }
+  applyFilters();
+  if (focus) focusLineup();
+}
+function toggleLineup(p, focus){
+  if (p.lu) removeLu(p); else if (!addLu(p)) return;
+  lineupChanged(focus && !!p.lu);
+}
+function renderLineup(){
+  lineupEl.hidden = !lineup.length;
+  if (!lineup.length){ lineupEl.innerHTML = ""; return; }
+  lineupEl.innerHTML = `<span class="lab">Lineup</span>` + lineup.map(p =>
+    `<span class="luchip" style="--c:var(--lu${p.lu})"><button type="button" class="go" data-id="${p.id}" title="Show ${esc(p.name)}">${esc(p.label)} <small>${esc(shortSpan(p))}</small></button><button type="button" class="x" data-rm="${p.id}" aria-label="Remove ${esc(p.name)} from the lineup">×</button></span>`).join("") +
+    `<button type="button" class="linkbtn luonly" data-only="1" aria-pressed="${luOnly}">${luOnly ? "Show everyone" : "Hide everyone else"}</button>` +
+    `<button type="button" class="linkbtn" data-luclear="1">Clear lineup</button>`;
+}
+lineupEl.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.rm){ removeLu(byId[b.dataset.rm]); lineupChanged(false); }
+  else if (b.dataset.only){ luOnly = !luOnly; renderLineup(); applyFilters(); focusLineup(); }
+  else if (b.dataset.luclear){ for (const p of lineup.slice()) removeLu(p); lineupChanged(false); }
+  else if (b.dataset.id){
+    const p = byId[b.dataset.id];
+    if (mode === "map") focusPerson(p, false);
+    else { fitTo(p.g.start - 15, p.g.end + 15, true); setTimeout(() => { if (p.visible && selected !== p) select(p); }, 480); }
+  }
+});
+// bring the whole lineup into view
+function focusLineup(){
+  if (!lineup.length) return;
+  if (mode === "map"){
+    initMapData();
+    const s = Math.min(...lineup.map(p => p.g.start)), e = Math.max(...lineup.map(p => p.g.end));
+    const alive = Y => lineup.filter(p => Y >= p.g.start && Y <= p.g.end).length;
+    if (!ymode.range && alive(ymode.a) < Math.min(lineup.length, bestOverlap().n)){
+      setYears(bestOverlap().y, 0);
+    } else if (ymode.range && (ymode.b < s || ymode.a > e)){ const w = ymode.b - ymode.a, a = Math.round((s + e)/2 - w/2); setYears(a, a + w); }
+    mapSel = null; mapCity = null;
+    fitLineupMap(true); renderPanel(); openPanelSmall();
+  } else {
+    const s = Math.min(...lineup.map(p => p.g.start)), e = Math.max(...lineup.map(p => p.g.end));
+    fitTo(s - Math.max(8, (e - s) * .04), e + Math.max(8, (e - s) * .04), true);
+    setTimeout(() => scroller.scrollTo({ top:scroller.scrollHeight, behavior: REDUCED ? "auto" : "smooth" }), 480);
+  }
+}
+// the year when most of the lineup is alive (the middle of that stretch)
+function bestOverlap(){
+  const s = Math.floor(Math.min(...lineup.map(p => p.g.start))), e = Math.ceil(Math.max(...lineup.map(p => p.g.end)));
+  let best = { n:-1, a:s, b:s };
+  for (let y = s; y <= e; y++){
+    const n = lineup.filter(p => y >= p.g.start && y <= p.g.end && p.it && p.it.length).length;
+    if (n > best.n) best = { n, a:y, b:y }; else if (n === best.n && best.b === y - 1) best.b = y;
+  }
+  return { n:best.n, y:clamp(Math.round((best.a + best.b) / 2), MIN_Y, Math.floor(MAX_Y)) };
+}
+function fitLineupMap(always){
+  const pts = currentEntries().filter(x => x.p.lu);
+  if (!pts.length || !MW) return;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const e of pts){ x0 = Math.min(x0, e.x); x1 = Math.max(x1, e.x); y0 = Math.min(y0, e.y); y1 = Math.max(y1, e.y); }
+  const inView = pts.every(e => { const sx = SX(e.x), sy = SY(e.y); return sx > 60 && sy > 60 && sx < MW - 60 && sy < MH - 60; });
+  if (inView && !always) return;
+  if (inView && mv.k >= 1.2 && SX(x1) - SX(x0) > MW * .25) return;
+  const c = { x:(x0 + x1)/2, y:(y0 + y1)/2 }, hw = Math.max(110, (x1 - x0)/2 * 1.35), hh = Math.max(80, (y1 - y0)/2 * 1.35);
+  fitBase(c.x - hw, c.y - hh, c.x + hw, c.y + hh, 70);
+  mv.k = Math.min(mv.k, 8); mv.tx = MW/2 - mv.k * c.x; mv.ty = MH/2 - mv.k * c.y;
+  mapRequest();
+}
+// map panel: everyone in the lineup on one time scale, coloured by where they were
+function cmpRange(){
+  const s = Math.min(...lineup.map(p => p.g.start)), e = Math.max(...lineup.map(p => p.g.end)), pad = Math.max(2, (e - s) * .03);
+  return [s - pad, e + pad];
+}
+function compareBlock(){
+  const [S, E] = cmpRange(), pc = y => ((y - S) / (E - S) * 100).toFixed(2) + "%";
+  const Y = ymode.range ? (ymode.a + ymode.b) / 2 : ymode.a;
+  const cur = Y >= S && Y <= E ? `<div class="cur" style="left:${pc(Y)}"></div>` : "";
+  let rows = "";
+  for (const p of lineup){
+    const s = p.g.start, e = p.g.end;
+    let where;
+    if (Y < s) where = "not yet born";
+    else if (Y > e && !(p.d && p.d.alive)) where = `† ${YS(Math.floor(e))}`;
+    else if (p.it && p.it.length){ const ps = posAt(p, Y); where = ps.moving ? `${ps.from.name} → ${ps.to.name}` : (ps.uncertain ? "? " : "") + ps.stop.name; }
+    else where = "no places recorded";
+    let segs = "";
+    const span = Math.max(.5, e - s), q = y => ((y - s) / span * 100).toFixed(2) + "%";
+    if (p.it && p.it.length){
+      if (p.it[0].y > s + .5) segs += `<div class="seg unk" style="left:0;width:${q(p.it[0].y)}"></div>`;
+      p.it.forEach((st, i) => {
+        const a = Math.max(st.y, s), b = i + 1 < p.it.length ? p.it[i+1].y : e;
+        if (b > a) segs += `<div class="seg${i % 2 ? " alt" : ""}" style="left:${q(a)};width:calc(${q(b)} - ${q(a)})" title="${esc(st.name)} ${YS(Math.floor(a))}–${YS(Math.floor(b))}"></div>`;
+      });
+    } else segs = `<div class="seg" style="left:0;width:100%"></div>`;
+    rows += `<div class="row" style="--c:var(--lu${p.lu})"><div class="who"><b>${esc(p.label)}</b><span>${esc(where)}</span></div>
+      <div class="track"><div class="span" style="left:${pc(s)};width:calc(${pc(e)} - ${pc(s)})">${segs}</div>${cur}</div></div>`;
+  }
+  return `<div class="mp-sec">Lineup</div><div class="cmp" data-cmp="1" title="Click to go to that year">${rows}</div>
+    <div class="cmp-ax"><span>${YS(Math.floor(S))}</span>${cur ? `<b>${YS(Math.floor(Y))}</b>` : ""}<span>${E >= MAX_Y - 1 ? "now" : YS(Math.ceil(E))}</span></div>`;
+}
+
+/* ---------- search suggestions: pick a name to add them to the lineup ---------- */
+const qEl = $("q"), sugEl = $("suggest");
+let sugList = [], sugAct = 0;
+function renderSuggest(){
+  const q = norm(qEl.value.trim());
+  if (q.length < 2){ closeSuggest(); return; }
+  const all = PEOPLE.filter(p => nameHit(p, q)).sort((a, b) => hitScore(b, q) - hitScore(a, q) || a.g.start - b.g.start);
+  sugList = all.slice(0, 8);
+  if (!sugList.length){ closeSuggest(); return; }
+  sugAct = clamp(sugAct, 0, sugList.length - 1);
+  const full = lineup.length >= LU_MAX;
+  sugEl.innerHTML = sugList.map((p, i) =>
+    `<li role="option" id="sg${i}" data-i="${i}" aria-selected="${i === sugAct}" class="${p.lu ? "in" : full ? "full" : ""}"><span class="sw" style="background:${cssCol(p)}"></span><span class="nm">${esc(p.name)}<small>${esc(shortSpan(p))}</small></span><span class="add">${p.lu ? "✓ in lineup" : full ? "lineup full" : "+ lineup"}</span></li>`).join("") +
+    (all.length > sugList.length ? `<li class="more" aria-disabled="true">+ ${all.length - sugList.length} more, type more of the name</li>` : "");
+  sugEl.hidden = false;
+  const r = qEl.getBoundingClientRect(), w = sugEl.offsetWidth;
+  sugEl.style.top = (r.bottom + 6) + "px"; sugEl.style.left = clamp(r.right - w, 8, innerWidth - w - 8) + "px";
+  qEl.setAttribute("aria-expanded", "true"); qEl.setAttribute("aria-activedescendant", "sg" + sugAct);
+}
+function closeSuggest(){ sugEl.hidden = true; sugList = []; sugAct = 0; qEl.setAttribute("aria-expanded", "false"); qEl.removeAttribute("aria-activedescendant"); }
+function pickSuggest(i){
+  const p = sugList[i]; if (!p) return;
+  if (!p.lu && lineup.length >= LU_MAX) return;
+  clearTimeout(qTimer);
+  qEl.value = ""; state.q = ""; closeSuggest();
+  if (!p.lu) toggleLineup(p, true); else focusLineup();
+  qEl.focus();
+}
+qEl.addEventListener("input", () => { sugAct = 0; renderSuggest(); });
+qEl.addEventListener("focus", renderSuggest);
+qEl.addEventListener("keydown", e => {
+  if (sugEl.hidden) return;
+  if (e.key === "ArrowDown"){ sugAct = (sugAct + 1) % sugList.length; renderSuggest(); e.preventDefault(); }
+  else if (e.key === "ArrowUp"){ sugAct = (sugAct - 1 + sugList.length) % sugList.length; renderSuggest(); e.preventDefault(); }
+  else if (e.key === "Enter"){ pickSuggest(sugAct); e.preventDefault(); }
+  else if (e.key === "Escape"){ closeSuggest(); e.stopPropagation(); e.preventDefault(); }
+});
+sugEl.addEventListener("pointerdown", e => e.preventDefault());   // keep the focus in the box
+sugEl.addEventListener("click", e => { const li = e.target.closest("li[data-i]"); if (li) pickSuggest(+li.dataset.i); });
+qEl.addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== qEl) closeSuggest(); }, 120));
 
 /* ===================== PERSISTENCE (this browser only) ===================== */
 const KEY = "music-lifelines-v1";
@@ -7936,7 +8143,7 @@ function saveSoon(){
   saveTimer = setTimeout(() => {
     try {
       localStorage.setItem(KEY, JSON.stringify({
-        role: state.role, imp: state.imp, f: Object.fromEntries(FACETS.map(f => [f.key, [...state.f[f.key]]])),
+        role: state.role, lu: lineup.map(p => p.id), luOnly, f: Object.fromEntries(FACETS.map(f => [f.key, [...state.f[f.key]]])),
         c: view.x0 + W/2/view.ppy, span: W / view.ppy
       }));
     } catch(_){}
@@ -7947,7 +8154,8 @@ function restore(){
     const s = JSON.parse(localStorage.getItem(KEY) || "null");
     if (!s) return false;
     if (s.role && (s.role === "all" || ROLES[s.role])) state.role = s.role;
-    if (s.imp >= 1 && s.imp <= 5){ state.imp = s.imp; impEl.value = s.imp; }
+    for (const id of s.lu || []) if (byId[id] && lineup.length < LU_MAX) addLu(byId[id]);
+    luOnly = !!s.luOnly;
     for (const f of FACETS) for (const v of (s.f && s.f[f.key]) || []) state.f[f.key].add(v);
     if (s.c && s.span && W){ view.ppy = W / s.span; view.x0 = s.c - s.span/2; return true; }
   } catch(_){}
@@ -8213,12 +8421,13 @@ function rrect(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x + r, y); ctx.a
 // drawn on top of everything: route of the selected person, glow + rings on found people, a name tag on the selected one
 function drawFocus(entries){
   const searching = !!state.q && hits.length > 0;
-  const focus = entries.filter(e => e.p === mapSel || (searching && e.p.hit));
+  const focus = entries.filter(e => e.p === mapSel || e.p.lu || (searching && e.p.hit));
   if (!focus.length && !mapSel) return;
   const now = performance.now(), pt = (now - pulseT) / 1600;
-  // route through all the selected person's places
-  if (mapSel && mapSel.it && mapSel.it.length > 1 && !ymode.range){
-    const it = mapSel.it, col = roleCol(mapSel);
+  // routes through all the places of the selected person and of everyone in the lineup
+  const routed = [...new Set([...lineup, mapSel].filter(p => p && p.visible && p.it && p.it.length > 1))];
+  if (!ymode.range) for (const rp of routed){
+    const it = rp.it, col = roleCol(rp);
     ctx2(ctx => {
       ctx.setLineDash([5, 4]); ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.globalAlpha = .55;
       ctx.beginPath(); it.forEach((s, i) => i ? ctx.lineTo(SX(s.x), SY(s.yb)) : ctx.moveTo(SX(s.x), SY(s.yb))); ctx.stroke();
@@ -8226,10 +8435,10 @@ function drawFocus(entries){
       for (const s of it){ ctx.beginPath(); ctx.arc(SX(s.x), SY(s.yb), 3.2, 0, Math.PI*2); ctx.fillStyle = colors.land; ctx.fill(); ctx.lineWidth = 1.6; ctx.strokeStyle = col; ctx.stroke(); }
     });
   }
-  const order = focus.slice().sort((a, b) => (a.p === mapSel) - (b.p === mapSel));
+  const order = focus.slice().sort((a, b) => (a.p === mapSel) - (b.p === mapSel) || !!a.p.lu - !!b.p.lu);
   const tags = [];
   for (const e of order){
-    const p = e.p, x = SX(e.x), y = SY(e.y), col = roleCol(p), big = p === mapSel;
+    const p = e.p, x = SX(e.x), y = SY(e.y), col = roleCol(p), big = p === mapSel || !!p.lu, main = p === mapSel;
     ctx2(ctx => {
       // soft glow
       const R = big ? 26 : 16, g = ctx.createRadialGradient(x, y, 2, x, y, R);
@@ -8241,7 +8450,7 @@ function drawFocus(entries){
       ctx.lineWidth = big ? 3 : 2.2; ctx.strokeStyle = col; ctx.stroke();
       ctx.beginPath(); ctx.arc(x, y, big ? 5 : 4, 0, Math.PI*2); ctx.fillStyle = col; ctx.fill();
       // pulse after a search lands
-      if (big && pt >= 0 && pt < 1 && !REDUCED){
+      if (main && pt >= 0 && pt < 1 && !REDUCED){
         for (const off of [0, .3]){
           const t = pt - off; if (t < 0 || t > .7) continue;
           const u = t / .7;
@@ -8250,11 +8459,11 @@ function drawFocus(entries){
         }
       }
     });
-    if (big || focus.length <= 12) tags.push({ e, x, y, big });
+    if (big || focus.length <= 12) tags.push({ e, x, y, big, main });
   }
   // name tags: place the selected one first so it always gets its spot, then others where they fit; draw the selected one last
   const placed = [], drawList = [];
-  tags.sort((a, b) => b.big - a.big);
+  tags.sort((a, b) => b.main - a.main || b.big - a.big);
   for (const t of tags){
     if (ymode.range && placed.some(o => o.p === t.e.p)) continue;
     const p = t.e.p, col = roleCol(p);
@@ -8267,6 +8476,11 @@ function drawFocus(entries){
     let bx = t.x - bw/2, by = t.y - (t.big ? 18 : 14) - bh, below = false;
     if (by < 4){ by = t.y + (t.big ? 18 : 14); below = true; }
     bx = clamp(bx, 4, MW - bw - 4); by = clamp(by, 4, MH - bh - 4);
+    const hitsTag = (x0, y0) => placed.some(o => x0 < o.x1 + 4 && x0 + bw > o.x0 - 4 && y0 < o.y1 + 4 && y0 + bh > o.y0 - 4);
+    if (t.big && !t.main && hitsTag(bx, by)){   // lineup tags: try below the dot, then to the sides
+      const tries = [[bx, t.y + 18, true], [t.x + 16, t.y - bh/2, false], [t.x - 16 - bw, t.y - bh/2, false]];
+      for (const [x1, y1, bl] of tries){ const cx = clamp(x1, 4, MW - bw - 4), cy = clamp(y1, 4, MH - bh - 4); if (!hitsTag(cx, cy)){ bx = cx; by = cy; below = bl; break; } }
+    }
     if (!t.big && placed.some(o => bx < o.x1 + 6 && bx + bw > o.x0 - 6 && by < o.y1 + 6 && by + bh > o.y0 - 6 || Math.hypot(o.dx - t.x, o.dy - t.y) < 26)) continue;
     placed.push({ p, x0:bx, y0:by, x1:bx + bw, y1:by + bh, dx:t.x, dy:t.y });
     drawList.unshift(() => ctx2(ctx => {
@@ -8303,7 +8517,7 @@ function lifeStrip(p){
     segs += `<div class="seg${i % 2 ? " alt" : ""}${now ? " now" : ""}" style="left:${pc(a)};width:calc(${pc(b)} - ${pc(a)})" title="${esc(st.name)} ${YS(Math.floor(a))}–${YS(Math.floor(b))}"></div>`;
   });
   const cur = Y != null && Y >= s && Y <= e ? `<div class="cur" style="left:${pc(Y)}"></div>` : "";
-  return `<div class="mp-sec">Life</div><div class="life" style="--rc:var(${ROLES[p.roles[0]].color})" data-life="1" title="Click to go to that year">${segs}${cur}</div>
+  return `<div class="mp-sec">Life</div><div class="life" style="--rc:${cssCol(p)}" data-life="1" title="Click to go to that year">${segs}${cur}</div>
     <div class="life-ax"><span>${YS(Math.floor(s))}</span>${Y != null && cur ? `<b>${YS(Math.floor(Y))}</b>` : ""}<span>${p.d && p.d.alive ? "now" : YS(Math.floor(e))}</span></div>`;
 }
 function currentEntries(){
@@ -8337,7 +8551,7 @@ function currentEntries(){
 /* ---------- drawing ---------- */
 let mapQueued = false;
 function mapRequest(){ if (!mapQueued && mode === "map"){ mapQueued = true; requestAnimationFrame(mapDraw); } }
-function roleCol(p){ return colors[p.roles[0]] || colors.ink; }
+function roleCol(p){ return p.lu ? colors["lu" + p.lu] : colors[p.roles[0]] || colors.ink; }
 function shortName(p){ return p.label; }
 const FNAME = `500 12.5px ${FONT_UI}`, FCITY = `700 11px ${FONT_SC}`, FSMALL = `italic 400 11.5px ${FONT_UI}`;
 function haloText(ctx, t, x, y, fill){
@@ -8383,7 +8597,6 @@ function drawBase(){
 function mapDraw(){
   mapQueued = false;
   if (mode !== "map" || !MW) return;
-  checkImp();
   updateYearText();
   const ctx = mctx;
   drawBase();
@@ -8398,7 +8611,7 @@ function mapDraw(){
     ctx.lineWidth = 1.3;
     for (const [p, list] of byP){
       if (list.length < 2) continue;
-      ctx.strokeStyle = roleCol(p); ctx.globalAlpha = mapSel === p ? .95 : .35;
+      ctx.strokeStyle = roleCol(p); ctx.globalAlpha = mapSel === p || p.lu ? .95 : lineup.length ? .15 : .35;
       ctx.beginPath(); list.forEach((e, i) => i ? ctx.lineTo(SX(e.x), SY(e.y)) : ctx.moveTo(SX(e.x), SY(e.y))); ctx.stroke();
     }
     ctx.globalAlpha = 1;
@@ -8416,7 +8629,7 @@ function mapDraw(){
   // moving people
   for (const e of movers){
     const x0 = SX(e.from.x), y0 = SY(e.from.yb), x1 = SX(e.to.x), y1 = SY(e.to.yb), x = SX(e.x), y = SY(e.y);
-    const dimM = state.q && hits.length && !e.p.hit && e.p !== mapSel ? .3 : 1;
+    const dimM = ((state.q && hits.length) || lineup.length) && !e.p.hit && !e.p.lu && e.p !== mapSel ? .3 : 1;
     ctx.setLineDash([4, 4]); ctx.strokeStyle = roleCol(e.p); ctx.lineWidth = 1.4; ctx.globalAlpha = .7 * dimM;
     ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = dimM;
     ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI*2); ctx.fillStyle = roleCol(e.p); ctx.fill();
@@ -8437,11 +8650,11 @@ function mapDraw(){
     boxes.push({ x0:c.x - r, y0:c.y - r, x1:c.x + r, y1:c.y + r });
   }
   const maxNames = mv.k < 1 ? 2 : mv.k < 1.6 ? 3 : mv.k < 3 ? 5 : mv.k < 7 ? 8 : 14;
-  const dimming = !!state.q && hits.length > 0;
+  const dimming = (!!state.q && hits.length > 0) || lineup.length > 0;
   for (const c of cl){
     if (c.x < -50 || c.y < -50 || c.x > MW + 50 || c.y > MH + 50) continue;
     const n = c.list.length, r = 3.2 + Math.sqrt(n) * 1.7;
-    const dimC = dimming && !c.list.some(e => e.p.hit || e.p === mapSel) ? .3 : 1;
+    const dimC = dimming && !c.list.some(e => e.p.hit || e.p.lu || e.p === mapSel) ? .3 : 1;
     ctx.globalAlpha = dimC;
     // dot: single person in role colour, several in ink
     ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI*2);
@@ -8456,7 +8669,7 @@ function mapDraw(){
     }
     mapHits.push({ x0:c.x - r - 4, y0:c.y - r - 4, x1:c.x + r + 4, y1:c.y + r + 4, city:c });
     // label block
-    const sorted = c.list.slice().sort((a, b) => b.p.hit - a.p.hit || (a.dead >= 0) - (b.dead >= 0) || a.p.g.start - b.p.g.start);
+    const sorted = c.list.slice().sort((a, b) => !!b.p.lu - !!a.p.lu || b.p.hit - a.p.hit || (a.dead >= 0) - (b.dead >= 0) || a.p.g.start - b.p.g.start);
     const shown = sorted.slice(0, n > maxNames ? maxNames - 1 : maxNames);
     const lines = shown.map(e => {
       let t = shortName(e.p);
@@ -8492,7 +8705,7 @@ function mapDraw(){
       const y = pos.y0 + 13 + i*lh + lh/2 - 1;
       if (l.more){ ctx.font = FSMALL; haloText(ctx, l.t, pos.x0 + 3, y, colors.muted); ctx.font = FNAME;
         mapHits.push({ x0:pos.x0, y0:y - lh/2, x1:pos.x1, y1:y + lh/2, city:c }); return; }
-      const p = l.e.p, sel = mapSel === p || p.hit;
+      const p = l.e.p, sel = mapSel === p || p.hit || !!p.lu;
       ctx.font = sel ? `700 12.5px ${FONT_UI}` : FNAME;
       haloText(ctx, l.t, pos.x0 + 3, y, l.e.dead >= 0 ? colors.muted : (sel ? roleCol(p) : colors.ink));
       const tw = ctx.measureText(l.t).width;
@@ -8656,7 +8869,7 @@ function evLine(ev){
   if (ev.kind === "born") what = `<span class="sym">✱</span>born${ev.at ? " in " + esc(ev.at.name) : ""}`;
   else if (ev.kind === "died") what = `<span class="sym">†</span>died${ev.at ? " in " + esc(ev.at.name) : ""}`;
   else what = `<span class="sym">→</span>${esc(ev.from.name)} to ${esc(ev.at.name)}`;
-  return `<li><button type="button" data-id="${p.id}"><span class="yr">${YS(ev.y)}</span><span>${sw}<span class="who">${esc(p.label)}</span> <span class="what">${what}</span></span></button></li>`;
+  return `<li><button type="button" data-id="${p.id}"${p.lu ? ` data-goyear="${ev.y}"` : ""}><span class="yr">${YS(ev.y)}</span><span>${sw}<span class="who">${esc(p.label)}</span> <span class="what">${what}</span></span></button></li>`;
 }
 function renderPanel(){
   if (mode !== "map" || !mapReady) return;
@@ -8672,10 +8885,11 @@ function renderPanel(){
       top.map(p => `<button type="button" data-id="${p.id}" data-focus="1" class="${p === mapSel ? "on" : ""}"><span class="sw" style="background:${roleCol(p)}"></span>${esc(p.label)} <span class="nomap">${esc(shortSpan(p))}</span></button>`).join("") +
       (rh.length > top.length ? `<span class="mp-note">+ ${rh.length - top.length} more, type more of the name</span>` : "") + `</div>`;
   }
+  if (lineup.length && !mapSel && !mapCity) html += compareBlock();
   if (mapSel){
     const p = mapSel;
-    html += `<button class="mp-back" type="button" data-back="1">← Back to events</button>`;
-    html += `<div class="pcard" style="--rc:var(${ROLES[p.roles[0]].color})" id="pcardHost"></div>`;
+    html += `<button class="mp-back" type="button" data-back="1">← Back to ${lineup.length ? "lineup" : "events"}</button>`;
+    html += `<div class="pcard" style="--rc:${cssCol(p)}" id="pcardHost"></div>`;
   } else if (mapCity){
     const list = [];
     for (const e of ents){
@@ -8695,6 +8909,11 @@ function renderPanel(){
       else note = `here since ${Math.max(e.stop.y, Math.floor(p.g.start))}`;
       return `<li><button type="button" class="one" data-id="${p.id}"><span><span class="sw" style="background:${roleCol(p)}"></span><span class="who">${esc(p.name)}</span> <span class="what">(${esc(shortSpan(p))})</span><br><span class="what">${esc(note)}</span></span></button></li>`;
     }).join("") + `</ul>` : `<p class="mp-empty">Nobody here at this time.</p>`;
+  } else if (lineup.length){
+    // the lineup's own births, moves and deaths, all through their lives
+    const evs = events.filter(ev => ev.p.lu);
+    html += `<div class="mp-sec">Their lives, year by year</div>`;
+    html += evs.length ? `<ul class="mp-list">${evs.map(ev => evLine(ev).replace("<li>", ev.y <= b && ev.y >= (ymode.range ? a : -1e9) && (ymode.range || !evs.some(o => o.y > ev.y && o.y <= b)) ? `<li class="nowev">` : "<li>")).join("")}</ul>` : `<p class="mp-empty">No places recorded for them.</p>`;
   } else {
     const lo = ymode.range ? a : a - 15, hi = b;
     const evs = events.filter(ev => ev.p.visible && ev.y >= lo && ev.y <= hi);
@@ -8720,6 +8939,12 @@ function renderPanel(){
   }
 }
 mpBody.addEventListener("click", e => {
+  const cm = e.target.closest("[data-cmp]");
+  if (cm && !e.target.closest("button")){
+    const r = cm.getBoundingClientRect(), [s, en] = cmpRange(), f = clamp((e.clientX - r.left) / r.width, 0, 1);
+    if (ymode.range) setRangeFlag(false);
+    setYears(Math.round(s + f * (en - s)), 0); renderPanel(); fitLineupMap(false); return;
+  }
   const lf = e.target.closest("[data-life]");
   if (lf && mapSel){
     const p = mapSel, r = lf.getBoundingClientRect(), f = clamp((e.clientX - r.left) / r.width, 0, 1);
@@ -8729,6 +8954,7 @@ mpBody.addEventListener("click", e => {
   }
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.focus){ focusPerson(byId[b.dataset.id], true); return; }
+  if (b.dataset.goyear && !mapSel){ if (ymode.range) setRangeFlag(false); setYears(+b.dataset.goyear, 0); renderPanel(); fitLineupMap(false); return; }
   if (b.dataset.back){ mapSel = null; mapCity = null; mapRequest(); renderPanel(); return; }
   if (b.dataset.year){
     const p = mapSel;
@@ -8811,6 +9037,7 @@ new MutationObserver(themeChanged).observe(document.documentElement, { attribute
 W = stage.clientWidth; H = stage.clientHeight;
 measureLabels();
 const restoredView = restore();
+lanesEl.classList.toggle("comparing", lineup.length > 0); renderLineup();
 if (!restoredView) fitVisible(false);
 resize();
 applyFilters();
