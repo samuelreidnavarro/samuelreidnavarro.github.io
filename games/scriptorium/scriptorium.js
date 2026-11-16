@@ -5985,20 +5985,29 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
     return {top, bottom: Math.max(bottom, top + 80)};
   }
   function fit(el){
-    el.style.maxHeight = ''; el.style.translate = ''; el.style.removeProperty('--bridge');
+    el.style.removeProperty('max-height'); el.style.removeProperty('max-width'); el.style.translate = ''; el.style.removeProperty('--bridge');
     if (!vis(el)) return;
     const B = band(el);
     let r = el.getBoundingClientRect();
     const room = B.bottom - B.top;
     if (r.height > room) {
-      el.style.maxHeight = Math.floor(room) + 'px';
+      el.style.setProperty('max-height', Math.floor(room) + 'px', 'important');
       if (getComputedStyle(el).overflowY === 'visible') el.style.overflowY = 'auto';
       r = el.getBoundingClientRect();
     }
-    let dy = 0;
+    /* the same sideways: inside the window, with a scroll bar of its own if it is wider than the window */
+    const W = window.innerWidth, padX = 6, roomX = W - 2 * padX;
+    if (r.width > roomX) {
+      el.style.setProperty('max-width', Math.floor(roomX) + 'px', 'important');
+      if (getComputedStyle(el).overflowX === 'visible') el.style.overflowX = 'auto';
+      r = el.getBoundingClientRect();
+    }
+    let dy = 0, dx = 0;
     if (r.top < B.top) dy = B.top - r.top;
     else if (r.bottom > B.bottom) dy = B.bottom - r.bottom;
-    if (dy) el.style.translate = '0 ' + Math.round(dy) + 'px';
+    if (r.left < padX) dx = padX - r.left;
+    else if (r.right > W - padX) dx = W - padX - r.right;
+    if (dx || dy) el.style.translate = Math.round(dx) + 'px ' + Math.round(dy) + 'px';
     /* a menu moved down away from its button stays open while the pointer crosses the gap (an invisible bridge, see the CSS) */
     if (dy > 0) el.style.setProperty('--bridge', String(Math.round(dy))); else el.style.removeProperty('--bridge');
   }
