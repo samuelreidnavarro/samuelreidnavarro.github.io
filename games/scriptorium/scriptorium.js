@@ -52,7 +52,7 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab" id="headLab">Note heads</span><div class="btns" id="headSeg" role="group" aria-label="Note heads in modern notation"><button class="tb" data-v="modern" title="Round modern note heads (in modern notation)">Modern</button><button class="tb" data-v="old" title="Lozenge note heads (in modern notation)">Old</button></div>
           <span class="lab">Ligatures</span><div class="btns" id="ligSeg" role="group" aria-label="Ligatures"><button class="tb" data-v="on" title="Ligatures drawn as ligatures (in mensural notation)">On</button><button class="tb" data-v="off" title="The notes of a ligature written one by one, under a bracket">Off</button></div>
           <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
-          <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Through the staff</button></div>
+          <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="out" title="Short ticks above and below the staff, nothing across it">Outside ticks</button><button class="tb" data-v="full">Through the staff</button></div>
           <label class="lab" for="bnumSel">Bar numbers</label><select id="bnumSel" title="Bar numbers above the staff, placed by time: they work with the barlines hidden too"><option value="off">None</option><option value="line">At the start of every line</option><option value="1">Every bar</option><option value="2">Every 2 bars</option><option value="4">Every 4 bars</option><option value="5">Every 5 bars</option><option value="10">Every 10 bars</option></select>
           <label class="lab bnx" for="bunitSel">A bar is</label><select class="bnx" id="bunitSel" title="What one bar is when counting"><option value="bar">From barline to barline</option><option value="mens">A breve of the mensuration sign</option><option value="S">A semibreve</option><option value="B">A breve</option><option value="Bp">A perfect breve (dotted)</option><option value="L">A long</option><option value="Lp">A perfect long</option></select>
           <span class="lab bnx">Bar numbers over</span><div class="btns bnx" id="bposSeg" role="group" aria-label="Bar numbers over"><button class="tb" data-v="top" title="Above the highest staff of each system">Top staff</button><button class="tb" data-v="all" title="Above every staff">Every staff</button></div>
@@ -1705,6 +1705,9 @@ function barSvg(type, x, tops, single, segs){
   if (style === 'none') return '';
   if (style === 'full') {
     for (const t of tops) s += vl(x, t, t + 4, 'barl', 0.14);
+  } else if (style === 'out') {
+    /* ticks outside the staff (Samuel 2026-11-16): a short stroke just above the top line and one just below the bottom line, nothing across the staff */
+    for (const t of tops) s += vl(x, t - 0.6, t, 'barl', 0.12) + vl(x, t + 4, t + 4.6, 'barl', 0.12);
   } else if (style === 'tick') {
     for (const t of tops) s += vl(x, t - 0.5, t + 0.5, 'barl', 0.12);   /* one space, across the top line */
   }
@@ -1983,7 +1986,7 @@ function drawSystem(vlist, line, y, opts = {}){
     /* a tick stands midway between the notes, in the room they already have */
     const pc = i > 0 ? line.cols[i - 1] : null;
     const strong = c.bar === 'double' || c.bar === 'sec';
-    const bx = st.bars === 'tick' && !strong && pc ? (line.xs[i - 1] + pc.right + line.xs[i] - c.left) / 2 : line.xs[i] - c.left - (st.bars === 'full' || strong ? 0.85 : 0.6);
+    const bx = (st.bars === 'tick' || st.bars === 'out') && !strong && pc ? (line.xs[i - 1] + pc.right + line.xs[i] - c.left) / 2 : line.xs[i] - c.left - (st.bars === 'full' || strong ? 0.85 : 0.6);
     s += barSvg(c.bar, bx, tops, single, segs);
     if (strong) s += secHit(c.t, bx, tops);
   }
