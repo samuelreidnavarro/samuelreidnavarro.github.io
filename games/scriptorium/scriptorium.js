@@ -50,7 +50,6 @@ ${APP.popsBeforeVoices || ''}
         <div class="popbody"><div class="staffset">
           <span class="lab">Notation</span><div class="btns" id="notaSeg" role="group" aria-label="Notation"><button class="tb" data-v="real" title="White mensural notation">White</button><button class="tb" data-v="black" title="Black mensural notation, for this piece only: filled notes, the semiminima with a flag, coloration in red">Black</button><button class="tb" data-v="fake" title="Modern rhythm, with ties and triplets">Modern</button></div>
           <span class="lab" id="headLab">Note heads</span><div class="btns" id="headSeg" role="group" aria-label="Note heads in modern notation"><button class="tb" data-v="modern" title="Round modern note heads (in modern notation)">Modern</button><button class="tb" data-v="old" title="Lozenge note heads (in modern notation)">Old</button></div>
-          <span class="lab">Mensuration signs</span><div class="btns" id="mensSeg" role="group" aria-label="Mensuration signs"><button class="tb" data-v="on" title="Draw the mensuration signs">Shown</button><button class="tb" data-v="off" title="No mensuration sign drawn; the music is laid out as before">None</button></div>
           <span class="lab">Ligatures</span><div class="btns" id="ligSeg" role="group" aria-label="Ligatures"><button class="tb" data-v="on" title="Ligatures drawn as ligatures (in mensural notation)">On</button><button class="tb" data-v="off" title="The notes of a ligature written one by one, under a bracket">Off</button></div>
           <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
           <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="full">Through the staff</button></div>
@@ -61,6 +60,7 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Staff lines</span><div class="btns" id="linesSeg" role="group" aria-label="Staff lines"><button class="tb" data-v="5">Five</button><button class="tb" data-v="4">Four</button></div>
           <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
           <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
+          <label class="ctl" for="thick" title="Thicker staff lines, barlines and shapes (the notes, clefs, signs)">Line and note thickness</label><input type="range" id="thick" min="0" max="0.16" step="0.005">
           <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="-0.4" max="1.2" step="0.01">
           <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0" max="2" step="0.02">
           <span class="lab">Equal staff distances</span><div class="btns" id="eqSeg" role="group" aria-label="Equal staff distances"><button class="tb" data-v="on" title="All staves of a system the same distance apart">On</button><button class="tb" data-v="off" title="Each staff as close to the one above as its notes, stems and words allow">Off</button></div>
@@ -948,7 +948,7 @@ function chooseClef(v, mode){
 let DOCK = null;     /* where the site page says the browser window is, when embedded: {top, vh, pageTop} */
 const KEY = APP.store + ':v1';
 const st = {
-  inc: {}, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on', heads: 'modern',
+  inc: {}, thick: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on', heads: 'modern',
   size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
   ...(APP.defaults || {})
 };
@@ -964,7 +964,7 @@ if (st.bars === 'mstrich') st.bars = 'full';
 /* barlines now stand in each staff only; everyone starts again from those */
 if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
 /* presets (shared by the apps through the browser): the two built-in ones and the ones Samuel saves; one of them opens every score */
-const PRESET_KEYS = ['eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'orient', 'flow'];
+const PRESET_KEYS = ['thick', 'eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'orient', 'flow'];
 const MENS1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'black', lines: '5', paperCol: 'white', size: 1.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', orient: 'portrait', flow: 'vertical'};
 const MENS2 = {...MENS1, clefs: 'mens', size: 1.65, dashes: 'off'};
 const CF1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', lines: '5', paperCol: 'parchment', size: 3.6, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web'};
@@ -978,7 +978,7 @@ const presetAll = () => [...BUILTIN, ...presetStore().custom];
 function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; }
 { const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } }
 /* changing an engraving setting unticks the ticked preset: the settings are now "current settings" of their own */
-const LOOK_KEYS = ['eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
+const LOOK_KEYS = ['thick', 'eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
 function presetDrift(){
   const S = presetStore(); if (!S.active) return;
   const P = presetAll().find(q => q.name === S.active);
@@ -1172,7 +1172,6 @@ function keyAt(v, t){
   return k;
 }
 function mensW(sign){
-  if (st.mens === 'off') return 0;
   const s = sign || '';
   if (s.startsWith('M:')) return Math.max(...s.slice(2).split('/').map(x => x.length)) * 1.25 + 0.4;
   const b = mensBase(s), fr = b.match(/(\d+)\s*\/\s*(\d+)/);
@@ -1305,7 +1304,6 @@ const NUMPATH = {
   '8': 'M0.6 1.1C0.1 1 0.1 0 0.6 0C1.1 0 1.1 1 0.6 1.1C0 1.2 0 2.3 0.6 2.3C1.2 2.3 1.2 1.2 0.6 1.1Z'
 };
 function mensSvg(sign, x, top){
-  if (st.mens === 'off') return '';
   if (String(sign || '').startsWith('M:')) return timeSigSvg(String(sign).slice(2).split('/'), x, top);
   const s = mensBase(sign);
   const hasC = /C/.test(s), hasO = /O/.test(s), stroke = /\|/.test(s), dot = /\./.test(s), rev = /r/.test(s);
@@ -2245,6 +2243,15 @@ function defs(){
   defsDone = true;
 }
 let wideFx = null, wideLast = 0, wideCache = null;   /* Horizontal Web follow-along (see wideFollow) */
+/* thickness: the shapes get an outline of their own colour (CSS, --thk); every line is drawn that much wider */
+function applyThick(){
+  const k = Math.max(0, +st.thick || 0);
+  pagesEl.style.setProperty('--thk', String(k));
+  pagesEl.querySelectorAll('[stroke-width]').forEach(el => {
+    const b = el.dataset.sw !== undefined ? +el.dataset.sw : (el.dataset.sw = el.getAttribute('stroke-width'), +el.dataset.sw);
+    if (k > 0) el.style.strokeWidth = String(+(b + k).toFixed(3)); else el.style.strokeWidth = '';
+  });
+}
 function render(){
   if (!piece) return;
   wideCache = null;
@@ -2283,6 +2290,7 @@ function render(){
   }
   viewerEl.style.width = '';
   pagesEl.innerHTML = html;
+  applyThick();
   /* the frame is as wide as one page (one opening in the choir book), measured afresh for every view */
   const framed = !horiz && window.innerWidth > 700;
   viewerEl.classList.toggle('frame', framed); wrapEl.classList.toggle('framed', framed);
@@ -2775,11 +2783,12 @@ function segInit(id, key, after){
 }
 function syncUI(){
   if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
-  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#mensSeg': 'mens', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#bposSeg': 'bpos'};
+  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#bposSeg': 'bpos'};
   $('#bnumSel').value = st.bnum || 'off'; $('#bunitSel').value = st.bunit || 'bar';
   document.querySelectorAll('.bnx').forEach(el => { el.hidden = !st.bnum || st.bnum === 'off'; });
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
   for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).value = st[k];
+  $('#thick').value = st.thick || 0;
   blackSync();
   Organ.sync();
   if ($('#audition')) $('#audition').checked = !!st.audition;
@@ -2918,11 +2927,12 @@ segInit('#eqSeg', 'eq'); segInit('#viewList', 'view'); $('#notaSeg').addEventLis
 }); segInit('#headSeg', 'heads'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars'); segInit('#bposSeg', 'bpos');
 [['#bnumSel', 'bnum'], ['#bunitSel', 'bunit']].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; save(); syncUI(); render(); }));
 segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#edSeg', 'ed');
- segInit('#ligSeg', 'lig'); segInit('#mensSeg', 'mens'); segInit('#scrollSeg', 'webScroll', () => { viewerEl.scrollLeft = 0; });
+ segInit('#ligSeg', 'lig'); segInit('#scrollSeg', 'webScroll', () => { viewerEl.scrollLeft = 0; });
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
 let rq = 0;
 const later = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); };
 for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).addEventListener('input', e => { st[k] = +e.target.value; save(); later(); });
+$('#thick').addEventListener('input', e => { st.thick = +e.target.value; save(); applyThick(); });
 /* ---------------- Voices: name, clef, add, remove, open in CantusFirmus ---------------- */
 /* the clefs, as CantusFirmus offers them (Samuel prefers its clef menu): short name and full name */
 const CLEF_MENU = [['treble8', 'G2 8', 'G clef on line 2, octave lower (tenor)'], ['treble', 'G2', 'G clef on line 2'], ['g1', 'G1', 'G clef on line 1'],

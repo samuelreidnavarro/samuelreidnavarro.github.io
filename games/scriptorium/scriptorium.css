@@ -44,7 +44,7 @@ h1{font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif;font-weight
 .srcnote a{color:inherit}
 .markbar{display:flex;align-items:center;gap:10px;margin:8px 2px 0;font-size:15px}
 .markbar[hidden]{display:none}
-#pages g.mark use,#pages g.mark .ink{fill:#2F4F8F}
+#pages g.mark use,#pages g.mark .ink{fill:#2F4F8F;color:#2F4F8F}
 #pages g.mark .ledger{stroke:#2F4F8F}
 .catitem{display:block;width:100%;text-align:left;padding:10px 10px 8px;margin:0 0 6px;border:1px solid var(--line);background:transparent;border-radius:6px;height:auto;min-height:0;line-height:1.3}
 .catitem:hover:not(:disabled){border-color:var(--text);background:var(--ground)}
@@ -504,20 +504,22 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 .pnum{position:absolute;bottom:-23px;left:0;right:0;text-align:center;font-size:13px;color:var(--muted)}
 #pages svg .staff{stroke:var(--staff,#8E2A1E)}
 #pages svg .ledger,#pages svg .barl,#pages svg .tie,#pages svg .ms{stroke:var(--leaf-ink)}
-#pages svg use,#pages svg .ink{fill:var(--leaf-ink)}
+#pages svg use,#pages svg .ink{fill:var(--leaf-ink);color:var(--leaf-ink)}
+/* Thickness (Engraving): the shapes get a thin outline of their own colour; the lines are drawn wider by the script (Samuel 2026-11-16) */
+#pages svg use,#pages svg .ink{stroke:currentColor;stroke-width:var(--thk,0);stroke-linejoin:round}
 #headSeg.dim{opacity:.45}
-#pages svg .red use,#pages svg .ink.red{fill:#A12C1C}
+#pages svg .red use,#pages svg .ink.red{fill:#A12C1C;color:#A12C1C}
 #pages svg text.foot{opacity:.8}
 #pages svg text{fill:var(--leaf-ink);font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif}
 #pages svg .title{font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif}
-#pages svg g.on use,#pages svg g.on .ink{fill:var(--accent)}
+#pages svg g.on use,#pages svg g.on .ink{fill:var(--accent);color:var(--accent)}
 #pages svg g.on .ledger{stroke:var(--accent)}
 .msg{color:var(--muted);font-style:italic;padding:30px 0}
 .editbar{margin-top:10px}
 .editbar .ib svg{width:20px;height:22px;fill:currentColor}
 #valBtns .ib svg,#accBtns .ib svg,#restBtn svg{width:24px;height:24px}
 .selinfo{color:var(--muted);font-style:italic;font-size:16px}
-#pages g.sel use,#pages g.sel .ink{fill:var(--accent)}
+#pages g.sel use,#pages g.sel .ink{fill:var(--accent);color:var(--accent)}
 #pages g.sel .ledger{stroke:var(--accent)}
 #pages .caret{fill:var(--accent);opacity:.75;pointer-events:none}
 #pages g[class^="n"]{cursor:pointer}
@@ -568,13 +570,13 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 #popExport .popbody,#popOpen .popbody{left:auto;right:-6px}
 /* the clef on the staff opens a menu of clefs */
 #pages .clefhit{cursor:pointer}
-#pages .clefhit:hover use{fill:var(--hov)}
+#pages .clefhit:hover use{fill:var(--hov);color:var(--hov)}
 #clefPick{position:absolute;z-index:25;min-width:220px}
 #clefPick[hidden]{display:none}
 #clefPick li{padding:6px 12px}
 /* writing with the mouse: the note that a click would write */
 #pages .ghost{opacity:.55;pointer-events:none}
-#pages .ghost use{fill:var(--accent)}
+#pages .ghost use{fill:var(--accent);color:var(--accent)}
 #pages .ghost .ledger{stroke:var(--accent)}
 body.editing #pages .stafhit{cursor:crosshair}
 .pagemeta{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;margin-top:6px;padding-top:8px;border-top:1px solid var(--line)}
@@ -638,7 +640,7 @@ body.editing #pages .stafhit{cursor:crosshair}
 .latrow select{font:inherit;font-size:16px;height:30px;border:1px solid var(--line);border-radius:6px;background:var(--ground);color:var(--text);max-width:12em}
 .latrow #micClap{margin-left:auto}
 #pages .mic{opacity:.5;pointer-events:none}
-#pages .mic .micdot,#pages .mic use{fill:var(--pen)}
+#pages .mic .micdot,#pages .mic use{fill:var(--pen);color:var(--pen)}
 #pages .mic .ledger{stroke:var(--pen)}
 /* the square with the arrow: open the score, or one voice, in another app */
 #popSend .sendbtn{min-width:0;padding:0 10px}
@@ -648,7 +650,7 @@ body.editing #pages .stafhit{cursor:crosshair}
 #sendList .sendh:first-child{padding-top:2px}
 /* while the music plays, only the sounding notes are marked: the selection's box and colour step aside */
 html.playing #pages g.sel:not(.on) .selbg{opacity:0}
-html.playing #pages g.sel:not(.on) use,html.playing #pages g.sel:not(.on) .ink{fill:var(--leaf-ink)}
+html.playing #pages g.sel:not(.on) use,html.playing #pages g.sel:not(.on) .ink{fill:var(--leaf-ink);color:var(--leaf-ink)}
 html.playing #pages g.sel:not(.on) .ledger{stroke:var(--leaf-ink)}
 html.playing #pages .caret{display:none}
 #accBtns .edbtn span{font-family:"IM Fell English",Georgia,serif;font-style:italic;font-size:17px;line-height:1}
@@ -894,10 +896,10 @@ html.dark .tools .podg,html.dark .editbar .podg,html.dark .transport .podg{backd
 /* Everything that can be changed by clicking turns the same red as the clefs when the pointer is over it (not on touch screens, where a tap shows it instead) */
 @media (hover:hover){
   #pages .menshit:hover .ms,#pages .mensadd:hover .ms{stroke:var(--hov)}
-  #pages .menshit:hover .ink,#pages .menshit:hover use,#pages .menshit:hover text,#pages .mensadd:hover .ink,#pages .mensadd:hover use,#pages .mensadd:hover text{fill:var(--hov)}
+  #pages .menshit:hover .ink,#pages .menshit:hover use,#pages .menshit:hover text,#pages .mensadd:hover .ink,#pages .mensadd:hover use,#pages .mensadd:hover text{fill:var(--hov);color:var(--hov)}
   #pages .mensadd:hover{opacity:.7}
-  #pages .keyhit:hover>use{fill:var(--hov)}
-  body.editing #pages g[class^="n"]:has(>.hit:hover)>use,body.editing #pages g[class^="n"]:has(>.hit:hover)>.ink{fill:var(--hov)}
+  #pages .keyhit:hover>use{fill:var(--hov);color:var(--hov)}
+  body.editing #pages g[class^="n"]:has(>.hit:hover)>use,body.editing #pages g[class^="n"]:has(>.hit:hover)>.ink{fill:var(--hov);color:var(--hov)}
   body.editing #pages g[class^="n"]:has(>.hit:hover)>.ledger{stroke:var(--hov)}
 }
 
