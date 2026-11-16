@@ -3742,10 +3742,13 @@ function insertEvent(vi, at, step, isRest, pad = 0, alt){
     v.events.splice(k, 0, e);
     shiftMarks(v, k, 1);
     if (ed.ovr) {
-      let need = e.d, j = k + 1;
+      /* Overwrite: the new note covers a stretch of time. What it covers entirely goes; a note it covers only in part is cut,
+         and what is left of it stays the same note (pitch, accidental ...) after the new one. Words stay at their place in
+         time: the note that starts where an old one started takes its syllable. A rest is made only where a rest was. */
+      let need = e.d, j = k + 1, took = false;
       while (need > EPS && v.events[j]) {
         const r = v.events[j];
-        if (j === k + 1 && off < EPS && !e.rest && r.syl && r.syl.some(Boolean)) e.syl = r.syl;
+        if (j === k + 1 && off < EPS && !e.rest && r.syl && r.syl.some(Boolean)) { e.syl = r.syl; took = true; }
         /* a sign, clef or key where the new note starts stays with the new note */
         if (j === k + 1 && off < EPS) for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei === j) m.ei = k;
         if (r.d <= need + EPS) {
@@ -3753,7 +3756,8 @@ function insertEvent(vi, at, step, isRest, pad = 0, alt){
           for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > j) m.ei--;
         } else {
           r.d = rt(r.d - need); r.kd = r.d; need = 0;
-          if (!r.rest) { r.rest = true; r.tieStart = r.tieEnd = r.tieMid = false; r.syl = []; r.lig = 0; r.alt = null; r.ed = false; r.long = false; }
+          /* what is left starts later: it is the note's tail, cut from the front */
+          if (!r.rest) { r.tieStart = !!(r.tieStart || r.tieMid); r.tieEnd = r.tieMid = false; r.long = false; r.ferm = false; if (took) r.syl = []; }
         }
       }
     } else if (!e.rest) {
@@ -4151,9 +4155,9 @@ function timePlace(rect, tg){
   }
   const g = VALS.find(q => q[0] === ed.val)[1] / propAt(v, Math.min(T, v.end));
   T = rt(Math.max(0, Math.round(T / g) * g));
-  /* only over rests or past the end */
+  /* over rests or past the end; in Overwrite also over a note, on the grid, inside it too (the note is cut, see insertEvent) */
   const ei = v.events.findIndex(e => T >= e.t - EPS && T < e.t + e.d - EPS);
-  if (ei >= 0 && !v.events[ei].rest) return null;
+  if (ei >= 0 && !v.events[ei].rest && !ed.ovr) return null;
   if (ei < 0 && T < v.end - EPS) return null;
   /* where that time stands on the line, for the ghost note */
   let gx = null;
