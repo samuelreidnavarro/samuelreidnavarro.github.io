@@ -5976,8 +5976,13 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
     let top = pad, bottom = H - pad;
     /* the controls themselves, not what is inside a menu */
     const bars = [...document.querySelectorAll('.tools .bar:not([hidden]) .podg, .tools .bar:not([hidden]) .libwrap')].filter(b => vis(b) && !b.parentElement.closest('.popbody, .menu, .library'));
-    /* below every row of controls at the top (a menu of the first row goes under the second row too, if it is shown) */
-    for (const b of bars) top = Math.max(top, b.getBoundingClientRect().bottom + pad);
+    /* a drop-down of a row of controls opens right under its own button (it may cover the row below, as drop-downs do); a menu
+       that belongs to no row (sign, clef, key, panels) keeps clear of every row at the top */
+    const own = el.closest && el.closest('.tools .bar');
+    for (const b of bars) {
+      if (own && !own.contains(b)) continue;
+      top = Math.max(top, b.getBoundingClientRect().bottom + pad);
+    }
     const tp = [...document.querySelectorAll('.transport .podg, .transport #play')].filter(b => vis(b) && !b.parentElement.closest('.popbody, .menu'));
     const inTp = el.closest && el.closest('.transport');
     if (tp.length && !inTp) bottom = Math.min(bottom, Math.min(...tp.map(b => b.getBoundingClientRect().top)) - pad);
