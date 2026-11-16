@@ -5456,7 +5456,8 @@ function syncEdit(){
   $('#editMore').setAttribute('aria-expanded', String(barOpen()));
   document.body.classList.toggle('editing', ed.on);
   iconsSync();
-  if (piece) NoteInput.sync(CBA);
+  /* the tools show their state (the grid, the note value, the accidentals) even before a piece has come in */
+  try { NoteInput.sync(CBA); } catch (e) { if (piece) throw e; }
 }
 function glyphIcon(k, minBox){
   const b = GLY[k].b, cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
@@ -5945,7 +5946,7 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
   const rows = () => [...document.querySelectorAll('.tools .bar, .transport')];
   const sync = () => {
     for (const r of rows()) {
-      const open = !!r.querySelector('.pop.open, #library:not([hidden])');
+      const open = !!r.querySelector('.pop.open, #library:not([hidden]), #unitList:not([hidden])');
       if (open && !r.classList.contains('popup')) {
         r.dataset.sl = r.scrollLeft;
         r.style.setProperty('--sl', r.scrollLeft + 'px');
@@ -5985,12 +5986,13 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
       if (own && !own.contains(b)) continue;
       /* a menu of a row may reach up over the bottom of its button (its transparent margin is part of the menu for the mouse), so
          that no gap lies between them */
-      top = Math.max(top, b.getBoundingClientRect().bottom + (own ? -16 : pad));
+      top = Math.max(top, b.getBoundingClientRect().bottom + (own ? -6 : pad));
     }
     const tp = [...document.querySelectorAll('.transport .podg, .transport #play')].filter(b => vis(b) && !b.parentElement.closest('.popbody, .menu'));
     const inTp = el.closest && el.closest('.transport');
     if (tp.length && !inTp) bottom = Math.min(bottom, Math.min(...tp.map(b => b.getBoundingClientRect().top)) - pad);
-    if (tp.length && inTp) bottom = Math.min(bottom, Math.min(...tp.map(b => b.getBoundingClientRect().top)) + 2);
+    /* a menu of the playback row may reach down over the top of its own button (its margin for the mouse), so no gap lies between them */
+    if (tp.length && inTp) { const own = el.closest('.podg'); bottom = Math.min(bottom, (own ? own.getBoundingClientRect().top : Math.min(...tp.map(b => b.getBoundingClientRect().top))) + 14); }
     return {top, bottom: Math.max(bottom, top + 80)};
   }
   function fit(el){

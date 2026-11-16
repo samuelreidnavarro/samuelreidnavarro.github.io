@@ -206,7 +206,7 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 .unitbtn{width:58px;grid-template-columns:1fr 12px;gap:0;padding:0 4px 0 2px}
 .unitbtn svg{width:34px;height:34px;fill:currentColor}
 .unitbtn .chev{width:12px;height:12px;fill:currentColor}
-#unitList{left:0;bottom:calc(100% + 6px);min-width:190px}
+#unitList{left:0;bottom:calc(100% - 2px);min-width:190px}
 .menu{position:absolute;z-index:20;margin:0;padding:4px;list-style:none;color:var(--text);
   background:var(--surface);border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 28px -10px rgba(0,0,0,.35)}
 .menu:focus{outline:none}
@@ -1268,7 +1268,18 @@ html.dark .kk.blk{background:#0E0B08}
 /* a menu kept in bounds by the script (moved down under the second row of controls): an invisible bridge up to its button keeps it open */
 .popbody::before{content:"";position:absolute;left:0;right:0;top:calc(-1px * var(--bridge,0) - 2px);height:calc(1px * var(--bridge,0) + 4px)}
 
-/* On a narrow window too a menu keeps its own size and opens under (or over) its button: it is only made smaller where the window is too small for it, never wider than it needs (Samuel 2026-11-16) */
+/* Every pop-up is drawn the same way (Samuel 2026-11-16): an ordinary 1px border, rounded corners and the usual shadow, the menu's own size
+   (smaller only where the window is too small for it, never wider than it needs), touching its button. The mouse's margin round it is an
+   invisible layer that paints nothing, so no halo or bump shows. */
+.popbody{border:1px solid var(--line) !important;border-radius:8px !important;background-clip:border-box !important;box-shadow:0 12px 28px -12px rgba(0,0,0,.4) !important}
+.popbody::after{content:"";position:absolute;left:-10px;right:-10px;top:-10px;bottom:-10px;z-index:-1}
+@media (max-width:1100px), (max-height:520px) and (orientation:landscape){
+  .tools .bar .popbody{top:calc(var(--popabs,64px) - 8px) !important;left:var(--popl,18px) !important;right:auto !important;width:max-content !important;max-width:calc(100vw - 4px) !important}
+}
+@media (max-width:1200px){
+  .transport .popbody{top:auto !important;bottom:var(--popbot,60px) !important;left:var(--popl,18px) !important;right:auto !important;width:max-content !important;max-width:calc(100vw - 4px) !important}
+  #popVol .popbody{left:var(--popl,18px) !important;right:auto !important;width:max-content !important}
+}
 @media (max-width:700px), (max-height:520px) and (orientation:landscape){
-  .bar .popbody,.tools .bar .popbody,.transport .popbody,#popXform .popbody,#popLook .popbody{left:calc(var(--popl,18px) - 10px) !important;right:auto !important;width:max-content !important;max-width:calc(100vw - 4px) !important}
+  .bar .popbody,#popXform .popbody,#popLook .popbody{left:var(--popl,18px) !important;right:auto !important;width:max-content !important;max-width:calc(100vw - 4px) !important}
 }
