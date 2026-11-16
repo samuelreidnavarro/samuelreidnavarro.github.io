@@ -5963,6 +5963,56 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
     r.scrollLeft += e.deltaY; e.preventDefault();
   }, {passive: false});
 }
+/* Pop-ups stay in bounds (Samuel 2026-11-16): every menu, drop-down and panel (the sign, clef and key menus, the library, the
+   toolbar drop-downs ...) is kept between the top and bottom rows of controls: never over them, never off the window. If it is
+   too tall for the room, it gets a scroll bar of its own; if it only stands a little too high or low, it is moved over. */
+{
+  const CAND = '.popbody, .menu, #library, .library';
+  const vis = el => el.getClientRects().length > 0 && !el.hidden;
+  let fitting = false, rq = 0;
+  /* the room: below the top rows (the row the menu belongs to, or all of them) and above the playback row */
+  function band(el){
+    const H = window.innerHeight, pad = 6;
+    let top = pad, bottom = H - pad;
+    /* the controls themselves, not what is inside a menu */
+    const bars = [...document.querySelectorAll('.tools .bar:not([hidden]) .podg, .tools .bar:not([hidden]) .libwrap')].filter(b => vis(b) && !b.parentElement.closest('.popbody, .menu, .library'));
+    /* below every row of controls at the top (a menu of the first row goes under the second row too, if it is shown) */
+    for (const b of bars) top = Math.max(top, b.getBoundingClientRect().bottom + pad);
+    const tp = [...document.querySelectorAll('.transport .podg, .transport #play')].filter(b => vis(b) && !b.parentElement.closest('.popbody, .menu'));
+    const inTp = el.closest && el.closest('.transport');
+    if (tp.length && !inTp) bottom = Math.min(bottom, Math.min(...tp.map(b => b.getBoundingClientRect().top)) - pad);
+    if (tp.length && inTp) bottom = Math.min(bottom, Math.min(...tp.map(b => b.getBoundingClientRect().top)) + 2);
+    return {top, bottom: Math.max(bottom, top + 80)};
+  }
+  function fit(el){
+    el.style.maxHeight = ''; el.style.translate = ''; el.style.removeProperty('--bridge');
+    if (!vis(el)) return;
+    const B = band(el);
+    let r = el.getBoundingClientRect();
+    const room = B.bottom - B.top;
+    if (r.height > room) {
+      el.style.maxHeight = Math.floor(room) + 'px';
+      if (getComputedStyle(el).overflowY === 'visible') el.style.overflowY = 'auto';
+      r = el.getBoundingClientRect();
+    }
+    let dy = 0;
+    if (r.top < B.top) dy = B.top - r.top;
+    else if (r.bottom > B.bottom) dy = B.bottom - r.bottom;
+    if (dy) el.style.translate = '0 ' + Math.round(dy) + 'px';
+    /* a menu moved down away from its button stays open while the pointer crosses the gap (an invisible bridge, see the CSS) */
+    if (dy > 0) el.style.setProperty('--bridge', String(Math.round(dy))); else el.style.removeProperty('--bridge');
+  }
+  function fitAll(){
+    if (fitting) return; fitting = true;
+    try { document.querySelectorAll(CAND).forEach(fit); } finally { fitting = false; }
+  }
+  const later = () => { if (!rq) rq = requestAnimationFrame(() => { rq = 0; fitAll(); setTimeout(fitAll, 60); }); };
+  for (const t of ['pointerenter', 'pointerdown', 'focusin', 'click', 'toggle', 'transitionend']) document.addEventListener(t, later, true);
+  window.addEventListener('resize', later); window.addEventListener('scroll', later, true);
+  new MutationObserver(ms => { if (ms.some(m => !(m.target.closest && m.target.closest('#pages')))) later(); })
+    .observe(document.body, {subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'open', 'aria-expanded']});
+  window.__fitMenus = fitAll;
+}
 /* start */
 if (H.start) H.start(); else (async () => {
   try { await document.fonts.load('100px "IM Fell English"'); await document.fonts.load('italic 100px "IM Fell English"'); } catch (e) {}

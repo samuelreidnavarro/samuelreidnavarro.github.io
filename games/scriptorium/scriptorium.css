@@ -1264,3 +1264,6 @@ html.dark .kk.blk{background:#0E0B08}
 #mensMenu .mlev .tb{font-size:13px;padding:3px 8px;min-height:0;height:auto}
 #mensMenu .mlev.mmod{flex-wrap:wrap;justify-content:flex-start;margin-top:2px}
 #mensMenu li.mdel{display:flex}
+
+/* a menu kept in bounds by the script (moved down under the second row of controls): an invisible bridge up to its button keeps it open */
+.popbody::before{content:"";position:absolute;left:0;right:0;top:calc(-1px * var(--bridge,0) - 2px);height:calc(1px * var(--bridge,0) + 4px)}
