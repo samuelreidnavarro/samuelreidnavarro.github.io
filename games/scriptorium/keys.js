@@ -28,7 +28,7 @@
     + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.2 5.2h17.6a.9.9 0 0 1 .9.9v11.8a.9.9 0 0 1-.9.9H3.2a.9.9 0 0 1-.9-.9V6.1a.9.9 0 0 1 .9-.9Zm.6 1.5v10.6h3.3v-4.1H6.2V6.7Zm4.8 0v6.5h-.9v4.1h4.1v-4.1h-.9V6.7Zm4.7 0v6.5h-.9v4.1h3.3V6.7Zm4.8 0h-1.9v6.5h-.9v4.1h2.8Z"/></svg><span class="singchev" aria-hidden="true"><svg class="chev" viewBox="0 0 12 12"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></span></button>'
     + '<div class="popbody"><div class="btns col" role="group" aria-label="Keyboard options"><button class="tb" id="kbdShow" data-keep aria-pressed="true" title="The key you play shows as a faint red dot on the selected staff">Show pitch on staff</button></div>'
     + '<div class="kbdset" role="group" aria-label="Keyboard settings"><div class="kbdcog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58ZM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6Z"/></svg><span>Keyboard</span></div>'
-    + '<label class="kbdrow" for="kbdW"><span>Width</span><input type="range" id="kbdW" min="20" max="56" step="1" aria-label="Width of the keys"></label>'
+    + '<label class="kbdrow" for="kbdW"><span>Width</span><input type="range" id="kbdW" min="20" max="130" step="1" aria-label="Width of the keys"></label>'
     + '<label class="kbdrow" for="kbdH"><span>Height</span><input type="range" id="kbdH" min="50" max="170" step="1" aria-label="Height of the keys"></label>'
     + '<label class="check kbdrow kbdgl" title="On: the keyboard no longer scrolls, and sliding a finger (or the mouse) over the keys plays them one after the other, for scales"><input type="checkbox" id="kbdG"> Glissando</label></div></div></div></div>');
   $('#kbdShow').setAttribute('aria-pressed', st.kbdShow === false ? 'false' : 'true');
@@ -195,7 +195,7 @@
   const load = k => { try { const v = localStorage.getItem(k); return v === null ? null : +v; } catch (e) { return null; } };
   const save = (k, v) => { try { localStorage.setItem(k, String(v)); } catch (e) {} };
   let kw = load(KW), kht = load(KHT), gliss = load(KG) === 1;
-  if (kw !== null) kw = Math.max(20, Math.min(56, kw || 28));
+  if (kw !== null) kw = Math.max(20, Math.min(130, kw || 28));
   if (kht !== null) kht = Math.max(50, Math.min(170, kht || 90));
   function width(){
     if (kw !== null) { box.style.setProperty('--kw', kw + 'px'); box.style.setProperty('--bw', Math.round(kw * 0.64) + 'px'); }
