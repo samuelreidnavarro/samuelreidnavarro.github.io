@@ -417,7 +417,7 @@
     return out;
   }
   function lyOne(src){
-    const hdr = (k) => { const m = new RegExp('\\\\header\\s*\\{[\\s\\S]*?\\b' + k + '\\s*=\\s*"([^"]*)"').exec(src); return m ? m[1] : ''; };
+    const hdr = (k) => { const m = new RegExp('\\\\header\\s*\\{[\\s\\S]*?\\b' + k + '\\s*=\\s*(?:\\\\markup\\s*\\{[^"}]*)?"([^"]*)"').exec(src); return m ? m[1] : ''; };
     const title = hdr('title'), composer = hdr('composer');
     /* drop \header, \paper, \layout, \midi blocks, and markup */
     for (const blk of ['header', 'paper', 'layout', 'midi']) {
@@ -467,7 +467,9 @@
     const kind = /\\new\s+Staff\b/.test(score) ? 'Staff' : /\\new\s+Voice\b/.test(score) ? 'Voice' : null;
     if (kind) {
       const re = new RegExp('\\\\new\\s+' + kind + '\\b', 'g'); let m;
-      while ((m = re.exec(score))) { const x = take(m.index + m[0].length); if (x) { music.push(x); if (x.name) named[x.name] = x; re.lastIndex = x.end; } }
+      /* a \transpose around staves (e.g. \score { \transpose c' g { << ... >> } }) is passed on to each staff inside it */
+      const outer = []; { const tr = /\\transpose\s+([a-g][a-z]*[',]*)\s+([a-g][a-z]*[',]*)\s*(\{|<<)/g; let q; while ((q = tr.exec(score))) { const k = q.index + q[0].length - q[3].length; outer.push({a: q.index, e: q[3] === '{' ? balanced(score, k, '{', '}') : balanced(score, k, '<<', '>>'), pre: '\\transpose ' + q[1] + ' ' + q[2] + ' '}); } }
+      while ((m = re.exec(score))) { const at = m.index; const x = take(m.index + m[0].length); if (x) { x.pre = outer.filter(o => o.a < at && at < o.e).map(o => o.pre).join(''); music.push(x); if (x.name) named[x.name] = x; re.lastIndex = x.end; } }
     } else {
       const m = /(\\relative\s*[a-g][',]*\s*)?(\{|<<)/.exec(score);
       if (m) { const k = m.index + m[0].length - m[2].length, e = m[2] === '{' ? balanced(score, k, '{', '}') : balanced(score, k, '<<', '>>'); music.push({name: '', iname: '', text: (m[1] || '') + score.slice(k, e), end: e}); }
@@ -487,7 +489,7 @@
     const voices = [];
     let bars = null;
     for (const x of music) {
-      const r = lyMusic(x.text);
+      const r = lyMusic((x.pre || '') + x.text);
       if (!r.events.some(e => !e.rest)) continue;
       if (lyrics.has(x)) lyAttach(r.events, lyrics.get(x));
       if (!bars) bars = r.bars;
@@ -502,6 +504,12 @@
     let t = 0, dur = W / 4, ref = null, clef = null, key = null, tieNext = false, inSlur = false, partial = null, i = 0, rel = false;
     const fac = [1], pendingFac = [];
     const meter = [{t: 0, len: W}];
+    /* \transpose from to: written pitches move by that interval (steps and semitones), the key too */
+    let tr = null;
+    const SEMI = [0, 2, 4, 5, 7, 9, 11], FIFTHS = [0, 2, 4, -1, 1, 3, 5];
+    const semiOf = st => 12 * Math.floor(st / 7) + SEMI[((st % 7) + 7) % 7];
+    const absPitch = tok => { const p = /^([a-g])(isis|eses|is|es|s)?([',]*)$/.exec(tok || ''); if (!p) return null; let st = 21 + 'cdefgab'.indexOf(p[1]); for (const c of p[3]) st += c === "'" ? 7 : -7; return {st, alt: lyAlt(p[2]), li: 'cdefgab'.indexOf(p[1])}; };
+    const trans = pp => { if (!tr || pp.step === undefined) return pp; const st = pp.step + tr.d, semi = semiOf(pp.step) + (pp.alt || 0) + tr.s; return {step: st, alt: semi - semiOf(st)}; };
     const parseDur = (ds, dots) => {
       let d = ds === '\\breve' ? 2 * W : ds === '\\longa' ? 4 * W : ds ? W / +ds : dur;
       if (ds) { const k = (dots || '').length; dur = Math.round(d * (2 - Math.pow(0.5, k))); return dur; }
@@ -523,11 +531,12 @@
     };
     for (; i < toks.length; i++) {
       const s = toks[i];
+      if (s === '\\transpose') { const a = absPitch(toks[i + 1]), b = absPitch(toks[i + 2]); if (a && b) { const d = b.st - a.st, sm = semiOf(b.st) + b.alt - semiOf(a.st) - a.alt, f = FIFTHS[b.li] + 7 * b.alt - FIFTHS[a.li] - 7 * a.alt; tr = tr ? {d: tr.d + d, s: tr.s + sm, f: tr.f + f} : {d, s: sm, f}; i += 2; } continue; }
       if (s === '\\relative') { rel = true; const p = /^([a-g])(isis|eses|is|es|s)?([',]*)$/.exec(toks[i + 1] || ''); if (p) { ref = null; ref = 21 + 'cdefgab'.indexOf(p[1]); for (const c of p[3]) ref += c === "'" ? 7 : -7; i++; } else ref = null; continue; }
       if (s === '\\fixed') { rel = false; i++; continue; }
       if (s === '\\time') { const m = /^(\d+)\/(\d+)$/.exec(toks[++i] || ''); if (m) { meter.push({t, len: Math.round(+m[1] * W / +m[2])}); mets.push({t, sign: meterSign(+m[1], +m[2])}); } continue; }
       if (s === '\\partial') { const m = /^(\d+)(\.*)/.exec(toks[++i] || ''); if (m) { const d = W / +m[1] * (2 - Math.pow(0.5, m[2].length)); partial = Math.round(d); } continue; }
-      if (s === '\\key') { const p = /^([a-g])(isis|eses|is|es|s)?/.exec(toks[i + 1] || ''); const mode = (toks[i + 2] || '').slice(1); if (p && key === null) key = [0, 2, 4, -1, 1, 3, 5]['cdefgab'.indexOf(p[1])] + 7 * lyAlt(p[2]) + (LY_MODE[mode] || 0); i += 2; continue; }
+      if (s === '\\key') { const p = /^([a-g])(isis|eses|is|es|s)?/.exec(toks[i + 1] || ''); const mode = (toks[i + 2] || '').slice(1); if (p && key === null) key = [0, 2, 4, -1, 1, 3, 5]['cdefgab'.indexOf(p[1])] + 7 * lyAlt(p[2]) + (LY_MODE[mode] || 0) + (tr ? tr.f : 0); i += 2; continue; }
       if (s === '\\clef') { const c = (toks[++i] || '').replace(/"/g, ''); if (clef === null && !evs.length) clef = LY_CLEF[c] || null; continue; }
       if (s === '\\tuplet') { const m = /^(\d+)\/(\d+)$/.exec(toks[++i] || ''); if (m) pendingFac.push(+m[2] / +m[1]); if (/^\d+$/.test(toks[i + 1] || '')) i++; continue; }
       if (s === '\\times') { const m = /^(\d+)\/(\d+)$/.exec(toks[++i] || ''); if (m) pendingFac.push(+m[1] / +m[2]); continue; }
@@ -541,11 +550,11 @@
         const m = /^<([^<>]*)>(\d+|\\breve|\\longa)?(\.*)/.exec(s);
         const n = m && /([a-g])(isis|eses|is|es|s)?([',]*)/.exec(m[1]);
         const d = parseDur(m && m[2], m && m[3]);
-        if (n) { const pp = pitchOf(n[1], n[2], n[3]); push(Object.assign({}, pp), d); }
+        if (n) { const pp = trans(pitchOf(n[1], n[2], n[3])); push(Object.assign({}, pp), d); }
         continue;
       }
-      let m = /^([a-g])(isis|eses|is|es|s)?([',]*)[!?]?(?:=[',]*)?(\d+|\\breve|\\longa)?(\.*)$/.exec(s);
-      if (m) { const pp = pitchOf(m[1], m[2], m[3]); push(pp, parseDur(m[4], m[5])); continue; }
+      let m = /^([a-g])(isis|eses|is|es|s)?([',]*)[!?]?(?:=[',]*)?(\d+|\\breve|\\longa)?(\.*)(?:\*(\d+)(?:\/(\d+))?)?$/.exec(s);
+      if (m) { const pp = trans(pitchOf(m[1], m[2], m[3])); push(pp, parseDur(m[4], m[5]) * (m[6] ? +m[6] / (+m[7] || 1) : 1)); continue; }
       m = /^([rRs])(\d+|\\breve|\\longa)?(\.*)(?:\*(\d+)(?:\/(\d+))?)?$/.exec(s);
       if (m) { const d = parseDur(m[2], m[3]) * (m[4] ? +m[4] / (+m[5] || 1) : 1); push({rest: true}, d); continue; }
     }
