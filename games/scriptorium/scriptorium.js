@@ -4249,15 +4249,22 @@ function mensIcon(sg){
   for (let i = 0; i < 5; i++) lines += `<line x1="-0.3" x2="4.6" y1="${i}" y2="${i}" stroke="currentColor" stroke-opacity=".5" stroke-width="0.1"/>`;
   return `<svg viewBox="-0.3 -1.9 4.9 8.8" aria-hidden="true">${lines}<g fill="currentColor" stroke="none">${mensSvg(sg, 0.2, 0)}</g></svg>`;
 }
-mensMenu.innerHTML = `<li class="flatopt mscope" data-m="" role="presentation"><span class="mslab">Change</span><span class="seg" role="group" aria-label="Which voices the sign changes in"><button type="button" class="tb" data-scope="all" aria-pressed="true">All voices</button><button type="button" class="tb" data-scope="one" aria-pressed="false">Only <span class="mvn">this voice</span></button></span><input type="checkbox" id="mensDiff" hidden></li>` + MENS_MENU.map(([sg, name]) => `<li role="option" data-m="${esc(sg)}" title="${esc(name)}">${mensIcon(sg)}<span>${esc(sg.replace('r', ' rev.'))}</span></li>`).join('') +
-  `<li class="flatopt mmod" role="presentation" title="What Modern notation prints for this sign, as a time signature; from here on the barlines fall where it says. Leave both empty for none (the barlines then stay as the file has them)."><span class="mslab">Modern equivalent</span><span class="mmodf"><input id="modN" type="text" inputmode="numeric" maxlength="6" autocomplete="off" aria-label="Modern equivalent: upper number"><span class="mmsl">/</span><input id="modD" type="text" inputmode="numeric" maxlength="3" autocomplete="off" aria-label="Modern equivalent: lower number"></span><button type="button" class="tb" id="modOk">Set</button></li>` +
-  `<li class="flatopt mlev" role="presentation" title="Modus: how many breves a longa holds. No sign shows it; the music (and the long rests) tell"><span class="mslab">Modus</span><span class="seg"><button type="button" class="tb" data-lev="m" data-val="2">Longa = 2 breves</button><button type="button" class="tb" data-lev="m" data-val="3">3 (perfect)</button></span></li>` +
-  `<li class="flatopt mlev" role="presentation" title="Maximodus: how many longae a maxima holds"><span class="mslab">Maximodus</span><span class="seg"><button type="button" class="tb" data-lev="x" data-val="2">Maxima = 2 longae</button><button type="button" class="tb" data-lev="x" data-val="3">3 (perfect)</button></span></li>` +
-  `<li class="flatopt mlev" role="presentation" title="On: each note's length follows from its shape, the signs and its neighbours (perfection, imperfection, alteration). Off: the lengths stay as written in the file"><span class="mslab">Mensural rules</span><span class="seg"><button type="button" class="tb" data-rules="on">On</button><button type="button" class="tb" data-rules="off">Off</button></span></li>` +
-  `<li class="flatopt mlev" role="presentation" title="Where scholars differ: a single smaller note between two perfect notes imperfects the one before it (a parte post, the usual reading) or the one after it (a parte ante)"><span class="mslab">One between</span><span class="seg"><button type="button" class="tb" data-opt="app">imperfects the note before</button><button type="button" class="tb" data-opt="apa">the note after</button></span></li>` +
-  `<li class="flatopt mlev" role="presentation" title="Where scholars differ: two smaller notes before a perfect note. Alteration (the usual reading): the second is doubled. Or: both perfect notes around them are imperfected"><span class="mslab">Two between</span><span class="seg"><button type="button" class="tb" data-opt="alt">second is altered</button><button type="button" class="tb" data-opt="imp2">both neighbours imperfect</button></span></li>` +
-  `<li class="flatopt mdel" data-m="-" role="option" title="Remove this mensuration sign (or press Delete)"><span>Delete the sign</span></li>` +
-  '';
+/* The menu is calm: the usual signs first, the proportions and the finer settings folded away (opened when the sign in use needs them) */
+const MENS_COMMON = ['O', 'C', 'O.', 'C.', 'O|', 'C|', 'Cr', '3'];
+const mensSignHtml = ([sg, name]) => `<div class="msign" role="option" data-m="${esc(sg)}" title="${esc(name)}">${mensIcon(sg)}<span>${esc(sg.replace('r', ' rev.'))}</span></div>`;
+const mensRow = (lab, tip, inner) => `<div class="mlev" title="${esc(tip)}"><span class="mslab">${lab}</span><span class="seg">${inner}</span></div>`;
+mensMenu.innerHTML = `<li class="flatopt mscope" data-m="" role="presentation"><span class="mslab">Change</span><span class="seg" role="group" aria-label="Which voices the sign changes in"><button type="button" class="tb" data-scope="all" aria-pressed="true">All voices</button><button type="button" class="tb" data-scope="one" aria-pressed="false">Only <span class="mvn">this voice</span></button></span><input type="checkbox" id="mensDiff" hidden></li>` +
+  `<li class="mgrp" role="presentation"><div class="mgrid" role="group" aria-label="Signs">${MENS_MENU.filter(x => MENS_COMMON.includes(x[0])).map(mensSignHtml).join('')}</div></li>` +
+  `<li class="mgrp" role="presentation"><details id="mensMore"><summary>Proportions</summary><div class="mgrid" role="group" aria-label="Proportion signs">${MENS_MENU.filter(x => !MENS_COMMON.includes(x[0])).map(mensSignHtml).join('')}</div></details></li>` +
+  `<li class="mgrp" role="presentation"><details id="mensOpts"><summary>Modus, rules and modern equivalent</summary>` +
+    mensRow('Modus', 'How many breves a longa holds. No sign shows it; the music (and the long rests) tell', `<button type="button" class="tb" data-lev="m" data-val="2">2</button><button type="button" class="tb" data-lev="m" data-val="3">3 perfect</button>`) +
+    mensRow('Maximodus', 'How many longae a maxima holds', `<button type="button" class="tb" data-lev="x" data-val="2">2</button><button type="button" class="tb" data-lev="x" data-val="3">3 perfect</button>`) +
+    mensRow('Rules', "On: each note's length follows from its shape, the signs and its neighbours (perfection, imperfection, alteration). Off: the lengths stay as written in the file", `<button type="button" class="tb" data-rules="on">On</button><button type="button" class="tb" data-rules="off">Off</button>`) +
+    mensRow('One between', 'Where scholars differ: a single smaller note between two perfect notes imperfects the one before it (a parte post, the usual reading) or the one after it (a parte ante)', `<button type="button" class="tb" data-opt="app">note before</button><button type="button" class="tb" data-opt="apa">note after</button>`) +
+    mensRow('Two between', 'Where scholars differ: two smaller notes before a perfect note. Alteration (the usual reading): the second is doubled. Or: both perfect notes around them are imperfected', `<button type="button" class="tb" data-opt="alt">alter the 2nd</button><button type="button" class="tb" data-opt="imp2">both imperfect</button>`) +
+    `<div class="mlev mmod" title="What Modern notation prints for this sign, as a time signature; from here on the barlines fall where it says. Leave both empty for none (the barlines then stay as the file has them)."><span class="mslab">Modern equivalent</span><span class="mmodf"><input id="modN" type="text" inputmode="numeric" maxlength="6" autocomplete="off" aria-label="Modern equivalent: upper number"><span class="mmsl">/</span><input id="modD" type="text" inputmode="numeric" maxlength="3" autocomplete="off" aria-label="Modern equivalent: lower number"></span><button type="button" class="tb" id="modOk">Set</button></div>` +
+  `</details></li>` +
+  `<li class="flatopt mdel" data-m="-" role="option" title="Remove this mensuration sign (or press Delete)"><span>Delete the sign</span></li>`;
 /* All voices | Only this voice, at the top of the menu (Samuel 2026-11-14: one voice's sign must be easy to change) */
 function mensScope(one){ $('#mensDiff').checked = one; mensMenu.querySelectorAll('[data-scope]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.scope === 'one') === one))); }
 let mensAt = null;
@@ -4270,7 +4277,9 @@ function openMensMenu(vi, t, e){
   const cur = metAt(v, t);
   mensScope(false);
   mensMenu.querySelector('.mvn').textContent = v.name || 'this voice';
-  mensMenu.querySelectorAll('li[data-m]').forEach(li => li.setAttribute('aria-selected', String(!!li.dataset.m && li.dataset.m === mensBase(cur))));
+  mensMenu.querySelectorAll('.msign').forEach(li => li.setAttribute('aria-selected', String(!!li.dataset.m && li.dataset.m === mensBase(cur))));
+  /* the folded parts open when the sign in use belongs to them */
+  { const more = mensMenu.querySelector('#mensMore'); if (more) more.open = !MENS_COMMON.includes(mensBase(cur)) && !!cur; }
   modFill(v, t); levFill(v, t);
   mensMenu.hidden = false; clefPick.hidden = true;
   mensMenu.style.left = Math.max(4, Math.min(wr.width - mensMenu.offsetWidth - 4, e.clientX - wr.left)) + 'px';
@@ -4385,9 +4394,9 @@ mensMenu.addEventListener('click', e => {
   const lv = e.target.closest('[data-lev]'); if (lv) { setLevel(lv.dataset.lev, +lv.dataset.val); return; }
   const ru = e.target.closest('[data-rules]'); if (ru) { setRules(ru.dataset.rules === 'on'); return; }
   const op = e.target.closest('[data-opt]'); if (op) { setMensOpt(op.dataset.opt); return; }
-  if (e.target.closest('.mlev')) return;
+  if (e.target.closest('.mlev') || e.target.closest('summary') || e.target.closest('details') && !e.target.closest('.msign')) return;
   if (e.target.closest('.mscope') || e.target.closest('.mmod')) return;
-  const li = e.target.closest('li[data-m]'); if (li && li.dataset.m) setMens(li.dataset.m);
+  const li = e.target.closest('.msign, li.mdel'); if (li && li.dataset.m) setMens(li.dataset.m);
 });
 document.addEventListener('pointerdown', e => { if (!mensMenu.hidden && !e.target.closest('#mensMenu') && !e.target.closest('.menshit') && !e.target.closest('#del')) mensMenu.hidden = true; });
 /* the trash button, while a sign is selected (its menu open), takes away that one sign, in its voice only */
