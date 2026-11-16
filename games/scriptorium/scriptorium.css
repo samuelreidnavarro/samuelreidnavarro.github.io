@@ -1267,3 +1267,8 @@ html.dark .kk.blk{background:#0E0B08}
 
 /* a menu kept in bounds by the script (moved down under the second row of controls): an invisible bridge up to its button keeps it open */
 .popbody::before{content:"";position:absolute;left:0;right:0;top:calc(-1px * var(--bridge,0) - 2px);height:calc(1px * var(--bridge,0) + 4px)}
+
+/* On a narrow window too a menu keeps its own size and opens under (or over) its button: it is only made smaller where the window is too small for it, never wider than it needs (Samuel 2026-11-16) */
+@media (max-width:700px), (max-height:520px) and (orientation:landscape){
+  .bar .popbody,.tools .bar .popbody,.transport .popbody,#popXform .popbody,#popLook .popbody{left:calc(var(--popl,18px) - 10px) !important;right:auto !important;width:max-content !important;max-width:calc(100vw - 4px) !important}
+}

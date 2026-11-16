@@ -5983,7 +5983,9 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
     const own = el.closest && el.closest('.tools .bar');
     for (const b of bars) {
       if (own && !own.contains(b)) continue;
-      top = Math.max(top, b.getBoundingClientRect().bottom + pad);
+      /* a menu of a row may reach up over the bottom of its button (its transparent margin is part of the menu for the mouse), so
+         that no gap lies between them */
+      top = Math.max(top, b.getBoundingClientRect().bottom + (own ? -16 : pad));
     }
     const tp = [...document.querySelectorAll('.transport .podg, .transport #play')].filter(b => vis(b) && !b.parentElement.closest('.popbody, .menu'));
     const inTp = el.closest && el.closest('.transport');
