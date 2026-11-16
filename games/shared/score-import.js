@@ -679,6 +679,12 @@
         const walk = list => { for (const e of list) {
           const tag = e.localName;
           if (tag === 'MultiEvent') { walk([...e.children]); continue; }
+          /* passages that differ between sources: read the edition's own (default) reading */
+          if (tag === 'VariantReadings') {
+            const rd = ch(e, 'Reading').find(r => ch(r, 'VariantVersionID').some(x => x.textContent.trim() === 'DEFAULT'));
+            if (rd) walk([...(c1(rd, 'Music') || rd).children]);
+            continue;
+          }
           if (tag === 'Clef') {
             const app = tx(e, 'Appearance'), loc = +tx(e, 'StaffLoc'), pc = c1(e, 'Pitch');
             if (c1(e, 'Signature') && pc) {
