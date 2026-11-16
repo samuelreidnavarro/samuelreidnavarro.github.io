@@ -26,7 +26,11 @@
   /* ---------- the button, at the left of the playback row ---------- */
   play0.insertAdjacentHTML('afterend', '<div class="podg" id="podKbd"><div class="pop" id="popKbd"><button class="ib" id="kbdBtn" aria-pressed="false" aria-haspopup="true" aria-controls="kbd" aria-label="Keyboard" title="Keyboard: play the notes, and write them in note input (N). On a computer the letter keys play it (A S D F … white keys, W E T Y … black keys; Z X octave, C V one key; Escape closes)">'
     + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.2 5.2h17.6a.9.9 0 0 1 .9.9v11.8a.9.9 0 0 1-.9.9H3.2a.9.9 0 0 1-.9-.9V6.1a.9.9 0 0 1 .9-.9Zm.6 1.5v10.6h3.3v-4.1H6.2V6.7Zm4.8 0v6.5h-.9v4.1h4.1v-4.1h-.9V6.7Zm4.7 0v6.5h-.9v4.1h3.3V6.7Zm4.8 0h-1.9v6.5h-.9v4.1h2.8Z"/></svg><span class="singchev" aria-hidden="true"><svg class="chev" viewBox="0 0 12 12"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></span></button>'
-    + '<div class="popbody"><div class="btns col" role="group" aria-label="Keyboard options"><button class="tb" id="kbdShow" data-keep aria-pressed="true" title="The key you play shows as a faint red dot on the selected staff">Show pitch on staff</button></div></div></div></div>');
+    + '<div class="popbody"><div class="btns col" role="group" aria-label="Keyboard options"><button class="tb" id="kbdShow" data-keep aria-pressed="true" title="The key you play shows as a faint red dot on the selected staff">Show pitch on staff</button></div>'
+    + '<div class="kbdset" role="group" aria-label="Keyboard settings"><div class="kbdcog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58ZM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6Z"/></svg><span>Keyboard</span></div>'
+    + '<label class="kbdrow" for="kbdW"><span>Width</span><input type="range" id="kbdW" min="20" max="56" step="1" aria-label="Width of the keys"></label>'
+    + '<label class="kbdrow" for="kbdH"><span>Height</span><input type="range" id="kbdH" min="50" max="170" step="1" aria-label="Height of the keys"></label>'
+    + '<label class="check kbdrow kbdgl" title="On: the keyboard no longer scrolls, and sliding a finger (or the mouse) over the keys plays them one after the other, for scales"><input type="checkbox" id="kbdG"> Glissando</label></div></div></div></div>');
   $('#kbdShow').setAttribute('aria-pressed', st.kbdShow === false ? 'false' : 'true');
   $('#popKbd').addEventListener('mouseenter', () => { if (window.__sing) window.__sing.syncSing(); });
   const btn = $('#kbdBtn');
@@ -40,7 +44,6 @@
     + '<button class="ib" id="kbdDn" aria-label="Octave down" title="Octave down (Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.4 4.6 5 12l7.4 7.4 1.6-1.6L8.2 12 14 6.2ZM19.4 4.6 12 12l7.4 7.4 1.6-1.6L15.2 12 21 6.2Z"/></svg></button>'
     + '<span class="kbd-ol">8ve</span>'
     + '<button class="ib" id="kbdUp" aria-label="Octave up" title="Octave up (X)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.6 4.6 19 12l-7.4 7.4-1.6-1.6 5.8-5.8L10 6.2ZM4.6 4.6 12 12l-7.4 7.4L3 17.8 8.8 12 3 6.2Z"/></svg></button></div>'
-    + '<div class="kbd-size"><label for="kbdW">Width</label><input type="range" id="kbdW" min="20" max="56" step="1" aria-label="Width of the keys"></div>'
     + '<div class="kbd-scroll" id="kbdScroll"><div class="kbd-keys" id="kbdKeys"></div></div></div>');
   const box = $('#kbd'), keysEl = $('#kbdKeys'), scroller = $('#kbdScroll');
   {
@@ -185,22 +188,31 @@
     width();
     document.documentElement.style.setProperty('--kbh', box.offsetHeight + 'px');
   }
-  /* phones: the piano runs from edge to edge, and the slider sets how wide the keys are (kept in this browser) */
+  /* the size of the keys and the glissando, set in the keyboard's menu (kept in this browser). Without a setting of its own, the keys
+     have the size of their screen (a phone's are a little smaller). */
   const phone = () => window.matchMedia && matchMedia('(max-width:700px),(pointer:coarse)').matches;
-  const KW = 'scriptorium:kbdW';
-  let kw = 28; try { kw = Math.max(20, Math.min(56, +localStorage.getItem(KW) || 28)); } catch (e) {}
+  const KW = 'scriptorium:kbdW', KHT = 'scriptorium:kbdH', KG = 'scriptorium:kbdG';
+  const load = k => { try { const v = localStorage.getItem(k); return v === null ? null : +v; } catch (e) { return null; } };
+  const save = (k, v) => { try { localStorage.setItem(k, String(v)); } catch (e) {} };
+  let kw = load(KW), kht = load(KHT), gliss = load(KG) === 1;
+  if (kw !== null) kw = Math.max(20, Math.min(56, kw || 28));
+  if (kht !== null) kht = Math.max(50, Math.min(170, kht || 90));
   function width(){
-    if (phone()) { box.style.setProperty('--kw', kw + 'px'); box.style.setProperty('--bw', Math.round(kw * 0.64) + 'px'); }
+    if (kw !== null) { box.style.setProperty('--kw', kw + 'px'); box.style.setProperty('--bw', Math.round(kw * 0.64) + 'px'); }
     else { box.style.removeProperty('--kw'); box.style.removeProperty('--bw'); }
-    $('#kbdW').value = kw;
+    if (kht !== null) box.style.setProperty('--kh', kht + 'px'); else box.style.removeProperty('--kh');
+    $('#kbdW').value = kw !== null ? kw : (phone() ? 28 : 30);
+    $('#kbdH').value = kht !== null ? kht : Math.round(parseFloat(getComputedStyle(box).getPropertyValue('--kh')) || 92);
+    $('#kbdG').checked = gliss; box.classList.toggle('gliss', gliss);
   }
   $('#kbdW').addEventListener('input', e => {
     /* the key in the middle of the screen stays there */
     const mid = (scroller.scrollLeft + scroller.clientWidth / 2) / (keysEl.offsetWidth || 1);
-    kw = +e.target.value; width();
+    kw = +e.target.value; save(KW, kw); width();
     scroller.scrollLeft = mid * keysEl.offsetWidth - scroller.clientWidth / 2;
-    try { localStorage.setItem(KW, String(kw)); } catch (e2) {}
   });
+  $('#kbdH').addEventListener('input', e => { kht = +e.target.value; save(KHT, kht); width(); if (window.__dockPlace) window.__dockPlace(); });
+  $('#kbdG').addEventListener('change', e => { gliss = e.target.checked; save(KG, gliss ? 1 : 0); width(); });
   if (window.ResizeObserver) new ResizeObserver(() => { if (!box.hidden) { document.documentElement.style.setProperty('--kbh', box.offsetHeight + 'px'); if (window.__dockPlace) window.__dockPlace(); } }).observe(box);
   window.addEventListener('message', () => { if (!box.hidden) setTimeout(fit, 0); });
   window.addEventListener('resize', () => { if (!box.hidden) fit(); });
@@ -235,10 +247,29 @@
     if (H.keyNote) H.keyNote(p.m, false);
     if (!cancel && !p.done && !p.taking && Math.abs(e.clientX - p.x) < 12) { follow(); write(p.m); }
   };
+  /* Glissando: the finger (or the mouse, pressed) slides on from key to key, each playing as it is reached; what is left behind stops.
+     Nothing is written by a slide, only by a press that stays on its key. */
+  keysEl.addEventListener('pointermove', e => {
+    if (!gliss) return;
+    const p = touches.get(e.pointerId); if (!p) return;
+    const under = document.elementFromPoint(e.clientX, e.clientY), k = under && under.closest && under.closest('.kk');
+    if (!k || !keysEl.contains(k)) return;
+    const m = +k.dataset.m; if (m === p.m) return;
+    const old = keyEl(p.m);
+    Organ.unhold(p.v); if (H.keyNote) H.keyNote(p.m, false);
+    if (old && ![...K.held.keys()].some(q => q.endsWith(':' + p.m)) && ![...touches.values()].some(q => q !== p && q.m === p.m)) old.classList.remove('on');
+    const s2 = sound(); p.m = m; p.v = Organ.hold(m, s2.reg, s2.gain); p.done = true;
+    k.classList.add('on'); if (H.keyNote) H.keyNote(m, true);
+    e.preventDefault();
+  });
   keysEl.addEventListener('pointerup', e => lift(e, false));
   keysEl.addEventListener('pointercancel', e => lift(e, true));
   keysEl.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') lift(e, true); });
   keysEl.addEventListener('contextmenu', e => e.preventDefault());
+  /* two fingers on the keys play two notes: the browser must not take them for a pinch (zoom) or a two-finger scroll */
+  box.addEventListener('touchstart', e => { if (e.touches.length > 1) e.preventDefault(); }, {passive: false});
+  box.addEventListener('touchmove', e => { if (e.touches.length > 1 || gliss) e.preventDefault(); }, {passive: false});
+  for (const t of ['gesturestart', 'gesturechange', 'gestureend']) box.addEventListener(t, e => e.preventDefault());
 
   /* the computer's keys: before the app's own shortcuts (window, capture), only while the keyboard is open */
   window.addEventListener('keydown', e => {

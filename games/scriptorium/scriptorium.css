@@ -1283,3 +1283,17 @@ html.dark .kk.blk{background:#0E0B08}
 @media (max-width:700px), (max-height:520px) and (orientation:landscape){
   .bar .popbody,#popXform .popbody,#popLook .popbody{left:var(--popl,18px) !important;right:auto !important;width:max-content !important;max-width:calc(100vw - 4px) !important}
 }
+
+/* the keyboard's menu: size and glissando (Samuel 2026-11-16); the old width slider above the keys is gone */
+.kbd-size{display:none !important}
+.kbdset{border-top:1px solid var(--line);margin-top:6px;padding-top:6px;min-width:210px}
+.kbdcog{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13.5px;padding:0 2px 4px}
+.kbdcog svg{width:16px;height:16px;fill:currentColor}
+.kbdrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:3px 2px;font-size:15px}
+.kbdrow input[type=range]{width:120px;margin:0}
+.kbdrow.kbdgl{justify-content:flex-start;gap:8px;cursor:pointer}
+/* touch: two fingers on the keys are two notes, never a zoom; with Glissando the keys do not scroll at all */
+.kbd,.kbd .kk,.kbd-scroll{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.kbd .kbd-scroll,.kbd .kk{touch-action:pan-x}
+.kbd.gliss .kbd-scroll,.kbd.gliss .kk{touch-action:none}
+.kbd.gliss .kbd-scroll{overflow-x:hidden}
