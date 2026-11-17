@@ -26,7 +26,10 @@
       const k = titleId(name); return k ? `<a href="#${k}" data-go="${k}">${esc(name)}</a>` : esc(name);
     }) + '</p>').join('');
   }
-  const short = t => (t.short || (t.def || '').replace(/\[\[([^\]]+)\]\]/g, '$1').split(/(?<=\.)\s/)[0] || t.syn || '').trim();
+  /* t.sug lists the fields that are still Claude's suggestions: grey for Samuel, hidden for everyone else */
+  const isSug = (t, k) => (t.sug || []).includes(k);
+  const ok = (t, k) => (user === 'Samuel' || !isSug(t, k)) ? (t[k] || '') : '';
+  const short = t => (ok(t, 'short') || ok(t, 'def').replace(/\[\[([^\]]+)\]\]/g, '$1').split(/(?<=\.)\s/)[0] || ok(t, 'syn') || '').trim();
   const imgUrl = id => API + '/img/' + id;
 
   function toast(m) { const el = $('#jgToast'); el.textContent = m; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2800); }
@@ -91,7 +94,7 @@
     const see = t.see || [];
     const from = Object.keys(D.terms).filter(k => k !== id && (D.terms[k].see || []).includes(id));
     const lk = k => `<a href="#${k}" data-go="${k}">${esc(D.terms[k].title)}</a>`;
-    const field = (label, key, hint) => sec(label, `<div class="jg-field" contenteditable="true" data-k="${key}" ${hint ? `aria-label="${esc(hint)}"` : ''}>${esc(t[key] || '')}</div>`);
+    const field = (label, key, hint) => sec(label, `<div class="jg-field${isSug(t, key) ? ' jg-sug' : ''}" contenteditable="true" data-k="${key}" ${hint ? `aria-label="${esc(hint)}"` : ''}>${esc(t[key] || '')}</div>`);
     let h = '';
     if (A) {
       h += field('Title', 'title') + field('Short description', 'short', 'Shown on the card. Empty: the first sentence of the definition.');
@@ -99,7 +102,7 @@
       h += sec('Musical example', `<input class="jg-in" data-k="ex" placeholder="ChoirBook link (Copy link in ChoirBook)" value="${esc(t.ex || '')}">${t.ex ? exFrame(t.ex) : ''}
         ${t.exImg ? `<img class="jg-img" src="${imgUrl(t.exImg)}" alt="">` : ''}
         <div class="jg-row"><button class="jg-btn" data-act="pick" data-key="exImg">${t.exImg ? 'Replace picture' : 'Add picture'}</button>${t.exImg ? '<button class="jg-btn danger" data-act="unimg" data-key="exImg">Remove picture</button>' : ''}</div>`);
-      h += sec('Historical origin of the terminus', `<div class="jg-field" contenteditable="true" data-k="origin">${esc(t.origin || '')}</div>
+      h += sec('Historical origin of the terminus', `<div class="jg-field${isSug(t, 'origin') ? ' jg-sug' : ''}" contenteditable="true" data-k="origin">${esc(t.origin || '')}</div>
         <input class="jg-in" data-k="originLink" placeholder="Link to the source" value="${esc(t.originLink || '')}" style="margin-top:.5rem">`);
       h += sec('Card picture', `${t.img ? `<img class="jg-img" src="${imgUrl(t.img)}" alt="" style="max-width:12rem">` : ''}
         <div class="jg-row"><button class="jg-btn" data-act="pick" data-key="img">${t.img ? 'Replace picture' : 'Add picture'}</button>${t.img ? '<button class="jg-btn danger" data-act="unimg" data-key="img">Remove picture</button>' : ''}</div>`);
@@ -110,10 +113,10 @@
       h += `<div class="jg-tools"><button class="jg-btn" data-act="pdf">Download PDF</button><button class="jg-btn danger" data-act="del">${delArm === id ? 'Click again to delete' : 'Delete article'}</button></div>`;
       return `<div class="jg-art">${h}</div>`;
     }
-    if (t.syn) h += sec('Synonyms and other spellings', rich(t.syn));
-    if (t.def) h += sec('Definition', rich(t.def));
+    if (ok(t, 'syn')) h += sec('Synonyms and other spellings', rich(t.syn));
+    if (ok(t, 'def')) h += sec('Definition', rich(t.def));
     if (t.exImg || t.ex) h += sec('Musical example', `${t.ex ? exFrame(t.ex) : ''}${t.exImg ? `<img class="jg-img" src="${imgUrl(t.exImg)}" alt="Musical example: ${esc(t.title)}">` : ''}${t.ex ? `<p class="jg-noprint"><a class="jg-btn" href="${esc(t.ex)}" target="_blank" rel="noopener">Open in ChoirBook</a></p>` : ''}`);
-    if (t.origin || t.originLink) h += sec('Historical origin of the terminus', `${rich(t.origin || '')}${t.originLink ? `<p><a href="${esc(t.originLink)}" target="_blank" rel="noopener">${esc(t.originLink)}</a></p>` : ''}`);
+    if (ok(t, 'origin') || t.originLink) h += sec('Historical origin of the terminus', `${rich(ok(t, 'origin'))}${t.originLink ? `<p><a href="${esc(t.originLink)}" target="_blank" rel="noopener">${esc(t.originLink)}</a></p>` : ''}`);
     const links = see.filter(k => D.terms[k]).concat(from.filter(k => !see.includes(k)));
     if (links.length) h += sec('See also', `<p>${links.map(lk).join(', ')}</p>`);
     h += `<div class="jg-tools"><button class="jg-btn" data-act="pdf">Download PDF</button></div>`;
@@ -199,9 +202,20 @@
     if (f.dataset.k === 'ex') redrawCard(id);
     save('Saved.');
   });
+  /* a suggestion becomes Samuel's own once he changes it or presses Enter in it */
+  function approve(f) {
+    const card = f.closest('.jg-card'), t = card && D.terms[card.dataset.id]; if (!t || !f.classList.contains('jg-sug')) return false;
+    f.classList.remove('jg-sug'); t.sug = (t.sug || []).filter(k => k !== f.dataset.k); if (!t.sug.length) delete t.sug;
+    return true;
+  }
+  document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.k) approve(e.target); });
+  document.addEventListener('keydown', e => {
+    const f = e.target; if (e.key !== 'Enter' || !f.classList || !f.classList.contains('jg-sug')) return;
+    e.preventDefault(); approve(f); save('Approved.');
+  });
   function collect(id) {
     const t = D.terms[id], el = document.getElementById(id);
-    el.querySelectorAll('[data-k]').forEach(f => { const v = (f.tagName === 'INPUT' ? f.value : f.innerText).replace(/ /g, ' ').trim(); if (v) t[f.dataset.k] = v; else if (f.dataset.k !== 'title') delete t[f.dataset.k]; });
+    el.querySelectorAll('[data-k]').forEach(f => { const v = (f.tagName === 'INPUT' ? f.value : f.innerText).replace(/ /g, ' ').trim(); if (v) t[f.dataset.k] = v; else if (f.dataset.k !== 'title') { delete t[f.dataset.k]; if (t.sug) { t.sug = t.sug.filter(k => k !== f.dataset.k); if (!t.sug.length) delete t.sug; } } });
   }
 
   /* ---------- events ---------- */

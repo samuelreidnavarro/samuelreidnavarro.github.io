@@ -36,6 +36,7 @@
 .jg-art .jg-img { display: block; max-width: 100%; border-radius: 4px; border: 1px solid var(--line); margin: .3rem 0; }
 .jg-field { white-space: pre-wrap; min-height: 1.6em; outline: 1px dashed var(--mark); outline-offset: 3px; border-radius: 2px; padding: 0 .1rem; }
 .jg-field:focus { outline-style: solid; }
+.jg-field.jg-sug { color: #b5a993; }
 .jg-in { width: 100%; padding: .3rem .6rem; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); font-size: 1rem; }
 .jg-row { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin-top: .4rem; font-size: 1rem; color: var(--soft); }
 .jg-chip { border: 1px solid var(--line); border-radius: 999px; padding: .05rem .6rem; background: var(--bg); cursor: pointer; font-size: .92rem; }
