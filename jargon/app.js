@@ -81,14 +81,16 @@
   /* ---------- drawing ---------- */
   /* every section folds when its title is clicked */
   const sec = (label, inner) => `<details class="jg-sec" open><summary><h3>${label}</h3></summary>${inner}</details>`;
-  /* a ChoirBook link -> the app itself, shown in the article */
+  /* a ChoirBook / CantusFirmus / Canon Maker link -> just the music, drawn by the app in a hidden frame */
+  const APPS = { 'choirbook.html': ['ChoirBook', 129], 'cantus-firmus.html': ['CantusFirmus', 165], 'canon-maker.html': ['Canon Maker', 113] };
+  const appOf = link => { try { const u = new URL(link, location.href), f = u.pathname.split('/').pop(); return APPS[f] ? { u, f, name: APPS[f][0], v: APPS[f][1] } : null; } catch (e) { return null; } };
   function exFrame(link) {
-    let u; try { u = new URL(link, location.href); } catch (e) { return ''; }
-    if (!/choirbook\.html$/.test(u.pathname)) return '';
-    const piece = u.searchParams.get('piece');
-    const src = 'games/choirbook.html?example=1&' + (piece ? 'piece=' + encodeURIComponent(piece) + '&' : '') + 'v=128' + u.hash;
-    return `<iframe class="jg-cb" data-src="${esc(src)}" title="ChoirBook" scrolling="no" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
+    const a = appOf(link); if (!a) return '';
+    const piece = a.u.searchParams.get('piece');
+    const src = 'games/' + a.f + '?example=1&' + (piece ? 'piece=' + encodeURIComponent(piece) + '&' : '') + 'v=' + a.v + a.u.hash;
+    return `<div class="jg-ex"><iframe class="jg-cb" data-src="${esc(src)}" title="${a.name}" scrolling="no" tabindex="-1" aria-hidden="true"></iframe></div>`;
   }
+  const openIn = link => { const a = appOf(link); return `<a class="jg-btn" href="${esc(link)}" target="_blank" rel="noopener">Open in ${a ? a.name : 'ChoirBook'}</a>`; };
   function article(id) {
     const t = D.terms[id], A = user === 'Samuel';
     const see = t.see || [];
@@ -99,7 +101,7 @@
     if (A) {
       h += field('Title', 'title') + field('Short description', 'short', 'Shown on the card. Empty: the first sentence of the definition.');
       h += field('Synonyms and other spellings', 'syn') + field('Definition', 'def');
-      h += sec('Musical example', `<input class="jg-in" data-k="ex" placeholder="ChoirBook link (Copy link in ChoirBook)" value="${esc(t.ex || '')}">${t.ex ? exFrame(t.ex) : ''}
+      h += sec('Musical example', `<input class="jg-in" data-k="ex" placeholder="Link from ChoirBook, CantusFirmus or Canon Maker (Copy link)" value="${esc(t.ex || '')}">${t.ex ? exFrame(t.ex) + `<p class="jg-row">${openIn(t.ex)}</p>` : ''}
         ${t.exImg ? `<img class="jg-img" src="${imgUrl(t.exImg)}" alt="">` : ''}
         <div class="jg-row"><button class="jg-btn" data-act="pick" data-key="exImg">${t.exImg ? 'Replace picture' : 'Add picture'}</button>${t.exImg ? '<button class="jg-btn danger" data-act="unimg" data-key="exImg">Remove picture</button>' : ''}</div>`);
       h += sec('Historical origin of the terminus', `<div class="jg-field${isSug(t, 'origin') ? ' jg-sug' : ''}" contenteditable="true" data-k="origin">${esc(t.origin || '')}</div>
@@ -115,7 +117,7 @@
     }
     if (ok(t, 'syn')) h += sec('Synonyms and other spellings', rich(t.syn));
     if (ok(t, 'def')) h += sec('Definition', rich(t.def));
-    if (t.exImg || t.ex) h += sec('Musical example', `${t.ex ? exFrame(t.ex) : ''}${t.exImg ? `<img class="jg-img" src="${imgUrl(t.exImg)}" alt="Musical example: ${esc(t.title)}">` : ''}${t.ex ? `<p class="jg-noprint"><a class="jg-btn" href="${esc(t.ex)}" target="_blank" rel="noopener">Open in ChoirBook</a></p>` : ''}`);
+    if (t.exImg || t.ex) h += sec('Musical example', `${t.ex ? exFrame(t.ex) : ''}${t.exImg ? `<img class="jg-img" src="${imgUrl(t.exImg)}" alt="Musical example: ${esc(t.title)}">` : ''}${t.ex ? `<p class="jg-noprint">${openIn(t.ex)}</p>` : ''}`);
     if (ok(t, 'origin') || t.originLink) h += sec('Historical origin of the terminus', `${rich(ok(t, 'origin'))}${t.originLink ? `<p><a href="${esc(t.originLink)}" target="_blank" rel="noopener">${esc(t.originLink)}</a></p>` : ''}`);
     const links = see.filter(k => D.terms[k]).concat(from.filter(k => !see.includes(k)));
     if (links.length) h += sec('See also', `<p>${links.map(lk).join(', ')}</p>`);
@@ -165,20 +167,13 @@
     return true;
   }
   function redrawCard(id) { const el = document.getElementById(id); if (!el) return; const a = el.querySelector('.jg-art'); if (a) a.outerHTML = article(id); startFrames(el); }
-  /* tell each ChoirBook where the window's bottom is, so its playback row stays in view */
-  let dq = 0;
-  function dock() {
-    if (dq) return;
-    dq = requestAnimationFrame(() => { dq = 0; document.querySelectorAll('iframe.jg-cb').forEach(f => { const r = f.getBoundingClientRect(); try { f.contentWindow.postMessage({ scriptoriumDock: { top: r.top, vh: innerHeight, pageTop: r.top + scrollY } }, '*'); } catch (e) {} }); });
-  }
-  addEventListener('scroll', dock, { passive: true }); addEventListener('resize', dock);
-  /* ChoirBook frames load once their card is open, and grow to the app's height */
-  function startFrames(el) { el.querySelectorAll('iframe.jg-cb[data-src]').forEach(f => { f.src = f.dataset.src; f.removeAttribute('data-src'); f.addEventListener('load', dock); }); }
+  /* frames load once their card is open; each sends back its music as one SVG, which takes the frame's place */
+  function startFrames(el) { el.querySelectorAll('iframe.jg-cb[data-src]').forEach(f => { f.src = f.dataset.src; f.removeAttribute('data-src'); }); }
   window.addEventListener('message', e => {
     const f = [...document.querySelectorAll('iframe.jg-cb')].find(x => x.contentWindow === e.source);
     if (!f || !e.data) return;
-    if (e.data.choirbookHeight) { f.style.height = e.data.choirbookHeight + 'px'; dock(); }
-    if ('choirbookFull' in e.data) f.classList.toggle('jg-full', !!e.data.choirbookFull);
+    const key = Object.keys(e.data).find(k => /Example$/.test(k)); if (!key) return;
+    const box = f.parentNode; box.innerHTML = e.data[key].svg; box.classList.add('jg-done');
   });
 
   /* show a term from a link: if it is not in the current view, search for it */

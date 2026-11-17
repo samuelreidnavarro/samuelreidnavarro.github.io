@@ -433,4 +433,47 @@
   };
   H.dark();
   window.__share = {pack, unpack, pageSvg, pdf: makePdf, buildPdf, pageOps};
+
+  /* ---------------- ?example=1: only the music, for another page (Samuel's Jargon) ----------------
+     Once the first page has drawn and stopped changing, it is sent to the page around as one SVG,
+     cropped to the notes, without the title, the composer or anything of the app around it. */
+  if (EMBED && /[?&]example=1/.test(location.search)) {
+    let last = '', still = 0, tries = 0;
+    const SKIP = el => el.closest('.selbg,.hit,.stafhit,.caret,.mic,.ghost') || el.classList.contains('foot') || /^(title|comp)$/.test(el.getAttribute('data-f') || '');
+    const tick = () => {
+      if (++tries > 120) return;
+      const live = pagesEl.querySelector('.page svg');
+      const sig = live ? live.innerHTML.length + ':' + live.getBoundingClientRect().width : '';
+      if (!live || sig !== last) { last = sig; still = 0; return setTimeout(tick, 250); }
+      if (++still < 2) return setTimeout(tick, 250);
+      document.fonts.ready.then(() => send(live));
+    };
+    function send(live){
+      /* the title block: the title, a line under it and the composer; everything above the music */
+      const title = live.querySelector('[data-f="title"]'), sub = title && title.nextElementSibling;
+      const drop = [title, sub && sub.tagName === 'text' && !sub.getAttribute('data-f') ? sub : null, live.querySelector('[data-f="comp"]')].filter(Boolean);
+      const inv = live.getScreenCTM().inverse(), pt = live.createSVGPoint();
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      live.querySelectorAll('path,line,polyline,polygon,ellipse,circle,use,text,rect').forEach(el => {
+        if (drop.includes(el) || SKIP(el)) return;
+        const cs = getComputedStyle(el);
+        if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) return;
+        if (el.tagName === 'rect' && (cs.fill === 'none' || /rgba\(.*, 0\)|transparent/.test(cs.fill)) && cs.stroke === 'none') return;
+        const r = el.getBoundingClientRect(); if (!r.width && !r.height) return;
+        [[r.left, r.top], [r.right, r.bottom]].forEach(([x, y]) => { pt.x = x; pt.y = y; const q = pt.matrixTransform(inv); x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); });
+      });
+      const out = pageSvg(0);
+      if (!out || !isFinite(x0)) return;
+      const doc = new DOMParser().parseFromString(out.svg, 'image/svg+xml'), svg = doc.documentElement;
+      svg.querySelectorAll('.foot').forEach(e => e.remove());
+      svg.querySelectorAll('[data-f="title"],[data-f="comp"]').forEach(e => { const n = e.nextElementSibling; if (e.getAttribute('data-f') === 'title' && n && n.tagName === 'text' && !n.getAttribute('data-f')) n.remove(); e.remove(); });
+      const vb = live.viewBox.baseVal, pad = Math.max(1, (x1 - x0) * .012);
+      const bx = Math.max(vb.x, x0 - pad), by = Math.max(vb.y, y0 - pad), bw = Math.min(vb.x + vb.width, x1 + pad) - bx, bh = Math.min(vb.y + vb.height, y1 + pad) - by;
+      svg.setAttribute('viewBox', `${bx} ${by} ${bw} ${bh}`);
+      const k = out.w / vb.width;
+      svg.setAttribute('width', Math.round(bw * k)); svg.setAttribute('height', Math.round(bh * k));
+      try { parent.postMessage({[APP.msg + 'Example']: {svg: new XMLSerializer().serializeToString(svg), w: bw * k, h: bh * k}}, '*'); } catch (e) {}
+    }
+    setTimeout(tick, 400);
+  }
 }]);
