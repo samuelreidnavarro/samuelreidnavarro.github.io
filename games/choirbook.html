@@ -36,6 +36,8 @@ window.SCRIPTORIUM = {
     'Duf3015-Se_la_face_ay_pale.krn': 'Duf/Duf3015-Se_la_face_ay_pale'
   }
 };
+/* an example shown inside another page (Samuel's Jargon) keeps its own storage, so it never touches the visitor's ChoirBook */
+if (/[?&]example=1/.test(location.search)) window.SCRIPTORIUM.store = 'choirbook-example';
 </script>
 <script src="shared/styled-select.js?v=1"></script>
 <script src="shared/organ.js?v=15"></script>
@@ -49,6 +51,6 @@ window.SCRIPTORIUM = {
 <script src="scriptorium/share.js?v=7"></script>
 <script src="scriptorium/lyrics.js?v=7"></script>
 <script src="scriptorium/keys.js?v=9"></script>
-<script src="scriptorium/scriptorium.js?v=151"></script>
+<script src="scriptorium/scriptorium.js?v=152"></script>
 </body>
 </html>

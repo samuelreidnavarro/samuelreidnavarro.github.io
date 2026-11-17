@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Samuel's Jargon | Samuel Reid Navarro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+Double+Pica:ital@0;1&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap">
+  <link rel="stylesheet" href="style.css?v=24">
+  <link rel="stylesheet" href="jargon/jargon.css?v=1">
+</head>
+<body>
+  <header class="banner">
+    <a href="index.html"><p class="site-name">Samuel Reid Navarro</p></a>
+  </header>
+  <nav class="nav" aria-label="Main">
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="music.html">Timelines</a></li>
+      <li><a href="choirbook.html">ChoirBook</a></li>
+      <li><a href="cantus-firmus.html">CantusFirmus</a></li>
+      <li><a href="about.html">About</a></li>
+      <li class="has-menu"><a href="mensurator.html" aria-current="page">More</a>
+        <ul class="menu">
+          <li><a href="mensurator.html">Mensurator</a></li>
+          <li><a href="canon.html">Canon Canonum</a></li>
+          <li><a href="canon-maker.html">Canon Maker</a></li>
+          <li><a href="redix-progressio.html">ReDiX Progressio</a></li>
+          <li><a href="compressor.html">Magic black and white PDF compressor</a></li>
+          <li><a href="chants.html">Chant Sources</a></li>
+          <li><a href="jargon.html">Samuel's Jargon</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+  <main>
+    <h1 class="page-title">Samuel's Jargon</h1>
+    <div class="jg">
+      <div class="jg-bar">
+        <input id="jgQ" type="search" placeholder="Search term" aria-label="Search term" autocomplete="off">
+        <div class="jg-who" id="jgWho"></div>
+        <form class="jg-form" id="jgLogin" hidden>
+          <input id="jgCode" type="password" placeholder="Name or password" aria-label="Name or password" autocomplete="off">
+          <button class="jg-btn solid">Log in</button>
+          <div class="jg-err" id="jgErr" hidden></div>
+        </form>
+      </div>
+      <div class="jg-admin" id="jgAdmin" hidden></div>
+      <div class="jg-list" id="jgList"></div>
+      <input class="jg-file" id="jgFile" type="file" accept="image/*">
+      <div class="jg-toast" id="jgToast" hidden></div>
+    </div>
+  </main>
+  <script src="jargon/app.js?v=1"></script>
+</body>
+</html>

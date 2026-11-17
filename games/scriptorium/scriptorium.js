@@ -6088,5 +6088,5 @@ window.__cb = Object.assign({st, get ed(){ return ed; }, noteAt, mensTest, mensC
   ov.addEventListener('click', e => { if (e.target === ov) shut(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !ov.hidden) { e.stopPropagation(); shut(); } }, true);
   let seen = false; try { seen = !!localStorage.getItem(AKEY); } catch (e) { seen = true; }
-  if (!seen && !/[?&]print=1/.test(location.search)) setTimeout(open, 600);
+  if (!seen && !/[?&](print|example)=1/.test(location.search)) setTimeout(open, 600);
 }
