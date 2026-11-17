@@ -10,7 +10,7 @@
 
   let D = { terms: {}, weeks: {} };
   let user = null, pw = null;           /* user: null | 'Samuel' | a group name */
-  let viewGroup = GROUPS[0];
+  let viewGroup = 'All terms';
   let markDate = new Date().toISOString().slice(0, 10), markUnplanned = false;
   let delArm = null;
 
