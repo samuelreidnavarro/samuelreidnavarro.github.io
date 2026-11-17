@@ -48,6 +48,19 @@
 .jg-file { display: none; }
 @media (prefers-reduced-motion: reduce) { .jg-chev { transition: none; } }
 
+/* comments */
+.jg-com { border-top: 1px solid var(--line); padding: .6rem 0 .2rem; }
+.jg-com:first-child { border-top: 0; }
+.jg-com-h { font-size: .95rem; color: var(--soft); display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; }
+.jg-com-h b { color: var(--text); font-weight: normal; font-family: "IM Fell English SC", var(--serif); }
+.jg-com p { margin: .1rem 0 .3rem; }
+.jg-reply { margin-left: 1.4rem; border-top: 0; border-left: 2px solid var(--line); padding: .2rem 0 .2rem .8rem; }
+.jg-cform { display: grid; gap: .45rem; margin-top: .6rem; justify-items: start; }
+.jg-cform input, .jg-cform textarea { width: 100%; padding: .4rem .7rem; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); font-size: 1rem; resize: vertical; }
+.jg-replyform { margin: .2rem 0 .4rem 1.4rem; }
+.jg-hp { position: absolute; left: -9999px; width: 1px; height: 1px; }
+.jg-link { background: none; border: 0; padding: 0; color: var(--mark); cursor: pointer; font-size: .9rem; text-decoration: underline; }
+
 /* sections fold from their title */
 .jg-sec > summary { list-style: none; cursor: pointer; }
 .jg-sec > summary::-webkit-details-marker { display: none; }

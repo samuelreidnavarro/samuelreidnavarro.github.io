@@ -112,6 +112,7 @@
         <input class="jg-in jg-addlink" list="jgTerms" placeholder="Link to another term" style="width:auto;flex:1;min-width:10rem"></div>`);
       if (from.length) h += sec('Linked from', `<p>${from.map(lk).join(', ')}</p>`);
       h += sec(`Taught in the week of ${esc(fmt(monday(markDate)))}`, `<div class="jg-row">${GROUPS.map(g => `<button class="jg-chip${markedIn(g, monday(markDate), id) ? ' on' : ''}" data-mark="${esc(g)}">${esc(g)}</button>`).join('')}</div>`);
+      h += sec('Comments', `<div class="jg-comments jg-noprint" data-term="${id}"></div>`);
       h += `<div class="jg-tools"><button class="jg-btn" data-act="pdf">Download PDF</button><button class="jg-btn danger" data-act="del">${delArm === id ? 'Click again to delete' : 'Delete article'}</button></div>`;
       return `<div class="jg-art">${h}</div>`;
     }
@@ -121,6 +122,7 @@
     if (ok(t, 'origin') || t.originLink) h += sec('Historical origin of the terminus', `${rich(ok(t, 'origin'))}${t.originLink ? `<p><a href="${esc(t.originLink)}" target="_blank" rel="noopener">${esc(t.originLink)}</a></p>` : ''}`);
     const links = see.filter(k => D.terms[k]).concat(from.filter(k => !see.includes(k)));
     if (links.length) h += sec('See also', `<p>${links.map(lk).join(', ')}</p>`);
+    h += sec('Comments', `<div class="jg-comments jg-noprint" data-term="${id}"></div>`);
     h += `<div class="jg-tools"><button class="jg-btn" data-act="pdf">Download PDF</button></div>`;
     return `<div class="jg-art">${h}</div>`;
   }
@@ -168,7 +170,45 @@
   }
   function redrawCard(id) { const el = document.getElementById(id); if (!el) return; const a = el.querySelector('.jg-art'); if (a) a.outerHTML = article(id); startFrames(el); }
   /* frames load once their card is open; each sends back its music as one SVG, which takes the frame's place */
-  function startFrames(el) { el.querySelectorAll('iframe.jg-cb[data-src]').forEach(f => { f.src = f.dataset.src; f.removeAttribute('data-src'); }); }
+  /* ---------- comments ---------- */
+  const when = iso => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const para = s => esc(s).replace(/\n/g, '<br>');
+  async function loadComments(box) {
+    const id = box.dataset.term; let list = [];
+    try { const r = await fetch(API + '/comments/' + id, { cache: 'no-store' }); if (r.ok) list = await r.json(); } catch (e) {}
+    drawComments(box, list);
+  }
+  function drawComments(box, list) {
+    const A = user === 'Samuel';
+    box.innerHTML = list.map(c => `<div class="jg-com" data-cid="${esc(c.id)}">
+        <div class="jg-com-h"><b>${esc(c.name || 'Anonymous')}</b> <span>${esc(when(c.at))}</span>${A ? ` <button class="jg-link" data-cdel="${esc(c.id)}">Delete</button>` : ''}</div>
+        <p>${para(c.text)}</p>
+        ${(c.replies || []).map(r => `<div class="jg-com jg-reply"><div class="jg-com-h"><b>Samuel</b> <span>${esc(when(r.at))}</span>${A ? ` <button class="jg-link" data-cdel="${esc(c.id)}" data-rat="${esc(r.at)}">Delete</button>` : ''}</div><p>${para(r.text)}</p></div>`).join('')}
+        ${A ? `<form class="jg-cform jg-replyform" data-reply="${esc(c.id)}"><textarea rows="2" placeholder="Reply" aria-label="Reply" required></textarea><button class="jg-btn">Reply</button></form>` : ''}
+      </div>`).join('') + (A ? '' : `<form class="jg-cform jg-newcom"><input type="text" placeholder="Name (optional)" aria-label="Name (optional)" maxlength="60"><textarea rows="3" placeholder="Comment" aria-label="Comment" required maxlength="4000"></textarea><input class="jg-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true"><button class="jg-btn solid">Send</button></form>`);
+  }
+  document.addEventListener('submit', async e => {
+    const f = e.target; if (!f.classList.contains('jg-cform')) return;
+    e.preventDefault();
+    const box = f.closest('.jg-comments'), term = box.dataset.term, text = f.querySelector('textarea').value.trim(); if (!text) return;
+    const btn = f.querySelector('button'); btn.disabled = true;
+    try {
+      let r;
+      if (f.dataset.reply) r = await fetch(API + '/comments/' + term, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin': pw }, body: JSON.stringify({ reply: f.dataset.reply, text }) });
+      else r = await fetch(API + '/comments/' + term, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: f.querySelector('input[type=text]').value, text, website: f.querySelector('.jg-hp').value }) });
+      if (r.status === 429) { toast('Please wait a minute before writing another comment.'); btn.disabled = false; return; }
+      if (!r.ok) throw 0;
+      toast(f.dataset.reply ? 'Reply posted.' : 'Comment posted.'); loadComments(box);
+    } catch (x) { toast('Sending failed. Please try again.'); btn.disabled = false; }
+  });
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('[data-cdel]'); if (!b || user !== 'Samuel') return;
+    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = 'Click again to delete'; return; }
+    const box = b.closest('.jg-comments');
+    const r = await fetch(API + '/comments/' + box.dataset.term, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin': pw }, body: JSON.stringify({ delete: b.dataset.cdel, replyAt: b.dataset.rat || undefined }) }).catch(() => null);
+    if (r && r.ok) { drawComments(box, await r.json()); toast('Deleted.'); } else toast('Deleting failed.');
+  });
+  function startFrames(el) { el.querySelectorAll('.jg-comments:not([data-loaded])').forEach(b => { b.dataset.loaded = 1; loadComments(b); }); el.querySelectorAll('iframe.jg-cb[data-src]').forEach(f => { f.src = f.dataset.src; f.removeAttribute('data-src'); }); }
   window.addEventListener('message', e => {
     const f = [...document.querySelectorAll('iframe.jg-cb')].find(x => x.contentWindow === e.source);
     if (!f || !e.data) return;
