@@ -1,4 +1,4 @@
-/* Samuel's Jargon. Articles and weeks live in a Cloudflare Worker (see the project's jargon/worker.js).
+/* Samuel's Musical Lexicon. Articles and weeks live in a Cloudflare Worker (see the project's jargon/worker.js).
    Log in: a group code shows that group's weeks; the admin password lets Samuel write. */
 (function () {
   const API = new URLSearchParams(location.search).get('api') || 'https://samuels-jargon.samreidn.workers.dev';
@@ -98,7 +98,7 @@
     root.querySelectorAll('[data-svg]:not([data-filled])').forEach(async el => {
       el.dataset.filled = 1; const id = el.dataset.svg;
       try { svgText[id] = svgText[id] || fetch(imgUrl(id)).then(r => r.ok ? r.text() : Promise.reject()); el.innerHTML = await svgText[id]; el.classList.add('jg-done');
-        const sv = el.querySelector('svg'); if (sv && el.classList.contains('jg-cex')) { sv.removeAttribute('width'); sv.removeAttribute('height'); sv.setAttribute('preserveAspectRatio', 'xMinYMin slice'); } }
+        const sv = el.querySelector('svg'); if (sv && el.classList.contains('jg-cex')) { sv.removeAttribute('width'); sv.removeAttribute('height'); const vb = sv.viewBox.baseVal; if (vb && vb.width) sv.style.aspectRatio = vb.width + ' / ' + vb.height; } }
       catch (e) { el.remove(); }
     });
   }
@@ -115,7 +115,7 @@
   function refreshThumb(id) {
     const el = document.getElementById(id), t = D.terms[id]; if (!el || !t) return;
     const old = el.querySelector('summary .jg-cex'); if (old) old.remove();
-    if (cached(t)) { el.querySelector('summary .jg-t').insertAdjacentHTML('afterend', `<span class="jg-cex" data-svg="${esc(t.exSvg)}" aria-hidden="true"></span>`); fillSvgs(el); }
+    if (cached(t)) { el.querySelector('summary').insertAdjacentHTML('beforeend', `<span class="jg-cex" data-svg="${esc(t.exSvg)}" aria-hidden="true"></span>`); fillSvgs(el); }
   }
   /* examples without a kept drawing get drawn one by one in the background while Samuel is logged in */
   let drawing = false;
@@ -172,7 +172,7 @@
   function card(id, unplanned) {
     const t = D.terms[id]; if (!t) return '';
     const d = short(t);
-    return `<details class="jg-card" id="${id}" data-id="${id}"><summary>${t.img ? `<img class="jg-thumb" src="${imgUrl(t.img)}" alt="">` : ''}<span class="jg-t"><h2>${esc(t.title)}</h2>${d ? `<p class="jg-d">${esc(d)}</p>` : ''}</span>${cached(t) ? `<span class="jg-cex" data-svg="${esc(t.exSvg)}" aria-hidden="true"></span>` : ''}${unplanned && user === 'Samuel' ? '<span class="jg-tag">unplanned</span>' : ''}<span class="jg-chev" aria-hidden="true">›</span></summary></details>`;
+    return `<details class="jg-card" id="${id}" data-id="${id}"><summary>${t.img ? `<img class="jg-thumb" src="${imgUrl(t.img)}" alt="">` : ''}<span class="jg-t"><h2>${esc(t.title)}</h2>${d ? `<p class="jg-d">${esc(d)}</p>` : ''}</span>${unplanned && user === 'Samuel' ? '<span class="jg-tag">unplanned</span>' : ''}<span class="jg-chev" aria-hidden="true">›</span>${cached(t) ? `<span class="jg-cex" data-svg="${esc(t.exSvg)}" aria-hidden="true"></span>` : ''}</summary></details>`;
   }
   const alpha = ids => ids.sort((a, b) => D.terms[a].title.localeCompare(D.terms[b].title));
 

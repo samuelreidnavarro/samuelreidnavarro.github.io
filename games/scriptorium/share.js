@@ -451,7 +451,7 @@
   H.dark();
   window.__share = {pack, unpack, pageSvg, pdf: makePdf, buildPdf, pageOps};
 
-  /* ---------------- ?example=1: only the music, for another page (Samuel's Jargon) ----------------
+  /* ---------------- ?example=1: only the music, for another page (Samuel's Musical Lexicon) ----------------
      Once the first page has drawn and stopped changing, it is sent to the page around as one SVG,
      cropped to the notes, without the title, the composer or anything of the app around it. */
   if (EMBED && /[?&]example=1/.test(location.search)) {

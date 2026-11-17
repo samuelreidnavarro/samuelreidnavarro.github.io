@@ -1,19 +1,19 @@
 /* Samuel's Jargon: search bar, week timeline, term cards that open into the article */
 .jg [hidden] { display: none !important; }
-.jg { --card: #fffdf8; max-width: 44rem; width: 100%; display: grid; gap: 1.6rem; justify-items: stretch; }
+.jg { --card: #ede3cb; --card-open: #fffdf8; max-width: 44rem; width: 100%; display: grid; gap: 1.6rem; justify-items: stretch; }
 .jg button, .jg input, .jg textarea { font: inherit; color: inherit; }
 .jg-bar { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; position: sticky; top: 0; z-index: 5; background: var(--bg); padding: .6rem 0; border-bottom: 1px solid var(--line); }
-#jgQ { flex: 1; min-width: 10rem; padding: .5rem .9rem; border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
+#jgQ { flex: 1; min-width: 10rem; padding: .5rem .9rem; border: 1px solid var(--line); border-radius: 999px; background: var(--card-open); }
 .jg-who { white-space: nowrap; color: var(--soft); font-size: 1rem; display: flex; gap: .5rem; align-items: center; }
 .jg-btn { background: none; border: 1px solid var(--line); border-radius: 6px; padding: .25rem .75rem; cursor: pointer; color: var(--mark); font-size: 1rem; text-decoration: none; display: inline-block; }
 .jg-btn:hover { border-color: var(--mark); }
-.jg-btn.solid { background: var(--mark); border-color: var(--mark); color: var(--card); }
+.jg-btn.solid { background: var(--mark); border-color: var(--mark); color: var(--card-open); }
 .jg-btn.danger { color: #8b2f1c; }
 .jg-form { display: flex; gap: .5rem; flex-wrap: wrap; width: 100%; }
-.jg-form input[type=text], .jg-form input[type=password], .jg-form input:not([type]) { flex: 1; min-width: 10rem; padding: .4rem .8rem; border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+.jg-form input[type=text], .jg-form input[type=password], .jg-form input:not([type]) { flex: 1; min-width: 10rem; padding: .4rem .8rem; border: 1px solid var(--line); border-radius: 6px; background: var(--card-open); }
 .jg-err { width: 100%; color: #8b2f1c; font-size: .95rem; }
 .jg-admin { display: flex; gap: .6rem 1rem; flex-wrap: wrap; align-items: center; font-size: 1rem; color: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: .7rem .9rem; background: var(--band); }
-.jg-admin input[type=date] { padding: .15rem .4rem; border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+.jg-admin input[type=date] { padding: .15rem .4rem; border: 1px solid var(--line); border-radius: 6px; background: var(--card-open); }
 .jg-week { display: grid; grid-template-columns: 7.5rem 1fr; gap: 1rem; }
 .jg-date { font-family: "IM Fell English SC", var(--serif); color: var(--soft); font-size: 1rem; padding: .9rem 1rem 0 0; text-align: right; border-right: 1px solid var(--line); line-height: 1.3; }
 .jg-date small { display: block; font-size: .85rem; }
@@ -21,11 +21,16 @@
 @media (max-width: 560px) { .jg-week { grid-template-columns: 1fr; gap: .4rem; } .jg-date { text-align: left; border-right: 0; border-bottom: 1px solid var(--line); padding: 0 0 .3rem; } }
 .jg-card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; min-width: 0; scroll-margin-top: 4.5rem; }
 .jg-card[open] { border-color: var(--soft); }
-.jg-card > summary { list-style: none; cursor: pointer; padding: .85rem 1.1rem; display: flex; gap: 1rem; align-items: center; }
+.jg-card > summary { list-style: none; cursor: pointer; padding: 0; display: flex; gap: 0; align-items: stretch; }
+.jg-card > summary > * { align-self: center; }
+.jg-card > summary > .jg-t { padding: .85rem 0 .85rem 1.1rem; }
+.jg-card > summary > .jg-chev { padding: 0 .9rem; }
+.jg-card > summary > .jg-thumb { margin-left: 1.1rem; }
 .jg-card > summary::-webkit-details-marker { display: none; }
 .jg-t { flex: 1; min-width: 0; }
-.jg-cex { flex: 0 0 45%; height: 4.6rem; overflow: hidden; align-self: center; border-radius: 4px; }
-.jg-cex svg { display: block; width: 100%; height: 100%; }
+.jg-card > summary > .jg-cex { flex: 0 0 45%; align-self: stretch; display: flex; align-items: center; overflow: hidden; border-radius: 0 7px 7px 0; }
+.jg-cex svg { display: block; width: 100%; height: auto; }
+.jg-ex svg > rect:first-of-type, .jg-cex svg > rect:first-of-type { fill: transparent !important; }
 .jg-offstage { position: absolute; left: -10000px; top: 0; width: 42rem; }
 .jg-card h2 { margin: 0; font-size: 1.45rem; letter-spacing: .02em; line-height: 1.2; text-align: left; }
 .jg-d { margin: .15rem 0 0; color: var(--soft); font-size: 1rem; }
@@ -43,7 +48,7 @@
 .jg-in { width: 100%; padding: .3rem .6rem; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); font-size: 1rem; }
 .jg-row { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin-top: .4rem; font-size: 1rem; color: var(--soft); }
 .jg-chip { border: 1px solid var(--line); border-radius: 999px; padding: .05rem .6rem; background: var(--bg); cursor: pointer; font-size: .92rem; }
-.jg-chip.on { background: var(--mark); color: var(--card); border-color: var(--mark); }
+.jg-chip.on { background: var(--mark); color: var(--card-open); border-color: var(--mark); }
 .jg-chip .x { border: 0; background: none; cursor: pointer; color: var(--soft); padding: 0 0 0 .2rem; }
 .jg-tools { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: 1.2rem; padding-top: .9rem; border-top: 1px solid var(--line); }
 .jg-none { color: var(--soft); text-align: center; }
