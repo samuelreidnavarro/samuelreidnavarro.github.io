@@ -92,6 +92,7 @@
   }
   /* the drawn example is kept as an SVG next to the article (t.exSvg, made from link t.exSvgFor) */
   const cached = t => t.ex && t.exSvg && t.exSvgFor === t.ex;
+  const exAll = t => [t].concat(t.more || []).filter(o => o.ex);
   const exView = t => cached(t) ? `<div class="jg-ex" data-svg="${esc(t.exSvg)}"></div>` : exFrame(t.ex);
   const svgText = {};
   function fillSvgs(root) {
@@ -104,7 +105,8 @@
   }
   /* Samuel: keep the drawing of an example once it has been made */
   async function keep(id, link, svg) {
-    const t = D.terms[id]; if (user !== 'Samuel' || !t || t.ex !== link || cached(t)) return;
+    const T = D.terms[id]; if (user !== 'Samuel' || !T) return;
+    const t = exAll(T).find(o => o.ex === link && !cached(o)); if (!t) return;
     try {
       const r = await fetch(API + '/img', { method: 'POST', headers: { 'Content-Type': 'image/svg+xml', 'X-Admin': pw }, body: svg });
       if (!r.ok) return;
@@ -121,11 +123,11 @@
   let drawing = false;
   async function drawMissing() {
     if (drawing || user !== 'Samuel') return; drawing = true;
-    const todo = Object.keys(D.terms).filter(k => D.terms[k].ex && !cached(D.terms[k]) && exFrame(D.terms[k].ex));
+    const todo = [];
+    Object.keys(D.terms).forEach(k => exAll(D.terms[k]).forEach(o => { if (!cached(o) && exFrame(o.ex)) todo.push([k, o.ex]); }));
     const host = document.createElement('div'); host.className = 'jg-ex jg-offstage'; document.querySelector('.jg').appendChild(host);
-    for (const k of todo) {
+    for (const [k, link] of todo) {
       if (user !== 'Samuel') break;
-      const link = D.terms[k].ex;
       host.innerHTML = exFrame(link); const f = host.querySelector('iframe');
       const svg = await new Promise(res => { const tm = setTimeout(() => res(null), 30000); const on = e => { if (e.source !== f.contentWindow || !e.data) return; const key = Object.keys(e.data).find(x => /Example$/.test(x)); if (!key) return; clearTimeout(tm); removeEventListener('message', on); res(e.data[key].svg); }; addEventListener('message', on); f.src = f.dataset.src; });
       if (svg) await keep(k, link, svg);
@@ -143,7 +145,9 @@
     if (A) {
       h += field('Title', 'title') + field('Short description', 'short', 'Shown on the card. Empty: the first sentence of the definition.');
       h += field('Synonyms and other spellings', 'syn') + field('Definition', 'def');
-      h += sec('Musical example', `<input class="jg-in" data-k="ex" placeholder="Link from ChoirBook, CantusFirmus or Canon Maker (Copy link)" value="${esc(t.ex || '')}">${t.ex ? exView(t) + `<p class="jg-row">${openIn(t.ex)}</p>` : ''}
+      h += sec('Musical examples', `<input class="jg-in" data-k="ex" placeholder="Link from ChoirBook, CantusFirmus or Canon Maker (Copy link)" value="${esc(t.ex || '')}">${t.ex ? exView(t) + `<p class="jg-row">${openIn(t.ex)}</p>` : ''}
+        ${(t.more || []).map((o, i) => `<input class="jg-in" data-k="more" data-mi="${i}" placeholder="Link for another example" value="${esc(o.ex || '')}" style="margin-top:.6rem">${o.ex ? exView(o) + `<p class="jg-row">${openIn(o.ex)}</p>` : ''}`).join('')}
+        <p class="jg-row"><button class="jg-btn" data-act="addex">Add musical example</button></p>
         ${t.exImg ? `<img class="jg-img" src="${imgUrl(t.exImg)}" alt="">` : ''}
         <div class="jg-row"><button class="jg-btn" data-act="pick" data-key="exImg">${t.exImg ? 'Replace picture' : 'Add picture'}</button>${t.exImg ? '<button class="jg-btn danger" data-act="unimg" data-key="exImg">Remove picture</button>' : ''}</div>`);
       h += sec('Historical origin of the terminus', `<div class="jg-field${isSug(t, 'origin') ? ' jg-sug' : ''}" contenteditable="true" data-k="origin">${esc(t.origin || '')}</div>
@@ -163,7 +167,7 @@
     }
     if (ok(t, 'syn')) h += sec('Synonyms and other spellings', rich(t.syn));
     if (ok(t, 'def')) h += sec('Definition', rich(t.def));
-    if (t.exImg || t.ex) h += sec('Musical example', `${t.ex ? exView(t) : ''}${t.exImg ? `<img class="jg-img" src="${imgUrl(t.exImg)}" alt="Musical example: ${esc(t.title)}">` : ''}${t.ex ? `<p class="jg-noprint">${openIn(t.ex)}</p>` : ''}`);
+    if (t.exImg || exAll(t).length) h += sec(exAll(t).length > 1 ? 'Musical examples' : 'Musical example', `${exAll(t).map(o => exView(o) + `<p class="jg-noprint">${openIn(o.ex)}</p>`).join('')}${t.exImg ? `<img class="jg-img" src="${imgUrl(t.exImg)}" alt="Musical example: ${esc(t.title)}">` : ''}`);
     if (ok(t, 'origin') || t.originLink) h += sec('Historical origin of the terminus', `${rich(ok(t, 'origin'))}${t.originLink ? `<p><a href="${esc(t.originLink)}" target="_blank" rel="noopener">${esc(t.originLink)}</a></p>` : ''}`);
     const links = see.filter(k => D.terms[k]).concat(from.filter(k => !see.includes(k)));
     if (links.length) h += sec('See also', `<p>${links.map(lk).join(', ')}</p>`);
@@ -284,7 +288,7 @@
     if (JSON.stringify(t) === before) return;
     const sum = card.querySelector('summary .jg-t');
     if (sum) { const d = short(t); sum.innerHTML = `<h2>${esc(t.title)}</h2>${d ? `<p class="jg-d">${esc(d)}</p>` : ''}`; }
-    if (f.dataset.k === 'ex') redrawCard(id);
+    if (f.dataset.k === 'ex' || f.dataset.k === 'more') redrawCard(id);
     save('Saved.');
   });
   /* a suggestion becomes Samuel's own once he changes it or presses Enter in it */
@@ -300,7 +304,10 @@
   });
   function collect(id) {
     const t = D.terms[id], el = document.getElementById(id);
-    el.querySelectorAll('[data-k]').forEach(f => { const v = (f.tagName === 'INPUT' ? f.value : f.innerText).replace(/ /g, ' ').trim(); if (v) t[f.dataset.k] = v; else if (f.dataset.k !== 'title') { delete t[f.dataset.k]; if (t.sug) { t.sug = t.sug.filter(k => k !== f.dataset.k); if (!t.sug.length) delete t.sug; } } });
+    const more = [...el.querySelectorAll('[data-k="more"]')];
+    if (more.length) t.more = more.map(f => { const o = (t.more || [])[+f.dataset.mi] || {}; const v = f.value.trim(); return v === o.ex ? o : { ex: v }; }).filter(o => o.ex);
+    if (t.more && !t.more.length) delete t.more;
+    el.querySelectorAll('[data-k]:not([data-k="more"])').forEach(f => { const v = (f.tagName === 'INPUT' ? f.value : f.innerText).replace(/ /g, ' ').trim(); if (v) t[f.dataset.k] = v; else if (f.dataset.k !== 'title') { delete t[f.dataset.k]; if (t.sug) { t.sug = t.sug.filter(k => k !== f.dataset.k); if (!t.sug.length) delete t.sug; } } });
   }
 
   /* ---------- requested terms ---------- */
@@ -357,7 +364,8 @@
     h.push(`<h2>${esc(t.title)}</h2>`);
     if (mine(t, 'syn')) h.push(`<p class="ps-syn">${esc(t.syn)}</p>`);
     if (mine(t, 'def')) h.push(`<h3>Definition</h3>${rich(t.def).replace(/<a [^>]*>|<\/a>/g, '')}`);
-    if (cached(t)) h.push(`<h3>Musical example</h3><div class="ps-ex" data-svg="${esc(t.exSvg)}"></div>`);
+    const exs = exAll(t).filter(cached);
+    if (exs.length) h.push(`<h3>Musical example${exs.length > 1 ? 's' : ''}</h3>${exs.map(o => `<div class="ps-ex" data-svg="${esc(o.exSvg)}"></div>`).join('')}`);
     if (t.exImg) h.push(`<img class="ps-img" src="${imgUrl(t.exImg)}" alt="">`);
     if (mine(t, 'origin') || t.originLink) h.push(`<h3>Historical origin of the terminus</h3>${rich(mine(t, 'origin')).replace(/<a [^>]*>|<\/a>/g, '')}${t.originLink ? `<p class="ps-link">${esc(t.originLink)}</p>` : ''}`);
     return `<article class="ps-card">${h.join('')}</article>`;
@@ -408,6 +416,7 @@
     const act = b.dataset.act;
     if (act === 'board') { boardToggle(id); b.textContent = onBoard(id) ? 'On the board' : 'Add to board'; return; }
     if (user !== 'Samuel') return;
+    if (act === 'addex') { collect(id); const t = D.terms[id]; t.more = (t.more || []).concat({ ex: '' }); redrawCard(id); const ins = document.querySelectorAll(`#${id} [data-k="more"]`); if (ins.length) ins[ins.length - 1].focus(); return; }
     if (b.dataset.unlink) { collect(id); const t = D.terms[id]; t.see = (t.see || []).filter(k => k !== b.dataset.unlink); redrawCard(id); save('Link removed.'); return; }
     if (b.dataset.mark) { const on = toggleMark(b.dataset.mark, id); b.classList.toggle('on', on); redrawCard(id); if (await save(on ? `Marked for ${b.dataset.mark}.` : `Removed from ${b.dataset.mark}.`)) { if (viewGroup === b.dataset.mark && !$('#jgQ').value) render(); } return; }
     if (act === 'del') {
