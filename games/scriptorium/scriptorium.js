@@ -2016,7 +2016,11 @@ function frameSize(){
   const h = Math.max(320, (wrapEl.classList.contains('fs') ? window.innerHeight : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) || 700) - 60);
   return [Math.max(240, w), h];
 }
+/* ?example=1 (an example shown in Samuel's Musical Lexicon): one very wide, tall page, so the music stays on a single line;
+   the page around crops it to the notes and scales it down to the room it has */
+const EXAMPLE_MODE = /[?&]example=1/.test(location.search);
 function pageGeom(){
+  if (EXAMPLE_MODE) { const sp = st.size, w = 20000, h = 1500; return {wmm: w, hmm: h, sp, W: w / sp, H: h / sp, M: 210 * 0.065 / sp}; }
   if (webFit()) {
     const [fw, fh] = frameSize(), pw = fw >= 660 ? fw / 2 : fw, mm = 96 / 25.4;
     const w = pw / mm, h = fh / mm, sp = st.size * 1.2;
@@ -2404,6 +2408,7 @@ function bringIntoView(el, force){
   return true;
 }
 function pageDiv(svg, G, sc, extra){
+  if (EXAMPLE_MODE) sc = 1;   /* true size: text drawn tiny on screen measures wrong */
   let hmm = G.hmm;
   let wmm = G.wmm;
   if (G.web) { const m = /viewBox="0 0 ([-\d.]+) ([\d.]+)"/.exec(svg); if (m) { hmm = +m[2] * G.sp; wmm = +m[1] * G.sp; } }

@@ -82,7 +82,7 @@
   /* every section folds when its title is clicked */
   const sec = (label, inner, closed) => `<details class="jg-sec"${closed ? '' : ' open'}><summary><h3>${label}</h3></summary>${inner}</details>`;
   /* a ChoirBook / CantusFirmus / Canon Maker link -> just the music, drawn by the app in a hidden frame */
-  const APPS = { 'choirbook.html': ['ChoirBook', 130], 'cantus-firmus.html': ['CantusFirmus', 166], 'canon-maker.html': ['Canon Maker', 114] };
+  const APPS = { 'choirbook.html': ['ChoirBook', 131], 'cantus-firmus.html': ['CantusFirmus', 167], 'canon-maker.html': ['Canon Maker', 115] };
   const appOf = link => { try { const u = new URL(link, location.href), f = u.pathname.split('/').pop(); return APPS[f] ? { u, f, name: APPS[f][0], v: APPS[f][1] } : null; } catch (e) { return null; } };
   function exFrame(link) {
     const a = appOf(link); if (!a) return '';
@@ -91,7 +91,9 @@
  return `<div class="jg-ex"><iframe class="jg-cb" data-link="${esc(link)}" data-src="${esc(src)}" title="${a.name}" scrolling="no" tabindex="-1" aria-hidden="true"></iframe></div>`;
   }
   /* the drawn example is kept as an SVG next to the article (t.exSvg, made from link t.exSvgFor) */
-  const cached = t => t.ex && t.exSvg && t.exSvgFor === t.ex;
+  /* EXV: how the apps draw an example; a drawing made the older way is drawn again (2: always one line, never broken into systems) */
+  const EXV = 2;
+  const cached = t => t.ex && t.exSvg && t.exSvgFor === t.ex && t.exV === EXV;
   const exAll = t => [t].concat(t.more || []).filter(o => o.ex);
   const exView = t => cached(t) ? `<div class="jg-ex" data-svg="${esc(t.exSvg)}"></div>` : exFrame(t.ex);
   const svgText = {};
@@ -99,7 +101,9 @@
     root.querySelectorAll('[data-svg]:not([data-filled])').forEach(async el => {
       el.dataset.filled = 1; const id = el.dataset.svg;
       try { svgText[id] = svgText[id] || fetch(imgUrl(id)).then(r => r.ok ? r.text() : Promise.reject()); el.innerHTML = await svgText[id]; el.classList.add('jg-done');
-        const sv = el.querySelector('svg'); if (sv && el.classList.contains('jg-cex')) { sv.removeAttribute('width'); sv.removeAttribute('height'); const vb = sv.viewBox.baseVal; if (vb && vb.width) sv.style.aspectRatio = vb.width + ' / ' + vb.height; } }
+        const sv = el.querySelector('svg');
+        /* the music shrinks to the room it has (a long example stays one line, with smaller staves); never drawn bigger than it was made */
+        if (sv) { const w = +sv.getAttribute('width'); if (!el.classList.contains('jg-cex') && w) sv.style.maxWidth = w + 'px'; sv.removeAttribute('width'); sv.removeAttribute('height'); const vb = sv.viewBox.baseVal; if (vb && vb.width) sv.style.aspectRatio = vb.width + ' / ' + vb.height; } }
       catch (e) { el.remove(); }
     });
   }
@@ -110,7 +114,7 @@
     try {
       const r = await fetch(API + '/img', { method: 'POST', headers: { 'Content-Type': 'image/svg+xml', 'X-Admin': pw }, body: svg });
       if (!r.ok) return;
-      const old = t.exSvg; t.exSvg = (await r.json()).id; t.exSvgFor = link; svgText[t.exSvg] = Promise.resolve(svg);
+      const old = t.exSvg; t.exSvg = (await r.json()).id; t.exSvgFor = link; t.exV = EXV; svgText[t.exSvg] = Promise.resolve(svg);
       if (await save()) { if (old) fetch(API + '/img/' + old, { method: 'DELETE', headers: { 'X-Admin': pw } }).catch(() => {}); refreshThumb(id); }
     } catch (e) {}
   }

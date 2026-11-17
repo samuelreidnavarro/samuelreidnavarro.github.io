@@ -31,8 +31,8 @@
 .jg-card > summary > .jg-cex { flex: 0 0 45%; align-self: stretch; display: flex; align-items: center; overflow: hidden; border-radius: 0 7px 7px 0; }
 .jg-cex svg { display: block; width: 100%; height: auto; }
 .jg-ex svg > rect:first-of-type, .jg-cex svg > rect:first-of-type { fill: transparent !important; }
-.jg-cex, .jg-ex.jg-done { background: var(--exbg); }
-.jg-ex.jg-done { border-radius: 6px; width: fit-content; max-width: 100%; }
+.jg-cex, .jg-ex.jg-done svg { background: var(--exbg); }
+.jg-ex.jg-done svg { border-radius: 6px; width: 100%; }
 .jg-offstage { position: absolute; left: -10000px; top: 0; width: 42rem; }
 .jg-card h2 { margin: 0; font-size: 1.45rem; letter-spacing: .02em; line-height: 1.2; text-align: left; }
 .jg-d { margin: .15rem 0 0; color: var(--soft); font-size: 1rem; }

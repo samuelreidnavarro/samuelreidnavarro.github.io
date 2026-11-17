@@ -476,18 +476,20 @@
         const cs = getComputedStyle(el);
         if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) return;
         if (el.tagName === 'rect' && (cs.fill === 'none' || /rgba\(.*, 0\)|transparent/.test(cs.fill)) && cs.stroke === 'none') return;
-        const r = el.getBoundingClientRect(); if (!r.width && !r.height) return;
-        [[r.left, r.top], [r.right, r.bottom]].forEach(([x, y]) => { pt.x = x; pt.y = y; const q = pt.matrixTransform(inv); x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); });
+        /* measured in the page's own units (the page is one very long line, drawn tiny on screen) */
+        let r; try { r = el.getBBox(); } catch (e) { return; } if (!r.width && !r.height) return;
+        const M = inv.multiply(el.getScreenCTM());
+        [[r.x, r.y], [r.x + r.width, r.y], [r.x, r.y + r.height], [r.x + r.width, r.y + r.height]].forEach(([x, y]) => { pt.x = x; pt.y = y; const q = pt.matrixTransform(M); x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); });
       });
       const out = pageSvg(0);
       if (!out || !isFinite(x0)) return;
       const doc = new DOMParser().parseFromString(out.svg, 'image/svg+xml'), svg = doc.documentElement;
       svg.querySelectorAll('.foot').forEach(e => e.remove());
       svg.querySelectorAll('[data-f="title"],[data-f="comp"]').forEach(e => { const n = e.nextElementSibling; if (e.getAttribute('data-f') === 'title' && n && n.tagName === 'text' && !n.getAttribute('data-f')) n.remove(); e.remove(); });
-      const vb = live.viewBox.baseVal, pad = Math.max(1, (x1 - x0) * .012);
+      const vb = live.viewBox.baseVal, pad = 1;
       const bx = Math.max(vb.x, x0 - pad), by = Math.max(vb.y, y0 - pad), bw = Math.min(vb.x + vb.width, x1 + pad) - bx, bh = Math.min(vb.y + vb.height, y1 + pad) - by;
       svg.setAttribute('viewBox', `${bx} ${by} ${bw} ${bh}`);
-      const k = out.w / vb.width;
+      const pg = live.closest('.page'), k = (pg && +pg.dataset.w ? +pg.dataset.w * 96 / 25.4 : out.w) / vb.width;   /* px per unit at true paper size */
       svg.setAttribute('width', Math.round(bw * k)); svg.setAttribute('height', Math.round(bh * k));
       try { parent.postMessage({[APP.msg + 'Example']: {svg: new XMLSerializer().serializeToString(svg), w: bw * k, h: bh * k}}, '*'); } catch (e) {}
     }
