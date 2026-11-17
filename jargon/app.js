@@ -107,7 +107,7 @@
         <input class="jg-in jg-addlink" list="jgTerms" placeholder="Link to another term" style="width:auto;flex:1;min-width:10rem"></div>`);
       if (from.length) h += sec('Linked from', `<p>${from.map(lk).join(', ')}</p>`);
       h += sec(`Taught in the week of ${esc(fmt(monday(markDate)))}`, `<div class="jg-row">${GROUPS.map(g => `<button class="jg-chip${markedIn(g, monday(markDate), id) ? ' on' : ''}" data-mark="${esc(g)}">${esc(g)}</button>`).join('')}</div>`);
-      h += `<div class="jg-tools"><button class="jg-btn solid" data-act="save">Save</button><button class="jg-btn" data-act="pdf">Download PDF</button><button class="jg-btn danger" data-act="del">${delArm === id ? 'Click again to delete' : 'Delete article'}</button></div>`;
+      h += `<div class="jg-tools"><button class="jg-btn" data-act="pdf">Download PDF</button><button class="jg-btn danger" data-act="del">${delArm === id ? 'Click again to delete' : 'Delete article'}</button></div>`;
       return `<div class="jg-art">${h}</div>`;
     }
     if (t.syn) h += sec('Synonyms and other spellings', rich(t.syn));
@@ -185,6 +185,20 @@
     try { history.replaceState(null, '', '#' + id); } catch (e) {}
   }
 
+  /* a field saves by itself when you leave it, if it changed; the card's title and description follow */
+  document.addEventListener('focusout', e => {
+    const f = e.target; if (user !== 'Samuel' || !f.dataset || !f.dataset.k) return;
+    const card = f.closest('.jg-card'); if (!card) return;
+    const id = card.dataset.id, t = D.terms[id]; if (!t) return;
+    const before = JSON.stringify(t);
+    collect(id);
+    if (!t.title) { t.title = JSON.parse(before).title; f.innerText = t.title; }
+    if (JSON.stringify(t) === before) return;
+    const sum = card.querySelector('summary .jg-t');
+    if (sum) { const d = short(t); sum.innerHTML = `<h2>${esc(t.title)}</h2>${d ? `<p class="jg-d">${esc(d)}</p>` : ''}`; }
+    if (f.dataset.k === 'ex') redrawCard(id);
+    save('Saved.');
+  });
   function collect(id) {
     const t = D.terms[id], el = document.getElementById(id);
     el.querySelectorAll('[data-k]').forEach(f => { const v = (f.tagName === 'INPUT' ? f.value : f.innerText).replace(/ /g, ' ').trim(); if (v) t[f.dataset.k] = v; else if (f.dataset.k !== 'title') delete t[f.dataset.k]; });
@@ -211,9 +225,8 @@
       return;
     }
     if (user !== 'Samuel') return;
-    if (b.dataset.unlink) { collect(id); const t = D.terms[id]; t.see = (t.see || []).filter(k => k !== b.dataset.unlink); redrawCard(id); return; }
+    if (b.dataset.unlink) { collect(id); const t = D.terms[id]; t.see = (t.see || []).filter(k => k !== b.dataset.unlink); redrawCard(id); save('Link removed.'); return; }
     if (b.dataset.mark) { const on = toggleMark(b.dataset.mark, id); b.classList.toggle('on', on); if (await save(on ? `Marked for ${b.dataset.mark}.` : `Removed from ${b.dataset.mark}.`)) { if (viewGroup === b.dataset.mark && !$('#jgQ').value) render(); } return; }
-    if (act === 'save') { collect(id); if (await save('Saved.')) { const o = card.open; render(); if (o) openCard(id, false); } return; }
     if (act === 'del') {
       if (delArm !== id) { delArm = id; redrawCard(id); return; }
       delete D.terms[id]; Object.values(D.terms).forEach(t => t.see && (t.see = t.see.filter(k => k !== id)));
@@ -236,7 +249,7 @@
       const id = e.target.closest('.jg-card').dataset.id, k = titleId(e.target.value);
       if (!k || k === id) { toast('Pick a term from the list.'); return; }
       collect(id); const t = D.terms[id]; t.see = t.see || []; if (!t.see.includes(k)) t.see.push(k);
-      redrawCard(id); toast(`Linked to ${D.terms[k].title}. Press Save to keep it.`);
+      redrawCard(id); save(`Linked to ${D.terms[k].title}.`);
     }
   });
   document.addEventListener('submit', async e => {
