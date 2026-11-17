@@ -24,6 +24,9 @@
 .jg-card > summary { list-style: none; cursor: pointer; padding: .85rem 1.1rem; display: flex; gap: 1rem; align-items: center; }
 .jg-card > summary::-webkit-details-marker { display: none; }
 .jg-t { flex: 1; min-width: 0; }
+.jg-cex { flex: 0 0 45%; height: 4.6rem; overflow: hidden; align-self: center; border-radius: 4px; }
+.jg-cex svg { display: block; width: 100%; height: 100%; }
+.jg-offstage { position: absolute; left: -10000px; top: 0; width: 42rem; }
 .jg-card h2 { margin: 0; font-size: 1.45rem; letter-spacing: .02em; line-height: 1.2; text-align: left; }
 .jg-d { margin: .15rem 0 0; color: var(--soft); font-size: 1rem; }
 .jg-thumb { width: 5.5rem; aspect-ratio: 4/3; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); flex: none; max-width: 30%; }
@@ -78,6 +81,6 @@
   body.jg-printing .jg-week { display: block; }
   body.jg-printing .jg-card { border: 0; background: none; }
   body.jg-printing .jg-card h2 { font-size: 2rem; }
-  body.jg-printing .jg-thumb, body.jg-printing .jg-chev, body.jg-printing .jg-tag, body.jg-printing .jg-tools, body.jg-printing .jg-noprint,  body.jg-printing .jg-sec > summary h3::after { display: none !important; }
+  body.jg-printing .jg-thumb, body.jg-printing .jg-cex, body.jg-printing .jg-chev, body.jg-printing .jg-tag, body.jg-printing .jg-tools, body.jg-printing .jg-noprint,  body.jg-printing .jg-sec > summary h3::after { display: none !important; }
   body.jg-printing .jg-art { border: 0; }
 }

@@ -88,7 +88,49 @@
     const a = appOf(link); if (!a) return '';
     const piece = a.u.searchParams.get('piece');
     const src = 'games/' + a.f + '?example=1&' + (piece ? 'piece=' + encodeURIComponent(piece) + '&' : '') + 'v=' + a.v + a.u.hash;
-    return `<div class="jg-ex"><iframe class="jg-cb" data-src="${esc(src)}" title="${a.name}" scrolling="no" tabindex="-1" aria-hidden="true"></iframe></div>`;
+ return `<div class="jg-ex"><iframe class="jg-cb" data-link="${esc(link)}" data-src="${esc(src)}" title="${a.name}" scrolling="no" tabindex="-1" aria-hidden="true"></iframe></div>`;
+  }
+  /* the drawn example is kept as an SVG next to the article (t.exSvg, made from link t.exSvgFor) */
+  const cached = t => t.ex && t.exSvg && t.exSvgFor === t.ex;
+  const exView = t => cached(t) ? `<div class="jg-ex" data-svg="${esc(t.exSvg)}"></div>` : exFrame(t.ex);
+  const svgText = {};
+  function fillSvgs(root) {
+    root.querySelectorAll('[data-svg]:not([data-filled])').forEach(async el => {
+      el.dataset.filled = 1; const id = el.dataset.svg;
+      try { svgText[id] = svgText[id] || fetch(imgUrl(id)).then(r => r.ok ? r.text() : Promise.reject()); el.innerHTML = await svgText[id]; el.classList.add('jg-done');
+        const sv = el.querySelector('svg'); if (sv && el.classList.contains('jg-cex')) { sv.removeAttribute('width'); sv.removeAttribute('height'); sv.setAttribute('preserveAspectRatio', 'xMinYMin slice'); } }
+      catch (e) { el.remove(); }
+    });
+  }
+  /* Samuel: keep the drawing of an example once it has been made */
+  async function keep(id, link, svg) {
+    const t = D.terms[id]; if (user !== 'Samuel' || !t || t.ex !== link || cached(t)) return;
+    try {
+      const r = await fetch(API + '/img', { method: 'POST', headers: { 'Content-Type': 'image/svg+xml', 'X-Admin': pw }, body: svg });
+      if (!r.ok) return;
+      const old = t.exSvg; t.exSvg = (await r.json()).id; t.exSvgFor = link; svgText[t.exSvg] = Promise.resolve(svg);
+      if (await save()) { if (old) fetch(API + '/img/' + old, { method: 'DELETE', headers: { 'X-Admin': pw } }).catch(() => {}); refreshThumb(id); }
+    } catch (e) {}
+  }
+  function refreshThumb(id) {
+    const el = document.getElementById(id), t = D.terms[id]; if (!el || !t) return;
+    const old = el.querySelector('summary .jg-cex'); if (old) old.remove();
+    if (cached(t)) { el.querySelector('summary .jg-t').insertAdjacentHTML('afterend', `<span class="jg-cex" data-svg="${esc(t.exSvg)}" aria-hidden="true"></span>`); fillSvgs(el); }
+  }
+  /* examples without a kept drawing get drawn one by one in the background while Samuel is logged in */
+  let drawing = false;
+  async function drawMissing() {
+    if (drawing || user !== 'Samuel') return; drawing = true;
+    const todo = Object.keys(D.terms).filter(k => D.terms[k].ex && !cached(D.terms[k]) && exFrame(D.terms[k].ex));
+    const host = document.createElement('div'); host.className = 'jg-ex jg-offstage'; document.querySelector('.jg').appendChild(host);
+    for (const k of todo) {
+      if (user !== 'Samuel') break;
+      const link = D.terms[k].ex;
+      host.innerHTML = exFrame(link); const f = host.querySelector('iframe');
+      const svg = await new Promise(res => { const tm = setTimeout(() => res(null), 30000); const on = e => { if (e.source !== f.contentWindow || !e.data) return; const key = Object.keys(e.data).find(x => /Example$/.test(x)); if (!key) return; clearTimeout(tm); removeEventListener('message', on); res(e.data[key].svg); }; addEventListener('message', on); f.src = f.dataset.src; });
+      if (svg) await keep(k, link, svg);
+    }
+    host.remove(); drawing = false;
   }
   const openIn = link => { const a = appOf(link); return `<a class="jg-btn" href="${esc(link)}" target="_blank" rel="noopener">Open in ${a ? a.name : 'ChoirBook'}</a>`; };
   function article(id) {
@@ -101,7 +143,7 @@
     if (A) {
       h += field('Title', 'title') + field('Short description', 'short', 'Shown on the card. Empty: the first sentence of the definition.');
       h += field('Synonyms and other spellings', 'syn') + field('Definition', 'def');
-      h += sec('Musical example', `<input class="jg-in" data-k="ex" placeholder="Link from ChoirBook, CantusFirmus or Canon Maker (Copy link)" value="${esc(t.ex || '')}">${t.ex ? exFrame(t.ex) + `<p class="jg-row">${openIn(t.ex)}</p>` : ''}
+      h += sec('Musical example', `<input class="jg-in" data-k="ex" placeholder="Link from ChoirBook, CantusFirmus or Canon Maker (Copy link)" value="${esc(t.ex || '')}">${t.ex ? exView(t) + `<p class="jg-row">${openIn(t.ex)}</p>` : ''}
         ${t.exImg ? `<img class="jg-img" src="${imgUrl(t.exImg)}" alt="">` : ''}
         <div class="jg-row"><button class="jg-btn" data-act="pick" data-key="exImg">${t.exImg ? 'Replace picture' : 'Add picture'}</button>${t.exImg ? '<button class="jg-btn danger" data-act="unimg" data-key="exImg">Remove picture</button>' : ''}</div>`);
       h += sec('Historical origin of the terminus', `<div class="jg-field${isSug(t, 'origin') ? ' jg-sug' : ''}" contenteditable="true" data-k="origin">${esc(t.origin || '')}</div>
@@ -118,7 +160,7 @@
     }
     if (ok(t, 'syn')) h += sec('Synonyms and other spellings', rich(t.syn));
     if (ok(t, 'def')) h += sec('Definition', rich(t.def));
-    if (t.exImg || t.ex) h += sec('Musical example', `${t.ex ? exFrame(t.ex) : ''}${t.exImg ? `<img class="jg-img" src="${imgUrl(t.exImg)}" alt="Musical example: ${esc(t.title)}">` : ''}${t.ex ? `<p class="jg-noprint">${openIn(t.ex)}</p>` : ''}`);
+    if (t.exImg || t.ex) h += sec('Musical example', `${t.ex ? exView(t) : ''}${t.exImg ? `<img class="jg-img" src="${imgUrl(t.exImg)}" alt="Musical example: ${esc(t.title)}">` : ''}${t.ex ? `<p class="jg-noprint">${openIn(t.ex)}</p>` : ''}`);
     if (ok(t, 'origin') || t.originLink) h += sec('Historical origin of the terminus', `${rich(ok(t, 'origin'))}${t.originLink ? `<p><a href="${esc(t.originLink)}" target="_blank" rel="noopener">${esc(t.originLink)}</a></p>` : ''}`);
     const links = see.filter(k => D.terms[k]).concat(from.filter(k => !see.includes(k)));
     if (links.length) h += sec('See also', `<p>${links.map(lk).join(', ')}</p>`);
@@ -130,7 +172,7 @@
   function card(id, unplanned) {
     const t = D.terms[id]; if (!t) return '';
     const d = short(t);
-    return `<details class="jg-card" id="${id}" data-id="${id}"><summary>${t.img ? `<img class="jg-thumb" src="${imgUrl(t.img)}" alt="">` : ''}<span class="jg-t"><h2>${esc(t.title)}</h2>${d ? `<p class="jg-d">${esc(d)}</p>` : ''}</span>${unplanned && user === 'Samuel' ? '<span class="jg-tag">unplanned</span>' : ''}<span class="jg-chev" aria-hidden="true">›</span></summary></details>`;
+    return `<details class="jg-card" id="${id}" data-id="${id}"><summary>${t.img ? `<img class="jg-thumb" src="${imgUrl(t.img)}" alt="">` : ''}<span class="jg-t"><h2>${esc(t.title)}</h2>${d ? `<p class="jg-d">${esc(d)}</p>` : ''}</span>${cached(t) ? `<span class="jg-cex" data-svg="${esc(t.exSvg)}" aria-hidden="true"></span>` : ''}${unplanned && user === 'Samuel' ? '<span class="jg-tag">unplanned</span>' : ''}<span class="jg-chev" aria-hidden="true">›</span></summary></details>`;
   }
   const alpha = ids => ids.sort((a, b) => D.terms[a].title.localeCompare(D.terms[b].title));
 
@@ -160,6 +202,7 @@
     }
     $('#jgList').innerHTML = html + `<datalist id="jgTerms">${Object.values(D.terms).map(t => `<option value="${esc(t.title)}">`).join('')}</datalist>`;
     open.forEach(k => openCard(k, false));
+    fillSvgs(document); drawMissing();
   }
   function openCard(id, scroll) {
     const el = document.getElementById(id); if (!el || !el.classList.contains('jg-card')) return false;
@@ -208,12 +251,15 @@
     const r = await fetch(API + '/comments/' + box.dataset.term, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin': pw }, body: JSON.stringify({ delete: b.dataset.cdel, replyAt: b.dataset.rat || undefined }) }).catch(() => null);
     if (r && r.ok) { drawComments(box, await r.json()); toast('Deleted.'); } else toast('Deleting failed.');
   });
-  function startFrames(el) { el.querySelectorAll('.jg-comments:not([data-loaded])').forEach(b => { b.dataset.loaded = 1; loadComments(b); }); el.querySelectorAll('iframe.jg-cb[data-src]').forEach(f => { f.src = f.dataset.src; f.removeAttribute('data-src'); }); }
+  function startFrames(el) { fillSvgs(el); el.querySelectorAll('.jg-comments:not([data-loaded])').forEach(b => { b.dataset.loaded = 1; loadComments(b); }); el.querySelectorAll('iframe.jg-cb[data-src]').forEach(f => { f.src = f.dataset.src; f.removeAttribute('data-src'); }); }
   window.addEventListener('message', e => {
     const f = [...document.querySelectorAll('iframe.jg-cb')].find(x => x.contentWindow === e.source);
     if (!f || !e.data) return;
     const key = Object.keys(e.data).find(k => /Example$/.test(k)); if (!key) return;
-    const box = f.parentNode; box.innerHTML = e.data[key].svg; box.classList.add('jg-done');
+    const box = f.parentNode; if (box.classList.contains('jg-offstage')) return;
+    const card = box.closest('.jg-card'), link = f.dataset.link;
+    box.innerHTML = e.data[key].svg; box.classList.add('jg-done');
+    if (card && link) keep(card.dataset.id, link, e.data[key].svg);
   });
 
   /* show a term from a link: if it is not in the current view, search for it */
