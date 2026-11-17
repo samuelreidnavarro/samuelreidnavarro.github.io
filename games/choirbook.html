@@ -37,7 +37,9 @@ window.SCRIPTORIUM = {
   }
 };
 /* an example shown inside another page (Samuel's Jargon) keeps its own storage, so it never touches the visitor's ChoirBook */
-if (/[?&]example=1/.test(location.search)) window.SCRIPTORIUM.store = 'choirbook-example';
+if (/[?&]example=1/.test(location.search)) { window.SCRIPTORIUM.store = 'choirbook-example'; window.SCRIPTORIUM.defaults = Object.assign({}, window.SCRIPTORIUM.defaults, {staff: 'black'});
+  /* every example starts fresh: only the link's own settings count */
+  try { Object.keys(localStorage).filter(k => k.startsWith(window.SCRIPTORIUM.store + ':')).forEach(k => localStorage.removeItem(k)); } catch (e) {} }
 </script>
 <script src="shared/styled-select.js?v=1"></script>
 <script src="shared/organ.js?v=15"></script>
@@ -48,7 +50,7 @@ if (/[?&]example=1/.test(location.search)) window.SCRIPTORIUM.store = 'choirbook
 <script src="scriptorium/mxl.js?v=2"></script>
   <script src="scriptorium/ly.js?v=3"></script>
   <script src="scriptorium/export2.js?v=2"></script>
-<script src="scriptorium/share.js?v=8"></script>
+<script src="scriptorium/share.js?v=9"></script>
 <script src="scriptorium/lyrics.js?v=7"></script>
 <script src="scriptorium/keys.js?v=9"></script>
 <script src="scriptorium/scriptorium.js?v=152"></script>

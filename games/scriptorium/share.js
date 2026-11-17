@@ -20,18 +20,35 @@
     if (!piece) return;
     closePops();
     let url = 'https://' + APP_URL;
-    if (pieceKey && !pieceKey.startsWith('mine:') && !pieceKey.startsWith('file:') && !piece.text) url += '?piece=' + encodeURIComponent(pieceKey);
-    else url += '#k=' + await pack(piece.text || writeKern(piece));
+    /* the look goes with the link: engraving settings, and each voice's clef and visibility */
+    const look = {s: {}, vis: (st.vis || {})[pieceKey] || {}, black: !!(st.black && st.black[pieceKey])};
+    for (const k of STYLE_KEYS) if (st[k] !== undefined) look.s[k] = st[k];
+    const l = await pack(JSON.stringify(look));
+    if (pieceKey && !pieceKey.startsWith('mine:') && !pieceKey.startsWith('file:') && !piece.text) url += '?piece=' + encodeURIComponent(pieceKey) + '#l=' + l;
+    else url += '#k=' + await pack(piece.text || writeKern(piece)) + '&l=' + l;
     try { await navigator.clipboard.writeText(url); toast(url.length > 6000 ? 'Link copied. It is long, since it carries the whole score.' : 'Link copied.'); }
     catch (e) { window.prompt('Copy this link:', url); }
   }
   /* a link opened: the score goes into My scores and opens */
   H.preStart = async () => {
-    const m = /[#&]k=([zu][A-Za-z0-9_-]+)/.exec(location.hash);
-    if (!m) return;
-    const text = await unpack(m[1]);
-    const P = parseKern(text);
-    st.piece = mineAdd(P.title || 'Score', text); save();
+    const m = /[#&]k=([zu][A-Za-z0-9_-]+)/.exec(location.hash), ml = /[#&]l=([zu][A-Za-z0-9_-]+)/.exec(location.hash);
+    if (!m && !ml) return;
+    let key = null;
+    if (m) {
+      const text = await unpack(m[1]);
+      const P = parseKern(text);
+      key = st.piece = mineAdd(P.title || 'Score', text);
+    } else key = new URLSearchParams(location.search).get('piece');
+    if (ml) try {
+      const look = JSON.parse(await unpack(ml[1]));
+      for (const k of STYLE_KEYS) if (look.s && look.s[k] !== undefined) st[k] = look.s[k];
+      if (key) {
+        if (look.vis) { st.vis = st.vis || {}; st.vis[key] = look.vis; }
+        if (!st.black || typeof st.black !== 'object') st.black = {};
+        if (look.black) st.black[key] = 1; else delete st.black[key];
+      }
+    } catch (e) {}
+    save();
     try { history.replaceState(null, '', location.href.split('#')[0]); } catch (e) {}
   };
 

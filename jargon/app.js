@@ -82,7 +82,7 @@
   /* every section folds when its title is clicked */
   const sec = (label, inner) => `<details class="jg-sec" open><summary><h3>${label}</h3></summary>${inner}</details>`;
   /* a ChoirBook / CantusFirmus / Canon Maker link -> just the music, drawn by the app in a hidden frame */
-  const APPS = { 'choirbook.html': ['ChoirBook', 129], 'cantus-firmus.html': ['CantusFirmus', 165], 'canon-maker.html': ['Canon Maker', 113] };
+  const APPS = { 'choirbook.html': ['ChoirBook', 130], 'cantus-firmus.html': ['CantusFirmus', 166], 'canon-maker.html': ['Canon Maker', 114] };
   const appOf = link => { try { const u = new URL(link, location.href), f = u.pathname.split('/').pop(); return APPS[f] ? { u, f, name: APPS[f][0], v: APPS[f][1] } : null; } catch (e) { return null; } };
   function exFrame(link) {
     const a = appOf(link); if (!a) return '';
