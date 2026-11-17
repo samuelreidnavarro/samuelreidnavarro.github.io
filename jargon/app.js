@@ -153,7 +153,10 @@
       h += sec('See also', `<div class="jg-row">${see.filter(k => D.terms[k]).map(k => `<span class="jg-chip">${lk(k)}<button class="x" data-unlink="${k}" aria-label="Remove link">×</button></span>`).join('')}
         <input class="jg-in jg-addlink" list="jgTerms" placeholder="Link to another term" style="width:auto;flex:1;min-width:10rem"></div>`);
       if (from.length) h += sec('Linked from', `<p>${from.map(lk).join(', ')}</p>`);
-      h += sec(`Taught in the week of ${esc(fmt(monday(markDate)))}`, `<div class="jg-row">${GROUPS.map(g => `<button class="jg-chip${markedIn(g, monday(markDate), id) ? ' on' : ''}" data-mark="${esc(g)}">${esc(g)}</button>`).join('')}</div>`);
+      { const all = GROUPS.map(g => { const w = Object.keys(D.weeks[g] || {}).filter(wk => markedIn(g, wk, id)).sort(); return w.length ? `${esc(g)}: ${w.map(wk => `<button class="jg-link" data-wkgo="${wk}">${esc(fmt(wk))}</button>`).join(', ')}` : ''; }).filter(Boolean);
+        h += sec('Taught', `<div class="jg-row"><button class="jg-btn" data-wkstep="-7" aria-label="Week before">‹</button><span>Week of</span><input type="date" class="jg-wk" value="${monday(markDate)}" aria-label="Week"><button class="jg-btn" data-wkstep="7" aria-label="Week after">›</button></div>
+          <div class="jg-row">${GROUPS.map(g => `<button class="jg-chip${markedIn(g, monday(markDate), id) ? ' on' : ''}" data-mark="${esc(g)}">${esc(g)}</button>`).join('')}</div>
+          ${all.length ? `<p class="jg-soft" style="font-size:1rem;margin-top:.4rem">${all.join('<br>')}</p>` : ''}`); }
       h += sec('Comments<span class="jg-ccount"></span>', `<div class="jg-comments jg-noprint" data-term="${id}"></div>`, true);
       h += `<div class="jg-tools"><button class="jg-btn" data-act="board">${onBoard(id) ? 'On the board' : 'Add to board'}</button><button class="jg-btn danger" data-act="del">${delArm === id ? 'Click again to delete' : 'Delete article'}</button></div>`;
       return `<div class="jg-art">${h}</div>`;
@@ -379,6 +382,19 @@
     if (b.dataset.bact === 'print') printBoard();
   });
 
+  /* the week Samuel marks terms in: the same for the whole page; the open card redraws in place */
+  function setWeek(iso, card) {
+    if (!iso) return; markDate = iso;
+    const d = $('#jgDate'); if (d) d.value = markDate;
+    document.querySelectorAll('.jg-card[open]').forEach(c => redrawCard(c.dataset.id));
+    const el = card && document.getElementById(card.dataset.id); const w = el && el.querySelector('.jg-wk'); if (w) w.focus();
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-wkstep],[data-wkgo]'); if (!b || user !== 'Samuel') return;
+    const card = b.closest('.jg-card');
+    if (b.dataset.wkgo) return setWeek(b.dataset.wkgo, card);
+    const d = new Date(monday(markDate) + 'T12:00:00'); d.setDate(d.getDate() + +b.dataset.wkstep); setWeek(d.toISOString().slice(0, 10), card);
+  });
   /* ---------- events ---------- */
   document.addEventListener('toggle', e => { const c = e.target; if (c.classList && c.classList.contains('jg-card') && c.open) openCard(c.id, false); }, true);
   document.addEventListener('click', async e => {
@@ -393,7 +409,7 @@
     if (act === 'board') { boardToggle(id); b.textContent = onBoard(id) ? 'On the board' : 'Add to board'; return; }
     if (user !== 'Samuel') return;
     if (b.dataset.unlink) { collect(id); const t = D.terms[id]; t.see = (t.see || []).filter(k => k !== b.dataset.unlink); redrawCard(id); save('Link removed.'); return; }
-    if (b.dataset.mark) { const on = toggleMark(b.dataset.mark, id); b.classList.toggle('on', on); if (await save(on ? `Marked for ${b.dataset.mark}.` : `Removed from ${b.dataset.mark}.`)) { if (viewGroup === b.dataset.mark && !$('#jgQ').value) render(); } return; }
+    if (b.dataset.mark) { const on = toggleMark(b.dataset.mark, id); b.classList.toggle('on', on); redrawCard(id); if (await save(on ? `Marked for ${b.dataset.mark}.` : `Removed from ${b.dataset.mark}.`)) { if (viewGroup === b.dataset.mark && !$('#jgQ').value) render(); } return; }
     if (act === 'del') {
       if (delArm !== id) { delArm = id; redrawCard(id); return; }
       delete D.terms[id]; Object.values(D.terms).forEach(t => t.see && (t.see = t.see.filter(k => k !== id)));
@@ -411,6 +427,7 @@
   });
   document.addEventListener('change', e => {
     if (e.target.id === 'jgDate') { markDate = e.target.value || markDate; render(); return; }
+    if (e.target.classList.contains('jg-wk')) { setWeek(e.target.value, e.target.closest('.jg-card')); return; }
     if (e.target.id === 'jgUnpl') { markUnplanned = e.target.checked; return; }
     if (e.target.classList.contains('jg-addlink')) {
       const id = e.target.closest('.jg-card').dataset.id, k = titleId(e.target.value);
