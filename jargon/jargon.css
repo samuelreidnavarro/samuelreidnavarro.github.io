@@ -1,6 +1,6 @@
 /* Samuel's Jargon: search bar, week timeline, term cards that open into the article */
 .jg [hidden] { display: none !important; }
-.jg { --card: #ede3cb; --card-open: #fffdf8; max-width: 44rem; width: 100%; display: grid; gap: 1.6rem; justify-items: stretch; }
+.jg { --card: #fffdf8; --card-open: #fffdf8; --exbg: #ede3cb; max-width: 44rem; width: 100%; display: grid; gap: 1.6rem; justify-items: stretch; }
 .jg button, .jg input, .jg textarea { font: inherit; color: inherit; }
 .jg-bar { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; position: sticky; top: 0; z-index: 5; background: var(--bg); padding: .6rem 0; border-bottom: 1px solid var(--line); }
 #jgQ { flex: 1; min-width: 10rem; padding: .5rem .9rem; border: 1px solid var(--line); border-radius: 999px; background: var(--card-open); }
@@ -31,6 +31,8 @@
 .jg-card > summary > .jg-cex { flex: 0 0 45%; align-self: stretch; display: flex; align-items: center; overflow: hidden; border-radius: 0 7px 7px 0; }
 .jg-cex svg { display: block; width: 100%; height: auto; }
 .jg-ex svg > rect:first-of-type, .jg-cex svg > rect:first-of-type { fill: transparent !important; }
+.jg-cex, .jg-ex.jg-done { background: var(--exbg); }
+.jg-ex.jg-done { border-radius: 6px; width: fit-content; max-width: 100%; }
 .jg-offstage { position: absolute; left: -10000px; top: 0; width: 42rem; }
 .jg-card h2 { margin: 0; font-size: 1.45rem; letter-spacing: .02em; line-height: 1.2; text-align: left; }
 .jg-d { margin: .15rem 0 0; color: var(--soft); font-size: 1rem; }
@@ -78,14 +80,42 @@
 .jg-ex .jg-cb { position: absolute; left: -10000px; top: 0; width: 100%; height: 900px; border: 0; }
 .jg-ex svg { display: block; height: auto; max-width: 100%; }
 
-/* Download PDF prints only the chosen article */
+/* requested terms */
+.jg-req { border-top: 1px solid var(--line); padding-top: 1.2rem; }
+.jg-req-h { font-size: 1.5rem; margin: 0 0 .6rem; text-align: left; }
+.jg-req-list { list-style: none; padding: 0; margin: 0 0 .8rem; display: grid; gap: .5rem; }
+.jg-req-list li { background: var(--card); border-radius: 6px; padding: .5rem .9rem; }
+.jg-req-list p { margin: .1rem 0 0; font-size: 1rem; }
+.jg-soft { color: var(--soft); }
+.jg-req .jg-row .jg-link { margin-right: 1rem; }
+
+/* the board */
+.jg-board { position: fixed; right: calc(1rem + env(safe-area-inset-right, 0px)); bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); z-index: 30; background: var(--card-open); border: 1px solid var(--soft); border-radius: 10px; box-shadow: 0 4px 18px rgba(59,49,37,.18); max-width: min(20rem, calc(100vw - 2rem)); }
+.jg-board-tab { background: none; border: 0; cursor: pointer; padding: .5rem .9rem; font: inherit; color: var(--text); display: flex; gap: .5rem; align-items: center; }
+.jg-board-tab span { background: var(--mark); color: var(--card-open); border-radius: 999px; min-width: 1.5em; padding: 0 .4em; font-size: .9rem; text-align: center; }
+.jg-board-body { display: none; padding: 0 .9rem .8rem; max-height: 50vh; overflow: auto; }
+.jg-board.open .jg-board-body { display: block; }
+.jg-board-item { display: flex; justify-content: space-between; gap: .5rem; border-top: 1px solid var(--line); padding: .3rem 0; font-size: 1rem; }
+.jg-board-item .x { border: 0; background: none; cursor: pointer; color: var(--soft); font-size: 1.1rem; }
+.jg-board.flash { animation: jgflash .6s; }
+@keyframes jgflash { 40% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .jg-board.flash { animation: none; } }
+.jg-print { display: none; }
+
+/* printing the board: only the sheets, two columns of clean cards on A4 */
+@page { size: A4; margin: 12mm; }
 @media print {
-  body.jg-printing > *:not(main), body.jg-printing .jg > *:not(.jg-list), body.jg-printing .jg-week > .jg-date { display: none !important; }
-  body.jg-printing .jg-card:not(.jg-print), body.jg-printing .jg-week:not(:has(.jg-print)) { display: none !important; }
-  body.jg-printing main { padding: 0; }
-  body.jg-printing .jg-week { display: block; }
-  body.jg-printing .jg-card { border: 0; background: none; }
-  body.jg-printing .jg-card h2 { font-size: 2rem; }
-  body.jg-printing .jg-thumb, body.jg-printing .jg-cex, body.jg-printing .jg-chev, body.jg-printing .jg-tag, body.jg-printing .jg-tools, body.jg-printing .jg-noprint,  body.jg-printing .jg-sec > summary h3::after { display: none !important; }
-  body.jg-printing .jg-art { border: 0; }
+  body.jg-printing > *:not(main), body.jg-printing main > *:not(.jg), body.jg-printing .jg > *:not(.jg-print) { display: none !important; }
+  body.jg-printing main { display: block; padding: 0; max-width: none; }
+  body.jg-printing .jg { display: block; max-width: none; }
+  body.jg-printing { background: #fff; font-size: 10.5pt; }
+  body.jg-printing .jg-print { display: block; columns: 2; column-gap: 8mm; }
+  .ps-card { break-inside: avoid; border: .4pt solid #b9ab92; border-radius: 3mm; padding: 4mm 5mm; margin: 0 0 6mm; background: #fff; }
+  .ps-card h2 { font-size: 16pt; margin: 0 0 1mm; text-align: left; }
+  .ps-card h3 { font-family: "IM Fell English SC", serif; font-weight: 400; color: #6b4a29; font-size: 9.5pt; letter-spacing: .04em; margin: 3mm 0 .5mm; text-align: left; }
+  .ps-card p { margin: 0 0 1.5mm; text-align: left; line-height: 1.35; }
+  .ps-syn { font-style: italic; color: #5c5040; }
+  .ps-link { font-size: 8.5pt; word-break: break-all; color: #5c5040; }
+  .ps-ex svg, .ps-img { display: block; width: 100%; height: auto; }
+  .ps-ex svg > rect:first-of-type { fill: transparent !important; }
 }

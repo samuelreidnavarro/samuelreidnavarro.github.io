@@ -80,7 +80,7 @@
 
   /* ---------- drawing ---------- */
   /* every section folds when its title is clicked */
-  const sec = (label, inner) => `<details class="jg-sec" open><summary><h3>${label}</h3></summary>${inner}</details>`;
+  const sec = (label, inner, closed) => `<details class="jg-sec"${closed ? '' : ' open'}><summary><h3>${label}</h3></summary>${inner}</details>`;
   /* a ChoirBook / CantusFirmus / Canon Maker link -> just the music, drawn by the app in a hidden frame */
   const APPS = { 'choirbook.html': ['ChoirBook', 130], 'cantus-firmus.html': ['CantusFirmus', 166], 'canon-maker.html': ['Canon Maker', 114] };
   const appOf = link => { try { const u = new URL(link, location.href), f = u.pathname.split('/').pop(); return APPS[f] ? { u, f, name: APPS[f][0], v: APPS[f][1] } : null; } catch (e) { return null; } };
@@ -154,8 +154,8 @@
         <input class="jg-in jg-addlink" list="jgTerms" placeholder="Link to another term" style="width:auto;flex:1;min-width:10rem"></div>`);
       if (from.length) h += sec('Linked from', `<p>${from.map(lk).join(', ')}</p>`);
       h += sec(`Taught in the week of ${esc(fmt(monday(markDate)))}`, `<div class="jg-row">${GROUPS.map(g => `<button class="jg-chip${markedIn(g, monday(markDate), id) ? ' on' : ''}" data-mark="${esc(g)}">${esc(g)}</button>`).join('')}</div>`);
-      h += sec('Comments', `<div class="jg-comments jg-noprint" data-term="${id}"></div>`);
-      h += `<div class="jg-tools"><button class="jg-btn" data-act="pdf">Download PDF</button><button class="jg-btn danger" data-act="del">${delArm === id ? 'Click again to delete' : 'Delete article'}</button></div>`;
+      h += sec('Comments<span class="jg-ccount"></span>', `<div class="jg-comments jg-noprint" data-term="${id}"></div>`, true);
+      h += `<div class="jg-tools"><button class="jg-btn" data-act="board">${onBoard(id) ? 'On the board' : 'Add to board'}</button><button class="jg-btn danger" data-act="del">${delArm === id ? 'Click again to delete' : 'Delete article'}</button></div>`;
       return `<div class="jg-art">${h}</div>`;
     }
     if (ok(t, 'syn')) h += sec('Synonyms and other spellings', rich(t.syn));
@@ -164,8 +164,8 @@
     if (ok(t, 'origin') || t.originLink) h += sec('Historical origin of the terminus', `${rich(ok(t, 'origin'))}${t.originLink ? `<p><a href="${esc(t.originLink)}" target="_blank" rel="noopener">${esc(t.originLink)}</a></p>` : ''}`);
     const links = see.filter(k => D.terms[k]).concat(from.filter(k => !see.includes(k)));
     if (links.length) h += sec('See also', `<p>${links.map(lk).join(', ')}</p>`);
-    h += sec('Comments', `<div class="jg-comments jg-noprint" data-term="${id}"></div>`);
-    h += `<div class="jg-tools"><button class="jg-btn" data-act="pdf">Download PDF</button></div>`;
+    h += sec('Comments<span class="jg-ccount"></span>', `<div class="jg-comments jg-noprint" data-term="${id}"></div>`, true);
+    h += `<div class="jg-tools"><button class="jg-btn" data-act="board">${onBoard(id) ? 'On the board' : 'Add to board'}</button></div>`;
     return `<div class="jg-art">${h}</div>`;
   }
 
@@ -202,7 +202,7 @@
     }
     $('#jgList').innerHTML = html + `<datalist id="jgTerms">${Object.values(D.terms).map(t => `<option value="${esc(t.title)}">`).join('')}</datalist>`;
     open.forEach(k => openCard(k, false));
-    fillSvgs(document); drawMissing();
+    fillSvgs(document); drawMissing(); drawRequests(); drawBoard();
   }
   function openCard(id, scroll) {
     const el = document.getElementById(id); if (!el || !el.classList.contains('jg-card')) return false;
@@ -223,6 +223,7 @@
   }
   function drawComments(box, list) {
     const A = user === 'Samuel';
+    const n = box.closest('.jg-sec') && box.closest('.jg-sec').querySelector('.jg-ccount'); if (n) n.textContent = list.length ? ` (${list.length})` : '';
     box.innerHTML = list.map(c => `<div class="jg-com" data-cid="${esc(c.id)}">
         <div class="jg-com-h"><b>${esc(c.name || 'Anonymous')}</b> <span>${esc(when(c.at))}</span>${A ? ` <button class="jg-link" data-cdel="${esc(c.id)}">Delete</button>` : ''}</div>
         <p>${para(c.text)}</p>
@@ -231,7 +232,7 @@
       </div>`).join('') + (A ? '' : `<form class="jg-cform jg-newcom"><input type="text" placeholder="Name (optional)" aria-label="Name (optional)" maxlength="60"><textarea rows="3" placeholder="Comment" aria-label="Comment" required maxlength="4000"></textarea><input class="jg-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true"><button class="jg-btn solid">Send</button></form>`);
   }
   document.addEventListener('submit', async e => {
-    const f = e.target; if (!f.classList.contains('jg-cform')) return;
+    const f = e.target; if (!f.classList.contains('jg-cform') || f.classList.contains('jg-reqform')) return;
     e.preventDefault();
     const box = f.closest('.jg-comments'), term = box.dataset.term, text = f.querySelector('textarea').value.trim(); if (!text) return;
     const btn = f.querySelector('button'); btn.disabled = true;
@@ -299,6 +300,85 @@
     el.querySelectorAll('[data-k]').forEach(f => { const v = (f.tagName === 'INPUT' ? f.value : f.innerText).replace(/ /g, ' ').trim(); if (v) t[f.dataset.k] = v; else if (f.dataset.k !== 'title') { delete t[f.dataset.k]; if (t.sug) { t.sug = t.sug.filter(k => k !== f.dataset.k); if (!t.sug.length) delete t.sug; } } });
   }
 
+  /* ---------- requested terms ---------- */
+  let REQ = [];
+  async function loadRequests() { try { const r = await fetch(API + '/requests', { cache: 'no-store' }); if (r.ok) REQ = await r.json(); } catch (e) {} drawRequests(); }
+  function drawRequests() {
+    const A = user === 'Samuel', el = $('#jgReq'); if (!el) return;
+    el.innerHTML = `<h2 class="jg-req-h">Requested terms</h2>
+      ${REQ.length ? `<ul class="jg-req-list">${REQ.map(r => `<li><b>${esc(r.title || r.syn || '…')}</b>${r.title && r.syn ? ` <span class="jg-soft">(${esc(r.syn)})</span>` : ''}${r.desc ? `<p>${para(r.desc)}</p>` : ''}${A ? `<span class="jg-row"><button class="jg-link" data-rmake="${esc(r.id)}">Write this article</button><button class="jg-link" data-rdel="${esc(r.id)}">Delete</button></span>` : ''}</li>`).join('')}</ul>` : ''}
+      ${A ? '' : `<form class="jg-cform jg-reqform"><input type="text" name="title" placeholder="Term" aria-label="Term" maxlength="120"><input type="text" name="syn" placeholder="Synonyms or other spellings" aria-label="Synonyms or other spellings" maxlength="300"><textarea name="desc" rows="2" placeholder="Description" aria-label="Description" maxlength="2000"></textarea><input class="jg-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true"><button class="jg-btn solid">Request</button></form>`}`;
+  }
+  document.addEventListener('submit', async e => {
+    const f = e.target; if (!f.classList.contains('jg-reqform')) return;
+    e.preventDefault();
+    const v = n => f.elements[n].value.trim(), body = { title: v('title'), syn: v('syn'), desc: v('desc'), website: f.elements.website.value };
+    if (!body.title && !body.syn && !body.desc) { toast('Write a term, a synonym or a description.'); return; }
+    try {
+      const r = await fetch(API + '/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (r.status === 429) { toast('Please wait a minute before sending another request.'); return; }
+      if (!r.ok) throw 0; toast('Request sent.'); loadRequests();
+    } catch (x) { toast('Sending failed. Please try again.'); }
+  });
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('[data-rdel],[data-rmake]'); if (!b || user !== 'Samuel') return;
+    const id = b.dataset.rdel || b.dataset.rmake, r = REQ.find(x => x.id === id); if (!r) return;
+    if (b.dataset.rmake) {
+      const title = r.title || r.syn.split(/[,;]/)[0].trim() || 'New term';
+      let k = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'term';
+      if (!titleId(title)) { while (D.terms[k]) k += '-2'; D.terms[k] = { title }; if (r.syn) D.terms[k].syn = r.syn; if (r.desc) D.terms[k].short = r.desc; if (!(await save(`${title} created.`))) return; }
+      else k = titleId(title);
+    } else if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = 'Click again to delete'; return; }
+    const res = await fetch(API + '/requests', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin': pw }, body: JSON.stringify({ delete: id }) }).catch(() => null);
+    if (res && res.ok) REQ = await res.json();
+    drawRequests();
+    if (b.dataset.rmake) { render(); go(titleId(r.title || r.syn.split(/[,;]/)[0].trim() || 'New term')); }
+  });
+
+  /* ---------- the board: cards to print together ---------- */
+  let BOARD = []; try { BOARD = JSON.parse(store.get('jargon-board') || '[]'); } catch (e) {}
+  const onBoard = id => BOARD.includes(id);
+  function boardToggle(id) { BOARD = onBoard(id) ? BOARD.filter(k => k !== id) : BOARD.concat(id); store.set('jargon-board', JSON.stringify(BOARD)); drawBoard(true); }
+  function drawBoard(flash) {
+    BOARD = BOARD.filter(k => D.terms[k]);
+    const el = $('#jgBoard'); el.hidden = !BOARD.length;
+    const open = el.classList.contains('open');
+    el.innerHTML = `<button class="jg-board-tab" data-bact="toggle" aria-expanded="${open}">Board <span>${BOARD.length}</span></button>
+      <div class="jg-board-body">${BOARD.map(k => `<div class="jg-board-item"><a href="#${k}" data-go="${k}">${esc(D.terms[k].title)}</a><button class="x" data-bdel="${k}" aria-label="Take off the board">×</button></div>`).join('')}
+      <div class="jg-row"><button class="jg-btn solid" data-bact="print">Print as PDF</button><button class="jg-btn" data-bact="clear">Clear</button></div></div>`;
+    if (flash) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+  }
+  /* one clean sheet per card: title, synonyms, definition, example, origin and source; nothing to click */
+  function sheet(id) {
+    const t = D.terms[id], h = [], mine = (t, k) => isSug(t, k) ? '' : (t[k] || '');
+    h.push(`<h2>${esc(t.title)}</h2>`);
+    if (mine(t, 'syn')) h.push(`<p class="ps-syn">${esc(t.syn)}</p>`);
+    if (mine(t, 'def')) h.push(`<h3>Definition</h3>${rich(t.def).replace(/<a [^>]*>|<\/a>/g, '')}`);
+    if (cached(t)) h.push(`<h3>Musical example</h3><div class="ps-ex" data-svg="${esc(t.exSvg)}"></div>`);
+    if (t.exImg) h.push(`<img class="ps-img" src="${imgUrl(t.exImg)}" alt="">`);
+    if (mine(t, 'origin') || t.originLink) h.push(`<h3>Historical origin of the terminus</h3>${rich(mine(t, 'origin')).replace(/<a [^>]*>|<\/a>/g, '')}${t.originLink ? `<p class="ps-link">${esc(t.originLink)}</p>` : ''}`);
+    return `<article class="ps-card">${h.join('')}</article>`;
+  }
+  async function printBoard() {
+    const el = $('#jgPrint'); el.innerHTML = BOARD.map(sheet).join('');
+    fillSvgs(el);
+    const waitImgs = [...el.querySelectorAll('img')].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; }));
+    const t0 = Date.now(); while (el.querySelector('[data-svg]:not(.jg-done)') && Date.now() - t0 < 8000) await new Promise(r => setTimeout(r, 100));
+    await Promise.all(waitImgs);
+    el.querySelectorAll('.ps-ex svg').forEach(sv => { sv.removeAttribute('height'); });
+    const old = document.title; document.title = BOARD.length === 1 ? D.terms[BOARD[0]].title : "Samuel's Musical Lexicon";
+    document.body.classList.add('jg-printing'); window.print();
+    document.body.classList.remove('jg-printing'); document.title = old;
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-bact],[data-bdel]'); if (!b) return;
+    const el = $('#jgBoard');
+    if (b.dataset.bdel) { boardToggle(b.dataset.bdel); document.querySelectorAll(`#${b.dataset.bdel} [data-act=board]`).forEach(x => x.textContent = 'Add to board'); return; }
+    if (b.dataset.bact === 'toggle') { el.classList.toggle('open'); drawBoard(); }
+    if (b.dataset.bact === 'clear') { BOARD = []; store.set('jargon-board', '[]'); el.classList.remove('open'); drawBoard(); document.querySelectorAll('[data-act=board]').forEach(x => x.textContent = 'Add to board'); }
+    if (b.dataset.bact === 'print') printBoard();
+  });
+
   /* ---------- events ---------- */
   document.addEventListener('toggle', e => { const c = e.target; if (c.classList && c.classList.contains('jg-card') && c.open) openCard(c.id, false); }, true);
   document.addEventListener('click', async e => {
@@ -310,15 +390,7 @@
     const card = b.closest('.jg-card'), id = card && card.dataset.id;
     if (!id) return;
     const act = b.dataset.act;
-    if (act === 'pdf') {
-      if (user === 'Samuel') collect(id);
-      const old = document.title; document.title = D.terms[id].title;
-      card.querySelectorAll('.jg-sec').forEach(s => s.open = true);
-      card.classList.add('jg-print'); document.body.classList.add('jg-printing');
-      window.print();
-      card.classList.remove('jg-print'); document.body.classList.remove('jg-printing'); document.title = old;
-      return;
-    }
+    if (act === 'board') { boardToggle(id); b.textContent = onBoard(id) ? 'On the board' : 'Add to board'; return; }
     if (user !== 'Samuel') return;
     if (b.dataset.unlink) { collect(id); const t = D.terms[id]; t.see = (t.see || []).filter(k => k !== b.dataset.unlink); redrawCard(id); save('Link removed.'); return; }
     if (b.dataset.mark) { const on = toggleMark(b.dataset.mark, id); b.classList.toggle('on', on); if (await save(on ? `Marked for ${b.dataset.mark}.` : `Removed from ${b.dataset.mark}.`)) { if (viewGroup === b.dataset.mark && !$('#jgQ').value) render(); } return; }
@@ -379,6 +451,6 @@
     const u = store.get('jargon-user');
     if (GROUPS.includes(u)) user = u;
     else if (u === 'Samuel' && store.get('jargon-pw')) { user = 'Samuel'; pw = store.get('jargon-pw'); }
-    if (await load()) { render(); const k = location.hash.slice(1); if (D.terms[k]) go(k); }
+    if (await load()) { loadRequests(); render(); const k = location.hash.slice(1); if (D.terms[k]) go(k); }
   })();
 })();
