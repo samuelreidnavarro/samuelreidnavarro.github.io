@@ -4825,8 +4825,9 @@ function refStepBefore(v, idx){
 /* a pitch change keeps a written sharp or flat, and follows the signature otherwise */
 function moveStep(v, e, s){
   const followed = (e.alt || 0) === (implied(v, e.step, e.t) || 0);
-  e.step = s; e.ed = false;
-  if (followed) e.alt = implied(v, s, e.t);
+  e.step = s;
+  /* an editorial accidental (ficta) stays editorial: it is kept with the note, so is its mark (Samuel 2026-11-17) */
+  if (followed) { e.alt = implied(v, s, e.t); e.ed = false; }
 }
 function toRestOrRemove(vi, s){
   const v = piece.voices[vi];
@@ -5352,8 +5353,10 @@ const CBA = {
   setXform(t){ ed.xf = t; },
   setPitch(h, s, alter){
     const e = h.e, imp = implied(h.v, s, e.t);
-    e.step = s; e.ed = false;
+    e.step = s;
     e.alt = alter === null ? imp : alter === 0 && !imp ? null : alter;
+    /* transposed editorial ficta stays editorial (Samuel 2026-11-17); it is only dropped when the note no longer needs an accidental */
+    if ((e.alt || 0) === (imp || 0)) e.ed = false;
   },
   range: [STEP_MIN, STEP_MAX],
   toast: m => toast(m)
