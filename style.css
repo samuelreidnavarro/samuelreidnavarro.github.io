@@ -224,21 +224,31 @@ main.home { max-width: 60rem; gap: 2.5rem; }
 .nav .has-menu { position: relative; }
 .nav .menu {
   display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); z-index: 20;
-  list-style: none; margin: 0; padding: .35rem 0; min-width: max-content;
-  background: #fffdf8; border: 1px solid var(--line); border-radius: 6px;
-  box-shadow: 0 6px 18px rgba(80, 60, 30, .12);
+  list-style: none; margin: .35rem 0 0; padding: .6rem 0; min-width: 16rem;
+  background: #fffdf8; border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(80, 60, 30, .14), 0 1px 3px rgba(80, 60, 30, .08);
+  text-align: left;
 }
 html:not(.js-menu) .nav .has-menu:hover .menu, html:not(.js-menu) .nav .has-menu:focus-within .menu { display: block; }
 /* with menu.js: More opens on a tap, a click or the mouse resting on it; the menu sits on the screen so a scrolling bar cannot cut it off */
 .nav .has-menu.open > .menu {
   display: block; position: fixed; transform: none; z-index: 100; overflow-y: auto; overscroll-behavior: contain;
+  animation: menu-in .14s ease-out;
 }
-@media (pointer: coarse) { .nav .menu a { padding: .75rem 1.4rem; } }
-.nav .menu a { padding: .45rem 1.2rem; border-bottom: 0; white-space: nowrap; }
-.nav .menu a:hover { background: var(--band); }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.nav .menu li + li { margin-top: .1rem; }
+.nav .menu a, body.compact .nav .menu a:not(.brand) {
+  padding: .55rem 2rem .55rem 1.75rem; border-bottom: 0; border-left: 3px solid transparent;
+  white-space: nowrap; text-align: left; color: var(--soft);
+  transition: background .12s, color .12s, border-color .12s;
+}
+.nav .menu a:hover, .nav .menu a:focus-visible, body.compact .nav .menu a:not(.brand):hover, body.compact .nav .menu a:not(.brand):focus-visible { background: var(--band); color: var(--text); border-left-color: var(--mark); outline: none; }
+.nav .menu a[aria-current="page"], body.compact .nav .menu a[aria-current="page"]:not(.brand) { color: var(--text); border-bottom-color: transparent; border-left-color: var(--mark); }
+@media (pointer: coarse) { .nav .menu a, body.compact .nav .menu a:not(.brand) { padding: .7rem 1.75rem .7rem 1.5rem; } }
 @media (max-width: 760px) {
   .nav { position: relative; } .nav ul { position: static; } .nav .has-menu { position: static; }
-  .nav .menu { max-width: calc(100vw - 2rem); } .nav .menu a { white-space: normal; text-align: center; }
+  .nav .menu { min-width: min(20rem, calc(100vw - 1rem)); }
+  .nav .menu a { white-space: normal; }
 }
 
 /* Magic black and white PDF compressor */
