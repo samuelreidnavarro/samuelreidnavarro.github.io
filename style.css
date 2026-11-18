@@ -220,7 +220,7 @@ main.home { max-width: 60rem; gap: 2.5rem; }
 .panel h2:last-child { margin-bottom: 1.1rem; }
 .panel p { margin: 0 1rem 1.1rem; color: var(--soft); font-size: 1.1rem; }
 
-/* Nav: "Tools" opens a small dropdown on hover (or keyboard focus) */
+/* Nav: "More" opens a small dropdown (menu.js; without it, on hover or keyboard focus) */
 .nav .has-menu { position: relative; }
 .nav .menu {
   display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); z-index: 20;
@@ -228,7 +228,12 @@ main.home { max-width: 60rem; gap: 2.5rem; }
   background: #fffdf8; border: 1px solid var(--line); border-radius: 6px;
   box-shadow: 0 6px 18px rgba(80, 60, 30, .12);
 }
-.nav .has-menu:hover .menu, .nav .has-menu:focus-within .menu { display: block; }
+html:not(.js-menu) .nav .has-menu:hover .menu, html:not(.js-menu) .nav .has-menu:focus-within .menu { display: block; }
+/* with menu.js: More opens on a tap, a click or the mouse resting on it; the menu sits on the screen so a scrolling bar cannot cut it off */
+.nav .has-menu.open > .menu {
+  display: block; position: fixed; transform: none; z-index: 100; overflow-y: auto; overscroll-behavior: contain;
+}
+@media (pointer: coarse) { .nav .menu a { padding: .75rem 1.4rem; } }
 .nav .menu a { padding: .45rem 1.2rem; border-bottom: 0; white-space: nowrap; }
 .nav .menu a:hover { background: var(--band); }
 @media (max-width: 760px) {

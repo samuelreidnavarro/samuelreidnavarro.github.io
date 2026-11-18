@@ -59,13 +59,14 @@
     if (o === open) return;
     open = o;
     body.classList.toggle("nav-folded", !o);
-    if (!o) place();
+    if (!o) { place(); if (window.SiteMenu) window.SiteMenu.closeAll(); }
     settle();
   }
   /* a phone keeps a "hover" where it was last tapped, so only a real mouse counts as resting on the bar */
   var mouse = false;
   document.addEventListener("pointermove", function (e) { mouse = e.pointerType === "mouse"; }, { passive: true });
-  var held = function () { return (mouse && nav.matches(":hover")) || nav.matches(":focus-within"); };
+  /* an open More menu (menu.js) also keeps the bar out */
+  var held = function () { return (mouse && nav.matches(":hover")) || nav.matches(":focus-within") || !!nav.querySelector(".has-menu.open"); };
   var foldTimer = 0, started = false;
   function foldSoon(ms) {
     clearTimeout(foldTimer);
