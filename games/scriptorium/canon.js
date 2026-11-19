@@ -38,7 +38,7 @@
       if (!ivQuals(c.n).includes(c.q)) c.q = ivDefQ(c.n);
       c.dc = Math.max(0, Math.min(64, Math.round(+c.dc) || 0));
       if (!DELAY_U[c.du]) c.du = 'B';
-      c.name = String(c.name || 'Comes').slice(0, 40);
+      c.name = String(c.name == null ? 'Comes' : c.name).trim().slice(0, 40);
       out.c.push(c);
     });
     return out;

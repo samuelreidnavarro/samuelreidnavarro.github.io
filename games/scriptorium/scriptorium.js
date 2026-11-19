@@ -43,6 +43,7 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Pages</span><div class="btns" id="flowSeg" role="group" aria-label="Pages"><button class="tb" data-v="vertical">Vertical</button><button class="tb" data-v="horizontal">Horizontal</button></div>
           <span class="lab" id="scrollLab">Scroll</span><div class="btns" id="scrollSeg" role="group" aria-label="Scroll"><button class="tb" data-v="vertical" title="Systems below each other">Vertical</button><button class="tb" data-v="horizontal" title="The score as one long line, scrolling sideways">Horizontal</button></div>
           <span class="lab">Dark room</span><div class="btns" id="darkSeg" role="group" aria-label="Dark room"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
+          <label class="ctl" for="glassRange" title="How transparent the menus and buttons are">Window transparency</label><input type="range" id="glassRange" min="0" max="0.95" step="0.01">
         </div></div>
       </div></div>
       <div class="podg"><div class="pop" id="popLook">
@@ -59,7 +60,7 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
           <span class="lab">Staff lines</span><div class="btns" id="linesSeg" role="group" aria-label="Staff lines"><button class="tb" data-v="5">Five</button><button class="tb" data-v="4">Four</button></div>
           <span class="lab">Paper</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
-          <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="4" step="0.05">
+          <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="7" step="0.05">
           <label class="ctl" for="thickL" title="Thicker staff lines, barlines and ledger lines">Staff line thickness</label><input type="range" id="thickL" min="0" max="0.16" step="0.005">
           <label class="ctl" for="thick" title="Thicker notes, rests, clefs, signs, stems and ties">Note thickness</label><input type="range" id="thick" min="0" max="0.16" step="0.005">
           <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="-0.4" max="1.2" step="0.01">
@@ -295,8 +296,21 @@ const EPS = 1e-6, eq = (a, b) => Math.abs(a - b) < 1e-4;
 const rt = x => Math.round(x * 5040) / 5040;
 const $ = s => document.querySelector(s);
 
-/* Manuscript paper (same recipe as the CantusFirmus app) */
-(function(){
+/* Manuscript paper textures: selectable from the Paper swatch dropdown in Engraving */
+const PAPER_TEXTURES = [
+  ['vellum-cream',   '#F3E8CE', 'Warm Cream Vellum'],
+  ['vellum-ivory',   '#F7EED9', 'Light Ivory Vellum'],
+  ['vellum-chamois', '#F5EBD3', 'Fine Chamois Vellum'],
+  ['vellum-chalk',   '#FAF4E4', 'Chalked Vellum'],
+  ['vellum-gold',    '#EDE0C1', 'Stippled Golden Vellum'],
+  ['laid',           '#F0E4C9', 'Laid & Chain-Line'],
+  ['rag',            '#EAE0C8', 'Flecked Rag Pulp'],
+  ['crisp',          '#F7F0DF', 'Bright Crisp Ivory'],
+  ['classic',        '#EFE3C7', 'Cloudy Parchment']
+];
+const PAPER_URLS = {};
+function makePaperUrl(kind){
+  if (PAPER_URLS[kind]) return PAPER_URLS[kind];
   try {
     const rng = seed => { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; };
     const noise = (seed, cell, w, h) => {
@@ -310,17 +324,52 @@ const $ = s => document.querySelector(s);
         return a + (b - a) * sx + (c - a + (a - b + d - c) * sx) * sy;
       };
     };
-    const w = 512, h = 512, ox = 64, oy = 64, gw = w + ox, gh = h + oy, k = w / 1600;
-    const fine = noise(11, 1.6 * k + 1, w, h), mid = noise(12, 9 * k + 2, w, h), big = noise(13, 180 * k, w, h), fox = noise(14, 40 * k, w, h);
-    const P = [239, 227, 199], FOX = 0.05;
+    const w = 384, h = 384, ox = 48, oy = 48, gw = w + ox, gh = h + oy, k = w / 1600;
+    const fine = noise(21, kind === 'vellum-chamois' ? 0.95 : 1.25, w, h);
+    const mid = noise(22, 3.6, w, h), streak = noise(23, 8.5, w, h), big = noise(13, 180 * k, w, h), fox = noise(14, 40 * k, w, h);
+    const raw = rng(101);
     const src = new Float32Array(gw * gh * 3);
     for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
       const i = (y * gw + x) * 3;
-      const n = (big(x, y) - 0.5) * 13 + (mid(x, y) - 0.5) * 6 + (fine(x, y) - 0.5) * 5;
-      const laid = (mid(x * 0.15, y * 2.5) - 0.5) * 7;
-      const wv = (mid(x * 0.3, y * 0.3) - 0.5) * 60 * k;
-      const fx = Math.max(0, fox(x + wv, y - wv) * 0.7 + big(x * 2, y * 2) * 0.3 - (1 - FOX * 2.6)) * 90;
-      src[i] = P[0] + n + laid - fx * 0.4; src[i + 1] = P[1] + n + laid - fx * 0.7; src[i + 2] = P[2] + n * 1.2 + laid - fx;
+      let r = 243, g = 232, b = 206;
+      if (kind === 'vellum-cream') {
+        const pore = (fine(x, y) - 0.5) * 20 + (mid(x * 0.8, y * 0.8) - 0.5) * 8;
+        const fol = raw() < 0.04 ? -15 : raw() > 0.955 ? 9 : 0, v = pore + fol;
+        r = 243 + v; g = 232 + v * 0.95; b = 206 + v * 0.86;
+      } else if (kind === 'vellum-ivory') {
+        const pore = (fine(x, y) - 0.5) * 18 + (mid(x * 0.9, y * 0.9) - 0.5) * 7;
+        const fol = raw() < 0.038 ? -14 : raw() > 0.95 ? 8 : 0, v = pore + fol;
+        r = 247 + v; g = 238 + v * 0.96; b = 217 + v * 0.88;
+      } else if (kind === 'vellum-chamois') {
+        const pore = (fine(x, y) - 0.5) * 16 + (raw() - 0.5) * 11;
+        r = 245 + pore; g = 235 + pore * 0.95; b = 211 + pore * 0.88;
+      } else if (kind === 'vellum-chalk') {
+        const pore = (fine(x, y) - 0.5) * 19 + (mid(x, y) - 0.5) * 6;
+        const fol = raw() < 0.042 ? -15 : raw() > 0.95 ? 7 : 0, v = pore + fol;
+        r = 250 + v; g = 244 + v * 0.96; b = 228 + v * 0.90;
+      } else if (kind === 'vellum-gold') {
+        const pore = (fine(x, y) - 0.5) * 22 + (mid(x * 0.8, y * 0.8) - 0.5) * 10;
+        const fol = raw() < 0.045 ? -18 : raw() > 0.96 ? 10 : 0, v = pore + fol;
+        r = 237 + v; g = 221 + v * 0.95; b = 186 + v * 0.85;
+      } else if (kind === 'laid') {
+        const wire = Math.sin(y * (2 * Math.PI / 4)) * 8.5;
+        const cd = Math.abs((x % 48) - 24), chain = cd < 1.2 ? -10 : cd < 2.4 ? 4.5 : 0;
+        const fib = (mid(x * 0.12, y * 1.8) - 0.5) * 13 + (fine(x, y) - 0.5) * 9, v = wire + chain + fib;
+        r = 240 + v; g = 228 + v * 0.96; b = 201 + v * 0.88;
+      } else if (kind === 'rag') {
+        const fx = (streak(x * 0.14, y * 2.4) - 0.5) * 17, fy = (streak(x * 2.4, y * 0.14) - 0.5) * 14;
+        const gr = (fine(x, y) - 0.5) * 13, fl = raw() < 0.012 ? -42 : raw() < 0.028 ? -20 : 0, v = fx + fy + gr;
+        r = 234 + v + fl * 0.85; g = 222 + v * 0.95 + fl * 0.95; b = 196 + v * 0.9 + fl * 1.1;
+      } else if (kind === 'crisp') {
+        const tooth = (fine(x, y) - 0.5) * 14 + (raw() - 0.5) * 8;
+        r = 247 + tooth; g = 240 + tooth * 0.98; b = 223 + tooth * 0.92;
+      } else {
+        const n = (big(x, y) - 0.5) * 13 + (mid(x, y) - 0.5) * 6 + (fine(x, y) - 0.5) * 5;
+        const laid = (mid(x * 0.15, y * 2.5) - 0.5) * 7, wv = (mid(x * 0.3, y * 0.3) - 0.5) * 60 * k;
+        const fx = Math.max(0, fox(x + wv, y - wv) * 0.7 + big(x * 2, y * 2) * 0.3 - (1 - 0.05 * 2.6)) * 90;
+        r = 239 + n + laid - fx * 0.4; g = 227 + n + laid - fx * 0.7; b = 199 + n * 1.2 + laid - fx;
+      }
+      src[i] = r; src[i + 1] = g; src[i + 2] = b;
     }
     const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
     const cx = cv.getContext('2d'), img = cx.createImageData(w, h), d = img.data;
@@ -334,9 +383,10 @@ const $ = s => document.querySelector(s);
       d[i + 3] = 255;
     }
     cx.putImageData(img, 0, 0);
-    document.documentElement.style.setProperty('--paper', `url(${cv.toDataURL('image/jpeg', 0.88)})`);
-  } catch (e) { /* plain beige is fine */ }
-})();
+    return (PAPER_URLS[kind] = `url(${cv.toDataURL('image/jpeg', 0.88)})`);
+  } catch (e) { return 'none'; }
+}
+makePaperUrl('vellum-cream');
 
 /* ------------------------------------------------------------------ */
 /* Vocabulary                                                          */
@@ -385,7 +435,8 @@ function parseNoteTok(tok){
   ev.ferm = tok.includes(';');
   ev.colH = tok.includes('@');   /* coloured as written (CMME), user signifier */
   ev.altd = tok.includes('~');
-  ev.dd = tok.includes('Y');      /* a dot of perfection (division) after a perfect note: it adds nothing (written here) */   /* altered: its value doubled by the mensural rules (written here) */
+  ev.dd = tok.includes('Y');      /* punctus divisionis: divides the perfection, adds nothing */
+  ev.pa = tok.includes('W');      /* punctus additionis on an already-perfect value: keeps it perfect, adds nothing */
   ev.long = /l/.test(rest.replace(/[a-gA-G]/g, ''));
   ev.tupS = tok.includes('V'); ev.tupE = tok.includes('Z');
   const pm = rest.match(/([a-gA-G])\1*/);
@@ -427,7 +478,7 @@ function parseKern(text){
       let last = null;
       for (const s of tok) {
         if (s === '**kern') {
-          last = {name:'', abbr:'', kclef:null, events:[], mets:[], keys:[], clefs:[], verses:0, t:0};
+          last = {name:null, abbr:'', kclef:null, events:[], mets:[], keys:[], clefs:[], verses:0, t:0};
           voices.push(last); cols.push({type:'kern', v:last});
         } else if ((s === '**text' || s === '**silbe') && last) {
           cols.push({type:'text', v:last, verse:last.verses++});
@@ -459,7 +510,7 @@ function parseKern(text){
         if (!c || c.type !== 'kern') return;
         const v = c.v;
         let m;
-        if ((m = s.match(/^\*I"(.*)$/))) v.name = m[1];
+        if ((m = s.match(/^\*I"(.*)$/))) v.name = m[1].trim();
         else if ((m = s.match(/^\*I'(.*)$/))) v.abbr = m[1];
         else if ((m = s.match(/^\*clef(.+)$/))) v.clefs.push({t: v.t, c: m[1], ei: v.events.length});
         else if ((m = s.match(/^\*oclef(.+)$/))) { if (!v.oclef) v.oclef = m[1]; }
@@ -508,7 +559,7 @@ function parseKern(text){
   if (!voices.length) throw new Error('No **kern voices found in this file.');
   voices.forEach((v, i) => {
     v.end = v.t;
-    if (!v.name) v.name = 'Voice ' + (voices.length - i);
+    if (v.name === null) v.name = 'Voice ' + (voices.length - i);
     { const c0 = v.clefs.find(q => q.t < EPS); v.kclef = c0 ? c0.c : null; }
   });
   const titleKey = Object.keys(meta).find(k => k === 'OTL') || Object.keys(meta).find(k => k.startsWith('OTL'));
@@ -541,8 +592,9 @@ function mensInfo(sign){
   const P = dot ? 3 : 2;
   /* proportions: JRP gives sounding values, so written = sounding x p */
   const p = fr ? +fr[1] / +fr[2] : num === '3' ? 1.5 : num === '2' ? 2 : 1;
+  const eqm = ext.match(/;eq=([MSBL])/);
   const M = /mp/.test(ext) ? 3 : 2, X = /xp/.test(ext) ? 3 : 2;
-  return {T, P, p, M, X};
+  return {T, P, p, eq: eqm ? eqm[1] : '', M, X};
 }
 function metAt(v, t){
   let s = null;
@@ -633,10 +685,10 @@ function shapeOfEvent(e, mi){
   if (e.colH || e.long || e.tupS || e.tupE) return null;
   const w = rt(e.d * mi.p), tab = valueTable(mi.T, mi.P, mi.M, mi.X);
   if (e.rest) { const r = tab.find(x => eq(w, x[1])); return r ? {g: r[0], rest: true} : null; }
-  if (e.altd) { const a = shapeAlt(w, mi.T, mi.P, mi.M, mi.X); return a ? {g: a.g, altd: true} : null; }
+  if (e.altd) { const a = shapeAlt(w, mi.T, mi.P, mi.M, mi.X); return a ? {g: a.g, altd: true, dd: !!e.dd} : null; }
   const sh = shapeReal(w, mi.T, mi.P, mi.M, mi.X);
   if (!sh || sh.col) return null;
-  return {g: sh.g, dot: !!sh.dot && !e.dd, dd: !!e.dd && isPerfectLevel(sh.g, mi)};
+  return {g: sh.g, dot: !!sh.dot && !e.dd && !e.pa, dd: !!e.dd, pa: !!e.pa};
 }
 /* one voice: tied parts (made by the barlines) are one note again, then every note takes its value from its shape and its neighbours.
    `map` is returned: where each old event went (so the selection and the caret can follow). */
@@ -695,7 +747,7 @@ function mensurate(v){
       const cand = x => !x.rigid && !x.sh.rest && x.sh.g === lv.g && !x.sh.dot && !x.sh.altd;
       const lower = x => x.rank > lv.rank;
       let prev = null, run = [];
-      const settle = next => {
+      const settle = (next, div) => {
         if (!run.length) return;
         const r = run.reduce((a, x) => a + x.val, 0), m = r / lv.u;
         if (Math.abs(m - Math.round(m)) < 1e-6) {
@@ -708,18 +760,21 @@ function mensurate(v){
           } else if (k === 2) {
             const last = run[run.length - 1];
             if (imp2 && prev && next && !prev.done && !next.done) { prev.val = lv.imp; prev.done = true; next.val = lv.imp; next.done = true; }
-            else if (next && !last.rigid && !last.sh.rest && !last.sh.dot && Math.abs(last.val - lv.u) < 1e-6) { last.val = 2 * lv.u; last.altd = true; }
+            else if ((next || (div && (!prev || prev.done))) && !last.rigid && !last.sh.rest && !last.sh.dot && Math.abs(last.val - lv.u) < 1e-6) { last.val = 2 * lv.u; last.altd = true; }
           }
         }
         run = [];
       };
       for (const x of it) {
-        /* a dot of perfection keeps its note perfect: what would imperfect it goes to the note after (a.p.a.) */
-        if (cand(x)) { x.val = lv.perf; x.done = !!x.sh.dd; settle(x); prev = x; }
-        else if (lower(x) && !x.rigid) run.push(x);
-        else { settle(null); prev = null; }
+        /* a dot on a perfect note keeps it perfect; a punctus divisionis also divides the perfection after it */
+        if (cand(x)) { x.val = lv.perf; x.done = !!(x.sh.dd || x.sh.pa); settle(x, false); prev = x.sh.dd ? null : x; }
+        else if (lower(x) && !x.rigid) {
+          run.push(x);
+          if (x.sh.dd && x.rank === lv.rank + 1) { settle(null, true); prev = null; }
+        }
+        else { settle(null, false); prev = null; }
       }
-      settle(null);
+      settle(null, false);
     }
   }
   /* 4. written back; tied parts leave */
@@ -874,7 +929,7 @@ function notate(piece, v, mode){
     const sh = (e.altd && shapeAlt(w, mi.T, mi.P, mi.M, mi.X)) || (e.colH && shapeCol(w, mi.T, mi.P, mi.M, mi.X)) || shapeReal(w, mi.T, mi.P, mi.M, mi.X);
     if (!sh) { pushSplit(out, base, w, mi.T, mi.P, false, mi.p); continue; }
     const pos = rt(((rt(e.t - segStart) * mi.p) % (mi.T * (mi.P === 3 ? 1.5 : 1))));
-    out.push(Object.assign(base, {g: sh.g, dot: !!sh.dot || (!!e.dd && !e.rest), dd: !!e.dd, col: !!sh.col, imp: !!sh.imp, w, pos}));
+    out.push(Object.assign(base, {g: sh.g, dot: !!sh.dot || (!!(e.dd || e.pa) && !e.rest), dd: !!e.dd, pa: !!e.pa, col: !!sh.col, imp: !!sh.imp, w, pos}));
   }
   /* each rest drawn is an object of its own: it belongs to the events that lie under it (three rests in a row are drawn as three,
      or as a long and a breve, and each can be selected, resized or deleted alone) */
@@ -1440,8 +1495,8 @@ function symInner(s, X, top){
     } else o += s.red ? `<g class="red">${gm}</g>` : gm;
   }
   if (s.dot && !s.ligSvg) {
-    const dy = top + 4 - (s.pos % 2 === 0 ? s.pos + 1 : s.pos) * 0.5;
-    o += `<circle class="ink" cx="${f(hx + s.hw + 0.4)}" cy="${f(dy)}" r="0.19"/>`;
+    const dx = hx + s.hw + (s.dd ? 0.55 : 0.4), dy = top + 4 - (s.pos % 2 === 0 ? s.pos + 1 : s.pos) * 0.5, dk = s.dd ? 'D' : 'A';
+    o += `<g class="dothit"><title>Punctus ${s.dd ? 'divisionis' : 'additionis'}</title><circle class="hit" cx="${f(dx)}" cy="${f(dy)}" r="0.55" fill="transparent"/><circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.19"/><text class="dotkind hit" x="${f(dx + 0.34)}" y="${f(dy + 0.24)}" font-size="0.85" font-style="normal">${dk}</text></g>`;
   }
   if (s.edAcc) {
     const ay = Math.min(top - 0.9, y - (isFlipped(s) ? 1.6 : (STEMMED[s.g] ? 4.3 : 1.7)));
@@ -1533,8 +1588,8 @@ function ligShape(G, top){
     /* over the joint: the space above the higher of the two notes there */
     const hi = !last && Y[i + 1] < Y[i] ? i + 1 : i, hiLine = G[hi][0].pos % 2 === 0;
     const dy = last ? (line ? Y[i] - 0.5 : Y[i]) : (hiLine ? Y[hi] - 0.5 : Y[hi] - 1);
-    const dx = last ? X[i] + w + 0.4 : X[i] + w - 0.35;   /* inside: just left of the joint, clear of the next note */
-    parts[i] += `<circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.2"/>`;
+    const dx = last ? X[i] + w + 0.4 : X[i] + w - 0.35, dk = q.dd ? 'D' : 'A';   /* inside: just left of the joint, clear of the next note */
+    parts[i] += `<g class="dothit"><title>Punctus ${q.dd ? 'divisionis' : 'additionis'}</title><circle class="hit" cx="${f(dx)}" cy="${f(dy)}" r="0.55" fill="transparent"/><circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.2"/><text class="dotkind hit" x="${f(dx + 0.34)}" y="${f(dy + 0.24)}" font-size="0.85" font-style="normal">${dk}</text></g>`;
   });
   /* stems */
   if (cop) parts[0] += ligV(X[0], Y[0] - TL, Y[0]);
@@ -2767,20 +2822,39 @@ async function buildPieceList(){
 /* ------------------------------------------------------------------ */
 const STAFF_COLORS = [['red', '#8E2A1E', 'Red'], ['black', '#2A2218', 'Black'], ['brown', '#8A6A44', 'Brown'], ['blue', '#2F4F8F', 'Blue'], ['grey', '#9A9286', 'Grey']];
 $('#staffSeg').innerHTML = STAFF_COLORS.map(([k, c, n]) => `<button class="tb swatch" data-v="${k}" style="--c:${c}" aria-label="${n}" title="${n}"><i></i></button>`).join('');
-const PAPER_COLORS = [['parchment', '#EFE3C7', 'Parchment'], ['beige', '#F0E8D8', 'Beige'], ['white', '#FFFFFF', 'White']];
-$('#paperColSeg').innerHTML = PAPER_COLORS.map(([k, c, n]) => `<button class="tb swatch" data-v="${k}" style="--c:${c}" aria-label="${n}" title="${n}"><i${k === 'parchment' ? ' style="background:#EFE3C7 var(--paper);background-size:160px"' : ''}></i></button>`).join('') +
+const PAPER_COLORS = [['parchment', '#F3E8CE', 'Paper texture'], ['beige', '#F0E8D8', 'Beige'], ['white', '#FFFFFF', 'White']];
+$('#paperColSeg').innerHTML = `<div class="texpop" id="texPop">` +
+  `<button class="tb swatch" id="mainPaperSwatch" data-v="parchment" style="--c:#F3E8CE" aria-label="Paper texture" title="Paper texture (hover to choose)"><i style="background:#F3E8CE var(--paper);background-size:160px"></i></button>` +
+  `<div class="texmenu" id="texMenu" role="group" aria-label="Paper textures">` +
+    PAPER_TEXTURES.map(([tk, tc, tn]) => `<button type="button" class="tb texopt" data-tex="${tk}" title="${tn}"><i class="texsw" data-texsw="${tk}" style="background:${tc}"></i><span>${tn}</span></button>`).join('') +
+  `</div></div>` +
+  PAPER_COLORS.slice(1).map(([k, c, n]) => `<button class="tb swatch" data-v="${k}" style="--c:${c}" aria-label="${n}" title="${n}"><i></i></button>`).join('') +
   `<label class="tb swatch pick" id="paperPickL" title="Any colour" aria-label="Any colour"><i></i><input type="color" id="paperPick" value="#e8e0d0"></label>`;
+$('#texPop').addEventListener('pointerenter', () => {
+  document.querySelectorAll('#texMenu [data-texsw]').forEach(el => {
+    if (!el.dataset.ready) { el.dataset.ready = '1'; el.style.backgroundImage = makePaperUrl(el.dataset.texsw); el.style.backgroundSize = '120px'; }
+  });
+});
 $('#paperColSeg').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
+  const tb = e.target.closest('[data-tex]');
+  if (tb) { e.stopPropagation(); st.paperCol = 'parchment'; st.paperTex = tb.dataset.tex; save(); syncUI(); return; }
+  const b = e.target.closest('button[data-v]'); if (!b) return;
   st.paperCol = b.dataset.v; save(); syncUI();
 });
 $('#paperPick').addEventListener('input', e => { st.paperCol = e.target.value; save(); syncUI(); });
 function applyPaper(){
+  const texKey = PAPER_TEXTURES.some(t => t[0] === st.paperTex) ? st.paperTex : 'vellum-cream';
+  const texEntry = PAPER_TEXTURES.find(t => t[0] === texKey) || PAPER_TEXTURES[0];
+  const url = makePaperUrl(texKey);
+  document.documentElement.style.setProperty('--paper', url);
   const named = PAPER_COLORS.find(c => c[0] === st.paperCol);
-  const col = named ? named[1] : (/^#[0-9a-f]{6}$/i.test(st.paperCol) ? st.paperCol : '#EFE3C7');
+  const col = st.paperCol === 'parchment' ? texEntry[1] : named ? named[1] : (/^#[0-9a-f]{6}$/i.test(st.paperCol) ? st.paperCol : '#F3E8CE');
   document.documentElement.style.setProperty('--pagebg', col);
   document.documentElement.classList.toggle('flatpaper', st.paperCol !== 'parchment');
-  $('#paperColSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st.paperCol)));
+  const ms = $('#mainPaperSwatch');
+  if (ms) { ms.title = `Paper: ${texEntry[2]}`; const mi = ms.querySelector('i'); if (mi) mi.style.backgroundColor = texEntry[1]; }
+  $('#paperColSeg').querySelectorAll('button[data-v]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st.paperCol)));
+  $('#paperColSeg').querySelectorAll('button[data-tex]').forEach(b => b.setAttribute('aria-pressed', String(st.paperCol === 'parchment' && b.dataset.tex === texKey)));
   const custom = !named;
   $('#paperPickL').setAttribute('aria-pressed', String(custom));
   if (custom) { $('#paperPickL').style.setProperty('--c', col); $('#paperPick').value = col; }
@@ -2975,7 +3049,7 @@ function shiftVis(at, by){
   st.vis[pieceKey] = out; save();
 }
 const VOICE_OPS = {
-  rename(i, name){ name = name.trim().slice(0, 40); if (!name || piece.voices[i].name === name) return; commit(() => { piece.voices[i].name = name; }); },
+  rename(i, name){ name = name.trim().slice(0, 40); if (piece.voices[i].name === name) return; commit(() => { piece.voices[i].name = name; }); },
   clef(i, c){
     vis(i).clef = c || null; save();
     if (c && !writable(piece.voices[i])) { render(); return; }
@@ -3223,45 +3297,33 @@ $('#markClear').addEventListener('click', () => { mark = null; document.querySel
 const libMode = () => APP.catalogue ? 'rep' : '';
 libBtn.addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden || libEl.dataset.mode !== libMode(), libMode()); });
 if ($('#myBtn')) $('#myBtn').addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden || libEl.dataset.mode !== 'mine', 'mine'); });
-/* with a mouse the Repertoire (and My scores) open on hover like every other menu, and close once the pointer has left them
-   (Samuel 2026-11-14); a click still opens them. Touch screens keep the one tap. The links list opens on hover too. */
+/* Repertoire opens on click (not hover), and closes without delay once the pointer leaves it. */
 {
   const mouse = () => window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches;
   const wrap = libEl.closest('.libwrap') || libEl.parentNode;
-  let tOpen = 0, tShut = 0;
-  /* in a narrower window the big panel would cover the page the moment the pointer passes: there it opens on a click only */
-  const narrow = () => window.matchMedia('(max-width:1100px)').matches;
-  const hoverOpen = (btn, mode) => btn && btn.addEventListener('mouseenter', () => {
-    if (!mouse() || narrow()) return;
-    clearTimeout(tOpen);
-    tOpen = setTimeout(() => { if (btn.matches(':hover') && (libEl.hidden || libEl.dataset.mode !== mode)) setLib(true, mode); }, 260);
-  });
-  hoverOpen(libBtn, libMode()); hoverOpen($('#myBtn'), 'mine');
-  [libBtn, $('#myBtn')].forEach(b => b && b.addEventListener('mouseleave', () => clearTimeout(tOpen)));
+  let tShut = 0;
   /* passing over the other choices of the Open menu (New score, Open file) closes the panel */
   $('#openList').addEventListener('mouseover', e => {
     const b = e.target.closest('button'); if (!mouse() || !b || b === libBtn || b.id === 'myBtn') return;
-    clearTimeout(tOpen); if (!libEl.hidden) setLib(false);
+    if (!libEl.hidden) setLib(false);
   });
   const ssOpenHere = () => window.StyledSelect && StyledSelect.isOpen() && libEl.contains(StyledSelect.owner());
-  const shutLater = () => {
+  const shutNow = () => {
     clearTimeout(tShut);
-    tShut = setTimeout(() => {
-      if (libEl.hidden || !mouse()) return;
-      if (wrap.matches(':hover') || ssOpenHere()) { if (ssOpenHere()) shutLater(); return; }
-      setLib(false); if (libEl.contains(document.activeElement)) document.activeElement.blur();
-    }, 450);
+    if (libEl.hidden || !mouse()) return;
+    if (wrap.matches(':hover') || ssOpenHere()) { if (ssOpenHere()) tShut = setTimeout(shutNow, 100); return; }
+    setLib(false); if (libEl.contains(document.activeElement)) document.activeElement.blur();
   };
-  wrap.addEventListener('mouseleave', () => { if (mouse()) shutLater(); });
+  wrap.addEventListener('mouseleave', () => { if (mouse()) shutNow(); });
   wrap.addEventListener('mouseenter', () => clearTimeout(tShut));
   /* + Show the links: opens while the mouse is over it */
   libEl.addEventListener('mouseover', e => {
     const d = e.target.closest && e.target.closest('details.morelinks'); if (!d || !mouse()) return;
-    clearTimeout(d._t); d.open = true;
+    d.open = true;
   });
   libEl.addEventListener('mouseout', e => {
     const d = e.target.closest && e.target.closest('details.morelinks'); if (!d || !mouse() || d.contains(e.relatedTarget)) return;
-    clearTimeout(d._t); d._t = setTimeout(() => { if (!d.matches(':hover')) d.open = false; }, 300);
+    d.open = false;
   });
   /* a click on the summary with a mouse keeps it as the hover left it (open), instead of shutting it under the pointer */
   libEl.addEventListener('click', e => { const s = e.target.closest && e.target.closest('details.morelinks > summary'); if (s && mouse()) e.preventDefault(); }, true);
@@ -3359,9 +3421,179 @@ document.addEventListener('drop', e => {
 });
 }
 /* **kern is read as it is; MusicXML, MuseScore, MIDI, LilyPond, GABC and CMME are turned into **kern first (shared/score-import.js) */
+/* Enhanced CMME reader: preserves explicit <Type> (distinguishing altered notes '~' from imperfected ones) and <Dot> (punctus divisionis 'Y' vs additionis) */
+function cmmeToKernRich(text, fileName){
+  const doc = new DOMParser().parseFromString(text, 'application/xml'), root = doc.documentElement;
+  if (!root || root.localName !== 'Piece') return null;
+  const W = 20160, LET = 'CDEFGAB';
+  const ch = (el, tag) => el ? [...el.children].filter(c => c.localName === tag) : [];
+  const c1 = (el, tag) => ch(el, tag)[0] || null;
+  const tx = (el, tag) => { const c = tag ? c1(el, tag) : el; return c ? c.textContent.trim() : ''; };
+  const gd = c1(root, 'GeneralData');
+  const title = tx(gd, 'Title'), source = tx(gd, 'Section');
+  let composer = tx(gd, 'Composer'), attributed = false;
+  { const m = /^\((.*)\)$/.exec(composer); if (m) { composer = m[1].trim(); attributed = true; } }
+  const names = ch(c1(root, 'VoiceData'), 'Voice').map(v => tx(v, 'Name'));
+  const n = Math.max(+tx(c1(root, 'VoiceData'), 'NumVoices') || 0, names.length);
+  const voices = Array.from({length: n}, (_, i) => ({name: names[i] || (i === 0 && n > 1 ? 'Superius' : ''), clef: null, oclef: null, key: 0, keyAlts: null, mets: [], events: []}));
+  const pitchOf = el => {
+    const L = tx(el, 'LetterName').toUpperCase(), o = +tx(el, 'OctaveNum');
+    if (!L || isNaN(o)) return null;
+    return 7 * (o + (L === 'A' || L === 'B' ? 0 : 1)) + LET.indexOf(L);
+  };
+  const len = el => { const l = c1(el, 'Length'); return l ? (+tx(l, 'Num') || 0) / (+tx(l, 'Den') || 1) : 0; };
+  const TYPE_G = {Maxima: 'Mx', Longa: 'L', Brevis: 'B', Semibrevis: 'S', Minima: 'M', Semiminima: 'Sm', Fusa: 'F', Semifusa: 'Sf'};
+  const doubles = [], bars = [];
+  let t0 = 0;
+  for (const ms of ch(root, 'MusicSection')) {
+    const mm = c1(ms, 'MensuralMusic');
+    if (!mm) continue;
+    let secEnd = t0;
+    for (const vx of ch(mm, 'Voice')) {
+      const vi = (+tx(vx, 'VoiceNum') || 1) - 1, V = voices[vi];
+      if (!V) continue;
+      let t = t0, p = 1, curSign = 'C', open = false, sig = V.keyAlts || {};
+      const evs = [];
+      const walk = list => { for (const e of list) {
+        const tag = e.localName;
+        if (tag === 'MultiEvent') { walk([...e.children]); continue; }
+        if (tag === 'VariantReadings') {
+          const rd = ch(e, 'Reading').find(r => ch(r, 'VariantVersionID').some(x => x.textContent.trim().toUpperCase() === 'DEFAULT'));
+          if (rd) walk([...(c1(rd, 'Music') || rd).children]);
+          continue;
+        }
+        if (tag === 'Clef') {
+          const app = tx(e, 'Appearance'), loc = +tx(e, 'StaffLoc'), pc = c1(e, 'Pitch');
+          if (c1(e, 'Signature') && pc) {
+            const L = tx(pc, 'LetterName').toLowerCase();
+            if (/^Bmol/i.test(app)) sig[L] = -1; else if (/^(Diesis|Sharp)/i.test(app)) sig[L] = 1;
+            if (!V.keyAlts) V.keyAlts = sig;
+          } else if (/^[CFG]$/.test(app) && !V.oclef && loc % 2) V.oclef = app + ((loc + 1) / 2);
+          continue;
+        }
+        if (tag === 'Mensuration') {
+          const sg = c1(e, 'Sign'), num = c1(e, 'Number');
+          let sign = '';
+          if (sg) {
+            sign = tx(sg, 'MainSymbol') === 'O' ? 'O' : 'C';
+            if (c1(sg, 'Dot')) sign += '.';
+            if (+tx(sg, 'Strokes') > 0) sign += '|';
+          }
+          if (num && +tx(num, 'Num')) {
+            const n1 = +tx(num, 'Num'), d1 = +tx(num, 'Den');
+            sign += d1 > 0 && d1 !== 1 ? n1 + '/' + d1 : String(n1);
+          }
+          if (!sign) continue;
+          curSign = sign;
+          const mi = mensInfo(sign);
+          p = mi.p;
+          V.mets.push({t: Math.round(t), sign});
+          continue;
+        }
+        /* Explicit <Dot> in CMME: if the preceding note isn't already 1.5x its nominal shape, it is a punctus divisionis ('Y') */
+        if (tag === 'Dot') {
+          const prev = evs[evs.length - 1];
+          if (prev && !prev.rest && !prev.isDottedAdd) prev.dd = true;
+          continue;
+        }
+        if (tag !== 'Note' && tag !== 'Rest') continue;
+        const lMin = len(e), d = lMin * W / 2 / p;
+        if (d <= 0) continue;
+        const ev = {t: Math.round(t), d: Math.round(d)};
+        if (tag === 'Rest') ev.rest = true;
+        else {
+          ev.step = pitchOf(e);
+          if (ev.step === null) { ev.rest = true; delete ev.step; }
+          else {
+            const L = tx(e, 'LetterName').toLowerCase(), ma = c1(e, 'ModernAccidental'), s0 = sig[L] || 0;
+            const a = ma ? Math.max(-1, Math.min(1, Math.round(+tx(ma, 'PitchOffset') || 0))) : 0;
+            ev.alt = a === s0 ? null : a;
+            ev.ed = a !== s0;
+            if (c1(e, 'Colored')) ev.col = true;
+            if (c1(e, 'Signum') || c1(e, 'Corona')) ev.ferm = true;
+            if (c1(e, 'Lig')) ev.ligNext = true;
+            const tp = tx(e, 'Type'), g = TYPE_G[tp];
+            if (tp === 'Longa' || tp === 'Maxima') ev.longa = true;
+            if (g) {
+              const mi = mensInfo(curSign), nomMin = (nomW(g, mi.T, mi.P, mi.M, mi.X) || 0) * 2;
+              if (nomMin > 0) {
+                if (!ev.col && Math.abs(lMin - 2 * nomMin) < 1e-4) ev.altd = true;
+                else if (!ev.col && Math.abs(lMin - 1.5 * nomMin) < 1e-4) ev.isDottedAdd = true;
+              }
+            }
+            const mt = c1(e, 'ModernText');
+            if (mt && tx(mt, 'Syllable')) {
+              const end = !!c1(mt, 'WordEnd');
+              ev.syl = (open ? '-' : '') + tx(mt, 'Syllable') + (end ? '' : '-');
+              open = !end;
+            }
+          }
+        }
+        evs.push(ev); t += d;
+      } };
+      walk([...(c1(vx, 'EventList') || vx).children]);
+      let lig = 0, id = 0;
+      for (let k = 0; k < evs.length; k++) {
+        const e = evs[k];
+        if (e.rest) { lig = 0; continue; }
+        if (!lig && e.ligNext) lig = ++id + vi * 1000;
+        if (lig) e.lig = lig;
+        if (!e.ligNext) lig = 0;
+        delete e.ligNext;
+      }
+      V.events.push(...evs);
+      secEnd = Math.max(secEnd, t);
+    }
+    secEnd = Math.round(secEnd);
+    let fin = secEnd;
+    for (const V of voices) {
+      const last = [...V.events].reverse().find(e => e.t >= t0 && !e.rest);
+      if (last && last.longa) { last.long = true; fin = Math.min(fin, last.t); }
+    }
+    const ref = voices.find(V => V.mets.some(m => m.t >= t0)) || voices[0];
+    const ms0 = ref.mets.filter(m => m.t >= t0 && m.t < secEnd);
+    ms0.forEach((m, k) => {
+      const mi = mensInfo(m.sign);
+      const br = Math.round(W * mi.T * (mi.P === 3 ? 1.5 : 1) / mi.p), to = k + 1 < ms0.length ? ms0[k + 1].t : secEnd;
+      for (let b = m.t + br; b < to - 1; b += br) if (b <= fin) bars.push(b);
+      if (to < secEnd) bars.push(to);
+    });
+    if (t0 > 0) { bars.push(t0); doubles.push(t0); }
+    t0 = secEnd;
+  }
+  for (const V of voices) {
+    V.events.forEach(e => { delete e.longa; delete e.isDottedAdd; });
+    if (V.keyAlts) V.key = -Object.keys(V.keyAlts).length;
+    V.clef = !V.oclef ? null : /^F/.test(V.oclef) ? 'F4' : /^(G|C1|C2)/.test(V.oclef) ? 'G2' : 'Gv2';
+  }
+  const S = {title, composer, attributed, source, voices, bars, doubles, rdf: ['@ = coloured (black) note']};
+  let kern = ScoreImport._.toKern(S, fileName);
+  /* attach '~' (altered) and 'Y' (punctus divisionis) onto the corresponding **kern note tokens */
+  const P = parseKern(kern);
+  const vs = S.voices.filter(v => v.events.length);
+  if (P.voices.length === vs.length) {
+    P.voices.forEach((pv, vi) => {
+      const sv = vs[vi];
+      for (const se of sv.events) {
+        if (!se.altd && !se.dd) continue;
+        const t = rt(se.t * 2 / W);
+        const pe = pv.events.find(e => !e.rest && eq(e.t, t));
+        if (pe) { if (se.altd) pe.altd = true; if (se.dd) pe.dd = true; }
+      }
+    });
+    kern = writeKern(P);
+  }
+  return kern;
+}
 function openFile(file){
   const fail = err => { stopPlay(); pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; };
-  const imp = f => ScoreImport.toKern(f).then(k => loadText(file.name, k), fail);
+  const imp = f => f.text().then(txt => {
+    if (/\.cmme(\.xml)?$/i.test(file.name) || /<Piece\b[^>]*cmme/i.test(txt.slice(0, 800))) {
+      const k = cmmeToKernRich(txt, file.name);
+      if (k) { loadText(file.name, k); return; }
+    }
+    return ScoreImport.toKern(f).then(k => loadText(file.name, k));
+  }).catch(fail);
   if (window.ScoreImport && ScoreImport.accepts(file.name)) { imp(file); return; }
   /* any other name: a zip, MIDI or XML score is still read as one (renamed or saved without its extension); plain text as **kern */
   file.arrayBuffer().then(buf => {
@@ -3424,6 +3656,7 @@ function noteTok(e, tie){
   if (e.colH && !e.rest) s += '@';
   if (e.altd && !e.rest) s += '~';
   if (e.dd && !e.rest) s += 'Y';
+  if (e.pa && !e.rest) s += 'W';
   return s;
 }
 function retime(v){
@@ -3737,14 +3970,13 @@ function insertEvent(vi, at, step, isRest, pad = 0, alt){
   }
   const alt0 = isRest ? null : altU === undefined ? imp : altU === 0 && !imp ? null : altU;
   const edAcc = armedAcc && !!ed.accEd && alt0 !== null;
-  let dotted = !isRest && !!ed.dotArm, divDot = false;
-  /* on a perfect value the dot adds nothing: it is a dot of perfection, the note stays perfect (Samuel 2026-11-15) */
-  if (dotted && perfectShape(v, t, ed.val)) { dotted = false; divDot = true; }
+  let dotted = !isRest && (ed.dotArm === true || ed.dotArm === 'add'), divDot = !isRest && ed.dotArm === 'div', perfAdd = false;
+  if (dotted && perfectShape(v, t, ed.val)) { dotted = false; perfAdd = true; }
   if (!isRest) { ed.accArm = null; ed.accEd = false; ed.dotArm = false; }
   const d = mensRulesOn() ? rt(nomD(v, t, ed.val) * (ed.colArm ? 2 / 3 : 1) * (dotted ? 1.5 : 1)) : rt(val / propAt(v, t) * (ed.colArm ? 2 / 3 : 1) * (dotted ? 1.5 : 1));
   commit(() => {
     const e = {d, rest: !!isRest, step, alt: alt0, ed: edAcc, syl: [], t};
-    if (divDot) { e.dd = true; if (!mensRulesOn()) { const mi = mensInfo(metAt(v, t)); e.d = rt(nomW(ed.val, mi.T, mi.P, mi.M, mi.X) / mi.p); } }
+    if (divDot || perfAdd) { if (divDot) e.dd = true; else e.pa = true; if (!mensRulesOn()) { const mi = mensInfo(metAt(v, t)); e.d = rt(nomW(ed.val, mi.T, mi.P, mi.M, mi.X) / mi.p); } }
     /* past the end: a rest up to the place clicked */
     if (pad > EPS && at >= v.events.length) { v.events.push({d: rt(pad), rest: true, alt: null, ed: false, syl: [], t: v.end}); at = v.events.length; }
     let k = at;
@@ -4265,6 +4497,10 @@ const mensSignHtml = ([sg, name]) => `<div class="msign" role="option" data-m="$
 const mensRow = (lab, tip, inner) => `<div class="mlev" title="${esc(tip)}"><span class="mslab">${lab}</span><span class="seg">${inner}</span></div>`;
 mensMenu.innerHTML = `<li class="flatopt mscope" data-m="" role="presentation"><span class="mslab">Change</span><span class="seg" role="group" aria-label="Which voices the sign changes in"><button type="button" class="tb" data-scope="all" aria-pressed="true">All voices</button><button type="button" class="tb" data-scope="one" aria-pressed="false">Only <span class="mvn">this voice</span></button></span><input type="checkbox" id="mensDiff" hidden></li>` +
   `<li class="mgrp" role="presentation"><div class="mgrid" role="group" aria-label="Signs">${MENS_MENU.filter(x => MENS_COMMON.includes(x[0])).map(mensSignHtml).join('')}</div></li>` +
+  `<li class="mgrp meq" role="presentation">` +
+    mensRow('Equivalent', 'Which note value keeps the same speed across the change of mensuration', `<button type="button" class="tb" data-eq="M" title="Minima = minima">Minima</button><button type="button" class="tb" data-eq="S" title="Semibrevis = semibrevis">Semibrevis</button><button type="button" class="tb" data-eq="B" title="Brevis = brevis">Brevis</button><button type="button" class="tb" data-eq="L" title="Longa = longa">Longa</button>`) +
+    `<div class="mlev"><button type="button" class="tb" data-recalc="1" style="width:100%;justify-content:center" title="Recalculate note durations from their written shapes, dots and mensuration signs (perfection, imperfection and alteration)">Recalculate durations</button></div>` +
+  `</li>` +
   `<li class="mgrp" role="presentation"><details id="mensMore"><summary>Proportions</summary><div class="mgrid" role="group" aria-label="Proportion signs">${MENS_MENU.filter(x => !MENS_COMMON.includes(x[0])).map(mensSignHtml).join('')}</div></details></li>` +
   `<li class="mgrp" role="presentation"><details id="mensOpts"><summary>Modus, rules and modern equivalent</summary>` +
     mensRow('Modus', 'How many breves a longa holds. No sign shows it; the music (and the long rests) tell', `<button type="button" class="tb" data-lev="m" data-val="2">2</button><button type="button" class="tb" data-lev="m" data-val="3">3 perfect</button>`) +
@@ -4313,8 +4549,8 @@ function setMens(sign, justThis){
       const m = v.mets.find(x => eq(x.t, t));
       /* the same sign as the one already in effect from earlier in the piece: no override at all (Samuel 2026-11-14) */
       let prev = null; for (const q of v.mets) if (q.t < t - EPS) prev = q.sign;
-      if (prev !== null && prev === sign) { if (m) v.mets = v.mets.filter(x => x !== m); continue; }
-      if (m) { m.sign = sign + m.sign.slice(mensBase(m.sign).length); continue; }   /* modus and maximodus stay */
+      if (prev !== null && mensBase(prev) === sign) { if (m) v.mets = v.mets.filter(x => x !== m); continue; }
+      if (m) { m.sign = sign + m.sign.slice(mensBase(m.sign).length); continue; }   /* modus, maximodus and equivalence stay */
       /* in a voice with no notes yet the sign stands at the start, before the first note to come */
       let k = v.events.findIndex(e => eq(e.t, t));
       if (k < 0 && t < EPS && !v.events.length) k = 0;
@@ -4326,12 +4562,45 @@ function setMens(sign, justThis){
 const MOD_HINT = {'O': '3/1', 'C': '2/1', 'O|': '3/1', 'C|': '2/1', 'O.': '9/2', 'C.': '6/2', 'Cr': '2/1', '3': '3/1', 'O3': '3/1', 'C3': '3/1', 'C|3': '3/1', 'C2': '2/1'};
 /* modus, maximodus, the rules and the two editorial choices: their buttons show what is in force */
 function mensOpt(k){ const o = String(piece && piece.meta && piece.meta.MENSOPT || ''); return o.split(',').includes(k); }
+function defaultEquiv(v, m){
+  const mi = mensInfo(m ? m.sign : null);
+  if (mi.eq) return mi.eq;
+  if (!v || !m) return 'M';
+  let prev = null; for (const q of v.mets) if (q.t < m.t - EPS) prev = q;
+  if (!prev) return 'M';
+  const pm = mensInfo(prev.sign);
+  for (const k of ['M', 'S', 'B', 'L']) {
+    const d1 = (nomW(k, pm.T, pm.P, pm.M, pm.X) || 1) / pm.p, d2 = (nomW(k, mi.T, mi.P, mi.M, mi.X) || 1) / mi.p;
+    if (Math.abs(d1 - d2) < 1e-6) return k;
+  }
+  return 'M';
+}
 function levFill(v, t){
   let m = null; for (const q of v.mets) if (q.t <= t + EPS) m = q;
-  const mi = mensInfo(m ? m.sign : null);
+  const mi = mensInfo(m ? m.sign : null), eqCur = defaultEquiv(v, m);
+  mensMenu.querySelectorAll('[data-eq]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.eq === eqCur)));
   mensMenu.querySelectorAll('[data-lev]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.val === (b.dataset.lev === 'm' ? mi.M : mi.X))));
   mensMenu.querySelectorAll('[data-rules]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.rules === 'on') === mensRulesOn())));
   mensMenu.querySelectorAll('[data-opt]').forEach(b => { const k = b.dataset.opt, on = k === 'apa' ? mensOpt('apa') : k === 'app' ? !mensOpt('apa') : k === 'imp2' ? mensOpt('imp2') : !mensOpt('imp2'); b.setAttribute('aria-pressed', String(on)); });
+}
+function setEquiv(eqVal){
+  if (!mensAt || !piece) return;
+  const {vi, t} = mensAt, only = $('#mensDiff').checked;
+  const targets = only ? [vi] : piece.voices.map((v, i) => i).filter(i => i === vi || piece.voices[i].mets.some(m => eq(m.t, t)));
+  commit(() => {
+    for (const i of targets) {
+      const v = piece.voices[i]; if (!writable(v)) continue;
+      let m = null; for (const q of v.mets) if (q.t <= t + EPS) m = q;
+      if (!m) continue;
+      const base = mensBase(m.sign), ext = m.sign.slice(base.length).split(';').filter(x => x && !/^eq=|^p=/.test(x));
+      ext.push('eq=' + eqVal);
+      m.sign = base + ext.map(x => ';' + x).join('');
+    }
+  });
+  levFill(piece.voices[vi], t);
+  if (play) restartPlay();
+  const nm = {M: 'Minima = minima', S: 'Semibrevis = semibrevis', B: 'Brevis = brevis', L: 'Longa = longa'}[eqVal];
+  if (nm) toast(nm + '.');
 }
 function setLevel(kind, val){
   if (!mensAt || !piece) return;
@@ -4350,6 +4619,21 @@ function setLevel(kind, val){
     }
   });
   levFill(piece.voices[vi], t);
+}
+function recalcDurations(){
+  if (!piece) return;
+  const only = $('#mensDiff') && $('#mensDiff').checked && mensAt;
+  const targets = only ? [mensAt.vi] : piece.voices.map((_, i) => i);
+  let changed = 0;
+  commit(() => {
+    for (const i of targets) {
+      const v = piece.voices[i]; if (!v || !writable(v)) continue;
+      const before = logicalNotes(v).map(it => it.d);
+      mensurate(v); retime(v);
+      before.forEach((d, k) => { if (v.events[k] && Math.abs(v.events[k].d - d) > 1e-6) changed++; });
+    }
+  });
+  toast(changed ? `Recalculated durations from mensural shapes (${changed} note${changed === 1 ? '' : 's'} adjusted; Undo restores the file's original lengths).` : 'All note durations already match the mensural rules.');
 }
 function setRules(on){
   if (!piece) return;
@@ -4401,6 +4685,8 @@ $('#modOk').addEventListener('click', setMod);
 }));
 mensMenu.addEventListener('click', e => {
   const sc = e.target.closest('[data-scope]'); if (sc) { mensScope(sc.dataset.scope === 'one'); return; }
+  const eqb = e.target.closest('[data-eq]'); if (eqb) { setEquiv(eqb.dataset.eq); return; }
+  const rc = e.target.closest('[data-recalc]'); if (rc) { recalcDurations(); return; }
   const lv = e.target.closest('[data-lev]'); if (lv) { setLevel(lv.dataset.lev, +lv.dataset.val); return; }
   const ru = e.target.closest('[data-rules]'); if (ru) { setRules(ru.dataset.rules === 'on'); return; }
   const op = e.target.closest('[data-opt]'); if (op) { setMensOpt(op.dataset.opt); return; }
@@ -5098,8 +5384,8 @@ const CBA = {
   state(){
     const s = selSym(), t = targetSym(), v = curVoice(), ta = accTarget();
     return {selected: !!s, signSel: mensOpen(), dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
-      acc: ta && {r: ta.rest, a: accOf(ta), p: ta.dot, ed: !!ta.edAcc}, canAcc: !!(ed.on || ed.sel || ed.range || ed.picks), armAcc: ed.accArm || '', armDot: !!ed.dotArm,
-      target: t && {r: t.rest, a: accOf(t), p: t.dot, ed: !!t.edAcc, lig: !!t.lig}, ligOn: ligSelOn(), edArm: !!ed.edArm, ovr: !!ed.ovr,
+      acc: ta && {r: ta.rest, a: accOf(ta), p: !!(ta.dot && !ta.dd), pd: !!ta.dd, ed: !!ta.edAcc}, canAcc: !!(ed.on || ed.sel || ed.range || ed.picks), armAcc: ed.accArm || '', armDot: ed.dotArm === true || ed.dotArm === 'add', armDiv: ed.dotArm === 'div',
+      target: t && {r: t.rest, a: accOf(t), p: !!(t.dot && !t.dd), pd: !!t.dd, ed: !!t.edAcc, lig: !!t.lig}, ligOn: ligSelOn(), edArm: !!ed.edArm, ovr: !!ed.ovr,
       col: s && !s.rest ? isColoured(s) : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
       hasNotes: !!(piece && piece.voices.length), durs: ed.range || ed.picks ? ['B'] : xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : []), range: !!(ed.range || ed.picks)};
   },
@@ -5226,28 +5512,49 @@ const CBA = {
     if (!CBA.guard()) return;
     if (ed.range || ed.picks) return;
     const t = accTarget(), v = curVoice();
-    if (!t) { if (ed.on) { ed.dotArm = !ed.dotArm; syncEdit(); } return; }   /* the next note written is dotted */
+    if (!t) { if (ed.on) { ed.dotArm = (ed.dotArm === true || ed.dotArm === 'add') ? false : 'add'; syncEdit(); } return; }
     if (t.rest || !v) return;
-    /* a dot of perfection (division): on a breve in tempus perfectum, a semibrevis in prolatio maior, a longa in modus
-       perfectus, a maxima in maximodus perfectus. It adds nothing; the note stays perfect (it cannot be imperfected) */
     { const e0 = v.events[t.src[0]];
-      if (e0.dd || perfectShape(v, t.t, t.g)) {
-        const on = !e0.dd;
+      if (e0.pa || perfectShape(v, t.t, t.g)) {
+        const on = !e0.pa;
         commit(() => {
-          const e = v.events[t.src[0]]; e.dd = on;
-          if (on && !mensRulesOn()) { const mi = mensInfo(metAt(v, e.t)), total = t.src.reduce((a, i) => a + v.events[i].d, 0), nm = rt(nomW(t.g, mi.T, mi.P, mi.M, mi.X) / mi.p);
-            if (!eq(total, nm)) { e.d = nm; e.tieStart = e.tieEnd = e.tieMid = false; dropEvents(v, t.src.slice(1)); if (ed.ovr) ovrResize(v, t.src[0], total); } }
+          const e = v.events[t.src[0]]; e.pa = on; e.dd = false;
+          const mi = mensInfo(metAt(v, e.t)), total = t.src.reduce((a, i) => a + v.events[i].d, 0), nm = rt(nomW(t.g, mi.T, mi.P, mi.M, mi.X) / mi.p);
+          if (!eq(total, nm)) { e.d = nm; e.tieStart = e.tieEnd = e.tieMid = false; dropEvents(v, t.src.slice(1)); if (ed.ovr) ovrResize(v, t.src[0], total); }
         });
         return;
       } }
     commit(() => {
-      const e = v.events[t.src[0]];
+      const e = v.events[t.src[0]], wasAdd = !!(t.dot && !e.dd && !e.pa);
       const total = t.src.reduce((a, i) => a + v.events[i].d, 0);
-      if (mensRulesOn()) { const mi = mensInfo(metAt(v, e.t)), nm = nomW(t.g, mi.T, mi.P, mi.M, mi.X) / mi.p; e.d = rt(t.dot ? nm : nm * 1.5); }
-      else e.d = rt(t.dot ? total / 1.5 : total * 1.5);
+      e.dd = false; e.pa = false;
+      if (mensRulesOn()) { const mi = mensInfo(metAt(v, e.t)), nm = nomW(t.g, mi.T, mi.P, mi.M, mi.X) / mi.p; e.d = rt(wasAdd ? nm : nm * 1.5); }
+      else e.d = rt(wasAdd ? total / 1.5 : total * 1.5);
       e.altd = false; e.tieStart = e.tieEnd = e.tieMid = false;
       dropEvents(v, t.src.slice(1));
       if (ed.ovr) ovrResize(v, t.src[0], total);
+    });
+  },
+  toggleDivDot(){
+    if (!CBA.guard()) return;
+    if (ed.range || ed.picks) return;
+    const t = accTarget(), v = curVoice();
+    if (!t) { if (ed.on) { ed.dotArm = ed.dotArm === 'div' ? false : 'div'; syncEdit(); } return; }
+    if (t.rest || !v) return;
+    commit(() => {
+      const e = v.events[t.src[0]], wasDiv = !!e.dd, wasAdd = !!(t.dot && !e.dd && !e.pa);
+      const total = t.src.reduce((a, i) => a + v.events[i].d, 0);
+      e.dd = !wasDiv; e.pa = false;
+      if (wasAdd) {
+        if (mensRulesOn()) { const mi = mensInfo(metAt(v, e.t)), nm = nomW(t.g, mi.T, mi.P, mi.M, mi.X) / mi.p; e.d = rt(nm); }
+        else e.d = rt(total / 1.5);
+        e.altd = false; e.tieStart = e.tieEnd = e.tieMid = false;
+        dropEvents(v, t.src.slice(1));
+        if (ed.ovr) ovrResize(v, t.src[0], total);
+      } else if (!wasDiv && !mensRulesOn()) {
+        const mi = mensInfo(metAt(v, e.t)), nm = rt(nomW(t.g, mi.T, mi.P, mi.M, mi.X) / mi.p);
+        if (!eq(total, nm)) { e.d = nm; e.tieStart = e.tieEnd = e.tieMid = false; dropEvents(v, t.src.slice(1)); if (ed.ovr) ovrResize(v, t.src[0], total); }
+      }
     });
   },
   stepPitch(d){
@@ -5465,7 +5772,16 @@ function syncEdit(){
   document.body.classList.toggle('editing', ed.on);
   iconsSync();
   /* the tools show their state (the grid, the note value, the accidentals) even before a piece has come in */
-  try { NoteInput.sync(CBA); } catch (e) { if (piece) throw e; }
+  try {
+    NoteInput.sync(CBA);
+    const pb = $('#pdivBtn'), db = $('#dotBtn');
+    if (pb && db) {
+      const S = CBA.state(), ta = S.acc !== undefined ? S.acc : S.target;
+      const pdivOn = ta ? (!ta.r && !!ta.pd) : !!S.armDiv;
+      pb.setAttribute('aria-pressed', pdivOn ? 'true' : 'false');
+      pb.disabled = db.disabled;
+    }
+  } catch (e) { if (piece) throw e; }
 }
 function glyphIcon(k, minBox){
   const b = GLY[k].b, cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
@@ -5490,6 +5806,32 @@ function iconsSync(){
 }
 NoteInput.fill(CBA, glyphIcon);
 NoteInput.wire(CBA);
+/* Punctus additionis (.A) and a hover dropdown below it for Punctus divisionis (.D) */
+{
+  const db = $('#dotBtn');
+  if (db) {
+    const dotIcon = L => `<svg viewBox="-1 -1 2 2" aria-hidden="true"><circle cx="-0.22" cy="0" r="0.28"/><text x="0.44" y="0.48" font-size="0.82" font-family="IM Fell English, Georgia, serif" text-anchor="middle">${L}</text></svg>`;
+    db.title = 'Punctus additionis (.)';
+    db.setAttribute('aria-label', 'Punctus additionis');
+    db.innerHTML = dotIcon('A');
+    const pop = document.createElement('div');
+    pop.className = 'pop'; pop.id = 'popDot';
+    db.parentNode.insertBefore(pop, db);
+    pop.appendChild(db);
+    const body = document.createElement('div');
+    body.className = 'popbody';
+    const pb = document.createElement('button');
+    pb.className = 'ib'; pb.id = 'pdivBtn';
+    pb.title = 'Punctus divisionis';
+    pb.setAttribute('aria-label', 'Punctus divisionis');
+    pb.setAttribute('aria-pressed', 'false');
+    pb.innerHTML = dotIcon('D');
+    pb.addEventListener('click', () => CBA.toggleDivDot());
+    body.appendChild(pb);
+    pop.appendChild(body);
+  }
+  document.head.insertAdjacentHTML('beforeend', '<style>#popDot .popbody{left:50% !important;right:auto !important;transform:translateX(-50%);padding:3px !important}#pages .dothit .dotkind{opacity:0;pointer-events:none;fill:var(--sel);font-family:"IM Fell English",Georgia,serif;transition:opacity .12s}#pages .dothit:hover .dotkind{opacity:1}@media print{#pages .dotkind{display:none !important}}#mensMenu .meq{border-top:1px solid var(--line);margin-top:4px;padding-top:2px}#mensMenu .meq .mlev{flex-direction:column;align-items:stretch;gap:3px}#mensMenu .meq .mslab{width:auto;font-size:13px;color:var(--muted)}#mensMenu .meq .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}#mensMenu .meq .tb{padding:3px 2px;font-size:12.5px;justify-content:center}.texpop{position:relative;display:inline-flex}.texmenu{display:none;position:absolute;left:-4px;top:calc(100% + 2px);z-index:85;padding:5px;border-radius:8px;background:var(--surface,#FAF5EA);border:1px solid var(--line);box-shadow:0 12px 28px -10px rgba(42,34,24,.38);flex-direction:column;gap:2px;min-width:170px}.texmenu::before{content:"";position:absolute;left:0;right:0;top:-6px;height:8px}.texpop:hover .texmenu,.texpop:focus-within .texmenu{display:flex}.texopt{display:flex !important;align-items:center;justify-content:flex-start !important;gap:8px;padding:4px 8px !important;min-height:30px !important;height:auto !important;font-size:13.5px !important;white-space:nowrap}.texsw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(42,34,24,.28);flex:none;display:inline-block}</style>');
+}
 /* edit mode is always caret mode: the caret stands at the start until a note is clicked */
 function setEdit(on){
   ed.on = on; clearGhost();
@@ -5576,11 +5918,28 @@ function sizeViewer(){
 /* Pinching on a trackpad (Ctrl with the wheel; gesture events in Safari) makes the music bigger, not the website:
    pages are magnified; on Web, where the music fills the width, the staves grow instead */
 {
+  let zRaf = 0;
+  const applyZoomFast = () => {
+    const G = pageGeom();
+    if (G.web || G.fit) { render(); return; }
+    const fs = wrapEl.classList.contains('fs'), horiz = isHoriz();
+    const Z = Math.max(0.5, Math.min(3, st.zoom || 1));
+    const avail = ($('.viewwrap').clientWidth || window.innerWidth) - (horiz ? (window.innerWidth <= 700 ? 60 : 40) : window.innerWidth <= 700 ? 0 : 40);
+    const pxmm = 96 / 25.4;
+    const availH = Math.max(320, (fs ? window.innerHeight : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) || 700) - 60);
+    const fitH = horiz ? availH / (G.hmm * pxmm) : Infinity;
+    const sc = st.view === 'choir' ? Math.min(2.5, avail / (2 * G.wmm * pxmm)) * Z : Math.min(1.25, avail / (G.wmm * pxmm), fitH) * Z;
+    const w = Math.round(G.wmm * pxmm * sc) + 'px', h = Math.round(G.hmm * pxmm * sc) + 'px';
+    pagesEl.querySelectorAll('.page').forEach(p => { p.style.width = w; p.style.height = h; });
+    viewerEl.classList.toggle('wide', Z > 1.001);
+    syncNav(); postHeight();
+  };
   const zoomBy = k => {
     if (!piece || !isFinite(k) || k <= 0) return;
-    if (st.paper === 'web') { st.size = Math.max(1, Math.min(4, Math.round(st.size * k * 100) / 100)); $('#size').value = st.size; }
+    if (st.paper === 'web') { st.size = Math.max(1, Math.min(7, Math.round(st.size * k * 100) / 100)); $('#size').value = st.size; }
     else st.zoom = Math.max(0.5, Math.min(3, (st.zoom || 1) * k));
-    save(); later();
+    save();
+    if (!zRaf) zRaf = requestAnimationFrame(() => { zRaf = 0; applyZoomFast(); });
   };
   document.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); zoomBy(Math.exp(-Math.max(-25, Math.min(25, e.deltaY)) * 0.006)); }, {passive: false});
   let g0 = 1;
@@ -5629,33 +5988,55 @@ function startPlay(from, again){
   from = Math.max(0, Math.min(from, piece.end));
   const voices = piece.voices.filter(v => vis(v.idx).play !== false);     /* the muted ones stay: their cursor moves, they make no sound */
   if (!voices.length) { toast('Every voice is left out of Playback (Voices).'); return; }
+  const top = voices[0], u = unitMinims();
+  /* map score time (in semibreves) to playback time (in minims), respecting any Equivalent (M, S, B, L) at sign changes without altering the score's notes */
+  const playZones = [];
+  {
+    const mets = (top.mets || []).slice().sort((a, b) => a.t - b.t);
+    let scale = 2, acc = 0, lastT = 0, prevMi = null;
+    for (const m of mets) {
+      if (m.t > lastT + EPS) { playZones.push({t0: lastT, p0: acc, scale}); acc += (m.t - lastT) * scale; lastT = m.t; }
+      const mi = mensInfo(m.sign);
+      if (prevMi && mi.eq) {
+        const d1 = (nomW(mi.eq, prevMi.T, prevMi.P, prevMi.M, prevMi.X) || 1) / prevMi.p;
+        const d2 = (nomW(mi.eq, mi.T, mi.P, mi.M, mi.X) || 1) / mi.p;
+        if (d1 > EPS && d2 > EPS) scale = scale * (d1 / d2);
+      }
+      prevMi = mi;
+    }
+    playZones.push({t0: lastT, p0: acc, scale});
+  }
+  const toPlayT = t => {
+    let z = playZones[0];
+    for (const q of playZones) if (t >= q.t0 - EPS) z = q;
+    return z.p0 + Math.max(0, t - z.t0) * z.scale;
+  };
   const events = [];
   voices.forEach(v => {
     const muted = vis(v.idx).play === 'mute';
     for (let k = 0; k < v.syms.length; k++) {
       const s = v.syms[k];
       /* a rest sounds nothing but lights up while it lasts */
-      if (s.rest) { events.push({id: s.id, t: s.t * 2, d: s.d * 2, midi: null}); continue; }
+      if (s.rest) { const pt = toPlayT(s.t); events.push({id: s.id, t: pt, d: toPlayT(s.t + s.d) - pt, midi: null}); continue; }
       /* tied pieces sound as one note: struck once (where the playing starts, if it starts inside), held to the end */
       let j = k;
       while (v.syms[j].tieNext && v.syms[j + 1] && !v.syms[j + 1].rest && v.syms[j + 1].step === s.step) j++;
       const chainEnd = v.syms[j].t + v.syms[j].d;
       let struck = false;
       for (let q = k; q <= j; q++) {
-        const p = v.syms[q], strike = !struck && p.t + p.d > from + EPS;
-        events.push({id: p.id, t: p.t * 2, d: p.d * 2, midi: muted ? null : midiOf({step: p.step, alt: p.alt === null || p.alt === undefined ? implied(v, p.step, p.t) : p.alt}), silent: !strike, hold: strike ? (chainEnd - p.t) * 2 : undefined, ch: v.idx});
+        const p = v.syms[q], strike = !struck && p.t + p.d > from + EPS, pt = toPlayT(p.t);
+        events.push({id: p.id, t: pt, d: toPlayT(p.t + p.d) - pt, midi: muted ? null : midiOf({step: p.step, alt: p.alt === null || p.alt === undefined ? implied(v, p.step, p.t) : p.alt}), silent: !strike, hold: strike ? toPlayT(chainEnd) - pt : undefined, ch: v.idx});
         if (strike) struck = true;
       }
       k = j;
     }
   });
-  const top = voices[0], u = unitMinims();
   const on = new Set();
   /* the Mixer: each voice's own sound (or the one for all) and volume */
   const mix = {};
   voices.forEach(v => { const o = vis(v.idx); mix[v.idx] = {reg: mixReg(o), gain: mixGain(o)}; });
   const spec = {
-    mix, events, from: from * 2, count: again ? 0 : st.countIn, unit: u, level: 1 / Math.sqrt(Math.max(1, voices.filter(v => vis(v.idx).play === true).length)),
+    mix, events, from: toPlayT(from), count: again ? 0 : st.countIn, unit: u, level: 1 / Math.sqrt(Math.max(1, voices.filter(v => vis(v.idx).play === true).length)),
     /* how many beats to the hand's pattern: three under a perfect sign */
     group: bi => { const T = mensInfo(metAt(top, bi * u / 2)).T; return T === 3 ? 3 : 2; },
     groupStart: bi => { let seg = 0; for (const m of top.mets) if (m.t <= bi * u / 2 + EPS) seg = m.t; return Math.round(seg * 2 / u); },
@@ -5979,11 +6360,24 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
    too tall for the room, it gets a scroll bar of its own; if it only stands a little too high or low, it is moved over. */
 {
   const CAND = '.popbody, .menu, #library, .library';
+  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background:color-mix(in srgb,var(--ground) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}.library .libtools{background:transparent !important}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg{background:var(--ground) !important}</style>');
+  {
+    const gr = $('#glassRange');
+    const applyGlass = v => {
+      const n = Math.max(0, Math.min(0.95, isNaN(+v) ? 0.42 : +v));
+      document.documentElement.classList.toggle('no-glass', n <= 0.005);
+      document.documentElement.style.setProperty('--glass-bg', Math.round((1 - n) * 100) + '%');
+      if (gr) gr.value = String(n);
+    };
+    const saved = st.glass !== undefined ? st.glass : 0.42;
+    applyGlass(saved);
+    if (gr) gr.addEventListener('input', e => { st.glass = +e.target.value; applyGlass(st.glass); save(); });
+  }
   const vis = el => el.getClientRects().length > 0 && !el.hidden;
   let fitting = false, rq = 0;
   /* the room: below the top rows (the row the menu belongs to, or all of them) and above the playback row */
   function band(el){
-    const H = window.innerHeight, pad = 6;
+    const H = (EMBED && DOCK && DOCK.vh) ? Math.min(window.innerHeight, DOCK.vh - Math.max(0, DOCK.top)) : window.innerHeight, pad = 6;
     let top = pad, bottom = H - pad;
     /* the controls themselves, not what is inside a menu */
     const bars = [...document.querySelectorAll('.tools .bar:not([hidden]) .podg, .tools .bar:not([hidden]) .libwrap')].filter(b => vis(b) && !b.parentElement.closest('.popbody, .menu, .library'));
@@ -6004,21 +6398,22 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
     return {top, bottom: Math.max(bottom, top + 80)};
   }
   function fit(el){
-    el.style.removeProperty('max-height'); el.style.removeProperty('max-width'); el.style.translate = ''; el.style.removeProperty('--bridge');
+    const st = el.scrollTop;
+    el.style.removeProperty('max-height'); el.style.removeProperty('max-width'); el.style.removeProperty('overflow-y'); el.style.removeProperty('overflow-x'); el.classList.remove('pop-scroll-y'); el.style.translate = ''; el.style.removeProperty('--bridge');
     if (!vis(el)) return;
     const B = band(el);
     let r = el.getBoundingClientRect();
     const room = B.bottom - B.top;
     if (r.height > room) {
       el.style.setProperty('max-height', Math.floor(room) + 'px', 'important');
-      if (getComputedStyle(el).overflowY === 'visible') el.style.overflowY = 'auto';
+      el.classList.add('pop-scroll-y');
+      if (st) el.scrollTop = st;
       r = el.getBoundingClientRect();
     }
-    /* the same sideways: inside the window, with a scroll bar of its own if it is wider than the window */
+    /* the same sideways: inside the window */
     const W = window.innerWidth, padX = 6, roomX = W - 2 * padX;
     if (r.width > roomX) {
       el.style.setProperty('max-width', Math.floor(roomX) + 'px', 'important');
-      if (getComputedStyle(el).overflowX === 'visible') el.style.overflowX = 'auto';
       r = el.getBoundingClientRect();
     }
     let dy = 0, dx = 0;
@@ -6035,8 +6430,10 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
     try { document.querySelectorAll(CAND).forEach(fit); } finally { fitting = false; }
   }
   const later = () => { if (!rq) rq = requestAnimationFrame(() => { rq = 0; fitAll(); setTimeout(fitAll, 60); }); };
-  for (const t of ['pointerenter', 'pointerdown', 'focusin', 'click', 'toggle', 'transitionend']) document.addEventListener(t, later, true);
-  window.addEventListener('resize', later); window.addEventListener('scroll', later, true);
+  document.addEventListener('pointerenter', e => { if (e.target && e.target.closest && e.target.closest('.popbody, .library') && !e.target.matches('.popbody, .library')) return; later(); }, true);
+  for (const t of ['pointerdown', 'focusin', 'click', 'toggle', 'transitionend']) document.addEventListener(t, later, true);
+  window.addEventListener('resize', later);
+  window.addEventListener('scroll', e => { if (e.target && e.target.closest && e.target.closest('.popbody, .menu, .library')) return; later(); }, true);
   new MutationObserver(ms => { if (ms.some(m => !(m.target.closest && m.target.closest('#pages')))) later(); })
     .observe(document.body, {subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'open', 'aria-expanded']});
   window.__fitMenus = fitAll;
