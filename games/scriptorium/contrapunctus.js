@@ -502,7 +502,8 @@
     if (play) restartPlay();
   }
 
-  function populateVoices(){
+  let lastPieceKey = null, lastSig = '';
+  function populateVoices(pieceChanged){
     if (!piece || !piece.voices.length) return;
     const s1 = document.getElementById('cpV1'), s2 = document.getElementById('cpV2');
     const prev1 = s1.value, prev2 = s2.value;
@@ -510,11 +511,22 @@
     s1.innerHTML = opts;
     s2.innerHTML = opts;
     const n = piece.voices.length;
-    if (prev1 !== '' && +prev1 < n) s1.value = prev1; else s1.value = '0';
-    if (prev2 !== '' && +prev2 < n && +prev2 !== +s1.value) s2.value = prev2;
-    else s2.value = String(n > 1 ? Math.min(n - 1, n >= 3 ? n - 1 : 1) : 0);
+    if (!pieceChanged && prev1 !== '' && +prev1 < n) s1.value = prev1; else s1.value = '0';
+    if (!pieceChanged && prev2 !== '' && +prev2 < n && +prev2 !== +s1.value) s2.value = prev2;
+    else s2.value = String(n > 1 ? n - 1 : 0);
     const sub = document.getElementById('cpPieceTitle');
     if (sub) sub.textContent = `${piece.title || 'Score'}${piece.composer ? ' — ' + piece.composer : ''} (${n} voice${n === 1 ? '' : 's'})`;
+  }
+  function syncPieceState(force){
+    if (!piece) return;
+    const sig = (pieceKey || '') + '|' + (piece.title || '') + '|' + (piece.composer || '') + '|' + piece.voices.map(v => v.name).join('\0');
+    const pieceChanged = pieceKey !== lastPieceKey;
+    if (!force && sig === lastSig) return;
+    lastPieceKey = pieceKey;
+    lastSig = sig;
+    populateVoices(pieceChanged);
+    if (piece.voices.length >= 2) runAnalysis();
+    else document.getElementById('cpCharts').innerHTML = `<p class="cp-foot">This score has fewer than two voices. Open a polyphonic piece from Open → Repertoire.</p>`;
   }
 
   function runAnalysis(){
@@ -565,10 +577,10 @@
   /* Hook into Scriptorium */
   Object.assign(H, {
     afterLoad(){
-      populateVoices();
-      if (piece && piece.voices.length >= 2) runAnalysis();
+      syncPieceState(true);
     },
     afterRender(){
+      syncPieceState(false);
       if (activeHighlight) applyHighlight(false);
     }
   });

@@ -2679,6 +2679,7 @@ function loadText(name, text){
     piece = parseKern(text);
     pieceKey = 'file:' + name; fileKeep(name, text); st.piece = pieceKey; save();
     if (typeof ed !== 'undefined') { ed.sel = null; ed.undo = []; ed.redo = []; ed.warned = false; ed.colArm = false; ed.xf = "all"; ed.range = null; ed.picks = null; }
+    if (H.afterLoad) H.afterLoad();
     syncUI(); render(); incipitSnap();
   } catch (e) { pagesEl.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
 }
@@ -3312,7 +3313,11 @@ if ($('#myBtn')) $('#myBtn').addEventListener('click', e => { e.stopPropagation(
 {
   const mouse = () => window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches;
   const wrap = libEl.closest('.libwrap') || libEl.parentNode;
-  let tShut = 0;
+  let tShut = 0, libNavAt = 0;
+  /* clicks inside the library (composer, genre, back, category) can resize its contents under a stationary pointer;
+     ignore the synthetic mouseleave that fires right after such a click */
+  libEl.addEventListener('pointerdown', e => { if (!e.target.closest('.pc')) libNavAt = performance.now(); }, true);
+  libEl.addEventListener('click', e => { if (!e.target.closest('.pc')) libNavAt = performance.now(); }, true);
   /* passing over the other choices of the Open menu (New score, Open file) closes the panel */
   $('#openList').addEventListener('mouseover', e => {
     const b = e.target.closest('button'); if (!mouse() || !b || b === libBtn || b.id === 'myBtn') return;
@@ -3322,6 +3327,7 @@ if ($('#myBtn')) $('#myBtn').addEventListener('click', e => { e.stopPropagation(
   const shutNow = () => {
     clearTimeout(tShut);
     if (libEl.hidden || !mouse()) return;
+    if (performance.now() - libNavAt < 450) return;
     if (wrap.matches(':hover') || ssOpenHere()) { if (ssOpenHere()) tShut = setTimeout(shutNow, 100); return; }
     setLib(false); if (libEl.contains(document.activeElement)) document.activeElement.blur();
   };
@@ -6371,7 +6377,7 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
    too tall for the room, it gets a scroll bar of its own; if it only stands a little too high or low, it is moved over. */
 {
   const CAND = '.popbody, .menu, #library, .library';
-  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
+  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}#library[data-mode="rep"]{min-height:min(62vh,520px)}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
   {
     const gr = $('#glassRange');
     const applyGlass = v => {
