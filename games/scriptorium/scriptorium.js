@@ -2834,15 +2834,23 @@ $('#paperColSeg').innerHTML = `<div class="texpop" id="texPop">` +
   `</div></div>` +
   PAPER_COLORS.slice(1).map(([k, c, n]) => `<button class="tb swatch" data-v="${k}" style="--c:${c}" aria-label="${n}" title="${n}"><i></i></button>`).join('') +
   `<label class="tb swatch pick" id="paperPickL" title="Any colour" aria-label="Any colour"><i></i><input type="color" id="paperPick" value="#e8e0d0"></label>`;
-$('#texPop').addEventListener('pointerenter', () => {
+function loadTexSwatches(){
   document.querySelectorAll('#texMenu [data-texsw]').forEach(el => {
     if (!el.dataset.ready) { el.dataset.ready = '1'; el.style.backgroundImage = makePaperUrl(el.dataset.texsw); el.style.backgroundSize = '120px'; }
   });
-});
+}
+$('#texPop').addEventListener('pointerenter', loadTexSwatches);
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#texPop')) $('#texPop').classList.remove('open'); });
 $('#paperColSeg').addEventListener('click', e => {
   const tb = e.target.closest('[data-tex]');
-  if (tb) { e.stopPropagation(); st.paperCol = 'parchment'; st.paperTex = tb.dataset.tex; save(); syncUI(); return; }
+  if (tb) { e.stopPropagation(); st.paperCol = 'parchment'; st.paperTex = tb.dataset.tex; $('#texPop').classList.remove('open'); save(); syncUI(); return; }
   const b = e.target.closest('button[data-v]'); if (!b) return;
+  if (b.id === 'mainPaperSwatch' && !canHover()) {
+    loadTexSwatches();
+    $('#texPop').classList.toggle('open');
+  } else {
+    $('#texPop').classList.remove('open');
+  }
   st.paperCol = b.dataset.v; save(); syncUI();
 });
 $('#paperPick').addEventListener('input', e => { st.paperCol = e.target.value; save(); syncUI(); });
@@ -5843,11 +5851,33 @@ NoteInput.wire(CBA);
     pb.setAttribute('aria-label', 'Punctus divisionis');
     pb.setAttribute('aria-pressed', 'false');
     pb.innerHTML = dotIcon('D');
-    pb.addEventListener('click', () => CBA.toggleDivDot());
+    pb.addEventListener('click', () => { CBA.toggleDivDot(); pop.classList.remove('open'); });
     body.appendChild(pb);
     pop.appendChild(body);
+    /* Touchscreens: press-and-hold on ·A opens the Punctus divisionis (·D) dropdown (short tap still toggles ·A) */
+    let dotHold = 0, dotHeld = false;
+    db.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse') return;
+      dotHeld = false;
+      clearTimeout(dotHold);
+      dotHold = setTimeout(() => {
+        dotHeld = true;
+        closePops(pop);
+        pop.classList.add('open');
+        db.setAttribute('aria-expanded', 'true');
+        if (window.__fitMenus) window.__fitMenus();
+      }, 340);
+    });
+    const cancelHold = () => clearTimeout(dotHold);
+    db.addEventListener('pointerup', cancelHold);
+    db.addEventListener('pointercancel', cancelHold);
+    db.addEventListener('pointermove', cancelHold);
+    db.addEventListener('contextmenu', e => { if (!canHover()) e.preventDefault(); });
+    db.addEventListener('click', e => {
+      if (dotHeld) { dotHeld = false; e.preventDefault(); e.stopImmediatePropagation(); }
+    }, true);
   }
-  document.head.insertAdjacentHTML('beforeend', '<style>#popDot .popbody{left:50% !important;right:auto !important;transform:translateX(-50%);padding:3px !important}#pages .dothit .dotkind{opacity:0;pointer-events:none;fill:var(--sel);font-family:"IM Fell English",Georgia,serif;transition:opacity .12s}#pages .dothit:hover .dotkind{opacity:1}@media print{#pages .dotkind{display:none !important}}#mensMenu .meq{border-top:1px solid var(--line);margin-top:4px;padding-top:2px}#mensMenu .meq .mlev{flex-direction:column;align-items:stretch;gap:3px}#mensMenu .meq .mslab{width:auto;font-size:13px;color:var(--muted)}#mensMenu .meq .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}#mensMenu .meq .tb{padding:3px 2px;font-size:12.5px;justify-content:center}.texpop{position:relative;display:inline-flex}.texmenu{display:none;position:absolute;left:-4px;top:calc(100% + 2px);z-index:85;padding:5px;border-radius:8px;background:var(--surface,#FAF5EA);border:1px solid var(--line);box-shadow:0 12px 28px -10px rgba(42,34,24,.38);flex-direction:column;gap:2px;min-width:170px}.texmenu::before{content:"";position:absolute;left:0;right:0;top:-6px;height:8px}.texpop:hover .texmenu,.texpop:focus-within .texmenu{display:flex}.texopt{display:flex !important;align-items:center;justify-content:flex-start !important;gap:8px;padding:4px 8px !important;min-height:30px !important;height:auto !important;font-size:13.5px !important;white-space:nowrap}.texsw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(42,34,24,.28);flex:none;display:inline-block}</style>');
+  document.head.insertAdjacentHTML('beforeend', '<style>#popDot .popbody{left:50% !important;right:auto !important;transform:translateX(-50%);padding:3px !important}#pages .dothit .dotkind{opacity:0;pointer-events:none;fill:var(--sel);font-family:"IM Fell English",Georgia,serif;transition:opacity .12s}#pages .dothit:hover .dotkind{opacity:1}@media print{#pages .dotkind{display:none !important}}#mensMenu .meq{border-top:1px solid var(--line);margin-top:4px;padding-top:2px}#mensMenu .meq .mlev{flex-direction:column;align-items:stretch;gap:3px}#mensMenu .meq .mslab{width:auto;font-size:13px;color:var(--muted)}#mensMenu .meq .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}#mensMenu .meq .tb{padding:3px 2px;font-size:12.5px;justify-content:center}.texpop{position:relative;display:inline-flex}.texmenu{display:none;position:absolute;left:-4px;top:calc(100% + 2px);z-index:85;padding:5px;border-radius:8px;background:var(--surface,#FAF5EA);border:1px solid var(--line);box-shadow:0 12px 28px -10px rgba(42,34,24,.38);flex-direction:column;gap:2px;min-width:170px}.texmenu::before{content:"";position:absolute;left:0;right:0;top:-6px;height:8px}.texpop:hover .texmenu,.texpop:focus-within .texmenu,.texpop.open .texmenu{display:flex}.texopt{display:flex !important;align-items:center;justify-content:flex-start !important;gap:8px;padding:4px 8px !important;min-height:30px !important;height:auto !important;font-size:13.5px !important;white-space:nowrap}.texsw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(42,34,24,.28);flex:none;display:inline-block}</style>');
 }
 /* edit mode is always caret mode: the caret stands at the start until a note is clicked */
 function setEdit(on){
