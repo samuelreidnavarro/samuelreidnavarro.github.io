@@ -402,10 +402,11 @@ const CLEFS = {
   c4:       {bottom:22, g:'c4', pos:6},
   c5:       {bottom:20, g:'c5', pos:8},
   f3:       {bottom:20, g:'fP', pos:4},
-  bass:     {bottom:18, g:'fP', pos:6}
+  bass:     {bottom:18, g:'fP', pos:6},
+  none:     {bottom:28, g:'c1', pos:0, none:true}
 };
 const MENS_CLEFS = ['c1','c2','c3','c4','f3','bass','treble'];
-const KERN_CLEF = {G1:'g1', G2:'treble', Gv2:'treble8', G2v:'treble8', F4:'bass', F3:'f3', C1:'c1', C2:'c2', C3:'c3', C4:'c4', C5:'c5'};
+const KERN_CLEF = {G1:'g1', G2:'treble', Gv2:'treble8', G2v:'treble8', F4:'bass', F3:'f3', C1:'c1', C2:'c2', C3:'c3', C4:'c4', C5:'c5', none:'none', X:'none'};
 const LETTERS = 'cdefgab';
 const ACCG = {'-1':'fl', '0':'na', '1':'sh'};
 const SHAPE_REST = {Mx:'rL', L:'rL', B:'rB', S:'rS', M:'rM', Sm:'rSm', F:'rF', Sf:'rSf'};
@@ -1326,6 +1327,7 @@ const vl = (x, y1, y2, cls, w) => `<line class="${cls}" x1="${f(x)}" x2="${f(x)}
 
 function clefSvg(c, x, top){
   const C = CLEFS[c];
+  if (C && C.none) return `<g class="noclef" opacity=".52"><rect x="${f(x + 0.1)}" y="${f(top + 0.25)}" width="1.9" height="3.5" rx="0.35" fill="none" stroke="currentColor" stroke-width="0.13" stroke-dasharray="0.38 0.28"/><text x="${f(x + 1.05)}" y="${f(top + 2.65)}" text-anchor="middle" font-size="2.1" font-style="italic" fill="currentColor" font-family="IM Fell English,Georgia,serif">?</text></g>`;
   let s = use(C.g, x, top + (8 - C.pos) * 0.5);
   if (C.oct) s += `<g transform="translate(${f(x + (gw(C.g) - gw('n8') * 0.8) / 2)} ${f(top + (8 - C.pos) * 0.5 + GLY[C.g].b[3] + 1.15)}) scale(0.8)">${use('n8', 0, 0)}</g>`;
   return s;
@@ -2367,6 +2369,7 @@ function render(){
   applyMark();
   if (!play) { handTop = -1; $('#handBox').style.top = ''; $('#pendBox').style.top = ''; if (st.view === 'choir') handMid(null); }
   syncNav(); ghostClefs();
+  if (H.afterRender) { try { H.afterRender(); } catch (e) {} }
   postHeight();
 }
 /* pages side by side: the arrows move one page (one opening in the choir book) left or right */
@@ -3023,9 +3026,9 @@ $('#thickL').addEventListener('input', e => { st.thickL = +e.target.value; save(
 /* the clefs, as CantusFirmus offers them (Samuel prefers its clef menu): short name and full name */
 const CLEF_MENU = [['treble8', 'G2 8', 'G clef on line 2, octave lower (tenor)'], ['treble', 'G2', 'G clef on line 2'], ['g1', 'G1', 'G clef on line 1'],
   ['c1', 'C1', 'C clef on line 1'], ['c2', 'C2', 'C clef on line 2'], ['c3', 'C3', 'C clef on line 3'], ['c4', 'C4', 'C clef on line 4'], ['c5', 'C5', 'C clef on line 5'],
-  ['f3', 'F3', 'F clef on line 3'], ['bass', 'F4', 'F clef on line 4']];
+  ['f3', 'F3', 'F clef on line 3'], ['bass', 'F4', 'F clef on line 4'], ...(APP.noClef ? [['none', 'No clef', 'No clef: pitches are relative (search by intervals or contour)']] : [])];
 const VCLEFS = [['', 'As written'], ...CLEF_MENU.map(c => [c[0], c[2]])];
-const CLEF_KERN = {g1: 'G1', treble: 'G2', treble8: 'Gv2', bass: 'F4', f3: 'F3', c1: 'C1', c2: 'C2', c3: 'C3', c4: 'C4', c5: 'C5'};
+const CLEF_KERN = {g1: 'G1', treble: 'G2', treble8: 'Gv2', bass: 'F4', f3: 'F3', c1: 'C1', c2: 'C2', c3: 'C3', c4: 'C4', c5: 'C5', none: 'none'};
 /* a voice of rests as long as the piece, with the signs of the voice next to it */
 function restVoice(name, clef, like){
   const v = {name, abbr: '', kclef: CLEF_KERN[clef], events: [], mets: [], keys: [], clefs: [{t: 0, c: CLEF_KERN[clef], ei: 0}], verses: 0, t: 0};
@@ -3051,9 +3054,17 @@ function shiftVis(at, by){
 const VOICE_OPS = {
   rename(i, name){ name = name.trim().slice(0, 40); if (piece.voices[i].name === name) return; commit(() => { piece.voices[i].name = name; }); },
   clef(i, c){
+    const v = piece.voices[i], oldC = (vis(i).clef && CLEFS[vis(i).clef]) ? vis(i).clef : chooseClef(v, st.clefs);
     vis(i).clef = c || null; save();
-    if (c && !writable(piece.voices[i])) { render(); return; }
-    if (c) commit(() => { const v = piece.voices[i]; if (v.clefs.length && eq(v.clefs[0].t, 0)) v.clefs[0].c = CLEF_KERN[c]; else v.clefs.unshift({t: 0, c: CLEF_KERN[c], ei: 0}); });
+    const newC = (c && CLEFS[c]) ? c : chooseClef(v, st.clefs);
+    const dStep = (APP.noClef && (oldC === 'none' || newC === 'none') && oldC !== newC)
+      ? ((CLEFS[newC] ? CLEFS[newC].bottom : 28) - (CLEFS[oldC] ? CLEFS[oldC].bottom : 28)) : 0;
+    if (c && !writable(v)) { render(); return; }
+    if (c) commit(() => {
+      if (dStep) v.events.forEach(e => { if (!e.rest) e.step += dStep; });
+      v.kclef = CLEF_KERN[c];
+      if (v.clefs.length && eq(v.clefs[0].t, 0)) v.clefs[0].c = CLEF_KERN[c]; else v.clefs.unshift({t: 0, c: CLEF_KERN[c], ei: 0});
+    });
     else render();
   },
   /* B flat in the signature of a voice, on or off (from its beginning) */
@@ -3292,11 +3303,11 @@ $('#voiceTable').addEventListener('change', e => {
 });
 /* pieces */
 const libEl = $('#library'), libBtn = $('#libBtn');
-function setLib(open, mode){ if (mode) libEl.dataset.mode = mode; libEl.hidden = !open; libBtn.setAttribute('aria-expanded', String(open)); postHeight(); if (open) { const q = $('#libQ'); if (q) setTimeout(() => q.focus(), 0); } }
+function setLib(open, mode){ if (mode !== undefined) libEl.dataset.mode = mode; libEl.hidden = !open; libBtn.setAttribute('aria-expanded', String(open)); postHeight(); if (open) { const q = $('#libQ'); if (q) setTimeout(() => q.focus(), 0); } }
 $('#markClear').addEventListener('click', () => { mark = null; document.querySelectorAll('#pages g.mark').forEach(g => g.classList.remove('mark')); $('#markBar').hidden = true; setAddress(pieceKey); postHeight(); });
 const libMode = () => APP.catalogue ? 'rep' : '';
-libBtn.addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden || libEl.dataset.mode !== libMode(), libMode()); });
-if ($('#myBtn')) $('#myBtn').addEventListener('click', e => { e.stopPropagation(); closePops(); setLib(libEl.hidden || libEl.dataset.mode !== 'mine', 'mine'); });
+libBtn.addEventListener('click', e => { e.stopPropagation(); const open = libEl.hidden || (libEl.dataset.mode || '') !== libMode(); closePops(); setLib(open, libMode()); if (open) shutPop($('#popOpen')); });
+if ($('#myBtn')) $('#myBtn').addEventListener('click', e => { e.stopPropagation(); const open = libEl.hidden || (libEl.dataset.mode || '') !== 'mine'; closePops(); setLib(open, 'mine'); if (open) shutPop($('#popOpen')); });
 /* Repertoire opens on click (not hover), and closes without delay once the pointer leaves it. */
 {
   const mouse = () => window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches;
@@ -6360,7 +6371,7 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
    too tall for the room, it gets a scroll bar of its own; if it only stands a little too high or low, it is moved over. */
 {
   const CAND = '.popbody, .menu, #library, .library';
-  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background:color-mix(in srgb,var(--ground) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}.library .libtools{background:transparent !important}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg{background:var(--ground) !important}</style>');
+  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
   {
     const gr = $('#glassRange');
     const applyGlass = v => {
