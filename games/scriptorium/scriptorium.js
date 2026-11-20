@@ -2369,6 +2369,7 @@ function render(){
   applyMark();
   if (!play) { handTop = -1; $('#handBox').style.top = ''; $('#pendBox').style.top = ''; if (st.view === 'choir') handMid(null); }
   syncNav(); ghostClefs();
+  if (typeof drawEditGrid === 'function') drawEditGrid();
   if (H.afterRender) { try { H.afterRender(); } catch (e) {} }
   postHeight();
 }
@@ -4448,6 +4449,60 @@ function timePlace(rect, tg){
 }
 let ghostEl = null;
 function clearGhost(){ if (ghostEl) { ghostEl.remove(); ghostEl = null; } }
+/* Rhythmic grid overlay in Note Input mode: shows exact click positions for the active note value (Semibrevis, Minima,
+   Semiminima, etc.) and highlights the immediate next-note slot at the end of the voice so you can see before clicking
+   whether a note will append directly or insert a rest first. */
+function drawEditGrid(){
+  document.querySelectorAll('#pages .ed-grid').forEach(el => el.remove());
+  if (!ed.on || !piece) return;
+  const valRow = VALS.find(q => q[0] === ed.val);
+  if (!valRow) return;
+  const sw = slotW();
+  pagesEl.querySelectorAll('rect.stafhit').forEach(rect => {
+    const vi = +rect.dataset.v, top = +rect.dataset.top, v = piece.voices[vi];
+    const pairs = (rect.dataset.tx || '').split(',').filter(Boolean).map(p => p.split(':').map(Number));
+    if (!v || !pairs.length) return;
+    const rx1 = +rect.getAttribute('x') + +rect.getAttribute('width');
+    const tMin = pairs[0][0], [tb, xb] = pairs[pairs.length - 1];
+    const g = valRow[1] / propAt(v, Math.min(tb, v.end));
+    if (!(g > 0)) return;
+    let out = '';
+    /* 1. Grid ticks across existing music on this staff line */
+    const stepCount = Math.min(180, Math.floor((tb - tMin) / g) + 1);
+    const stepInc = stepCount >= 180 ? g * Math.ceil(((tb - tMin) / g) / 140) : g;
+    let t0 = Math.ceil((tMin - EPS) / stepInc) * stepInc;
+    if (t0 < tMin - EPS) t0 += stepInc;
+    for (let T = t0; T <= tb + EPS; T = rt(T + stepInc)) {
+      let gx = null;
+      for (let i = 0; i + 1 < pairs.length; i++) {
+        const [ta, xa] = pairs[i], [t2, x2] = pairs[i + 1];
+        if (T >= ta - EPS && T <= t2 + EPS && t2 > ta) { gx = xa + (T - ta) / (t2 - ta) * (x2 - xa); break; }
+      }
+      if (gx === null) { if (Math.abs(T - tb) < EPS) gx = xb; else continue; }
+      const x = gx + 0.6;
+      const major = Math.abs(T - Math.round(T)) < 1e-3;
+      out += `<line class="eg-tick${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(top - (major ? 1.05 : 0.72))}" y2="${f(top - 0.18)}"/>`;
+      out += `<line class="eg-line${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(top)}" y2="${f(top + 4)}"/>`;
+    }
+    /* 2. Tail slots past the end of the voice: highlight slot 0 (immediate next note, no rest) and mark subsequent grid slots */
+    if (rx1 > xb + 1.2) {
+      const s0w = Math.min(sw, rx1 - xb);
+      out += `<rect class="eg-next" x="${f(xb)}" y="${f(top - 0.35)}" width="${f(Math.max(0.5, s0w))}" height="4.7" rx="0.35"/>`;
+      for (let s = 1; s <= 40; s++) {
+        const x = xb + s * sw + 0.6;
+        if (x > rx1 - 0.5) break;
+        const T = rt(tb + s * g), major = Math.abs(T - Math.round(T)) < 1e-3;
+        out += `<line class="eg-tick tail${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(top - (major ? 1.05 : 0.72))}" y2="${f(top - 0.18)}"/>`;
+        out += `<line class="eg-line tail${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(top)}" y2="${f(top + 4)}"/>`;
+      }
+    }
+    if (!out) return;
+    const grp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    grp.setAttribute('class', 'ed-grid');
+    grp.innerHTML = out;
+    rect.parentNode.insertBefore(grp, rect);
+  });
+}
 pagesEl.addEventListener('pointermove', e => {
   if (!ed.on || e.pointerType !== 'mouse' || !piece) { clearGhost(); return; }
   const on = noteAt(e);
@@ -4460,8 +4515,17 @@ pagesEl.addEventListener('pointermove', e => {
   const g = ed.val, w = ed.inRest ? 0.42 : gw(g), x = tg.x - w / 2, y = tg.top + 4 - tg.pos * 0.5;
   const flip = (STEMMED[g] && tg.pos >= 7) || (TAILED[g] && tg.pos <= -1);
   let html = ed.inRest ? restSvg({g, glyph: SHAPE_REST[g]}, tg.x, tg.top) : ledgers(tg.pos, x, w, tg.top) + (flip ? useT(g, x, y, 1, -1) : use(g, x, y));
-  /* past the end of the music: a faint piece of staff for the note to stand on */
-  if (tg.x > tg.end) for (let q = 0; q < 5; q++) html += `<line class="ledger" x1="${f(tg.end)}" x2="${f(x + w + 1)}" y1="${f(tg.top + q)}" y2="${f(tg.top + q)}" stroke-width="0.1" opacity="0.5"/>`;
+  /* past the end of the music: a faint piece of staff for the note to stand on, plus a rest-gap cue if clicking here adds a rest first */
+  if (tg.x > tg.end) {
+    for (let q = 0; q < 5; q++) html += `<line class="ledger" x1="${f(tg.end)}" x2="${f(x + w + 1)}" y1="${f(tg.top + q)}" y2="${f(tg.top + q)}" stroke-width="0.1" opacity="0.5"/>`;
+    if (tp && tp.T > tg.v.end + EPS) {
+      const gx0 = tg.end + 0.3, gx1 = x - 0.35;
+      if (gx1 > gx0 + 0.4) {
+        html += `<line x1="${f(gx0)}" x2="${f(gx1)}" y1="${f(tg.top + 2)}" y2="${f(tg.top + 2)}" stroke="var(--sel)" stroke-width="0.12" stroke-dasharray="0.3 0.25" opacity="0.65"/>`;
+        html += `<text x="${f((gx0 + gx1) / 2)}" y="${f(tg.top - 0.4)}" text-anchor="middle" font-size="0.95" font-style="italic" fill="var(--sel)" opacity="0.85" font-family="IM Fell English,Georgia,serif">+ rest</text>`;
+      }
+    }
+  }
   if (!ghostEl || ghostEl.parentNode !== tg.g) { clearGhost(); ghostEl = document.createElementNS('http://www.w3.org/2000/svg', 'g'); ghostEl.setAttribute('class', 'ghost'); tg.g.appendChild(ghostEl); }
   ghostEl.innerHTML = html;
 });
@@ -5807,6 +5871,7 @@ function syncEdit(){
       pb.disabled = db.disabled;
     }
   } catch (e) { if (piece) throw e; }
+  if (typeof drawEditGrid === 'function') drawEditGrid();
 }
 function glyphIcon(k, minBox){
   const b = GLY[k].b, cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
@@ -5892,7 +5957,7 @@ function setEdit(on){
     ed.ins = at && at.ei >= 0 ? {vi: at.vi, ei: at.ei, off: 0, pad: 0} : null;
   }
   if (ed.on && piece && !ed.sel && !ed.ins && !ed.range && !ed.picks) { const vs = visibleVoices(); if (vs.length) ed.ins = {vi: vs[0].idx, ei: 0, off: 0, pad: 0}; }
-  showSel(true); syncEdit(); postHeight();
+  showSel(true); syncEdit(); drawEditGrid(); postHeight();
 }
 $('#editBtn').addEventListener('click', () => setEdit(!ed.on));
 /* the arrow beside the pen: the editing tools row, open or shut, kept per app */
@@ -6407,7 +6472,7 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
    too tall for the room, it gets a scroll bar of its own; if it only stands a little too high or low, it is moved over. */
 {
   const CAND = '.popbody, .menu, #library, .library';
-  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}html,body,body *:not(input):not(textarea):not([contenteditable]){-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none !important}input,textarea,[contenteditable]{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default !important}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}#library[data-mode="rep"]{min-height:min(62vh,520px)}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
+  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}html,body,body *:not(input):not(textarea):not([contenteditable]){-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none !important}input,textarea,[contenteditable]{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default !important}#pages .ed-grid{pointer-events:none}#pages .ed-grid .eg-tick{stroke:var(--sel);stroke-width:.11;opacity:.45}#pages .ed-grid .eg-tick.maj{stroke-width:.15;opacity:.75}#pages .ed-grid .eg-line{stroke:var(--sel);stroke-width:.08;stroke-dasharray:.26 .26;opacity:.13}#pages .ed-grid .eg-line.maj{opacity:.24}#pages .ed-grid .eg-line.tail{opacity:.24}#pages .ed-grid .eg-next{fill:var(--sel);fill-opacity:.075;stroke:var(--sel);stroke-width:.08;stroke-opacity:.28;stroke-dasharray:.3 .25}@media print{#pages .ed-grid{display:none !important}}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}#library[data-mode="rep"]{min-height:min(62vh,520px)}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
   {
     const gr = $('#glassRange');
     const applyGlass = v => {
