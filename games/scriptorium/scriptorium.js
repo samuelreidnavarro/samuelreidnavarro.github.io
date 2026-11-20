@@ -4418,78 +4418,100 @@ function eventIndexFor(tg){
    them, as before. Returns {T, x} or null. */
 const slotW = () => (ed.inRest ? 0.42 : gw(navVal())) + 1.6;
 const slotT = (v, t) => VALS.find(q => q[0] === navVal())[1] / propAt(v, t);
-function timePlace(rect, tg){
+/* Single shared coordinate map between musical time T and staff x on a line (used by the rhythmic grid, the caret,
+   and click-snapping so all three align pixel-for-pixel). */
+function staffGridMap(rect, v){
   const pairs = (rect.dataset.tx || '').split(',').filter(Boolean).map(p => p.split(':').map(Number));
-  if (pairs.length < 1) return null;
-  const v = tg.v, x = tg.x - 0.6;
-  let T;
-  if (x <= pairs[0][1]) T = pairs[0][0];
-  else {
-    let i = 0; while (i + 1 < pairs.length && pairs[i + 1][1] < x) i++;
-    if (i + 1 < pairs.length) { const [ta, xa] = pairs[i], [tb, xb] = pairs[i + 1]; T = ta + (xb > xa ? (x - xa) / (xb - xa) : 0) * (tb - ta); }
-    else {
-      /* past the last column: on at the pace of the line */
-      /* past the last column: one step of the Grid value for each slot width, so a click a little past the end
-         stays near the end (rests are packed tight, their pace would throw the note far ahead) */
-      const [tb, xb] = pairs[pairs.length - 1];
-      T = tb + Math.floor((x - xb) / slotW()) * slotT(v, tb);
+  if (!pairs.length) return null;
+  const par = rect.parentNode, vi = +rect.dataset.v;
+  const w = ed.inRest ? 0.6 : gw(ed.val);
+  const bg = q => { const e = q >= 0 && par.querySelector('g.n' + vi + '-' + q + '>rect.selbg'); return e ? {x: +e.getAttribute('x'), w: +e.getAttribute('width')} : null; };
+  const mid = q => { const b = bg(q); return b ? b.x + b.w / 2 : null; };
+  const after = q => { const b = bg(q); return b ? b.x + b.w + 0.5 + w / 2 : null; };
+  const pts = [];
+  if (rect.dataset.k0 !== '') {
+    const k0 = +rect.dataset.k0, k1 = +rect.dataset.k1;
+    let lastQ = -1;
+    for (let q = k0; q <= k1; q++) {
+      const s = v.syms && v.syms[q];
+      if (!s || !s.src || !s.src.length) continue;
+      const mx = mid(q);
+      if (mx !== null) { pts.push([s.t, mx]); lastQ = q; }
+    }
+    if (lastQ >= 0) {
+      const ax = after(lastQ), ls = v.syms[lastQ];
+      if (ax !== null && ls) pts.push([rt(ls.t + ls.d), ax]);
     }
   }
+  if (pts.length < 2) {
+    /* fallback for empty staff or lines without symbols */
+    pairs.forEach(([t, x]) => pts.push([t, x + 0.6]));
+  }
+  const [tb, xb] = pts[pts.length - 1];
+  const g = navGrid(v, Math.min(tb, v.end));
+  const sw = slotW();
+  const xOf = T => {
+    if (T <= pts[0][0] + EPS) return pts[0][1];
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const [ta, xa] = pts[i], [t2, x2] = pts[i + 1];
+      if (T >= ta - EPS && T <= t2 + EPS && t2 > ta) return xa + (T - ta) / (t2 - ta) * (x2 - xa);
+    }
+    return xb + ((T - tb) / g) * sw;
+  };
+  const tOf = x => {
+    if (x <= pts[0][1]) return pts[0][0];
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const [ta, xa] = pts[i], [t2, x2] = pts[i + 1];
+      if (x <= x2) return ta + (x2 > xa ? (x - xa) / (x2 - xa) : 0) * (t2 - ta);
+    }
+    /* past xb: centered on each grid tick xb + s*sw so clicking near tick 0 (caret at end) never jumps to +1 rest */
+    return tb + Math.max(0, Math.round((x - xb) / sw)) * g;
+  };
+  return {pts, tMin: pts[0][0], tb, xb, g, sw, xOf, tOf};
+}
+function timePlace(rect, tg){
+  const v = tg.v, M = staffGridMap(rect, v);
+  if (!M) return null;
+  let T = M.tOf(tg.x);
   const g = navGrid(v, Math.min(T, v.end));
   T = rt(Math.max(0, Math.round(T / g) * g));
   /* over rests or past the end; in Overwrite also over a note, on the grid, inside it too (the note is cut, see insertEvent) */
   const ei = v.events.findIndex(e => T >= e.t - EPS && T < e.t + e.d - EPS);
   if (ei >= 0 && !v.events[ei].rest && !ed.ovr) return null;
   if (ei < 0 && T < v.end - EPS) return null;
-  /* where that time stands on the line, for the ghost note */
-  let gx = null;
-  for (let i = 0; i + 1 < pairs.length; i++) { const [ta, xa] = pairs[i], [tb, xb] = pairs[i + 1]; if (T >= ta - EPS && T <= tb + EPS && tb > ta) { gx = xa + (T - ta) / (tb - ta) * (xb - xa); break; } }
-  if (gx === null) { const [tb, xb] = pairs[pairs.length - 1]; gx = T <= pairs[0][0] ? pairs[0][1] : xb + (T - tb) / slotT(v, tb) * slotW() + 0.6; }
-  return {T, ei, x: gx + 0.6};
+  return {T, ei, x: M.xOf(T)};
 }
 let ghostEl = null;
 function clearGhost(){ if (ghostEl) { ghostEl.remove(); ghostEl = null; } }
-/* Rhythmic grid overlay in Note Input mode: follows the Grid dropdown (navVal: explicit grid resolution or Follow note value)
-   and highlights the immediate next-note slot at the end of the voice so you can see before clicking whether a note will
-   append directly or insert a rest first. */
+/* Rhythmic grid overlay in Note Input mode: follows the Grid dropdown (navVal) and aligns pixel-for-pixel with the caret. */
 function drawEditGrid(){
   document.querySelectorAll('#pages .ed-grid').forEach(el => el.remove());
   if (!ed.on || !piece) return;
-  const valRow = VALS.find(q => q[0] === navVal());
-  if (!valRow) return;
-  const sw = slotW();
   pagesEl.querySelectorAll('rect.stafhit').forEach(rect => {
     const vi = +rect.dataset.v, top = +rect.dataset.top, v = piece.voices[vi];
-    const pairs = (rect.dataset.tx || '').split(',').filter(Boolean).map(p => p.split(':').map(Number));
-    if (!v || !pairs.length) return;
+    if (!v) return;
+    const M = staffGridMap(rect, v);
+    if (!M || !(M.g > 0)) return;
     const rx1 = +rect.getAttribute('x') + +rect.getAttribute('width');
-    const tMin = pairs[0][0], [tb, xb] = pairs[pairs.length - 1];
-    const g = valRow[1] / propAt(v, Math.min(tb, v.end));
-    if (!(g > 0)) return;
+    const {tMin, tb, xb, g, sw, xOf} = M;
     let out = '';
-    /* 1. Grid ticks across existing music on this staff line */
+    /* 1. Grid ticks across existing music on this staff line (exact caret positions) */
     const stepCount = Math.min(180, Math.floor((tb - tMin) / g) + 1);
     const stepInc = stepCount >= 180 ? g * Math.ceil(((tb - tMin) / g) / 140) : g;
     let t0 = Math.ceil((tMin - EPS) / stepInc) * stepInc;
     if (t0 < tMin - EPS) t0 += stepInc;
     for (let T = t0; T <= tb + EPS; T = rt(T + stepInc)) {
-      let gx = null;
-      for (let i = 0; i + 1 < pairs.length; i++) {
-        const [ta, xa] = pairs[i], [t2, x2] = pairs[i + 1];
-        if (T >= ta - EPS && T <= t2 + EPS && t2 > ta) { gx = xa + (T - ta) / (t2 - ta) * (x2 - xa); break; }
-      }
-      if (gx === null) { if (Math.abs(T - tb) < EPS) gx = xb; else continue; }
-      const x = gx + 0.6;
+      const x = xOf(T);
       const major = Math.abs(T - Math.round(T)) < 1e-3;
       out += `<line class="eg-tick${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(top - (major ? 1.05 : 0.72))}" y2="${f(top - 0.18)}"/>`;
       out += `<line class="eg-line${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(top)}" y2="${f(top + 4)}"/>`;
     }
-    /* 2. Tail slots past the end of the voice: highlight slot 0 (immediate next note, no rest) and mark subsequent grid slots */
-    if (rx1 > xb + 1.2) {
-      const s0w = Math.min(sw, rx1 - xb);
-      out += `<rect class="eg-next" x="${f(xb)}" y="${f(top - 0.35)}" width="${f(Math.max(0.5, s0w))}" height="4.7" rx="0.35"/>`;
+    /* 2. Tail slots past the end of the voice: slot 0 centered on xb (the caret position for immediate next note, no rest) */
+    if (rx1 > xb + 0.6) {
+      const xL = Math.max(+rect.getAttribute('x'), xb - sw * 0.48), xR = Math.min(rx1, xb + sw * 0.48);
+      if (xR > xL + 0.3) out += `<rect class="eg-next" x="${f(xL)}" y="${f(top - 0.35)}" width="${f(xR - xL)}" height="4.7" rx="0.35"/>`;
       for (let s = 1; s <= 40; s++) {
-        const x = xb + s * sw + 0.6;
+        const x = xb + s * sw;
         if (x > rx1 - 0.5) break;
         const T = rt(tb + s * g), major = Math.abs(T - Math.round(T)) < 1e-3;
         out += `<line class="eg-tick tail${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(top - (major ? 1.05 : 0.72))}" y2="${f(top - 0.18)}"/>`;
@@ -5796,7 +5818,7 @@ function drawCaret(scroll){
     else if (at <= last) x = mid(at);
     else x = after(last);
     if (x === null || isNaN(x)) return;
-    if (pad) x += pad * 2.4;       /* out in the empty space after the last note */
+    if (pad) { const M = staffGridMap(r, v); x = M ? M.xOf(rt(T + pad)) : x + pad * 2.4; }
     const c = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     c.setAttribute('class', 'caret');
     c.innerHTML = `<rect x="${f(x - 0.075)}" y="${f(top - 0.9)}" width="0.15" height="5.5"/>` +
