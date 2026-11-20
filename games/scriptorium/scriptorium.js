@@ -4416,8 +4416,8 @@ function eventIndexFor(tg){
 /* Over a rest, or past the end of the voice, a click writes at the time under the pointer (on the grid of the chosen
    value), not after the last note: the time comes from where the line's columns stand. Over notes it goes between
    them, as before. Returns {T, x} or null. */
-const slotW = () => (ed.inRest ? 0.42 : gw(ed.val)) + 1.6;
-const slotT = (v, t) => VALS.find(q => q[0] === ed.val)[1] / propAt(v, t);
+const slotW = () => (ed.inRest ? 0.42 : gw(navVal())) + 1.6;
+const slotT = (v, t) => VALS.find(q => q[0] === navVal())[1] / propAt(v, t);
 function timePlace(rect, tg){
   const pairs = (rect.dataset.tx || '').split(',').filter(Boolean).map(p => p.split(':').map(Number));
   if (pairs.length < 1) return null;
@@ -4429,13 +4429,13 @@ function timePlace(rect, tg){
     if (i + 1 < pairs.length) { const [ta, xa] = pairs[i], [tb, xb] = pairs[i + 1]; T = ta + (xb > xa ? (x - xa) / (xb - xa) : 0) * (tb - ta); }
     else {
       /* past the last column: on at the pace of the line */
-      /* past the last column: one step of the chosen value for each note's width, so a click a little past the end
+      /* past the last column: one step of the Grid value for each slot width, so a click a little past the end
          stays near the end (rests are packed tight, their pace would throw the note far ahead) */
       const [tb, xb] = pairs[pairs.length - 1];
       T = tb + Math.floor((x - xb) / slotW()) * slotT(v, tb);
     }
   }
-  const g = VALS.find(q => q[0] === ed.val)[1] / propAt(v, Math.min(T, v.end));
+  const g = navGrid(v, Math.min(T, v.end));
   T = rt(Math.max(0, Math.round(T / g) * g));
   /* over rests or past the end; in Overwrite also over a note, on the grid, inside it too (the note is cut, see insertEvent) */
   const ei = v.events.findIndex(e => T >= e.t - EPS && T < e.t + e.d - EPS);
@@ -4449,13 +4449,13 @@ function timePlace(rect, tg){
 }
 let ghostEl = null;
 function clearGhost(){ if (ghostEl) { ghostEl.remove(); ghostEl = null; } }
-/* Rhythmic grid overlay in Note Input mode: shows exact click positions for the active note value (Semibrevis, Minima,
-   Semiminima, etc.) and highlights the immediate next-note slot at the end of the voice so you can see before clicking
-   whether a note will append directly or insert a rest first. */
+/* Rhythmic grid overlay in Note Input mode: follows the Grid dropdown (navVal: explicit grid resolution or Follow note value)
+   and highlights the immediate next-note slot at the end of the voice so you can see before clicking whether a note will
+   append directly or insert a rest first. */
 function drawEditGrid(){
   document.querySelectorAll('#pages .ed-grid').forEach(el => el.remove());
   if (!ed.on || !piece) return;
-  const valRow = VALS.find(q => q[0] === ed.val);
+  const valRow = VALS.find(q => q[0] === navVal());
   if (!valRow) return;
   const sw = slotW();
   pagesEl.querySelectorAll('rect.stafhit').forEach(rect => {
