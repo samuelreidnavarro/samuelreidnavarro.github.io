@@ -5863,12 +5863,22 @@ function syncEdit(){
   /* the tools show their state (the grid, the note value, the accidentals) even before a piece has come in */
   try {
     NoteInput.sync(CBA);
-    const pb = $('#pdivBtn'), db = $('#dotBtn');
+    const pb = $('#pdivBtn'), db = $('#dotBtn'), popDot = $('#popDot');
     if (pb && db) {
       const S = CBA.state(), ta = S.acc !== undefined ? S.acc : S.target;
+      const dotOn = db.getAttribute('aria-pressed') === 'true';
       const pdivOn = ta ? (!ta.r && !!ta.pd) : !!S.armDiv;
       pb.setAttribute('aria-pressed', pdivOn ? 'true' : 'false');
       pb.disabled = db.disabled;
+      if (popDot) {
+        const curSelKey = ed.sel ? `${ed.sel.vi}:${ed.sel.ei}` : '';
+        if (pdivOn) {
+          popDot.classList.add('open');
+        } else if ((!dotOn && !pdivOn) || (curSelKey !== popDot.dataset.selKey && !pdivOn)) {
+          popDot.classList.remove('open');
+        }
+        popDot.dataset.selKey = curSelKey;
+      }
     }
   } catch (e) { if (piece) throw e; }
   if (typeof drawEditGrid === 'function') drawEditGrid();
@@ -5916,33 +5926,33 @@ NoteInput.wire(CBA);
     pb.setAttribute('aria-label', 'Punctus divisionis');
     pb.setAttribute('aria-pressed', 'false');
     pb.innerHTML = dotIcon('D');
-    pb.addEventListener('click', () => { CBA.toggleDivDot(); pop.classList.remove('open'); });
+    pb.addEventListener('click', () => {
+      CBA.toggleDivDot();
+      const on = pb.getAttribute('aria-pressed') === 'true';
+      pop.classList.toggle('open', on);
+      if (on && window.__fitMenus) window.__fitMenus();
+    });
     body.appendChild(pb);
     pop.appendChild(body);
-    /* Touchscreens: press-and-hold on ·A opens the Punctus divisionis (·D) dropdown (short tap still toggles ·A) */
-    let dotHold = 0, dotHeld = false;
-    db.addEventListener('pointerdown', e => {
-      if (e.pointerType === 'mouse') return;
-      dotHeld = false;
-      clearTimeout(dotHold);
-      dotHold = setTimeout(() => {
-        dotHeld = true;
+    /* Touchscreens & Apple Pencil: tapping ·A toggles it as usual AND drops down the menu to show ·A / ·D;
+       it collapses automatically once a note is input or another note without a dot of division is selected. */
+    let dotLastPtr = 'mouse';
+    db.addEventListener('pointerdown', e => { dotLastPtr = e.pointerType || 'touch'; });
+    db.addEventListener('click', () => {
+      if (dotLastPtr === 'mouse') return;
+      const dotOn = db.getAttribute('aria-pressed') === 'true';
+      const divOn = pb.getAttribute('aria-pressed') === 'true';
+      if (dotOn || divOn) {
         closePops(pop);
         pop.classList.add('open');
-        db.setAttribute('aria-expanded', 'true');
+        pop.dataset.selKey = ed.sel ? `${ed.sel.vi}:${ed.sel.ei}` : '';
         if (window.__fitMenus) window.__fitMenus();
-      }, 340);
+      } else {
+        pop.classList.remove('open');
+      }
     });
-    const cancelHold = () => clearTimeout(dotHold);
-    db.addEventListener('pointerup', cancelHold);
-    db.addEventListener('pointercancel', cancelHold);
-    db.addEventListener('pointermove', cancelHold);
-    db.addEventListener('contextmenu', e => { if (!canHover()) e.preventDefault(); });
-    db.addEventListener('click', e => {
-      if (dotHeld) { dotHeld = false; e.preventDefault(); e.stopImmediatePropagation(); }
-    }, true);
   }
-  document.head.insertAdjacentHTML('beforeend', '<style>#popDot .popbody{left:50% !important;right:auto !important;transform:translateX(-50%);padding:3px !important}#pages .dothit .dotkind{opacity:0;pointer-events:none;fill:var(--sel);font-family:"IM Fell English",Georgia,serif;transition:opacity .12s}#pages .dothit:hover .dotkind{opacity:1}@media print{#pages .dotkind{display:none !important}}#mensMenu .meq{border-top:1px solid var(--line);margin-top:4px;padding-top:2px}#mensMenu .meq .mlev{flex-direction:column;align-items:stretch;gap:3px}#mensMenu .meq .mslab{width:auto;font-size:13px;color:var(--muted)}#mensMenu .meq .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}#mensMenu .meq .tb{padding:3px 2px;font-size:12.5px;justify-content:center}.texpop{position:relative;display:inline-flex}.texmenu{display:none;position:absolute;left:-4px;top:calc(100% + 2px);z-index:85;padding:5px;border-radius:8px;background:var(--surface,#FAF5EA);border:1px solid var(--line);box-shadow:0 12px 28px -10px rgba(42,34,24,.38);flex-direction:column;gap:2px;min-width:170px}.texmenu::before{content:"";position:absolute;left:0;right:0;top:-6px;height:8px}.texpop:hover .texmenu,.texpop:focus-within .texmenu,.texpop.open .texmenu{display:flex}.texopt{display:flex !important;align-items:center;justify-content:flex-start !important;gap:8px;padding:4px 8px !important;min-height:30px !important;height:auto !important;font-size:13.5px !important;white-space:nowrap}.texsw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(42,34,24,.28);flex:none;display:inline-block}</style>');
+  document.head.insertAdjacentHTML('beforeend', '<style>#popDot.open .popbody{display:block !important}#popDot .popbody{left:50% !important;right:auto !important;transform:translateX(-50%);padding:3px !important}#pages .dothit .dotkind{opacity:0;pointer-events:none;fill:var(--sel);font-family:"IM Fell English",Georgia,serif;transition:opacity .12s}#pages .dothit:hover .dotkind{opacity:1}@media print{#pages .dotkind{display:none !important}}#mensMenu .meq{border-top:1px solid var(--line);margin-top:4px;padding-top:2px}#mensMenu .meq .mlev{flex-direction:column;align-items:stretch;gap:3px}#mensMenu .meq .mslab{width:auto;font-size:13px;color:var(--muted)}#mensMenu .meq .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}#mensMenu .meq .tb{padding:3px 2px;font-size:12.5px;justify-content:center}.texpop{position:relative;display:inline-flex}.texmenu{display:none;position:absolute;left:-4px;top:calc(100% + 2px);z-index:85;padding:5px;border-radius:8px;background:var(--surface,#FAF5EA);border:1px solid var(--line);box-shadow:0 12px 28px -10px rgba(42,34,24,.38);flex-direction:column;gap:2px;min-width:170px}.texmenu::before{content:"";position:absolute;left:0;right:0;top:-6px;height:8px}.texpop:hover .texmenu,.texpop:focus-within .texmenu,.texpop.open .texmenu{display:flex}.texopt{display:flex !important;align-items:center;justify-content:flex-start !important;gap:8px;padding:4px 8px !important;min-height:30px !important;height:auto !important;font-size:13.5px !important;white-space:nowrap}.texsw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(42,34,24,.28);flex:none;display:inline-block}</style>');
 }
 /* edit mode is always caret mode: the caret stands at the start until a note is clicked */
 function setEdit(on){
