@@ -75,8 +75,14 @@
     table.rdx-items td.where { white-space: nowrap; font-variant-numeric: tabular-nums; }
     table.rdx-items a { white-space: nowrap; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
     .rdx-snip { padding: .55rem 0 .85rem; overflow-x: auto; }
-    .rdx-snip .cb-prev { display: inline-block; max-width: 100%; background: var(--pagebg, #F3E8CE); background-image: var(--paper, none); background-size: 320px; border-radius: 6px; border: 1px solid var(--line); box-shadow: 0 6px 18px -10px rgba(42,34,24,.32); padding: 4px 6px; }
+    .rdx-snip .cb-prev { display: block; width: fit-content; max-width: 100%; overflow-x: auto; background: var(--pagebg, #F3E8CE); background-image: var(--paper, none); background-size: 320px; border-radius: 6px; border: 1px solid var(--line); box-shadow: 0 6px 18px -10px rgba(42,34,24,.32); padding: 4px 6px; }
     .rdx-snip svg { display: block; max-width: 100%; height: auto; pointer-events: none; }
+    .rdx-snip svg .staff { stroke: var(--staff, #8E2A1E); }
+    .rdx-snip svg .ledger, .rdx-snip svg .barl, .rdx-snip svg .tie, .rdx-snip svg .ms { stroke: var(--leaf-ink, #2A2218); fill: none; }
+    .rdx-snip svg use, .rdx-snip svg .ink { fill: var(--leaf-ink, #2A2218); color: var(--leaf-ink, #2A2218); }
+    .rdx-snip svg .red use, .rdx-snip svg .ink.red { fill: #A12C1C; color: #A12C1C; }
+    .rdx-snip svg text { fill: var(--leaf-ink, #2A2218); font-family: "IM Fell English", "Palatino Linotype", Palatino, Georgia, serif; }
+    .rdx-snip svg .hit, .rdx-snip svg .selbg, .rdx-snip svg .stafhit, .rdx-snip svg .clefhit rect, .rdx-snip svg .menshit rect, .rdx-snip svg .keyhit rect, .rdx-snip svg .dothit rect, .rdx-snip svg .mensadd, .rdx-snip svg .ksarr, .rdx-snip svg .dotkind { fill: transparent !important; opacity: 0 !important; }
     .rdx-snip svg g.mel-hit use, .rdx-snip svg g.mel-hit .ink, .rdx-snip svg g.mel-hit circle, .rdx-snip svg g.mel-hit text { fill: #1B56B8 !important; color: #1B56B8 !important; }
     .rdx-snip svg g.mel-hit .ledger, .rdx-snip svg g.mel-hit line, .rdx-snip svg g.mel-hit path.tie { stroke: #1B56B8 !important; }
     .rdx-snip svg .mel-hi-bg { fill: #1B56B8; fill-opacity: .14; rx: 0.45; pointer-events: none; }
@@ -914,21 +920,28 @@
 
     /* Temporarily render `sliced` using Scriptorium's own prepare() + layoutScore() */
     const saved = {
-      piece, pieceKey,
-      paper: st.paper, view: st.view, size: st.size, bars: st.bars, bnum: st.bnum, clefs: st.clefs,
+      piece, pieceKey, voiceNames: APP.voiceNames,
+      paper: st.paper, view: st.view, size: st.size, bars: st.bars, bnum: st.bnum, clefs: st.clefs, webScroll: st.webScroll,
       visSnap: st.vis['__mel_preview__']
     };
     let svgs = [], hitIds = [];
+    const sp = 1.65;
     try {
       piece = sliced;
       pieceKey = '__mel_preview__';
+      APP.voiceNames = true;
       st.vis['__mel_preview__'] = {};
       sliced.voices.forEach((v, vi) => { st.vis['__mel_preview__'][vi] = {on: true, notes: true, lyr: true, play: false, clef: v.clef}; });
-      st.paper = 'web'; st.view = 'score'; st.size = 1.65; st.bars = 'full'; st.bnum = '1'; st.clefs = 'modern';
+      st.paper = 'web'; st.view = 'score'; st.size = sp; st.bars = 'full'; st.bnum = '1'; st.clefs = 'modern'; st.webScroll = 'vertical';
       prepare();
-      const sp = 1.65, wmm = Math.min(270, Math.max(170, (document.getElementById('melResults').clientWidth || 820) * 25.4 / 96 - 16));
+      const wmm = Math.min(270, Math.max(170, (document.getElementById('melResults').clientWidth || 820) * 25.4 / 96 - 16));
       const G = {web: true, wmm, hmm: 240, sp, W: wmm / sp, H: 240 / sp, M: 6};
-      svgs = layoutScore(G);
+      svgs = layoutScore(G).map(svg => {
+        const m = /viewBox="0 0 ([-\d.]+) ([\d.]+)"/.exec(svg);
+        if (!m) return svg;
+        const pw = Math.round(+m[1] * sp * 96 / 25.4), ph = Math.round(+m[2] * sp * 96 / 25.4);
+        return svg.replace('<svg ', `<svg width="${pw}" height="${ph}" `);
+      });
       /* Collect every symbol g class id belonging to the matched melody */
       if (sliced.voices[targetVi] && sliced.voices[targetVi].syms) {
         sliced.voices[targetVi].syms.forEach((s, qi) => {
@@ -940,8 +953,9 @@
     } finally {
       piece = saved.piece;
       pieceKey = saved.pieceKey;
+      APP.voiceNames = saved.voiceNames;
       st.paper = saved.paper; st.view = saved.view; st.size = saved.size;
-      st.bars = saved.bars; st.bnum = saved.bnum; st.clefs = saved.clefs;
+      st.bars = saved.bars; st.bnum = saved.bnum; st.clefs = saved.clefs; st.webScroll = saved.webScroll;
       if (saved.visSnap) st.vis['__mel_preview__'] = saved.visSnap; else delete st.vis['__mel_preview__'];
       if (piece) prepare();
     }
