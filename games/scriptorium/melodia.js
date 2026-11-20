@@ -7,8 +7,7 @@
   const NOTE_SEMI = [0, 2, 4, 5, 7, 9, 11];
   const LET_UP = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
   const RECIP_TAB = [[8, '000'], [6, '00.'], [4, '00'], [3, '0.'], [2, '0'], [1.5, '1.'], [1, '1'], [0.75, '2.'], [0.5, '2'], [0.375, '4.'], [0.25, '4'], [0.1875, '8.'], [0.125, '8'], [0.0625, '16']];
-  let lastRealClef = 'c1';
-  let lastOnRhythm = 'prop';
+  let lastRealClef = 'treble';
   let searchMode = 'semi'; /* 'pitch' | 'semi' | 'step' */
   let syncingText = false;
 
@@ -23,9 +22,6 @@
     .transport, html.embedded .transport { position: relative !important; top: auto !important; bottom: auto !important; left: auto !important; right: auto !important; margin: 2px auto 12px !important; max-width: 72rem; border-top: 0 !important; background: transparent !important; justify-content: center; }
     .kbd, html.embedded .kbd { position: relative !important; top: auto !important; bottom: auto !important; left: auto !important; right: auto !important; margin: 4px auto 12px !important; }
     #handBox, #pendBox, .framegrip, .fsbtn { display: none !important; }
-    html.mel-no-rhythm #durBtns { opacity: .52; }
-    html.mel-no-rhythm #pages .menshit, html.mel-no-rhythm #pages .mensadd, html.mel-no-rhythm #pages .dotkind { opacity: .22 !important; }
-    #melRhyToggle { font-size: 14px; padding: 0 9px; white-space: nowrap; }
     #pages .mel-int { font-family: "IM Fell English", Georgia, serif; font-size: 1.05px; font-style: italic; fill: var(--accent); text-anchor: middle; pointer-events: none; }
     .rdx-mel { max-width: 72rem; margin: 0 auto 40px; padding: 0 clamp(8px, 1.4vw, 24px); display: grid; gap: 1.15rem; color: var(--text); }
     .rdx-intro { max-width: 54rem; margin: 0 auto; font-size: 1.04rem; line-height: 1.48; color: var(--muted); text-align: center; }
@@ -78,9 +74,13 @@
     table.rdx-items td { padding: .28rem .5rem; border-bottom: 1px dotted var(--line); vertical-align: middle; }
     table.rdx-items td.where { white-space: nowrap; font-variant-numeric: tabular-nums; }
     table.rdx-items a { white-space: nowrap; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-    .rdx-snip { padding: .45rem 0 .85rem; overflow-x: auto; }
-    .rdx-snip svg { max-width: 100%; height: auto; background: #fffdf8; border-radius: 6px; border: 1px solid var(--line); }
-    .rdx-snip .cap { font-size: .94rem; color: var(--muted); font-style: italic; margin-top: .25rem; }
+    .rdx-snip { padding: .55rem 0 .85rem; overflow-x: auto; }
+    .rdx-snip .cb-prev { display: inline-block; max-width: 100%; background: var(--pagebg, #F3E8CE); background-image: var(--paper, none); background-size: 320px; border-radius: 6px; border: 1px solid var(--line); box-shadow: 0 6px 18px -10px rgba(42,34,24,.32); padding: 4px 6px; }
+    .rdx-snip svg { display: block; max-width: 100%; height: auto; pointer-events: none; }
+    .rdx-snip svg g.mel-hit use, .rdx-snip svg g.mel-hit .ink, .rdx-snip svg g.mel-hit circle, .rdx-snip svg g.mel-hit text { fill: #1B56B8 !important; color: #1B56B8 !important; }
+    .rdx-snip svg g.mel-hit .ledger, .rdx-snip svg g.mel-hit line, .rdx-snip svg g.mel-hit path.tie { stroke: #1B56B8 !important; }
+    .rdx-snip svg .mel-hi-bg { fill: #1B56B8; fill-opacity: .14; rx: 0.45; pointer-events: none; }
+    .rdx-snip .cap { font-size: .94rem; color: var(--muted); font-style: italic; margin-top: .3rem; }
   </style>`);
 
   /* build the ReDiX Melodia UI panel right below the transport bar */
@@ -137,11 +137,11 @@
 
       <div class="rdx-examples">
         <span>Examples:</span>
-        <button type="button" data-ex="1C 1D 1E 1F 1D 1E 0C" data-clef="c1" data-mode="semi" data-rhy="any">C D E F D E C (exact intervals)</button>
-        <button type="button" data-ex="1C 1D 1E 1F 1D 1E 0C" data-clef="c1" data-mode="pitch" data-rhy="any">C D E F D E C (exact pitches)</button>
-        <button type="button" data-ex="1.C 2D 1E 1F 1D 1E 0C" data-clef="c1" data-mode="semi" data-rhy="prop">Dotted S + M + S + S (intervals + relative rhythm)</button>
-        <button type="button" data-ex="1F 1G 1A 1Bb 1G 1A 0F" data-clef="c1" data-mode="pitch" data-rhy="any">F G A B♭ G A F</button>
-        <button type="button" data-ex="1G 2G 1C4 2C4 1D4 2D4 0E4" data-clef="c1" data-mode="semi" data-rhy="prop">L’homme armé (intervals + rhythm)</button>
+        <button type="button" data-ex="1C 1D 1E 1F 1D 1E 0C" data-mode="semi" data-rhy="any">C D E F D E C (exact intervals)</button>
+        <button type="button" data-ex="1C 1D 1E 1F 1D 1E 0C" data-mode="pitch" data-rhy="any">C D E F D E C (exact pitches)</button>
+        <button type="button" data-ex="1.C 2D 1E 1F 1D 1E 0C" data-mode="semi" data-rhy="prop">Dotted S + M + S + S (intervals + relative rhythm)</button>
+        <button type="button" data-ex="1F 1G 1A 1Bb 1G 1A 0F" data-mode="pitch" data-rhy="any">F G A B♭ G A F</button>
+        <button type="button" data-ex="1G3 2G3 1C4 2C4 1D4 2D4 0E4" data-mode="semi" data-rhy="prop">L’homme armé (intervals + rhythm)</button>
       </div>
 
       <div class="rdx-grid2">
@@ -214,33 +214,14 @@
   `;
   wrap.appendChild(panel);
 
-  /* Add a Rhythm On/Off toggle right beside the note values in the Note Input toolbar, synced with the Rhythm pills below */
-  {
-    const durBtns = document.getElementById('durBtns');
-    if (durBtns && durBtns.parentNode) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'tb';
-      btn.id = 'melRhyToggle';
-      btn.title = 'Turn rhythm on or off for the search (when off, notes are shown stemless and matched in any rhythm)';
-      btn.textContent = 'No rhythm';
-      btn.setAttribute('aria-pressed', 'true');
-      durBtns.parentNode.insertBefore(btn, durBtns);
-      btn.addEventListener('click', () => {
-        const sel = document.getElementById('melRhythm');
-        if (!sel) return;
-        sel.value = sel.value === 'any' ? lastOnRhythm : 'any';
-        render();
-      });
-      durBtns.addEventListener('click', e => {
-        if (!e.target.closest('button')) return;
-        const sel = document.getElementById('melRhythm');
-        if (sel && sel.value === 'any') {
-          sel.value = lastOnRhythm;
-          setTimeout(() => render(), 0);
-        }
-      }, true);
-    }
+  /* Choose a G or F clef automatically from the melody's pitch range */
+  function clefForNotes(notes){
+    const steps = (notes || []).filter(n => !n.rest && typeof n.step === 'number').map(n => n.step);
+    if (!steps.length) return 'treble';
+    const avg = steps.reduce((a, b) => a + b, 0) / steps.length;
+    if (avg >= 28) return 'treble';   /* C4 and above -> G2 */
+    if (avg >= 22) return 'treble8';  /* D3..B3 -> G2 8 (tenor G clef) */
+    return 'bass';                    /* below D3 -> F4 */
   }
 
   /* ---------------- Helper functions for extracting & formatting the staff melody ---------------- */
@@ -326,44 +307,8 @@
     return out;
   }
 
-  /* when Rhythm is OFF, draw notes on the staff as uniform stemless pitch heads (no stems/flags/dots) */
-  function applyRhythmVisual(){
-    const rhySel = document.getElementById('melRhythm');
-    const rhyMode = rhySel ? rhySel.value : 'any';
-    const noRhy = rhyMode === 'any';
-    if (!noRhy) lastOnRhythm = rhyMode;
-    document.documentElement.classList.toggle('mel-no-rhythm', noRhy);
-    const tb = document.getElementById('melRhyToggle');
-    if (tb) {
-      tb.setAttribute('aria-pressed', String(noRhy));
-      tb.textContent = noRhy ? 'No rhythm' : (rhyMode === 'exact' ? 'Rhythm: Exact' : 'Rhythm: Relative');
-    }
-    if (!noRhy || !piece || !piece.voices.length) return;
-    const v = piece.voices[0];
-    const headId = MODERN ? '#g-nS' : BLACK ? '#g-Sc' : '#g-S';
-    (v.syms || []).forEach((s, qi) => {
-      if (s.rest || s.phantom) return;
-      const g = pagesEl.querySelector(`g.n0-${qi}`);
-      if (!g) return;
-      g.querySelectorAll('circle').forEach(c => { c.style.display = 'none'; });
-      g.querySelectorAll('use').forEach(u => {
-        const href = u.getAttribute('href') || u.getAttribute('xlink:href') || '';
-        if (/^#g-(fl|na|sh|r|c)/.test(href)) return; /* keep accidentals */
-        const tr = u.getAttribute('transform') || '';
-        const tm = /translate\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/.exec(tr);
-        if (tm) {
-          u.removeAttribute('transform');
-          u.setAttribute('x', tm[1]);
-          u.setAttribute('y', tm[2]);
-        }
-        u.setAttribute('href', headId);
-      });
-    });
-  }
-
   /* draw interval labels above the staff when searching by Exact intervals or Diatonic steps */
   function drawStaffIntervals(){
-    applyRhythmVisual();
     document.querySelectorAll('#pages .mel-int').forEach(el => el.remove());
     if (!piece || !piece.voices.length) return;
     const v = piece.voices[0];
@@ -539,7 +484,7 @@
   }
 
   async function setStaffMelody(notes, clefKey, mode){
-    const c = (clefKey && clefKey !== 'none') ? clefKey : (lastRealClef || 'c1');
+    const c = (clefKey && clefKey !== 'none') ? clefKey : clefForNotes(notes);
     lastRealClef = c;
     if (mode) searchMode = mode;
     const krn = kernFromNotes(notes, c);
@@ -562,7 +507,7 @@
     const notes = parseQuickText(document.getElementById('melQuickIn').value);
     if (!notes.length) { toast('Enter note letters such as C D E F D E C.'); return; }
     syncingText = true;
-    setStaffMelody(notes, lastRealClef || 'c1', searchMode).finally(() => { syncingText = false; });
+    setStaffMelody(notes, clefForNotes(notes), searchMode).finally(() => { syncingText = false; });
   });
   document.getElementById('melQuickIn').addEventListener('keydown', e => {
     e.stopPropagation();
@@ -572,13 +517,13 @@
     }
   });
   document.getElementById('melClearBtn').addEventListener('click', () => {
-    setStaffMelody([], lastRealClef || 'c1', searchMode);
+    setStaffMelody([], lastRealClef || 'treble', searchMode);
   });
   document.querySelectorAll('.rdx-examples button[data-ex]').forEach(b => {
     b.addEventListener('click', () => {
       if (b.dataset.rhy && document.getElementById('melRhythm')) document.getElementById('melRhythm').value = b.dataset.rhy;
       const notes = parseQuickText(b.dataset.ex);
-      setStaffMelody(notes, b.dataset.clef, b.dataset.mode).then(() => runSearch(true));
+      setStaffMelody(notes, clefForNotes(notes), b.dataset.mode).then(() => runSearch(true));
     });
   });
 
@@ -875,46 +820,174 @@
     }
   }
 
-  /* Verovio snippet preview, matching ReDiX Progressio */
-  let vrvPromise = null, tk = null;
+  /* Read-only ChoirBook (Scriptorium) SVG preview: 1 bar before through 1 bar after, found melody marked in blue */
   const kernCache = {};
-  function loadVerovio(){
-    if (vrvPromise) return vrvPromise;
-    vrvPromise = new Promise((resolve, reject) => {
-      window.Module = window.Module || {};
-      const ready = () => { try { tk = new verovio.toolkit(); resolve(tk); } catch (e) { reject(e); } };
-      window.Module.onRuntimeInitialized = ready;
-      const s = document.createElement('script');
-      s.src = '../redix-progressio/verovio-humdrum-3.10.0.js';
-      s.onerror = () => reject(new Error('Could not load the music notation library.'));
-      document.head.appendChild(s);
-    });
-    vrvPromise.catch(() => { vrvPromise = null; });
-    return vrvPromise;
-  }
   function catScoreUrl(e){
     if (e.h) return 'choirbook/redix-progressio/' + e.k + '.krn';
     return CAT_DATA.sources[e.s] + (e.u || (e.s === 'pal' ? e.k.slice(4) : e.k) + '.krn');
   }
+  function renderChoirBookPreview(kernText, r){
+    const P = parseKern(kernText);
+    const bt = n => {
+      const b = (P.barNums || []).find(x => x.n === n);
+      if (b) return b.t;
+      if (n <= 1) return 0;
+      return null;
+    };
+    const fromBar = Math.max(1, r.bar1 - 1);
+    const toBar = r.bar2 + 1;
+    const t0 = bt(fromBar) ?? 0;
+    const t1 = bt(toBar + 1) ?? P.end;
+    const m0 = (bt(r.bar1) ?? t0) - t0;
+    const m1 = (bt(r.bar2 + 1) ?? t1) - t0;
+
+    /* Slice each voice cleanly to [t0, t1] */
+    const slicedVoices = P.voices.map(v => {
+      const c0 = clefAt(v, t0), k0 = keyAt(v, t0), met0 = metAt(v, t0);
+      const evs = [];
+      for (const e of v.events) {
+        const ea = e.t, eb = rt(e.t + e.d);
+        if (eb <= t0 + EPS || ea >= t1 - EPS) continue;
+        const a = Math.max(ea, t0), b = Math.min(eb, t1);
+        const ne = Object.assign({}, e, {t: rt(a - t0), d: rt(b - a), syl: ea >= t0 - EPS ? e.syl : []});
+        if (a > ea + EPS) { ne.tieStart = false; ne.tieMid = false; ne.tieEnd = false; }
+        if (b < eb - EPS) { ne.tieStart = false; }
+        evs.push(ne);
+      }
+      /* Ensure a modern G/F clef for readability matching ChoirBook modern clefs */
+      const noteSteps = evs.filter(e => !e.rest).map(e => e.step);
+      const vClef = c0 && (c0 === 'treble' || c0 === 'treble8' || c0 === 'bass') ? c0 : clefForNotes(noteSteps.map(s => ({step: s})));
+      const clefs = [{t: 0, c: CLEF_KERN[vClef] || 'G2', ei: 0}];
+      const keys = [{t: 0, alts: Object.assign({}, k0), ei: 0}];
+      const mets = met0 ? [{t: 0, sign: met0, ei: 0}] : [];
+      return Object.assign({}, v, {events: evs, clefs, keys, mets, kclef: CLEF_KERN[vClef] || 'G2', clef: vClef, end: rt(t1 - t0)});
+    });
+
+    const sliced = {
+      title: '', composer: '', attributed: false,
+      voices: slicedVoices,
+      bars: (P.bars || []).filter(b => b.t > t0 + EPS && b.t < t1 - EPS).map(b => Object.assign({}, b, {t: rt(b.t - t0)})),
+      barNums: (P.barNums || []).filter(b => b.t >= t0 - EPS && b.t <= t1 + EPS).map(b => Object.assign({}, b, {t: rt(b.t - t0)})),
+      sections: [],
+      end: rt(t1 - t0),
+      meta: {}
+    };
+
+    /* Locate the exact matched melody in the matched voice and mark its events with _melHit = true */
+    let targetVi = sliced.voices.findIndex(v => (v.name || '').toLowerCase() === (r.vName || '').toLowerCase());
+    if (targetVi < 0) targetVi = 0;
+    const tv = sliced.voices[targetVi];
+    if (tv && r.notes && r.notes.length) {
+      /* Build sounding note groups (merging tied continuations) for target voice */
+      const groupsV = [];
+      for (let i = 0; i < tv.events.length; i++) {
+        const e = tv.events[i];
+        if (e.rest) { groupsV.push({rest: true, eis: [i], t: e.t}); continue; }
+        if ((e.tieEnd || e.tieMid) && groupsV.length && !groupsV[groupsV.length - 1].rest && groupsV[groupsV.length - 1].step === e.step) {
+          groupsV[groupsV.length - 1].eis.push(i);
+          continue;
+        }
+        const letter = LETTERS[((e.step % 7) + 7) % 7];
+        const sig = keyAt(tv, e.t)[letter] || 0;
+        const alt = (e.alt !== null && e.alt !== undefined) ? e.alt : sig;
+        groupsV.push({rest: false, step: e.step, alt, t: e.t, eis: [i]});
+      }
+      const notesV = groupsV.filter(g => !g.rest);
+      const M = r.notes.length;
+      let bestStart = -1, bestDist = 1e9;
+      for (let i = 0; i <= notesV.length - M; i++) {
+        let ok = true;
+        for (let k = 0; k < M; k++) {
+          if (notesV[i + k].step !== r.notes[k].step || notesV[i + k].alt !== r.notes[k].alt) { ok = false; break; }
+        }
+        if (ok) {
+          const dist = notesV[i].t >= m0 - EPS && notesV[i].t <= m1 + EPS ? 0 : Math.abs(notesV[i].t - m0);
+          if (dist < bestDist) { bestDist = dist; bestStart = i; }
+        }
+      }
+      if (bestStart >= 0) {
+        for (let k = 0; k < M; k++) {
+          for (const ei of notesV[bestStart + k].eis) tv.events[ei]._melHit = true;
+        }
+      }
+    }
+
+    /* Temporarily render `sliced` using Scriptorium's own prepare() + layoutScore() */
+    const saved = {
+      piece, pieceKey,
+      paper: st.paper, view: st.view, size: st.size, bars: st.bars, bnum: st.bnum, clefs: st.clefs,
+      visSnap: st.vis['__mel_preview__']
+    };
+    let svgs = [], hitIds = [];
+    try {
+      piece = sliced;
+      pieceKey = '__mel_preview__';
+      st.vis['__mel_preview__'] = {};
+      sliced.voices.forEach((v, vi) => { st.vis['__mel_preview__'][vi] = {on: true, notes: true, lyr: true, play: false, clef: v.clef}; });
+      st.paper = 'web'; st.view = 'score'; st.size = 1.65; st.bars = 'full'; st.bnum = '1'; st.clefs = 'modern';
+      prepare();
+      const sp = 1.65, wmm = Math.min(270, Math.max(170, (document.getElementById('melResults').clientWidth || 820) * 25.4 / 96 - 16));
+      const G = {web: true, wmm, hmm: 240, sp, W: wmm / sp, H: 240 / sp, M: 6};
+      svgs = layoutScore(G);
+      /* Collect every symbol g class id belonging to the matched melody */
+      if (sliced.voices[targetVi] && sliced.voices[targetVi].syms) {
+        sliced.voices[targetVi].syms.forEach((s, qi) => {
+          if (s.src && s.src.some(ei => sliced.voices[targetVi].events[ei] && sliced.voices[targetVi].events[ei]._melHit)) {
+            hitIds.push(`n${targetVi}-${qi}`);
+          }
+        });
+      }
+    } finally {
+      piece = saved.piece;
+      pieceKey = saved.pieceKey;
+      st.paper = saved.paper; st.view = saved.view; st.size = saved.size;
+      st.bars = saved.bars; st.bnum = saved.bnum; st.clefs = saved.clefs;
+      if (saved.visSnap) st.vis['__mel_preview__'] = saved.visSnap; else delete st.vis['__mel_preview__'];
+      if (piece) prepare();
+    }
+    return {svgs, hitIds, fromBar, toBar};
+  }
+
   async function toggleSnippet(btn){
     const gi = +btn.dataset.g, k = +btn.dataset.k, row = document.getElementById(`ms${gi}-${k}`), box = row.querySelector('.rdx-snip');
     if (openSnip && openSnip.row === row) { closeSnip(); return; }
     closeSnip();
     openSnip = {row, btn};
     row.hidden = false; btn.textContent = 'Hide'; btn.setAttribute('aria-expanded', 'true');
-    box.innerHTML = '<p class="rdx-status">Loading score excerpt…</p>';
+    box.innerHTML = '<p class="rdx-status">Loading ChoirBook preview…</p>';
     postHeight();
     const r = groups[gi].list[k], e = CAT_DATA.pieces[r.p];
     try {
-      const [t] = await Promise.all([
-        kernCache[e.k] || (kernCache[e.k] = fetch(catScoreUrl(e)).then(x => { if (!x.ok) throw new Error('Could not load the score.'); return x.text(); })),
-        loadVerovio()
-      ]);
+      const t = await (kernCache[e.k] || (kernCache[e.k] = fetch(catScoreUrl(e)).then(x => { if (!x.ok) throw new Error('Could not load the score.'); return x.text(); })));
       if (!openSnip || openSnip.row !== row) return;
-      const from = Math.max(1, r.bar1), to = Math.max(from, r.bar2);
-      const data = t.replace(/\s*$/, '\n') + `!!!filter: myank -m ${from}-${to}\n`;
-      const svg = tk.renderData(data, {inputFrom: 'humdrum', breaks: 'none', adjustPageHeight: true, scale: 40, pageWidth: 4000, footer: 'none', header: 'none', font: 'Leipzig'});
-      box.innerHTML = svg + `<p class="cap">${from === to ? 'Bar ' + from : `Bars ${from}–${to}`} · ${esc(r.vName)}: ${esc(r.key)}.</p>`;
+      const {svgs, hitIds, fromBar, toBar} = renderChoirBookPreview(t, r);
+      box.innerHTML = `<div class="cb-prev">${svgs.join('')}</div>` +
+        `<p class="cap">ChoirBook preview · Bars ${fromBar}–${toBar} · <strong>${esc(r.vName)}</strong> (matched melody in blue): ${esc(r.key)}.</p>`;
+      /* Apply blue highlight class and subtle blue background pill to matched notes */
+      const hitSet = new Set(hitIds);
+      const hitEls = [];
+      box.querySelectorAll('svg g[class^="n"]').forEach(g => {
+        const cls = g.classList[0];
+        if (hitSet.has(cls)) { g.classList.add('mel-hit'); hitEls.push(g); }
+      });
+      if (hitEls.length) {
+        /* Group contiguous hits by parent SVG group and add a soft blue highlight band behind them */
+        const byParent = new Map();
+        hitEls.forEach(g => { const p = g.parentNode; if (!byParent.has(p)) byParent.set(p, []); byParent.get(p).push(g); });
+        byParent.forEach((els, p) => {
+          let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+          els.forEach(g => { const b = g.getBBox(); if (b.width) { x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y); x2 = Math.max(x2, b.x + b.width); y2 = Math.max(y2, b.y + b.height); } });
+          if (x1 < x2) {
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('class', 'mel-hi-bg');
+            rect.setAttribute('x', (x1 - 0.5).toFixed(2));
+            rect.setAttribute('y', (y1 - 0.45).toFixed(2));
+            rect.setAttribute('width', (x2 - x1 + 1.0).toFixed(2));
+            rect.setAttribute('height', (y2 - y1 + 0.9).toFixed(2));
+            p.insertBefore(rect, els[0]);
+          }
+        });
+      }
     } catch (err) {
       box.innerHTML = `<p class="rdx-err">${esc(err.message || err)}</p>`;
     }
@@ -953,7 +1026,7 @@
     if (pb) {
       const r = groups[+pb.dataset.g].list[+pb.dataset.k];
       if (r && r.notes) {
-        setStaffMelody(r.notes, lastRealClef || 'c1', searchMode);
+        setStaffMelody(r.notes, clefForNotes(r.notes), searchMode);
         window.scrollTo({top: 0, behavior: 'smooth'});
       }
     }
@@ -986,9 +1059,10 @@
 
   /* ---------------- Plug into the Scriptorium engine ---------------- */
   async function defaultMelody(){
-    /* Start with C D E F D E C in C1 clef, searching by exact intervals (transposable) */
+    /* Start in Web view with C D E F D E C in G2 clef, searching by exact intervals */
+    st.view = 'score'; st.paper = 'web'; st.clefs = 'modern';
     const notes = parseQuickText('C D E F D E C');
-    await setStaffMelody(notes, 'c1', 'semi');
+    await setStaffMelody(notes, clefForNotes(notes), 'semi');
     loadCorpus().then(() => runSearch()).catch(() => {});
   }
 
@@ -997,7 +1071,7 @@
       syncModeUI();
     },
     newScore(){
-      setStaffMelody([], lastRealClef || 'c1', searchMode);
+      setStaffMelody([], lastRealClef || 'treble', searchMode);
       toast('Empty staff ready. Click on the staff or press A–G to write a melody.');
     },
     async buildPieceList(){
@@ -1006,6 +1080,7 @@
     start(){
       (async () => {
         try { await document.fonts.load('100px "IM Fell English"'); await document.fonts.load('italic 100px "IM Fell English"'); } catch (e) {}
+        st.view = 'score'; st.paper = 'web'; st.clefs = 'modern';
         syncUI(); sizeViewer();
         await defaultMelody();
         buildPieceList().then(syncUI);
