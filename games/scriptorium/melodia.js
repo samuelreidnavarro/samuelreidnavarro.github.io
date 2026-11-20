@@ -102,8 +102,8 @@
     <p class="rdx-intro">
       <strong>ReDiX Melodia</strong> searches the ~2,870 fifteenth- and sixteenth-century polyphonic scores of the
       <a href="../redix-progressio.html">ReDiX</a> corpus (over 2.18 million notes across 10,800 voices).
-      Write a melody on the staff above — click the clef at the start of the staff to choose a clef for <strong>exact pitches</strong>,
-      or choose <strong>No clef</strong> to search for any transposition by <strong>exact intervallic structure</strong> or <strong>generic diatonic steps</strong>.
+      Write a melody on the staff above (with any clef you prefer), then choose whether to match its <strong>exact pitches</strong>,
+      its <strong>exact intervals</strong> (any transposition preserving half and whole steps), or its <strong>diatonic steps</strong> (any transposition regardless of major or minor).
     </p>
     <form class="rdx-card" id="melForm" autocomplete="off">
       <div style="display:grid;gap:.65rem">
@@ -111,11 +111,11 @@
           <h2>Melodic &amp; rhythmic search</h2>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:.6rem 1.4rem;align-items:center">
-          <div class="rdx-modes" role="group" aria-label="Clef and pitch mode">
-            <span style="font-style:italic;color:var(--muted);margin-right:.2rem">Clef / Pitches:</span>
-            <button type="button" class="mbtn" data-m="pitch" aria-selected="false" title="Clef ON: search for these exact note names">Clef ON: Exact pitches</button>
-            <button type="button" class="mbtn" data-m="semi" aria-selected="true" title="Clef OFF: search for any transposition preserving exact major and minor intervals (semitones / solmization)">No clef: Exact intervals</button>
-            <button type="button" class="mbtn" data-m="step" aria-selected="false" title="Clef OFF: search for any transposition preserving generic diatonic steps (2nds, 3rds, etc.) regardless of major or minor">No clef: Diatonic steps</button>
+          <div class="rdx-modes" role="group" aria-label="Pitch and interval matching">
+            <span style="font-style:italic;color:var(--muted);margin-right:.2rem">Match:</span>
+            <button type="button" class="mbtn" data-m="pitch" aria-selected="false" title="Match these exact note names as written on the staff">Exact pitches</button>
+            <button type="button" class="mbtn" data-m="semi" aria-selected="true" title="Match any transposition preserving the exact major and minor intervals (half and whole steps)">Exact intervals</button>
+            <button type="button" class="mbtn" data-m="step" aria-selected="false" title="Match any transposition preserving generic diatonic steps (2nds, 3rds, etc.) regardless of major or minor">Diatonic steps</button>
           </div>
           <div class="rdx-modes" id="melRhyBar" role="group" aria-label="Rhythm mode">
             <span style="font-style:italic;color:var(--muted);margin-right:.2rem">Rhythm:</span>
@@ -137,11 +137,11 @@
 
       <div class="rdx-examples">
         <span>Examples:</span>
-        <button type="button" data-ex="1C 1D 1E 1F 1D 1E 0C" data-clef="none" data-mode="semi" data-rhy="any">C D E F D E C (no clef, any rhythm)</button>
-        <button type="button" data-ex="1C 1D 1E 1F 1D 1E 0C" data-clef="c1" data-mode="pitch" data-rhy="any">C D E F D E C (clef on, exact C)</button>
-        <button type="button" data-ex="1.C 2D 1E 1F 1D 1E 0C" data-clef="none" data-mode="semi" data-rhy="prop">Dotted S + M + S + S (no clef + relative rhythm)</button>
+        <button type="button" data-ex="1C 1D 1E 1F 1D 1E 0C" data-clef="c1" data-mode="semi" data-rhy="any">C D E F D E C (exact intervals)</button>
+        <button type="button" data-ex="1C 1D 1E 1F 1D 1E 0C" data-clef="c1" data-mode="pitch" data-rhy="any">C D E F D E C (exact pitches)</button>
+        <button type="button" data-ex="1.C 2D 1E 1F 1D 1E 0C" data-clef="c1" data-mode="semi" data-rhy="prop">Dotted S + M + S + S (intervals + relative rhythm)</button>
         <button type="button" data-ex="1F 1G 1A 1Bb 1G 1A 0F" data-clef="c1" data-mode="pitch" data-rhy="any">F G A B♭ G A F</button>
-        <button type="button" data-ex="1G 2G 1C4 2C4 1D4 2D4 0E4" data-clef="none" data-mode="semi" data-rhy="prop">L’homme armé (intervals + rhythm)</button>
+        <button type="button" data-ex="1G 2G 1C4 2C4 1D4 2D4 0E4" data-clef="c1" data-mode="semi" data-rhy="prop">L’homme armé (intervals + rhythm)</button>
       </div>
 
       <div class="rdx-grid2">
@@ -361,14 +361,13 @@
     });
   }
 
-  /* draw interval labels above the staff when in No-clef mode */
+  /* draw interval labels above the staff when searching by Exact intervals or Diatonic steps */
   function drawStaffIntervals(){
     applyRhythmVisual();
     document.querySelectorAll('#pages .mel-int').forEach(el => el.remove());
     if (!piece || !piece.voices.length) return;
     const v = piece.voices[0];
-    const hasClef = v.clef && v.clef !== 'none';
-    if (hasClef && searchMode === 'pitch') return;
+    if (searchMode === 'pitch') return;
     const exact = searchMode !== 'step';
     const noteEls = [];
     (v.syms || []).forEach((s, qi) => {
@@ -399,12 +398,9 @@
   function syncModeUI(){
     if (!piece || !piece.voices.length) return;
     const v = piece.voices[0];
-    const curClef = (vis(0).clef && CLEFS[vis(0).clef]) ? vis(0).clef : chooseClef(v, st.clefs);
-    if (curClef !== 'none') lastRealClef = curClef;
-    /* if the user picked No clef on the staff while in 'pitch' mode, switch to 'semi';
-       if the user picked a real clef on the staff while in 'semi'/'step' mode, switch to 'pitch' */
-    if (curClef === 'none' && searchMode === 'pitch') searchMode = 'semi';
-    else if (curClef !== 'none' && searchMode !== 'pitch') searchMode = 'pitch';
+    let curClef = (vis(0).clef && CLEFS[vis(0).clef]) ? vis(0).clef : chooseClef(v, st.clefs);
+    if (!curClef || curClef === 'none') { curClef = lastRealClef || 'c1'; vis(0).clef = curClef; }
+    else lastRealClef = curClef;
 
     const rhySel = document.getElementById('melRhythm');
     const rhyMode = rhySel ? rhySel.value : 'any';
@@ -443,30 +439,21 @@
         ? `<span><span class="f-tag">Rhythm (relative ratios):</span> <strong class="f-val">${esc(ratios)}</strong> <span>(${esc(durNames)})</span></span>`
         : `<span><span class="f-tag">Rhythm (exact values):</span> <strong class="f-val">${esc(durNames)}</strong></span>`;
     if (searchMode === 'pitch') {
-      fBox.innerHTML = `<span><span class="f-tag">Clef ON — Exact pitches (${curClef.toUpperCase()}):</span> <strong class="f-val">${esc(notesStr)}</strong></span>` +
+      fBox.innerHTML = `<span><span class="f-tag">Exact pitches:</span> <strong class="f-val">${esc(notesStr)}</strong></span>` +
         (dSemi.length ? `<span><span class="f-tag">Intervals:</span> <span>${esc(dSemi.join('  '))}</span></span>` : '') + rhyHtml;
     } else if (searchMode === 'semi') {
-      fBox.innerHTML = `<span><span class="f-tag">No clef — Exact intervals:</span> <strong class="f-val">${esc(dSemi.join('  ') || '(single note)')}</strong></span>` +
-        `<span><span class="f-tag">Staff contour:</span> <span>${esc(notesStr)} (matches any transposition with the same semitones)</span></span>` + rhyHtml;
+      fBox.innerHTML = `<span><span class="f-tag">Exact intervals (transposable):</span> <strong class="f-val">${esc(dSemi.join('  ') || '(single note)')}</strong></span>` +
+        `<span><span class="f-tag">Written as:</span> <span>${esc(notesStr)} (matches any transposition with the same half/whole steps)</span></span>` + rhyHtml;
     } else {
-      fBox.innerHTML = `<span><span class="f-tag">No clef — Diatonic steps:</span> <strong class="f-val">${esc(dStep.join('  ') || '(single note)')}</strong></span>` +
-        `<span><span class="f-tag">Matches any major/minor quality:</span> <span>e.g. C D E F D E C, A B C D B C A, F G A B♭ G A F…</span></span>` + rhyHtml;
+      fBox.innerHTML = `<span><span class="f-tag">Diatonic steps (transposable):</span> <strong class="f-val">${esc(dStep.join('  ') || '(single note)')}</strong></span>` +
+        `<span><span class="f-tag">Written as:</span> <span>${esc(notesStr)} (matches any major/minor quality)</span></span>` + rhyHtml;
     }
     drawStaffIntervals();
   }
 
   function setSearchMode(m){
     searchMode = m;
-    if (!piece || !piece.voices.length) return;
-    const curClef = (vis(0).clef && CLEFS[vis(0).clef]) ? vis(0).clef : chooseClef(piece.voices[0], st.clefs);
-    if (m === 'pitch' && curClef === 'none') {
-      VOICE_OPS.clef(0, lastRealClef || 'c1');
-    } else if (m !== 'pitch' && curClef !== 'none') {
-      lastRealClef = curClef;
-      VOICE_OPS.clef(0, 'none');
-    } else {
-      syncModeUI();
-    }
+    syncModeUI();
   }
 
   document.querySelectorAll('.rdx-modes .mbtn[data-m]').forEach(b => {
@@ -552,7 +539,8 @@
   }
 
   async function setStaffMelody(notes, clefKey, mode){
-    const c = clefKey || (searchMode === 'pitch' ? (lastRealClef || 'c1') : 'none');
+    const c = (clefKey && clefKey !== 'none') ? clefKey : (lastRealClef || 'c1');
+    lastRealClef = c;
     if (mode) searchMode = mode;
     const krn = kernFromNotes(notes, c);
     const id = mineAdd('Query melody', krn);
@@ -574,7 +562,7 @@
     const notes = parseQuickText(document.getElementById('melQuickIn').value);
     if (!notes.length) { toast('Enter note letters such as C D E F D E C.'); return; }
     syncingText = true;
-    setStaffMelody(notes, vis(0).clef || (searchMode === 'pitch' ? lastRealClef : 'none'), searchMode).finally(() => { syncingText = false; });
+    setStaffMelody(notes, lastRealClef || 'c1', searchMode).finally(() => { syncingText = false; });
   });
   document.getElementById('melQuickIn').addEventListener('keydown', e => {
     e.stopPropagation();
@@ -584,7 +572,7 @@
     }
   });
   document.getElementById('melClearBtn').addEventListener('click', () => {
-    setStaffMelody([], vis(0).clef || 'none', searchMode);
+    setStaffMelody([], lastRealClef || 'c1', searchMode);
   });
   document.querySelectorAll('.rdx-examples button[data-ex]').forEach(b => {
     b.addEventListener('click', () => {
@@ -965,7 +953,7 @@
     if (pb) {
       const r = groups[+pb.dataset.g].list[+pb.dataset.k];
       if (r && r.notes) {
-        setStaffMelody(r.notes, searchMode === 'pitch' ? (lastRealClef || 'c1') : 'none', searchMode);
+        setStaffMelody(r.notes, lastRealClef || 'c1', searchMode);
         window.scrollTo({top: 0, behavior: 'smooth'});
       }
     }
@@ -998,9 +986,9 @@
 
   /* ---------------- Plug into the Scriptorium engine ---------------- */
   async function defaultMelody(){
-    /* Start with C D E F D E C in No-clef mode so both pitched and clefless searches are immediately clear */
+    /* Start with C D E F D E C in C1 clef, searching by exact intervals (transposable) */
     const notes = parseQuickText('C D E F D E C');
-    await setStaffMelody(notes, 'none', 'semi');
+    await setStaffMelody(notes, 'c1', 'semi');
     loadCorpus().then(() => runSearch()).catch(() => {});
   }
 
@@ -1009,7 +997,7 @@
       syncModeUI();
     },
     newScore(){
-      setStaffMelody([], vis(0).clef || 'none', searchMode);
+      setStaffMelody([], lastRealClef || 'c1', searchMode);
       toast('Empty staff ready. Click on the staff or press A–G to write a melody.');
     },
     async buildPieceList(){
