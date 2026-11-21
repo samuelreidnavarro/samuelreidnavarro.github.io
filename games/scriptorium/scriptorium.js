@@ -560,6 +560,7 @@ function parseKern(text){
         else if ((m = s.match(/^\*M(\d+)\/(\d+)$/))) v.lastM = +m[1] / +m[2];
         else if (s === '*lig') { v.ligN = (v.ligN || 0) + 1; v.ligOn = v.ligN; }
         else if (s === '*Xlig') v.ligOn = 0;
+        else if (s === '*divisi') v.isSub = true;
       });
       continue;
     }
@@ -603,6 +604,14 @@ function parseKern(text){
   const composer = prettyName(meta.COM || meta.COA || '');
   /* top voice first */
   const vs = voices.slice().reverse();
+  vs.forEach((v, i) => {
+    if (v.isSub && i > 0) {
+      let p = i - 1;
+      while (p > 0 && vs[p].isSub) p--;
+      v.subOf = p;
+    }
+    delete v.isSub;
+  });
   const end = Math.max(...vs.map(v => v.end));
   const res = {title, composer, attributed: !meta.COM && !!meta.COA, voices: vs, bars: bars.filter(b => b.t < end - EPS), sections, end, meta, barNums};
   /* a score with mensuration signs but no barlines at all (one written here) gets them by itself, at every perfection */
@@ -1183,6 +1192,7 @@ function playCell(i, name){
   return `<td><button type="button" class="ptri" data-i="${i}" data-s="${t}" aria-label="${esc(name)}: playback. ${PLAY_TIP[t]}" title="${PLAY_TIP[t]}">${PLAY_ICON[t]}</button></td>`;
 }
 function vis(i){
+  if (piece && piece.voices && piece.voices[i] && piece.voices[i].subOf >= 0) i = piece.voices[i].subOf;
   const all = st.vis[pieceKey] || (st.vis[pieceKey] = {});
   const o = all[i] || (all[i] = {on: true, notes: true, lyr: true});
   if (o.play === undefined) o.play = true;
@@ -1218,6 +1228,20 @@ function textW(s, size, italic, fontCss){
 /* ------------------------------------------------------------------ */
 const LYR = 1.7;   /* lyric size, staff spaces */
 const decoder = document.createElement('textarea');
+const parentOf = vi => (piece && piece.voices[vi] && piece.voices[vi].subOf >= 0) ? piece.voices[vi].subOf : vi;
+const subVoiceOf = pvi => (piece && piece.voices.find(v => v.subOf === pvi)) || null;
+const isLayer2Voice = vi => !!(piece && piece.voices[vi] && piece.voices[vi].subOf >= 0);
+function subActiveAt(v2, t){
+  if (!v2 || !v2.events) return false;
+  let a = 0, b = piece ? piece.end + 1 : 1e9;
+  if (piece && piece.bars && piece.bars.length) {
+    for (const br of piece.bars) {
+      if (br.t <= t + EPS) a = Math.max(a, br.t);
+      else { b = Math.min(b, br.t); break; }
+    }
+  } else { a = Math.max(0, t - 2); b = t + 2; }
+  return v2.events.some(e => !e.rest && e.t < b - EPS && e.t + e.d > a + EPS);
+}
 function staffCfg(){
   if (!st.staves || typeof st.staves !== 'object' || !pieceKey) return null;
   const c = st.staves[pieceKey];
@@ -1225,10 +1249,12 @@ function staffCfg(){
 }
 function staffGroups(vlist){
   const cfg = st.view === 'score' ? staffCfg() : null;
-  if (!cfg || vlist.length < 2) return vlist.map(v => ({id: v.idx, voices: [v]}));
+  const hasSub = vlist.some(v => v.subOf >= 0);
+  if ((!cfg && !hasSub) || vlist.length < 2) return vlist.map(v => ({id: v.idx, voices: [v]}));
   const byId = new Map(), order = [];
   for (const v of vlist) {
-    const id = cfg.map[v.idx] !== undefined ? +cfg.map[v.idx] : v.idx;
+    const pIdx = v.subOf >= 0 ? v.subOf : v.idx;
+    const id = cfg && cfg.map[pIdx] !== undefined ? +cfg.map[pIdx] : pIdx;
     if (!byId.has(id)) { const g = {id, voices: []}; byId.set(id, g); order.push(g); }
     byId.get(id).voices.push(v);
   }
@@ -1264,27 +1290,31 @@ function prepare(){
   try { iconsSync(); } catch (e) {}   /* the note value icons in the notation in use (defined with the edit tools, later) */
   piece.voices.forEach((v, i) => { v.idx = i; });
   const sharedMeta = new Map();
-  if (st.view === 'score') {
-    for (const grp of staffGroups(piece.voices.filter(v => vis(v.idx).on))) {
-      if (grp.voices.length > 1) {
-        const clef = chooseGroupClef(grp.voices, grp.id);
-        grp.voices.forEach((v, gi) => {
-          const dir = gi === 0 ? 1 : gi === grp.voices.length - 1 ? -1 : 0;
-          sharedMeta.set(v.idx, {clef, dir});
-        });
-      }
+  for (const grp of staffGroups(piece.voices.filter(v => vis(v.idx).on))) {
+    if (grp.voices.length > 1) {
+      const primaries = grp.voices.filter(v => !(v.subOf >= 0));
+      const onlyDivisi = primaries.length === 1;
+      const clef = onlyDivisi
+        ? ((vis(primaries[0].idx).clef && CLEFS[vis(primaries[0].idx).clef]) ? vis(primaries[0].idx).clef : chooseClef(primaries[0], st.clefs))
+        : chooseGroupClef(grp.voices, grp.id);
+      grp.voices.forEach((v, gi) => {
+        const isSub = v.subOf >= 0;
+        const subV = !isSub ? grp.voices.find(q => q.subOf === v.idx) : null;
+        const dir = isSub ? -1 : onlyDivisi ? 0 : (gi === 0 ? 1 : gi === grp.voices.length - 1 ? -1 : 0);
+        sharedMeta.set(v.idx, {clef, dir, subV, isSub, onlyDivisi});
+      });
     }
   }
   piece.voices.forEach((v, i) => {
     v.idx = i;
     const sm = sharedMeta.get(i);
     v.clef = sm ? sm.clef : (vis(i).clef && CLEFS[vis(i).clef]) ? vis(i).clef : chooseClef(v, st.clefs);
-    v.sharedStaff = !!sm;
+    v.sharedStaff = !!(sm && !sm.onlyDivisi);
     const syms = notate(piece, v, mode);
     /* a voice with no notes yet still shows its staff, clef and sign, and a place where the first note will stand */
     if (!syms.length) { const m0 = v.mets.find(q => q.t < EPS); syms.push({t: 0, d: 2, rest: true, phantom: true, g: 'B', alt: null, syl: [], src: [], lig: 0, mens: m0 ? m0.sign : null, sign: m0 ? m0.sign : null}); }
     for (const s of syms) {
-      s.stemDir = sm ? sm.dir : 0;
+      s.stemDir = sm ? (sm.onlyDivisi && sm.subV ? (subActiveAt(sm.subV, s.t) ? 1 : 0) : sm.dir) : 0;
       s.clef = sm ? sm.clef : clefAt(v, s.t);
       s.pos = s.rest ? null : s.step - CLEFS[s.clef].bottom;
       const g = s.rest ? SHAPE_REST[s.g] : BLACK ? BLACK_G[s.g] || s.g + 'c' : MODERN ? MOD_G[s.g] || s.g : s.g + (s.col ? 'c' : '');
@@ -1943,7 +1973,13 @@ function staffLine(o){
   if (o.group && o.group.length > 1) {
     const grp = o.group, dxMap = new Map(), restDyMap = new Map(), skipSet = new Set();
     for (let i = o.from; i < o.to; i++) {
-      const items = grp.map((gv, gi) => [gi, o.cols[i].items.get(gv)]).filter(([, sym]) => !!sym);
+      const items = [];
+      grp.forEach((gv, gi) => {
+        const sym = o.cols[i].items.get(gv);
+        if (!sym) return;
+        if (gv.subOf >= 0 && sym.rest && !subActiveAt(gv, sym.t)) { skipSet.add(sym); return; }
+        items.push([gi, sym]);
+      });
       if (items.length < 2) {
         if (items.length === 1 && items[0][1].rest) {
           const gi = items[0][0];
@@ -2264,7 +2300,7 @@ function groupRoom(grp, line){
 }
 /* draw one system (several voices stacked, or combined onto shared staves) at y; returns {svg, h} */
 function drawSystem(vlist, line, y, opts = {}){
-  const groups = st.view === 'score' ? staffGroups(vlist) : vlist.map(v => ({id: v.idx, voices: [v]}));
+  const groups = (st.view === 'score' || vlist.some(v => v.subOf >= 0)) ? staffGroups(vlist) : vlist.map(v => ({id: v.idx, voices: [v]}));
   const rooms = groups.map(grp => groupRoom(grp, line));
   const gap = Math.max(0.3, 0.5 * st.vs);
   const tops = [];
@@ -2320,7 +2356,7 @@ function drawSystem(vlist, line, y, opts = {}){
         const vi = vlist.indexOf(v);
         if (vi >= 0 && opts.names[vi]) s += `<text class="vnamehit" data-v="${v.idx}" x="${f(nX)}" y="${f(tops[k] + 2.6)}" font-size="1.8" text-anchor="end" font-style="italic">${esc(opts.names[vi])}</text>`;
       } else {
-        const gn = grp.voices.map(gv => ({v: gv, name: opts.names[vlist.indexOf(gv)] || ''})).filter(x => x.name);
+        const gn = grp.voices.filter(gv => !(gv.subOf >= 0)).map(gv => ({v: gv, name: opts.names[vlist.indexOf(gv)] || ''})).filter(x => x.name);
         const step = Math.min(2.1, 4.4 / Math.max(1, gn.length));
         const y0 = tops[k] + 2.6 - (gn.length - 1) * step * 0.5;
         gn.forEach((item, idx) => {
@@ -3267,10 +3303,12 @@ function syncUI(){
         `<td><button class="vbtn vexp" data-op="cf" data-i="${v.idx}" title="Open in CantusFirmus" aria-label="Open ${esc(v.name)} in CantusFirmus"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3.5h6.5V10h-2V6.9l-6.8 6.8-1.4-1.4 6.8-6.8H14ZM4.5 6.5h7v2h-5v9h9v-5h2v7h-13Z"/></svg></button></td>` +
         `<td><button class="vbtn vdel" data-op="del" data-i="${v.idx}" aria-label="Remove ${esc(v.name)}" title="Remove this voice">×</button></td></tr>`;
     };
-    const grpN = piece.voices.length >= 2 ? staffGroups(piece.voices.filter(v => vis(v.idx).on)).length : 0;
-    const isComb = piece.voices.length >= 2 && !!staffCfg() && grpN < piece.voices.filter(v => vis(v.idx).on).length;
-    const combBtn = piece.voices.length >= 2 ? ` <button data-op="combine" class="vcomb" title="Combine multiple voices onto shared staves (short score)">${isComb ? `Staves (${grpN})` : 'Combine on staves…'}</button>` : '';
-    $('#voiceTable').innerHTML = `<thead><tr><th></th><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th><th>Playback</th><th></th><th></th></tr></thead><tbody>` + piece.voices.map((v, i) => { v.idx = i; return row(v); }).join('') +
+    const mainVoices = piece.voices.filter((v, i) => { v.idx = i; return !(v.subOf >= 0); });
+    const visMain = mainVoices.filter(v => vis(v.idx).on);
+    const grpN = mainVoices.length >= 2 ? staffGroups(visMain).length : 0;
+    const isComb = mainVoices.length >= 2 && !!staffCfg() && grpN < visMain.length;
+    const combBtn = mainVoices.length >= 2 ? ` <button data-op="combine" class="vcomb" title="Combine multiple voices onto shared staves (short score)">${isComb ? `Staves (${grpN})` : 'Combine on staves…'}</button>` : '';
+    $('#voiceTable').innerHTML = `<thead><tr><th></th><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th><th>Playback</th><th></th><th></th></tr></thead><tbody>` + mainVoices.map(v => row(v)).join('') +
       `</tbody><tfoot><tr><td colspan="8"><div class="vfoot"><button data-op="add">+ New voice</button>${combBtn}</div></td></tr></tfoot>`;
     if (!$('#staffCombine').hidden && typeof renderStaffCombine === 'function') { if (piece.voices.length < 2) openStaffCombine(false); else renderStaffCombine(); }
     }
@@ -3556,9 +3594,9 @@ const VOICE_OPS = {
 };
 function renderStaffCombine(){
   const box = $('#staffCombine'); if (!box || !piece) return;
-  const vs = piece.voices, n = vs.length;
+  const vs = piece.voices.filter(v => !(v.subOf >= 0)), n = vs.length;
   const cfg = staffCfg() || {map: {}, clefs: {}};
-  const getId = i => cfg.map[i] !== undefined ? +cfg.map[i] : i;
+  const getId = v => cfg.map[v.idx] !== undefined ? +cfg.map[v.idx] : vs.indexOf(v);
   const maxSt = Math.min(n, Math.max(2, n));
   const groups = staffGroups(vs);
   const shared = groups.filter(g => g.voices.length > 1);
@@ -3568,9 +3606,9 @@ function renderStaffCombine(){
     `<div class="sc-head"><button type="button" class="tb sc-back" data-sc="back">← Voices</button><span class="sc-title">Voices per staff</span></div>` +
     `<div class="sc-presets"><button type="button" class="tb" data-sc="sep">Separate staves</button>` +
       (n >= 3 ? `<button type="button" class="tb" data-sc="short">${n === 4 ? 'Short score (SA / TB)' : 'Pair voices'}</button>` : '') + `</div>` +
-    `<div class="sc-rows">` + vs.map((v, i) => {
-      const cur = getId(i);
-      const pills = Array.from({length: maxSt}, (_, si) => `<button type="button" class="sc-pill" data-vi="${i}" data-si="${si}" aria-pressed="${cur === si}">${si + 1}</button>`).join('');
+    `<div class="sc-rows">` + vs.map(v => {
+      const cur = getId(v);
+      const pills = Array.from({length: maxSt}, (_, si) => `<button type="button" class="sc-pill" data-vi="${v.idx}" data-si="${si}" aria-pressed="${cur === si}">${si + 1}</button>`).join('');
       return `<div class="sc-row"><span class="sc-name">${esc(v.name)}</span><div class="sc-pills">${pills}</div></div>`;
     }).join('') + `</div>` +
     (shared.length ? `<div class="sc-staves"><div class="sc-sub">Shared staff clefs</div>` + shared.map((g, idx) => {
@@ -4302,6 +4340,7 @@ function writeKern(P){
   const line = f2 => cols.map(c => f2(c)).join('\t');
   out.push(line(c => c.text < 0 ? '**kern' : '**text'));
   out.push(line(c => c.text < 0 ? `*I"${c.v.name}` : '*'));
+  if (vs.some(v => v.subOf >= 0)) out.push(line(c => c.text < 0 && c.v.subOf >= 0 ? '*divisi' : '*'));
   if (vs.some(v => v.abbr)) out.push(line(c => c.text < 0 && c.v.abbr ? `*I'${c.v.abbr}` : '*'));
   if (vs.some(v => v.oclef)) out.push(line(c => c.text < 0 && c.v.oclef ? `*oclef${c.v.oclef}` : '*'));
   /* every event split at the barlines, with ties */
@@ -4773,6 +4812,7 @@ function redo(){
   ed.undo.push(piece.text || writeKern(piece)); applyText(top);
 }
 function showSel(scroll){
+  if (typeof syncLayer2UI === 'function') syncLayer2UI();
   document.querySelectorAll('#pages g.sel').forEach(g => g.classList.remove('sel'));
   document.querySelectorAll('#pages .caret').forEach(c => c.remove());
   if ((ed.range || ed.picks) && piece) {
@@ -4876,8 +4916,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') clefPick.hid
 function staffTarget(rect, e){
   const ctm = rect.getScreenCTM(); if (!ctm) return null;
   const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
-  const vi = +rect.dataset.v, top = +rect.dataset.top, v = piece.voices[vi];
+  let vi = +rect.dataset.v, top = +rect.dataset.top, v = piece.voices[vi];
   if (!v) return null;
+  if (ed.on && ed.layer2) { const sub = subVoiceOf(vi); if (sub) { vi = sub.idx; v = sub; } }
   const pos = Math.max(-8, Math.min(16, Math.round((top + 4 - p.y) * 2)));
   let mode = 'end', k = null;
   if (rect.dataset.k0 !== '') {
@@ -4990,7 +5031,7 @@ function staffGridMap(rect, v){
   return {pts, tMin: pts[0][0], tb, xb, g, sw, xOf, tOf};
 }
 function timePlace(rect, tg){
-  const v = tg.v, M = staffGridMap(rect, v);
+  const v = tg.v, M = staffGridMap(rect, v.subOf >= 0 ? piece.voices[v.subOf] : v);
   if (!M) return null;
   let T = M.tOf(tg.x);
   const g = navGrid(v, Math.min(T, v.end));
@@ -5748,7 +5789,15 @@ pagesEl.addEventListener('click', e => {
   const rect = offN ? offN.rect : ed.on && !e.shiftKey ? stafFor(e.target) : null;
   if (rect) {
     e.stopImmediatePropagation();
+    if (ed.layer2) {
+      const pvi = parentOf(+rect.dataset.v);
+      if (!subVoiceOf(pvi)) ensureSubVoice(pvi);
+    }
     const tg = offN ? offN.tg : staffTarget(rect, e); if (!tg) return;
+    if (ed.layer2 && !isLayer2Voice(tg.vi)) {
+      const sub = subVoiceOf(parentOf(tg.vi));
+      if (sub) { tg.vi = sub.idx; tg.v = sub; }
+    }
     clearGhost(); ed.range = null; ed.picks = null;
     const tp = timePlace(rect, tg);
     if (tp) {
@@ -6469,10 +6518,28 @@ function drawCaret(scroll){
   if (!piece) return;
   const {vi, ei} = ed.ins, v = piece.voices[vi];
   if (!v || !v.syms) return;
-  let k = -1, frac = 0, at = -1;
   const pad = ed.ins.pad > EPS && ei >= v.events.length ? ed.ins.pad : 0;
-  /* found by time alone (a note may be written as several, several rests as one) */
   const T = ei < v.events.length ? rt(v.events[ei].t + (ed.ins.off || 0)) : v.end;
+  if (v.subOf >= 0) {
+    const pvi = v.subOf, pv = piece.voices[pvi];
+    if (!pv) return;
+    const rects = [...document.querySelectorAll('#pages rect.stafhit[data-v="' + pvi + '"]')];
+    let r = rects.find(r2 => {
+      const M = staffGridMap(r2, pv);
+      return M && T >= M.tMin - EPS && T <= M.tb + EPS;
+    }) || rects[rects.length - 1];
+    if (!r) return;
+    const M = staffGridMap(r, pv); if (!M) return;
+    const x = M.xOf(rt(T + pad)), top = +r.dataset.top;
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    c.setAttribute('class', 'caret');
+    c.innerHTML = `<rect x="${f(x - 0.075)}" y="${f(top - 0.9)}" width="0.15" height="5.5"/>` +
+      `<path d="M${f(x - 0.45)} ${f(top - 1.6)}H${f(x + 0.45)}L${f(x)} ${f(top - 0.85)}Z"/>`;
+    r.parentNode.appendChild(c);
+    if (scroll) bringIntoView(c);
+    return;
+  }
+  let k = -1, frac = 0, at = -1;
   v.syms.forEach((q, i) => { if (q.src && k < 0 && T > q.t + EPS && T < q.t + q.d - EPS) { k = i; frac = (T - q.t) / q.d; } });
   let last = -1; for (let i = v.syms.length - 1; i >= 0; i--) if (v.syms[i].src) { last = i; break; }
   if (k < 0) {
@@ -6557,6 +6624,7 @@ pagesEl.addEventListener('pointerup', () => {
 pagesEl.addEventListener('pointercancel', () => { if (noteDrag) { noteDrag = null; render(); } });
 
 function syncEdit(){
+  if (typeof syncLayer2UI === 'function') syncLayer2UI();
   $('#editBtn').setAttribute('aria-pressed', String(ed.on));
   $('#editBar').hidden = !barOpen();
   $('#editMore').setAttribute('aria-expanded', String(barOpen()));
@@ -6608,23 +6676,135 @@ function iconsSync(){
 }
 NoteInput.fill(CBA, glyphIcon);
 NoteInput.wire(CBA);
-/* Divisi (stacked notes of the same value in one voice): toggle button next to Ligature */
+function syncLayer2UI(){
+  const on = !!(ed.layer2 || (ed.sel && isLayer2Voice(ed.sel.vi)) || (ed.on && ed.ins && isLayer2Voice(ed.ins.vi)));
+  document.body.classList.toggle('layer2', on);
+  const vb = $('#v2Btn'); if (vb) vb.setAttribute('aria-pressed', String(!!ed.layer2));
+  const cb = $('#divisiBtn'); if (cb) cb.setAttribute('aria-pressed', String(!!ed.divisi));
+}
+function ensureSubVoice(pvi){
+  const existing = subVoiceOf(pvi);
+  if (existing) return existing;
+  const par = piece.voices[pvi]; if (!par) return null;
+  const v2 = restVoice((par.name || 'Voice') + ' 2', par.clef || 'treble', par);
+  v2.subOf = pvi;
+  commit(() => {
+    const insertAt = pvi + 1;
+    for (const v of piece.voices) if (v.subOf >= insertAt) v.subOf++;
+    piece.voices.splice(insertAt, 0, v2);
+    piece.voices.forEach((v, i) => { v.idx = i; });
+  });
+  return subVoiceOf(pvi);
+}
+function splitVoiceAt(v, t){
+  if (!v || t <= EPS || t >= v.end - EPS) return;
+  const i = v.events.findIndex(e => e.t < t - EPS && e.t + e.d > t + EPS);
+  if (i < 0) return;
+  const a = v.events[i], d1 = rt(t - a.t), d2 = rt(a.d - d1);
+  const b = Object.assign({}, a, {t: rt(t), d: d2, kd: d2, syl: [], ferm: false});
+  if (!a.rest) {
+    b.tieEnd = !!(a.tieEnd || a.tieMid); b.tieStart = !!(a.tieStart || a.tieMid); b.tieMid = b.tieStart && b.tieEnd;
+    if (a.tieEnd && !a.tieStart) { a.tieMid = true; a.tieEnd = false; } else if (!a.tieMid) a.tieStart = true;
+  }
+  a.d = d1; a.kd = d1; a.long = false; a.ferm = false;
+  v.events.splice(i + 1, 0, b);
+  for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > i) m.ei++;
+}
+function caretAtTime(v, T){
+  if (!v) return {vi: 0, ei: 0, off: 0, pad: 0};
+  const t = Math.max(0, Math.min(v.end, T || 0));
+  const ei = v.events.findIndex(e => t >= e.t - EPS && t < e.t + e.d - EPS);
+  if (ei >= 0) return {vi: v.idx, ei, off: rt(t - v.events[ei].t), pad: 0};
+  return {vi: v.idx, ei: v.events.length, off: 0, pad: 0};
+}
+function swapDivisiSelection(){
+  if (!piece) return false;
+  let vi = -1, t0 = Infinity, t1 = -Infinity;
+  if (ed.range || ed.picks) {
+    const it = selItems();
+    if (!it.length) return false;
+    const parents = new Set(it.map(x => parentOf(x.v.idx)));
+    if (parents.size !== 1) return false;
+    vi = [...parents][0];
+    for (const {e} of it) { t0 = Math.min(t0, e.t); t1 = Math.max(t1, rt(e.t + e.d)); }
+  } else if (ed.sel) {
+    const s = selSym(); if (!s) return false;
+    vi = parentOf(ed.sel.vi); t0 = s.t; t1 = rt(s.t + s.d);
+  } else return false;
+  const v1 = piece.voices[vi], v2 = subVoiceOf(vi);
+  if (!v1 || !v2 || !(t1 > t0 + EPS)) return false;
+  const hasV2 = v2.events.some(e => !e.rest && e.t < t1 - EPS && e.t + e.d > t0 + EPS);
+  if (!hasV2) return false;
+  commit(() => {
+    const a = piece.voices[vi], b = subVoiceOf(vi);
+    if (!a || !b) return;
+    splitVoiceAt(a, t0); splitVoiceAt(a, t1);
+    splitVoiceAt(b, t0); splitVoiceAt(b, t1);
+    const iA0 = a.events.findIndex(e => e.t >= t0 - EPS);
+    const iA1 = a.events.findIndex(e => e.t >= t1 - EPS);
+    const endA = iA1 < 0 ? a.events.length : iA1;
+    const iB0 = b.events.findIndex(e => e.t >= t0 - EPS);
+    const iB1 = b.events.findIndex(e => e.t >= t1 - EPS);
+    const endB = iB1 < 0 ? b.events.length : iB1;
+    if (iA0 < 0 || iB0 < 0) return;
+    const sliceA = a.events.slice(iA0, endA);
+    const sliceB = b.events.slice(iB0, endB);
+    a.events.splice(iA0, endA - iA0, ...sliceB);
+    b.events.splice(iB0, endB - iB0, ...sliceA);
+    retime(a); retime(b);
+  });
+  toast('Swapped voice 1 and voice 2.');
+  return true;
+}
+/* Chord (stacked notes of the same value in one voice) + Divisi (+v, true second voice with independent rhythm, stems down, blue selection) */
 {
   const lb = $('#ligBtn');
   if (lb) {
-    const db = document.createElement('button');
-    db.className = 'ib'; db.id = 'divisiBtn';
-    db.setAttribute('aria-pressed', 'false');
-    db.setAttribute('aria-label', 'Divisi (stacked notes)');
-    db.title = 'Divisi: click above or below an existing note to stack another note of the same value (click an existing note in the stack to remove it)';
-    db.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4 16.5 6.9 12 11.4 7.5 6.9Zm0 2.5L9.9 6.9 12 9 14.1 6.9ZM12 12.6 16.5 17.1 12 21.6 7.5 17.1Zm0 2.5L9.9 17.1 12 19.2 14.1 17.1Z"/></svg>';
-    db.addEventListener('click', () => {
+    const cb = document.createElement('button');
+    cb.className = 'ib'; cb.id = 'divisiBtn';
+    cb.setAttribute('aria-pressed', 'false');
+    cb.setAttribute('aria-label', 'Chord (stacked notes)');
+    cb.title = 'Chord: click above or below an existing note (or press A–G) to stack another note of the same value';
+    cb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4 16.5 6.9 12 11.4 7.5 6.9Zm0 2.5L9.9 6.9 12 9 14.1 6.9ZM12 12.6 16.5 17.1 12 21.6 7.5 17.1Zm0 2.5L9.9 17.1 12 19.2 14.1 17.1Z"/></svg>';
+    cb.addEventListener('click', () => {
       if (!piece) return;
       ed.divisi = !ed.divisi;
-      if (ed.divisi && !ed.on) setEdit(true);
-      db.setAttribute('aria-pressed', String(!!ed.divisi));
+      if (ed.divisi) { ed.layer2 = false; if (!ed.on) setEdit(true); }
+      syncLayer2UI();
     });
-    lb.insertAdjacentElement('afterend', db);
+    lb.insertAdjacentElement('afterend', cb);
+
+    const vb = document.createElement('button');
+    vb.className = 'ib v2btn'; vb.id = 'v2Btn';
+    vb.setAttribute('aria-pressed', 'false');
+    vb.setAttribute('aria-label', 'Divisi (+v): second voice');
+    vb.title = 'Divisi (+v): write a second independent voice on the same staff (stems down, blue selection). With a divisi passage selected, click to swap voice 1 and voice 2';
+    vb.innerHTML = '<span>+v</span>';
+    vb.addEventListener('click', () => {
+      if (!piece || !CBA.guard()) return;
+      if (swapDivisiSelection()) { syncLayer2UI(); return; }
+      ed.layer2 = !ed.layer2;
+      if (ed.layer2) {
+        ed.divisi = false;
+        if (!ed.on) setEdit(true);
+        const cv = curVoice() || visibleVoices()[0];
+        if (cv) {
+          const pvi = parentOf(cv.idx), T = selStart();
+          const v2 = ensureSubVoice(pvi);
+          if (v2) { ed.sel = null; ed.range = null; ed.picks = null; ed.ins = caretAtTime(v2, T); }
+        }
+        toast('Divisi (+v): writing second voice (stems down). Click +v again for voice 1.');
+      } else {
+        const cv = curVoice();
+        if (cv) {
+          const pvi = parentOf(cv.idx), T = selStart();
+          ed.sel = null; ed.range = null; ed.picks = null;
+          ed.ins = caretAtTime(piece.voices[pvi], T);
+        }
+      }
+      syncLayer2UI(); showSel(true); drawEditGrid();
+    });
+    cb.insertAdjacentElement('afterend', vb);
   }
 }
 /* Punctus additionis (.A) and a hover dropdown below it for Punctus divisionis (.D) */
@@ -6678,7 +6858,7 @@ NoteInput.wire(CBA);
 /* edit mode is always caret mode: the caret stands at the start until a note is clicked */
 function setEdit(on){
   ed.on = on; clearGhost();
-  if (!on) { ed.accArm = null; ed.accEd = false; ed.dotArm = false; ed.edArm = false; }
+  if (!on) { ed.accArm = null; ed.accEd = false; ed.dotArm = false; ed.edArm = false; ed.layer2 = false; ed.divisi = false; }
   /* entering note input takes the selection away: the caret stands just before what was selected (Samuel 2026-11-14) */
   if (ed.on && piece && (ed.sel || ed.range || ed.picks)) {
     let at = null;
@@ -7206,7 +7386,7 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
    too tall for the room, it gets a scroll bar of its own; if it only stands a little too high or low, it is moved over. */
 {
   const CAND = '.popbody, .menu, #library, .library';
-  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}html,body,body *:not(input):not(textarea):not([contenteditable]){-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none !important}input,textarea,[contenteditable]{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default !important}#popView .staffset{grid-template-columns:auto minmax(150px,auto)}#pages svg .ledger,#pages svg .barl,#pages svg .tie,#pages svg .ms{stroke:var(--note-ink,var(--leaf-ink))}#pages svg use,#pages svg .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) use,html.playing #pages g.sel:not(.on) .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) .ledger{stroke:var(--note-ink,var(--leaf-ink))}#pages svg text.lyr{font-family:var(--lyr-font,"IM Fell English","Palatino Linotype",Palatino,Georgia,serif)}.staffset .subhead{grid-column:1/-1;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);opacity:.78;padding-top:6px;margin-top:2px;border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent)}.staffset .subhead:first-child{padding-top:0;margin-top:0;border-top:0}.staffset .lab-lock{display:inline-flex;align-items:center;gap:5px}.lockbtn{display:inline-grid;place-items:center;width:22px;height:22px;padding:0;border:0 !important;outline:none;box-shadow:none !important;border-radius:5px;background:transparent !important;color:var(--muted) !important;cursor:pointer;opacity:.78;transition:opacity .12s,background .12s}.lockbtn svg{width:14px;height:14px;fill:currentColor;display:block}.lockbtn[aria-pressed="true"]{color:var(--muted) !important;background:transparent !important;box-shadow:none !important;border:0 !important;opacity:.85}.lockbtn:hover,.lockbtn[aria-pressed="true"]:hover:not(:disabled){background:color-mix(in srgb,var(--ink) 8%,transparent) !important;color:var(--muted) !important;border-color:transparent !important;opacity:1}.pt-field{display:inline-flex;align-items:center;gap:5px}.pt-field input{width:62px;height:var(--h);padding:0 7px;border:1px solid var(--line);border-radius:6px;background:var(--surface,#F4EDE0);color:var(--ink);font:inherit;font-size:14px;font-variant-numeric:tabular-nums}.pt-field span{color:var(--muted);font-size:13px}.lines-ctl{align-items:center;gap:4px !important}#linesNum{width:52px;height:var(--h);padding:0 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface,#F4EDE0);color:var(--ink);font:inherit;font-size:14px;font-variant-numeric:tabular-nums;margin-left:2px}#pages .seclab{cursor:pointer}@media (hover:hover){#pages .seclab:hover{fill:var(--accent);color:var(--accent)}}.sec-ed{position:absolute;z-index:40;min-width:140px;max-width:280px;padding:3px 7px;border:1.5px solid var(--accent);border-radius:5px;background:var(--ground,#FBF7EF);color:var(--ink);font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif;font-style:italic;font-size:15px;box-shadow:0 4px 14px rgba(42,34,24,.22);outline:none}.vfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}#popVoices.open .popbody{display:block !important}#staffCombine{padding:6px 8px;min-width:290px;max-width:360px;display:flex;flex-direction:column;gap:8px}#staffCombine[hidden]{display:none !important}.sc-head{display:flex;align-items:center;gap:8px}.sc-title{font-size:13px;font-weight:700;color:var(--ink)}.sc-presets{display:flex;gap:6px;flex-wrap:wrap}.sc-presets .tb,.sc-back{font-size:12px;height:26px;padding:0 9px}.sc-rows{display:flex;flex-direction:column;gap:5px}.sc-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.sc-name{font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}.sc-pills{display:flex;gap:3px}.sc-pill{min-width:26px;height:24px;padding:0 6px;border:1px solid var(--line);border-radius:5px;background:transparent;color:var(--muted);font:inherit;font-size:12px;cursor:pointer}.sc-pill[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.sc-staves{border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent);padding-top:6px;display:flex;flex-direction:column;gap:5px}.sc-sub{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.sc-srow{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--ink)}.sc-slbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}.sc-clef{font-size:12px;height:26px}.rng-wrap{display:flex;flex-direction:column;min-width:150px}.rng-wrap input[type=range]{width:100%;margin:0}.rng-meta{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:11px;line-height:1.2;font-variant-numeric:tabular-nums;opacity:0;max-height:0;overflow:hidden;margin-top:0;pointer-events:none;transition:opacity .14s ease,max-height .14s ease,margin-top .14s ease}.rng-wrap:hover .rng-meta,.rng-wrap:focus-within .rng-meta,.rng-wrap.active .rng-meta{opacity:1;max-height:22px;margin-top:2px;pointer-events:auto}.rng-bound{appearance:none;border:0;background:transparent;padding:0 3px;margin:0;font:inherit;color:var(--muted);cursor:pointer;border-radius:3px;border-bottom:1px dotted color-mix(in srgb,var(--muted) 55%,transparent)}.rng-bound:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 7%,transparent)}.rng-val{color:var(--accent);font-weight:600;padding:0 4px}.rng-edit{width:46px;font:inherit;font-size:11px;padding:0 3px;border:1px solid var(--accent);border-radius:3px;background:var(--ground,#FBF7EF);color:var(--ink);text-align:center;outline:none}.rng-edit::-webkit-inner-spin-button,.rng-edit::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}#pages .ed-grid{pointer-events:none}#pages .ed-grid .eg-tick{stroke:var(--sel);stroke-width:.11;opacity:.45}#pages .ed-grid .eg-tick.maj{stroke-width:.15;opacity:.75}#pages .ed-grid .eg-line{stroke:var(--sel);stroke-width:.08;stroke-dasharray:.26 .26;opacity:.13}#pages .ed-grid .eg-line.maj{opacity:.24}#pages .ed-grid .eg-line.tail{opacity:.24}@media print{#pages .ed-grid{display:none !important}}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}#library[data-mode="rep"]{min-height:min(62vh,520px)}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
+  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}html,body,body *:not(input):not(textarea):not([contenteditable]){-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none !important}input,textarea,[contenteditable]{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default !important}#popView .staffset{grid-template-columns:auto minmax(150px,auto)}#pages svg .ledger,#pages svg .barl,#pages svg .tie,#pages svg .ms{stroke:var(--note-ink,var(--leaf-ink))}#pages svg use,#pages svg .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) use,html.playing #pages g.sel:not(.on) .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) .ledger{stroke:var(--note-ink,var(--leaf-ink))}#pages svg text.lyr{font-family:var(--lyr-font,"IM Fell English","Palatino Linotype",Palatino,Georgia,serif)}.staffset .subhead{grid-column:1/-1;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);opacity:.78;padding-top:6px;margin-top:2px;border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent)}.staffset .subhead:first-child{padding-top:0;margin-top:0;border-top:0}.staffset .lab-lock{display:inline-flex;align-items:center;gap:5px}.lockbtn{display:inline-grid;place-items:center;width:22px;height:22px;padding:0;border:0 !important;outline:none;box-shadow:none !important;border-radius:5px;background:transparent !important;color:var(--muted) !important;cursor:pointer;opacity:.78;transition:opacity .12s,background .12s}.lockbtn svg{width:14px;height:14px;fill:currentColor;display:block}.lockbtn[aria-pressed="true"]{color:var(--muted) !important;background:transparent !important;box-shadow:none !important;border:0 !important;opacity:.85}.lockbtn:hover,.lockbtn[aria-pressed="true"]:hover:not(:disabled){background:color-mix(in srgb,var(--ink) 8%,transparent) !important;color:var(--muted) !important;border-color:transparent !important;opacity:1}.pt-field{display:inline-flex;align-items:center;gap:5px}.pt-field input{width:62px;height:var(--h);padding:0 7px;border:1px solid var(--line);border-radius:6px;background:var(--surface,#F4EDE0);color:var(--ink);font:inherit;font-size:14px;font-variant-numeric:tabular-nums}.pt-field span{color:var(--muted);font-size:13px}.lines-ctl{align-items:center;gap:4px !important}#linesNum{width:52px;height:var(--h);padding:0 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface,#F4EDE0);color:var(--ink);font:inherit;font-size:14px;font-variant-numeric:tabular-nums;margin-left:2px}#pages .seclab{cursor:pointer}@media (hover:hover){#pages .seclab:hover{fill:var(--accent);color:var(--accent)}}.sec-ed{position:absolute;z-index:40;min-width:140px;max-width:280px;padding:3px 7px;border:1.5px solid var(--accent);border-radius:5px;background:var(--ground,#FBF7EF);color:var(--ink);font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif;font-style:italic;font-size:15px;box-shadow:0 4px 14px rgba(42,34,24,.22);outline:none}.vfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}#popVoices.open .popbody{display:block !important}#staffCombine{padding:6px 8px;min-width:290px;max-width:360px;display:flex;flex-direction:column;gap:8px}#staffCombine[hidden]{display:none !important}.sc-head{display:flex;align-items:center;gap:8px}.sc-title{font-size:13px;font-weight:700;color:var(--ink)}.sc-presets{display:flex;gap:6px;flex-wrap:wrap}.sc-presets .tb,.sc-back{font-size:12px;height:26px;padding:0 9px}.sc-rows{display:flex;flex-direction:column;gap:5px}.sc-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.sc-name{font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}.sc-pills{display:flex;gap:3px}.sc-pill{min-width:26px;height:24px;padding:0 6px;border:1px solid var(--line);border-radius:5px;background:transparent;color:var(--muted);font:inherit;font-size:12px;cursor:pointer}.sc-pill[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.sc-staves{border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent);padding-top:6px;display:flex;flex-direction:column;gap:5px}.sc-sub{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.sc-srow{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--ink)}.sc-slbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}.sc-clef{font-size:12px;height:26px}body.layer2 #pages{--sel:#1B56B8;--accent:#1B56B8}.v2btn{font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif;font-weight:700;font-size:14px;letter-spacing:-.02em;padding:0 6px !important;width:auto !important;min-width:30px}.v2btn[aria-pressed="true"]{background:#1B56B8 !important;border-color:#1B56B8 !important;color:#fff !important}.rng-wrap{display:flex;flex-direction:column;min-width:150px}.rng-wrap input[type=range]{width:100%;margin:0}.rng-meta{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:11px;line-height:1.2;font-variant-numeric:tabular-nums;opacity:0;max-height:0;overflow:hidden;margin-top:0;pointer-events:none;transition:opacity .14s ease,max-height .14s ease,margin-top .14s ease}.rng-wrap:hover .rng-meta,.rng-wrap:focus-within .rng-meta,.rng-wrap.active .rng-meta{opacity:1;max-height:22px;margin-top:2px;pointer-events:auto}.rng-bound{appearance:none;border:0;background:transparent;padding:0 3px;margin:0;font:inherit;color:var(--muted);cursor:pointer;border-radius:3px;border-bottom:1px dotted color-mix(in srgb,var(--muted) 55%,transparent)}.rng-bound:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 7%,transparent)}.rng-val{color:var(--accent);font-weight:600;padding:0 4px}.rng-edit{width:46px;font:inherit;font-size:11px;padding:0 3px;border:1px solid var(--accent);border-radius:3px;background:var(--ground,#FBF7EF);color:var(--ink);text-align:center;outline:none}.rng-edit::-webkit-inner-spin-button,.rng-edit::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}#pages .ed-grid{pointer-events:none}#pages .ed-grid .eg-tick{stroke:var(--sel);stroke-width:.11;opacity:.45}#pages .ed-grid .eg-tick.maj{stroke-width:.15;opacity:.75}#pages .ed-grid .eg-line{stroke:var(--sel);stroke-width:.08;stroke-dasharray:.26 .26;opacity:.13}#pages .ed-grid .eg-line.maj{opacity:.24}#pages .ed-grid .eg-line.tail{opacity:.24}@media print{#pages .ed-grid{display:none !important}}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}#library[data-mode="rep"]{min-height:min(62vh,520px)}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
   {
     const gr = $('#glassRange');
     const applyGlass = v => {
