@@ -71,6 +71,7 @@ ${APP.popsBeforeVoices || ''}
           <label class="lab bnx" for="bunitSel">A bar is</label><select class="bnx" id="bunitSel" title="What one bar is when counting"><option value="bar">From barline to barline</option><option value="mens">A breve of the mensuration sign</option><option value="S">A semibreve</option><option value="B">A breve</option><option value="Bp">A perfect breve (dotted)</option><option value="L">A long</option><option value="Lp">A perfect long</option></select>
           <span class="lab bnx">Bar numbers over</span><div class="btns bnx" id="bposSeg" role="group" aria-label="Bar numbers over"><button class="tb" data-v="top" title="Above the highest staff of each system">Top staff</button><button class="tb" data-v="all" title="Above every staff">Every staff</button></div>
           <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
+          <span class="lab">Accidentals</span><div class="btns" id="accSeg" role="group" aria-label="Accidental style"><button class="tb" data-v="modern" title="Standard vertical sharp and natural">Modern</button><button class="tb" data-v="old" title="Renaissance diagonal double-cross sharp (diesis) and square b quadratum">Old</button><button class="tb" data-v="early" title="Early single diagonal cross sharp (×) and square b quadratum">Early</button></div>
           <div class="subhead">Lyrics</div>
           <label class="lab" for="lyrFontSel">Font</label><select id="lyrFontSel" title="Font used for lyrics"></select>
           <label class="ctl" for="lyrPt">Size</label><span class="pt-field"><input type="number" id="lyrPt" min="4" max="36" step="0.5" inputmode="decimal" aria-label="Lyrics size in points"><span>pt</span></span>
@@ -304,6 +305,30 @@ function shiftPath(d, dy){
   GLY.Smc = {d: GLY.F.d, b: GLY.F.b};
   GLY.Fc = {d: GLY.Sf.d, b: GLY.Sf.b};
   GLY.Sfc = {d: GLY.F3.d, b: GLY.F3.b};
+  /* Historical accidental styles: shO (Renaissance diagonal double-cross diesis), shX (early single diagonal cross), naO (square b quadratum) */
+  const barP = (x1, y1, x2, y2, hw) => {
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, nx = -dy / len * hw, ny = dx / len * hw;
+    const r = n => Math.round(n * 1000) / 1000;
+    return `M${r(x1 + nx)} ${r(y1 + ny)}L${r(x2 + nx)} ${r(y2 + ny)}L${r(x2 - nx)} ${r(y2 - ny)}L${r(x1 - nx)} ${r(y1 - ny)}Z`;
+  };
+  {
+    const cx = 0.52, L = 0.46, s = 0.145, u = Math.SQRT1_2, hw = 0.052;
+    GLY.shO = {
+      d: barP(cx - L * u + s * u, -L * u - s * u, cx + L * u + s * u, L * u - s * u, hw) +
+         barP(cx - L * u - s * u, -L * u + s * u, cx + L * u - s * u, L * u + s * u, hw) +
+         barP(cx - L * u + s * u, L * u + s * u, cx + L * u + s * u, -L * u + s * u, hw) +
+         barP(cx - L * u - s * u, L * u - s * u, cx + L * u - s * u, -L * u - s * u, hw),
+      b: [0.02, -0.52, 1.02, 0.52]
+    };
+    GLY.shX = {
+      d: barP(0.46 - 0.34, -0.34, 0.46 + 0.34, 0.34, 0.062) + barP(0.46 - 0.34, 0.34, 0.46 + 0.34, -0.34, 0.062),
+      b: [0.06, -0.4, 0.86, 0.4]
+    };
+    GLY.naO = {
+      d: 'M0.06 -1.12H0.16V0.52H0.06ZM0.42 -0.52H0.52V1.12H0.42ZM0.06 -0.44H0.52V-0.24H0.06ZM0.06 0.24H0.52V0.44H0.06Z',
+      b: [0.06, -1.12, 0.52, 1.12]
+    };
+  }
   const flagU = 'M1.13 -3.5H1.25C1.33 -2.8 2.15 -2.45 1.9 -1.25C1.86 -2.15 1.45 -2.45 1.25 -2.55Z';
   const flagD = 'M0.05 3.5H0.17C0.25 2.8 1.07 2.45 0.82 1.25C0.78 2.15 0.37 2.45 0.17 2.55Z';
   GLY.nX = {d: GLY.nE.d + shiftPath(flagU, 0.6), b: GLY.nE.b};
@@ -312,7 +337,13 @@ function shiftPath(d, dy){
 }
 
 const NATSC = 1.3;   /* the natural sign is drawn a little larger than its glyph (Samuel 2026-11-14) */
-const gw = k => (GLY[k].b[2] - GLY[k].b[0]) * (k === 'na' ? NATSC : 1);
+const accGlyph = k => {
+  const s = typeof st !== 'undefined' ? st.accStyle : 'modern';
+  if (s === 'old') return k === 'sh' ? 'shO' : k === 'na' ? 'naO' : k;
+  if (s === 'early') return k === 'sh' ? 'shX' : k === 'na' ? 'naO' : k;
+  return k;
+};
+const gw = k => { const g = accGlyph(k); return (GLY[g].b[2] - GLY[g].b[0]) * (g === 'na' ? NATSC : 1); };
 const f = n => (Math.round(n * 1000) / 1000).toString();
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const EPS = 1e-6, eq = (a, b) => Math.abs(a - b) < 1e-4;
@@ -1058,7 +1089,7 @@ function chooseClef(v, mode){
 let DOCK = null;     /* where the site page says the browser window is, when embedded: {top, vh, pageTop} */
 const KEY = APP.store + ':v1';
 const st = {
-  inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', noteCol: 'black', colLock: 'off', dashes: 'on', ed: 'on', heads: 'modern', stems: 'adaptive',
+  inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', noteCol: 'black', colLock: 'off', dashes: 'on', ed: 'on', heads: 'modern', stems: 'adaptive', accStyle: 'modern',
   size: 1.75, noteSize: 1.75, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, printPaper: 'A4', bounds: {}, staves: {},
   hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
   ...(APP.defaults || {})
@@ -1080,6 +1111,7 @@ if (!st.noteCol) st.noteCol = 'black';
 if (st.colLock !== 'on' && st.colLock !== 'off') st.colLock = st.staff === st.noteCol ? 'on' : 'off';
 if (!st.lyrFont) st.lyrFont = 'fell';
 if (!st.stems) st.stems = 'adaptive';
+if (!st.accStyle) st.accStyle = 'modern';
 if (typeof st.lyrPt !== 'number' || !isFinite(st.lyrPt)) st.lyrPt = typeof st.lyrSize === 'number' && isFinite(st.lyrSize) ? Math.round(st.lyrSize * 5 * 2) / 2 : 8.5;
 if (!st.printPaper || st.printPaper === 'web') st.printPaper = st.paper && st.paper !== 'web' ? st.paper : 'A4';
 st.hs = Math.max(-2, Math.min(10, st.hs)); st.vs = Math.max(0, Math.min(10, st.vs)); st.ss = Math.max(0, Math.min(10, st.ss));
@@ -1087,10 +1119,10 @@ if (st.bars === 'mstrich') st.bars = 'full';
 /* barlines now stand in each staff only; everyone starts again from those */
 if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
 /* presets (shared by the apps through the browser): the two built-in ones and the ones Samuel saves; one of them opens every score */
-const PRESET_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'printPaper', 'orient', 'flow'];
-const MENS1 = {eq: 'off', nota: 'real', stems: 'adaptive', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'black', noteCol: 'black', colLock: 'on', lines: '5', paperCol: 'white', size: 1.5, noteSize: 1.5, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', printPaper: 'A4', orient: 'portrait', flow: 'vertical'};
+const PRESET_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'printPaper', 'orient', 'flow'];
+const MENS1 = {eq: 'off', nota: 'real', stems: 'adaptive', accStyle: 'modern', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'black', noteCol: 'black', colLock: 'on', lines: '5', paperCol: 'white', size: 1.5, noteSize: 1.5, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', printPaper: 'A4', orient: 'portrait', flow: 'vertical'};
 const MENS2 = {...MENS1, clefs: 'mens', size: 1.65, noteSize: 1.65, dashes: 'off'};
-const CF1 = {eq: 'off', nota: 'real', stems: 'adaptive', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', noteCol: 'black', colLock: 'off', lines: '5', paperCol: 'parchment', size: 3.6, noteSize: 3.6, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web', printPaper: 'A4'};
+const CF1 = {eq: 'off', nota: 'real', stems: 'adaptive', accStyle: 'modern', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', noteCol: 'black', colLock: 'off', lines: '5', paperCol: 'parchment', size: 3.6, noteSize: 3.6, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web', printPaper: 'A4'};
 const CF2 = {...CF1, clefs: 'mens', dashes: 'off'};
 const IS_CF = APP.id === 'cantus-firmus';
 const IS_REDIX = APP.id === 'redix-melodia' || APP.id === 'redix-contrapunctus';
@@ -1102,7 +1134,7 @@ const presetAll = () => [...BUILTIN, ...presetStore().custom];
 function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; if (pr.s.noteSize === undefined || st.sizeLock !== 'off') st.noteSize = st.size; if (pr.s.noteCol === undefined) st.noteCol = 'black'; if (pr.s.colLock === undefined) st.colLock = st.staff === st.noteCol ? 'on' : 'off'; }
 { const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } if (IS_REDIX) { st.paperCol = 'white'; st.staff = 'black'; st.noteCol = 'black'; st.colLock = 'on'; st.clefs = 'modern'; if (APP.id === 'redix-melodia') { st.view = 'score'; st.paper = 'web'; } } }
 /* changing an engraving setting unticks the ticked preset: the settings are now "current settings" of their own */
-const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
+const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
 function presetDrift(){
   const S = presetStore(); if (!S.active) return;
   const P = presetAll().find(q => q.name === S.active);
@@ -1494,7 +1526,7 @@ function breakLines(cols, avail, firstAvail){
 /* ------------------------------------------------------------------ */
 /* Drawing                                                             */
 /* ------------------------------------------------------------------ */
-const use = (k, x, y) => k === 'na' ? `<use href="#g-na" transform="translate(${f(x)} ${f(y)}) scale(${NATSC})"/>` : `<use href="#g-${k}" x="${f(x)}" y="${f(y)}"/>`;
+const use = (k, x, y) => { const g = accGlyph(k); return g === 'na' ? `<use href="#g-na" transform="translate(${f(x)} ${f(y)}) scale(${NATSC})"/>` : `<use href="#g-${g}" x="${f(x)}" y="${f(y)}"/>`; };
 /* A stem down turns the glyph over. The minim's hollow head is slanted, so a mirror would reverse its slant: it is turned half a circle about the middle of the head instead (the stem stands in the middle), and the head keeps its shape. */
 const useT = (k, x, y, sx, sy) => sy === -1 && sx === 1 && GLY[k + 'd'] ? use(k + 'd', x, y) : k === 'M' && sy === -1 && sx === 1
   ? `<use href="#g-M" transform="translate(${f(x + 0.64)} ${f(y)}) rotate(180) translate(-0.64 0)"/>`
@@ -3264,7 +3296,7 @@ function segInit(id, key, after){
 }
 function syncUI(){
   if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
-  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#stemSeg': 'stems', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#bposSeg': 'bpos'};
+  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#stemSeg': 'stems', '#accSeg': 'accStyle', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#bposSeg': 'bpos'};
   $('#bnumSel').value = st.bnum || 'off'; $('#bunitSel').value = st.bunit || 'bar';
   $('#lyrFontSel').value = st.lyrFont || 'fell';
   if ($('#lyrPt') && document.activeElement !== $('#lyrPt')) $('#lyrPt').value = String(+(+st.lyrPt || 8.5).toFixed(2));
@@ -3447,7 +3479,7 @@ segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines');
 $('#linesNum').addEventListener('input', e => { const n = parseInt(e.target.value, 10); if (isFinite(n) && n >= 1 && n <= 15) { st.lines = String(n); save(); syncUI(); later(); } });
 $('#linesNum').addEventListener('change', e => { const n = Math.max(1, Math.min(15, parseInt(e.target.value, 10) || 5)); st.lines = String(n); e.target.value = String(n); save(); syncUI(); render(); });
 $('#linesNum').addEventListener('keydown', e => { e.stopPropagation(); });
-segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#edSeg', 'ed');
+segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#edSeg', 'ed'); segInit('#accSeg', 'accStyle');
  segInit('#ligSeg', 'lig'); segInit('#scrollSeg', 'webScroll', () => { viewerEl.scrollLeft = 0; });
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
 let rq = 0;
