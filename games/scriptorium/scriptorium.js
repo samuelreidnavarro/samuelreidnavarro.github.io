@@ -1006,10 +1006,12 @@ let DOCK = null;     /* where the site page says the browser window is, when emb
 const KEY = APP.store + ':v1';
 const st = {
   inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on', heads: 'modern',
-  size: 1.75, hs: 0.6, vs: 1, tempo: 90, beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
+  size: 1.75, hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
   ...(APP.defaults || {})
 };
+const HAD_SAVED = !!localStorage.getItem(KEY);
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+if (!st.tempoV2) { if (st.tempo === 90 || st.tempo === undefined) st.tempo = 60; if (!st.unit) st.unit = 'S'; st.tempoV2 = 1; }
 delete st.ctlMode;   /* the old Controls setting (On movement | At the edges) is gone: the controls always wake on movement */
 /* the spacing sliders now cover only their tight end */
 /* every piece opens with the same look: staff size and spacing */
@@ -1027,13 +1029,14 @@ const MENS2 = {...MENS1, clefs: 'mens', size: 1.65, dashes: 'off'};
 const CF1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', lines: '5', paperCol: 'parchment', size: 3.6, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web'};
 const CF2 = {...CF1, clefs: 'mens', dashes: 'off'};
 const IS_CF = APP.id === 'cantus-firmus';
+const IS_REDIX = APP.id === 'redix-melodia' || APP.id === 'redix-contrapunctus';
 const BUILTIN = IS_CF ? [{name: 'Preset 1', s: CF1, fixed: true}, {name: 'Preset 2', s: CF2, fixed: true}] : [{name: 'Preset 1', s: MENS1, fixed: true}, {name: 'Preset 2', s: MENS2, fixed: true}];
-const PKEY = IS_CF ? 'scriptorium:presets:cf' : 'scriptorium:presets';
+const PKEY = IS_CF ? 'scriptorium:presets:cf' : IS_REDIX ? 'scriptorium:presets:redix' : 'scriptorium:presets';
 function presetStore(){ let o = {}; try { o = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch (e) {} return {custom: Array.isArray(o.custom) ? o.custom : [], active: o.active === undefined || o.active === 'Mensural 1' ? 'Preset 1' : o.active === 'Mensural 2' ? 'Preset 2' : o.active}; }
 function presetPut(o){ try { localStorage.setItem(PKEY, JSON.stringify(o)); } catch (e) {} }
 const presetAll = () => [...BUILTIN, ...presetStore().custom];
 function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; }
-{ const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } }
+{ const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } if (IS_REDIX) { st.paperCol = 'white'; st.staff = 'black'; st.clefs = 'modern'; if (APP.id === 'redix-melodia') { st.view = 'score'; st.paper = 'web'; } } }
 /* changing an engraving setting unticks the ticked preset: the settings are now "current settings" of their own */
 const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
 function presetDrift(){

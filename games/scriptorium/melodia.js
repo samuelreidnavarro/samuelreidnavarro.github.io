@@ -75,9 +75,9 @@
     table.rdx-items td.where { white-space: nowrap; font-variant-numeric: tabular-nums; }
     table.rdx-items a { white-space: nowrap; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
     .rdx-snip { padding: .55rem 0 .85rem; overflow-x: auto; }
-    .rdx-snip .cb-prev { display: block; width: fit-content; max-width: 100%; overflow-x: auto; background: var(--pagebg, #F3E8CE); background-image: var(--paper, none); background-size: 320px; border-radius: 6px; border: 1px solid var(--line); box-shadow: 0 6px 18px -10px rgba(42,34,24,.32); padding: 4px 6px; }
+    .rdx-snip .cb-prev { display: block; width: fit-content; max-width: 100%; overflow-x: auto; background: #ffffff; background-image: none; border-radius: 6px; border: 1px solid var(--line); box-shadow: 0 6px 18px -10px rgba(42,34,24,.32); padding: 4px 6px; }
     .rdx-snip svg { display: block; max-width: 100%; height: auto; pointer-events: none; }
-    .rdx-snip svg .staff { stroke: var(--staff, #8E2A1E); }
+    .rdx-snip svg .staff { stroke: #2A2218; }
     .rdx-snip svg .ledger, .rdx-snip svg .barl, .rdx-snip svg .tie, .rdx-snip svg .ms { stroke: var(--leaf-ink, #2A2218); fill: none; }
     .rdx-snip svg use, .rdx-snip svg .ink { fill: var(--leaf-ink, #2A2218); color: var(--leaf-ink, #2A2218); }
     .rdx-snip svg .red use, .rdx-snip svg .ink.red { fill: #A12C1C; color: #A12C1C; }
