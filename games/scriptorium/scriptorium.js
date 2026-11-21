@@ -63,7 +63,7 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab" id="headLab">Note heads</span><div class="btns" id="headSeg" role="group" aria-label="Note heads in modern notation"><button class="tb" data-v="modern" title="Round modern note heads (in modern notation)">Modern</button><button class="tb" data-v="old" title="Lozenge note heads (in modern notation)">Old</button></div>
           <span class="lab">Ligatures</span><div class="btns" id="ligSeg" role="group" aria-label="Ligatures"><button class="tb" data-v="on" title="Ligatures drawn as ligatures (in mensural notation)">On</button><button class="tb" data-v="off" title="The notes of a ligature written one by one, under a bracket">Off</button></div>
           <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
-          <span class="lab">Staff lines</span><div class="btns" id="linesSeg" role="group" aria-label="Staff lines"><button class="tb" data-v="5">Five</button><button class="tb" data-v="4">Four</button></div>
+          <span class="lab">Staff lines</span><div class="btns lines-ctl" id="linesSeg" role="group" aria-label="Staff lines"><button class="tb" data-v="5">Five</button><button class="tb" data-v="4">Four</button><input type="number" id="linesNum" min="1" max="15" step="1" inputmode="numeric" title="Custom number of staff lines (1–15)" aria-label="Number of staff lines"></div>
           <div class="subhead">Bars &amp; Accidentals</div>
           <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="out" title="Short ticks above and below the staff, nothing across it">Outside ticks</button><button class="tb" data-v="full">Through the staff</button></div>
           <label class="lab" for="bnumSel">Bar numbers</label><select id="bnumSel" title="Bar numbers above the staff, placed by time: they work with the barlines hidden too"><option value="off">None</option><option value="line">At the start of every line</option><option value="1">Every bar</option><option value="5">Every 5 bars</option><option value="10">Every 10 bars</option></select>
@@ -1201,6 +1201,9 @@ const LYR_FONTS = [
 ];
 const lyrFontCss = () => (LYR_FONTS.find(x => x[0] === st.lyrFont) || LYR_FONTS[0])[2];
 const lyrSize = () => Math.max(0.5, Math.min(6, (+st.lyrPt || 8.5) / 5));
+const staffLinesN = () => Math.max(1, Math.min(15, parseInt(st.lines, 10) || 5));
+const staffTopOff = () => { const n = staffLinesN(); return n === 1 ? 3 : 5 - n; };
+const staffBotOff = () => staffLinesN() === 1 ? 5 : 4;
 const noteScale = () => (st.sizeLock === 'off' && +st.noteSize > 0 && +st.size > 0) ? Math.max(0.3, Math.min(3, +st.noteSize / +st.size)) : 1;
 const mctx = document.createElement('canvas').getContext('2d');
 function textW(s, size, italic, fontCss){
@@ -1537,7 +1540,7 @@ function timeSigSvg(rows, x, top){
 function ledgers(pos, x, w, top){
   let s = '';
   for (let p = -2; p >= pos; p -= 2) s += hl(x - 0.4, x + w + 0.4, top + 4 - p * 0.5, 'ledger', 0.16);
-  for (let p = st.lines === '4' ? 8 : 10; p <= pos; p += 2) s += hl(x - 0.4, x + w + 0.4, top + 4 - p * 0.5, 'ledger', 0.16);
+  for (let p = 2 * staffLinesN(); p <= pos; p += 2) s += hl(x - 0.4, x + w + 0.4, top + 4 - p * 0.5, 'ledger', 0.16);
   return s;
 }
 const rrect = (x, y1, y2) => `<rect class="ink" x="${f(x)}" y="${f(y1)}" width="0.42" height="${f(y2 - y1)}"/>`;
@@ -1598,14 +1601,14 @@ function markSvg(s, X, top){
   if (s.mens) o += `<g class="menshit" data-t="${s.t}"><rect x="${f(ox - 0.2)}" y="${f(top - 0.5)}" width="${f(X - ox - 0.1)}" height="5" fill="transparent"/>${mensSvg(s.mens, ox, top)}</g>`;
   return o;
 }
-function symSvg(s, X, top, showNotes){
+function symSvg(s, X, top, showNotes, suppressMark){
   /* with the notes hidden, the key change and mensuration sign stay, like the clef */
-  if (!showNotes) return s.keyc || s.mens || s.clefc ? markSvg(s, X, top) : '';
+  if (!showNotes) return !suppressMark && (s.keyc || s.mens || s.clefc) ? markSvg(s, X, top) : '';
   if (s.ligSvg && s.ligX != null) X = s.ligX;   /* a note of a drawn ligature stands where the ligature puts it */
   const hy = s.rest ? top + 0.5 : top + 4 - s.pos * 0.5 - 1;
   /* the place of a first note in an empty voice: nothing drawn but the sign before it and the cursor's place */
-  if (s.phantom) return `<g class="${s.id} phantom"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/>${s.mens ? markSvg(s, X, top) : ''}</g>`;
-  return `<g class="${s.id}"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top)}</g>`;
+  if (s.phantom) return `<g class="${s.id} phantom"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/>${!suppressMark && s.mens ? markSvg(s, X, top) : ''}</g>`;
+  return `<g class="${s.id}"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top, suppressMark)}</g>`;
 }
 function chordHeadSvg(s, x, y){
   const g = s.glyph;
@@ -1617,11 +1620,11 @@ function chordHeadSvg(s, x, y){
   if (g === 'nQ' || g === 'nE' || g === 'nX') return `<ellipse class="ink" cx="0" cy="0" rx="0.54" ry="0.39" transform="translate(${f(x + s.hw * 0.5)} ${f(y)}) rotate(-20)"/>`;
   return use(g, x, y);
 }
-function symInner(s, X, top){
+function symInner(s, X, top, suppressMark){
   let o = '';
   let hx = X;
   const ns = noteScale(), cx = hx + s.hw / 2;
-  if (s.mens || s.keyc || s.clefc) o += markSvg(s, X, top);
+  if (!suppressMark && (s.mens || s.keyc || s.clefc)) o += markSvg(s, X, top);
   if (s.rest) {
     const r = restSvg(s, cx, top);
     o += Math.abs(ns - 1) > 0.005 ? `<g transform="translate(${f(cx)} ${f(top + 2)}) scale(${f(ns)}) translate(${f(-cx)} ${f(-(top + 2))})">${r}</g>` : r;
@@ -1815,7 +1818,7 @@ function ligatures(v, list, top){
 function staffLine(o){
   const {v, top, x0, x1} = o;
   let s = '';
-  for (let k = st.lines === '4' ? 1 : 0; k < 5; k++) s += hl(x0, x1, top + k, 'staff', 0.12);
+  for (let k = 5 - staffLinesN(); k < 5; k++) s += hl(x0, x1, top + k, 'staff', 0.12);
   /* clef, key */
   const t0 = o.t0;
   const clef = lineClef(v, t0), govC = clefChangeAt(v, t0 > EPS && v.clefs.some(m => m.t > EPS && Math.abs(m.t - t0) < EPS) ? t0 - 0.01 : t0);
@@ -1837,7 +1840,7 @@ function staffLine(o){
       `<g class="ksarr" data-ks="1"><rect x="${f(cx - 0.9)}" y="${f(top - 2.6)}" width="1.8" height="2" fill="transparent"/><path d="M${f(cx - 0.6)} ${f(top - 0.8)}L${f(cx + 0.6)} ${f(top - 0.8)}L${f(cx)} ${f(top - 1.9)}Z"/></g>` +
       `<g class="ksarr" data-ks="-1"><rect x="${f(cx - 0.9)}" y="${f(top + 4.6)}" width="1.8" height="2" fill="transparent"/><path d="M${f(cx - 0.6)} ${f(top + 4.8)}L${f(cx + 0.6)} ${f(top + 4.8)}L${f(cx)} ${f(top + 5.9)}Z"/></g></g>`; }
   /* notes (single voice or shared multi-voice staff) */
-  const drawLayer = (lv, lShow, lShowLyr, lyrY, dxMap, restDyMap, skipSet, drawCustos) => {
+  const drawLayer = (lv, lShow, lShowLyr, lyrY, dxMap, restDyMap, skipSet, drawCustos, suppressMark) => {
     let out = '', ligOut = '';
     if (lShow) {
       const list = [];
@@ -1849,7 +1852,7 @@ function staffLine(o){
       if (!sym) continue;
       const X = o.xs[i] + (dxMap ? (dxMap.get(sym) || 0) : 0);
       const rdy = restDyMap ? (restDyMap.get(sym) || 0) : 0;
-      if (!skipSet || !skipSet.has(sym)) out += symSvg(sym, X, top + rdy, lShow);
+      if (!skipSet || !skipSet.has(sym)) out += symSvg(sym, X, top + rdy, lShow, suppressMark);
       if (lShowLyr && sym.text && st.dashes !== 'off') {
         out += `<text class="lyr" data-s="${sym.id}" x="${f(X + sym.hw / 2 + sym.lyo)}" y="${f(lyrY)}" font-size="${f(lyrSize())}" text-anchor="middle">${esc(sym.text)}</text>`;
       }
@@ -1954,10 +1957,10 @@ function staffLine(o){
           lShowLyr = true; ly = o.lyrY; sharedLyrDrawn = true;
         }
       }
-      s += drawLayer(gv, sh.notes, lShowLyr, ly, dxMap, restDyMap, skipSet, gi === 0);
+      s += drawLayer(gv, sh.notes, lShowLyr, ly, dxMap, restDyMap, skipSet, gi === 0, gi > 0);
     });
   } else {
-    s += drawLayer(v, o.showNotes, o.showLyr, o.lyrY, null, null, null, true);
+    s += drawLayer(v, o.showNotes, o.showLyr, o.lyrY, null, null, null, true, false);
   }
   return s;
 }
@@ -1966,30 +1969,31 @@ function staffLine(o){
 /* segs: the stretches between the staves where a line may run (the lyrics are left clear) */
 function barSvg(type, x, tops, single, segs){
   let s = '';
-  const style = st.bars;
+  const style = st.bars, y0 = staffTopOff(), y1 = staffBotOff();
   /* barlines stand in each staff only, never in the space between the staves */
   if (type === 'double') {
-    for (const t of tops) { s += vl(x - 0.25, t, t + 4, 'barl', 0.14) + vl(x + 0.25, t, t + 4, 'barl', 0.14); }
+    for (const t of tops) { s += vl(x - 0.25, t + y0, t + y1, 'barl', 0.14) + vl(x + 0.25, t + y0, t + y1, 'barl', 0.14); }
     return s;
   }
   /* a section line: a full single line through every staff, whatever the barline style */
-  if (type === 'sec') { for (const t of tops) s += vl(x, t, t + 4, 'barl', 0.14); return s; }
+  if (type === 'sec') { for (const t of tops) s += vl(x, t + y0, t + y1, 'barl', 0.14); return s; }
   if (style === 'none') return '';
   if (style === 'full') {
-    for (const t of tops) s += vl(x, t, t + 4, 'barl', 0.14);
+    for (const t of tops) s += vl(x, t + y0, t + y1, 'barl', 0.14);
   } else if (style === 'out') {
     /* ticks outside the staff (Samuel 2026-11-16): a short stroke just above the top line and one just below the bottom line, nothing across the staff */
-    for (const t of tops) s += vl(x, t - 0.6, t, 'barl', 0.12) + vl(x, t + 4, t + 4.6, 'barl', 0.12);
+    for (const t of tops) s += vl(x, t + y0 - 0.6, t + y0, 'barl', 0.12) + vl(x, t + y1, t + y1 + 0.6, 'barl', 0.12);
   } else if (style === 'tick') {
-    for (const t of tops) s += vl(x, t - 0.5, t + 0.5, 'barl', 0.12);   /* one space, across the top line */
+    for (const t of tops) s += vl(x, t + y0 - 0.5, t + y0 + 0.5, 'barl', 0.12);   /* one space, across the top line */
   }
   return s;
 }
 /* the place to click a section line or double bar (to make it single or double, or take it away) */
-function secHit(t, x, tops){ return `<rect class="sechit" data-t="${t}" x="${f(x - 0.6)}" y="${f(tops[0] - 0.5)}" width="1.2" height="${f(tops[tops.length - 1] + 4.5 - tops[0] + 0.5)}"/>`; }
+function secHit(t, x, tops){ const y0 = staffTopOff(), y1 = staffBotOff(); return `<rect class="sechit" data-t="${t}" x="${f(x - 0.6)}" y="${f(tops[0] + y0 - 0.5)}" width="1.2" height="${f(tops[tops.length - 1] + y1 + 0.5 - (tops[0] + y0) + 0.5)}"/>`; }
 function finalBar(x, tops){
   let s = '';
-  for (const t of tops) s += `<rect class="ink" x="${f(x)}" y="${f(t)}" width="0.16" height="4"/><rect class="ink" x="${f(x + 0.4)}" y="${f(t)}" width="0.5" height="4"/>`;
+  const y0 = staffTopOff(), h = staffBotOff() - y0;
+  for (const t of tops) s += `<rect class="ink" x="${f(x)}" y="${f(t + y0)}" width="0.16" height="${f(h)}"/><rect class="ink" x="${f(x + 0.4)}" y="${f(t + y0)}" width="0.5" height="${f(h)}"/>`;
   return s;
 }
 
@@ -2039,8 +2043,9 @@ function lineRoom(v, line){
      kind: 'full' stems at their length, 'short' stems that may be cut at the shortest they may be, 'base' without those stems */
   const tEnd = line.tEnd !== undefined ? line.tEnd : line.to < line.cols.length ? line.cols[line.to].t : null;
   const nx = tEnd !== null && !line.endsPiece ? nextSym(v, tEnd) : null;
+  const stTop = Math.min(0, 5 - staffLinesN());
   const build = kind => {
-    const lo = Array(n).fill(-base), hi = Array(n).fill(4 + base);
+    const lo = Array(n).fill(stTop - base), hi = Array(n).fill(4 + base);
     const up = (i, y) => { lo[i] = Math.min(lo[i], y); }, dn = (i, y) => { hi[i] = Math.max(hi[i], y); };
     /* the custos at the line end, pointing at the next note */
     if (nx && !nx.rest && nx.pos !== null && nx.pos !== undefined) { const y = 4 - nx.pos * 0.5; up(n - 1, y - 1.9 - pad); dn(n - 1, y + 1.9 + pad); }
@@ -2179,7 +2184,7 @@ function incipitSvg(q, x0, top){
   if (!q) return '';
   const C = CLEFS[q.clef], W = incipitW() - 1.2;
   let o = '';
-  for (let k = st.lines === '4' ? 1 : 0; k < 5; k++) o += hl(x0, x0 + W, top + k, 'staff', 0.12);
+  for (let k = 5 - staffLinesN(); k < 5; k++) o += hl(x0, x0 + W, top + k, 'staff', 0.12);
   let x = x0 + 0.4;
   o += clefSvg(q.clef, x, top); x += gw(C.g) + 0.5;
   if (q.mens) { o += mensSvg(q.mens, x, top); x += mensW(q.mens) + 0.6; }
@@ -2331,7 +2336,7 @@ function drawSystem(vlist, line, y, opts = {}){
     s += `<text class="barnum" x="${f(q.x)}" y="${f(top + barNumY(rooms[k], q.ci))}" font-size="1.6" font-style="italic" text-anchor="${q.start ? 'start' : 'middle'}">${q.n}</text>`;
   });
   /* left edge: a thin line joining the staves in score */
-  if (groups.length > 1 && opts.join) s += vl(line.x0, tops[0], tops[tops.length - 1] + 4, 'barl', 0.14);
+  if (groups.length > 1 && opts.join) s += vl(line.x0, tops[0] + staffTopOff(), tops[tops.length - 1] + staffBotOff(), 'barl', 0.14);
   return {svg: s, h: yy - y, tops};
 }
 
@@ -2696,7 +2701,7 @@ function ghostClefs(){
     const b = r.getBoundingClientRect(), sc = b.height / 9.2, y = b.top - vr.top + 2.6 * sc;
     if (y < -40 || y > vr.height + 40) continue;
     let lines = '';
-    for (let k = st.lines === '4' ? 1 : 0; k < 5; k++) lines += hl(-3, 7, k, 'staff', 0.12);
+    for (let k = 5 - staffLinesN(); k < 5; k++) lines += hl(-3, 7, k, 'staff', 0.12);
     g += `<g transform="translate(${f(3 * sc)} ${f(y)}) scale(${f(sc)})">${lines}${clefSvg(v.clef, 0.2, 0)}</g>`;
   }
   el.firstChild.setAttribute('width', W); el.firstChild.setAttribute('height', vr.height);
@@ -3195,6 +3200,7 @@ function syncUI(){
   $('#bnumSel').value = st.bnum || 'off'; $('#bunitSel').value = st.bunit || 'bar';
   $('#lyrFontSel').value = st.lyrFont || 'fell';
   if ($('#lyrPt') && document.activeElement !== $('#lyrPt')) $('#lyrPt').value = String(+(+st.lyrPt || 8.5).toFixed(2));
+  if ($('#linesNum') && document.activeElement !== $('#linesNum')) $('#linesNum').value = String(staffLinesN());
   document.querySelectorAll('.bnx').forEach(el => { el.hidden = !st.bnum || st.bnum === 'off'; });
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
   const activePaper = st.paper === 'web' ? (st.printPaper || 'A4') : st.paper;
@@ -3367,7 +3373,11 @@ $('#noteColSeg').addEventListener('click', e => { const b = e.target.closest('bu
 $('#noteColPick').addEventListener('input', e => { st.noteCol = e.target.value; if (st.colLock !== 'off') st.staff = st.noteCol; save(); syncUI(); });
 $('#sizeLock').addEventListener('click', () => { st.sizeLock = st.sizeLock === 'off' ? 'on' : 'off'; if (st.sizeLock === 'on') st.noteSize = st.size; save(); syncUI(); render(); });
 $('#colLock').addEventListener('click', () => { st.colLock = st.colLock === 'off' ? 'on' : 'off'; if (st.colLock === 'on') st.noteCol = st.staff; save(); syncUI(); render(); });
-segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#edSeg', 'ed');
+segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines');
+$('#linesNum').addEventListener('input', e => { const n = parseInt(e.target.value, 10); if (isFinite(n) && n >= 1 && n <= 15) { st.lines = String(n); save(); syncUI(); later(); } });
+$('#linesNum').addEventListener('change', e => { const n = Math.max(1, Math.min(15, parseInt(e.target.value, 10) || 5)); st.lines = String(n); e.target.value = String(n); save(); syncUI(); render(); });
+$('#linesNum').addEventListener('keydown', e => { e.stopPropagation(); });
+segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#edSeg', 'ed');
  segInit('#ligSeg', 'lig'); segInit('#scrollSeg', 'webScroll', () => { viewerEl.scrollLeft = 0; });
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
 let rq = 0;
@@ -3546,12 +3556,21 @@ function ensureStaffCfg(){
   return st.staves[pieceKey];
 }
 function openStaffCombine(on){
+  const pop = $('#popVoices');
+  if (pop) {
+    if (on) pop.classList.add('open');
+    else if (canHover()) pop.classList.remove('open');
+    const pb = pop.querySelector('button.popbtn'); if (pb) pb.setAttribute('aria-expanded', String(on || pop.classList.contains('open')));
+  }
   $('#voiceTable').hidden = !!on;
   $('#staffCombine').hidden = !on;
   if (on) renderStaffCombine();
+  if (window.__fitMenus) window.__fitMenus();
 }
+$('#staffCombine').addEventListener('pointerdown', e => e.stopPropagation());
 $('#staffCombine').addEventListener('click', e => {
   e.stopPropagation();
+  const pop = $('#popVoices'); if (pop) pop.classList.add('open');
   const act = e.target.closest('[data-sc]');
   if (act) {
     const a = act.dataset.sc;
@@ -7084,7 +7103,7 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
    too tall for the room, it gets a scroll bar of its own; if it only stands a little too high or low, it is moved over. */
 {
   const CAND = '.popbody, .menu, #library, .library';
-  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}html,body,body *:not(input):not(textarea):not([contenteditable]){-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none !important}input,textarea,[contenteditable]{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default !important}#popView .staffset{grid-template-columns:auto minmax(150px,auto)}#pages svg .ledger,#pages svg .barl,#pages svg .tie,#pages svg .ms{stroke:var(--note-ink,var(--leaf-ink))}#pages svg use,#pages svg .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) use,html.playing #pages g.sel:not(.on) .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) .ledger{stroke:var(--note-ink,var(--leaf-ink))}#pages svg text.lyr{font-family:var(--lyr-font,"IM Fell English","Palatino Linotype",Palatino,Georgia,serif)}.staffset .subhead{grid-column:1/-1;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);opacity:.78;padding-top:6px;margin-top:2px;border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent)}.staffset .subhead:first-child{padding-top:0;margin-top:0;border-top:0}.staffset .lab-lock{display:inline-flex;align-items:center;gap:5px}.lockbtn{display:inline-grid;place-items:center;width:22px;height:22px;padding:0;border:0 !important;outline:none;box-shadow:none !important;border-radius:5px;background:transparent !important;color:var(--muted) !important;cursor:pointer;opacity:.78;transition:opacity .12s,background .12s}.lockbtn svg{width:14px;height:14px;fill:currentColor;display:block}.lockbtn[aria-pressed="true"]{color:var(--muted) !important;background:transparent !important;box-shadow:none !important;border:0 !important;opacity:.85}.lockbtn:hover,.lockbtn[aria-pressed="true"]:hover:not(:disabled){background:color-mix(in srgb,var(--ink) 8%,transparent) !important;color:var(--muted) !important;border-color:transparent !important;opacity:1}.pt-field{display:inline-flex;align-items:center;gap:5px}.pt-field input{width:62px;height:var(--h);padding:0 7px;border:1px solid var(--line);border-radius:6px;background:var(--surface,#F4EDE0);color:var(--ink);font:inherit;font-size:14px;font-variant-numeric:tabular-nums}.pt-field span{color:var(--muted);font-size:13px}#pages .seclab{cursor:pointer}@media (hover:hover){#pages .seclab:hover{fill:var(--accent);color:var(--accent)}}.sec-ed{position:absolute;z-index:40;min-width:140px;max-width:280px;padding:3px 7px;border:1.5px solid var(--accent);border-radius:5px;background:var(--ground,#FBF7EF);color:var(--ink);font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif;font-style:italic;font-size:15px;box-shadow:0 4px 14px rgba(42,34,24,.22);outline:none}.vfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}#staffCombine{padding:6px 8px;min-width:260px;max-width:340px;display:flex;flex-direction:column;gap:8px}#staffCombine[hidden]{display:none !important}.sc-head{display:flex;align-items:center;gap:8px}.sc-title{font-size:13px;font-weight:700;color:var(--ink)}.sc-presets{display:flex;gap:6px;flex-wrap:wrap}.sc-presets .tb,.sc-back{font-size:12px;height:26px;padding:0 9px}.sc-rows{display:flex;flex-direction:column;gap:5px}.sc-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.sc-name{font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}.sc-pills{display:flex;gap:3px}.sc-pill{min-width:26px;height:24px;padding:0 6px;border:1px solid var(--line);border-radius:5px;background:transparent;color:var(--muted);font:inherit;font-size:12px;cursor:pointer}.sc-pill[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.sc-staves{border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent);padding-top:6px;display:flex;flex-direction:column;gap:5px}.sc-sub{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.sc-srow{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--ink)}.sc-slbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}.sc-clef{font-size:12px;height:26px}.rng-wrap{display:flex;flex-direction:column;min-width:150px}.rng-wrap input[type=range]{width:100%;margin:0}.rng-meta{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:11px;line-height:1.2;font-variant-numeric:tabular-nums;opacity:0;max-height:0;overflow:hidden;margin-top:0;pointer-events:none;transition:opacity .14s ease,max-height .14s ease,margin-top .14s ease}.rng-wrap:hover .rng-meta,.rng-wrap:focus-within .rng-meta,.rng-wrap.active .rng-meta{opacity:1;max-height:22px;margin-top:2px;pointer-events:auto}.rng-bound{appearance:none;border:0;background:transparent;padding:0 3px;margin:0;font:inherit;color:var(--muted);cursor:pointer;border-radius:3px;border-bottom:1px dotted color-mix(in srgb,var(--muted) 55%,transparent)}.rng-bound:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 7%,transparent)}.rng-val{color:var(--accent);font-weight:600;padding:0 4px}.rng-edit{width:46px;font:inherit;font-size:11px;padding:0 3px;border:1px solid var(--accent);border-radius:3px;background:var(--ground,#FBF7EF);color:var(--ink);text-align:center;outline:none}.rng-edit::-webkit-inner-spin-button,.rng-edit::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}#pages .ed-grid{pointer-events:none}#pages .ed-grid .eg-tick{stroke:var(--sel);stroke-width:.11;opacity:.45}#pages .ed-grid .eg-tick.maj{stroke-width:.15;opacity:.75}#pages .ed-grid .eg-line{stroke:var(--sel);stroke-width:.08;stroke-dasharray:.26 .26;opacity:.13}#pages .ed-grid .eg-line.maj{opacity:.24}#pages .ed-grid .eg-line.tail{opacity:.24}@media print{#pages .ed-grid{display:none !important}}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}#library[data-mode="rep"]{min-height:min(62vh,520px)}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
+  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}html,body,body *:not(input):not(textarea):not([contenteditable]){-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none !important}input,textarea,[contenteditable]{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default !important}#popView .staffset{grid-template-columns:auto minmax(150px,auto)}#pages svg .ledger,#pages svg .barl,#pages svg .tie,#pages svg .ms{stroke:var(--note-ink,var(--leaf-ink))}#pages svg use,#pages svg .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) use,html.playing #pages g.sel:not(.on) .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) .ledger{stroke:var(--note-ink,var(--leaf-ink))}#pages svg text.lyr{font-family:var(--lyr-font,"IM Fell English","Palatino Linotype",Palatino,Georgia,serif)}.staffset .subhead{grid-column:1/-1;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);opacity:.78;padding-top:6px;margin-top:2px;border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent)}.staffset .subhead:first-child{padding-top:0;margin-top:0;border-top:0}.staffset .lab-lock{display:inline-flex;align-items:center;gap:5px}.lockbtn{display:inline-grid;place-items:center;width:22px;height:22px;padding:0;border:0 !important;outline:none;box-shadow:none !important;border-radius:5px;background:transparent !important;color:var(--muted) !important;cursor:pointer;opacity:.78;transition:opacity .12s,background .12s}.lockbtn svg{width:14px;height:14px;fill:currentColor;display:block}.lockbtn[aria-pressed="true"]{color:var(--muted) !important;background:transparent !important;box-shadow:none !important;border:0 !important;opacity:.85}.lockbtn:hover,.lockbtn[aria-pressed="true"]:hover:not(:disabled){background:color-mix(in srgb,var(--ink) 8%,transparent) !important;color:var(--muted) !important;border-color:transparent !important;opacity:1}.pt-field{display:inline-flex;align-items:center;gap:5px}.pt-field input{width:62px;height:var(--h);padding:0 7px;border:1px solid var(--line);border-radius:6px;background:var(--surface,#F4EDE0);color:var(--ink);font:inherit;font-size:14px;font-variant-numeric:tabular-nums}.pt-field span{color:var(--muted);font-size:13px}.lines-ctl{align-items:center;gap:4px !important}#linesNum{width:52px;height:var(--h);padding:0 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface,#F4EDE0);color:var(--ink);font:inherit;font-size:14px;font-variant-numeric:tabular-nums;margin-left:2px}#pages .seclab{cursor:pointer}@media (hover:hover){#pages .seclab:hover{fill:var(--accent);color:var(--accent)}}.sec-ed{position:absolute;z-index:40;min-width:140px;max-width:280px;padding:3px 7px;border:1.5px solid var(--accent);border-radius:5px;background:var(--ground,#FBF7EF);color:var(--ink);font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif;font-style:italic;font-size:15px;box-shadow:0 4px 14px rgba(42,34,24,.22);outline:none}.vfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}#popVoices.open .popbody{display:block !important}#staffCombine{padding:6px 8px;min-width:290px;max-width:360px;display:flex;flex-direction:column;gap:8px}#staffCombine[hidden]{display:none !important}.sc-head{display:flex;align-items:center;gap:8px}.sc-title{font-size:13px;font-weight:700;color:var(--ink)}.sc-presets{display:flex;gap:6px;flex-wrap:wrap}.sc-presets .tb,.sc-back{font-size:12px;height:26px;padding:0 9px}.sc-rows{display:flex;flex-direction:column;gap:5px}.sc-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.sc-name{font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}.sc-pills{display:flex;gap:3px}.sc-pill{min-width:26px;height:24px;padding:0 6px;border:1px solid var(--line);border-radius:5px;background:transparent;color:var(--muted);font:inherit;font-size:12px;cursor:pointer}.sc-pill[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.sc-staves{border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent);padding-top:6px;display:flex;flex-direction:column;gap:5px}.sc-sub{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.sc-srow{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--ink)}.sc-slbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}.sc-clef{font-size:12px;height:26px}.rng-wrap{display:flex;flex-direction:column;min-width:150px}.rng-wrap input[type=range]{width:100%;margin:0}.rng-meta{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:11px;line-height:1.2;font-variant-numeric:tabular-nums;opacity:0;max-height:0;overflow:hidden;margin-top:0;pointer-events:none;transition:opacity .14s ease,max-height .14s ease,margin-top .14s ease}.rng-wrap:hover .rng-meta,.rng-wrap:focus-within .rng-meta,.rng-wrap.active .rng-meta{opacity:1;max-height:22px;margin-top:2px;pointer-events:auto}.rng-bound{appearance:none;border:0;background:transparent;padding:0 3px;margin:0;font:inherit;color:var(--muted);cursor:pointer;border-radius:3px;border-bottom:1px dotted color-mix(in srgb,var(--muted) 55%,transparent)}.rng-bound:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 7%,transparent)}.rng-val{color:var(--accent);font-weight:600;padding:0 4px}.rng-edit{width:46px;font:inherit;font-size:11px;padding:0 3px;border:1px solid var(--accent);border-radius:3px;background:var(--ground,#FBF7EF);color:var(--ink);text-align:center;outline:none}.rng-edit::-webkit-inner-spin-button,.rng-edit::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}#pages .ed-grid{pointer-events:none}#pages .ed-grid .eg-tick{stroke:var(--sel);stroke-width:.11;opacity:.45}#pages .ed-grid .eg-tick.maj{stroke-width:.15;opacity:.75}#pages .ed-grid .eg-line{stroke:var(--sel);stroke-width:.08;stroke-dasharray:.26 .26;opacity:.13}#pages .ed-grid .eg-line.maj{opacity:.24}#pages .ed-grid .eg-line.tail{opacity:.24}@media print{#pages .ed-grid{display:none !important}}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}#library[data-mode="rep"]{min-height:min(62vh,520px)}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
   {
     const gr = $('#glassRange');
     const applyGlass = v => {
