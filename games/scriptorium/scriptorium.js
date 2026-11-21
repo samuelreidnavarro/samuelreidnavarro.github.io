@@ -37,32 +37,42 @@ ${APP.popsBeforeVoices || ''}
       <div class="podg"><div class="pop" id="popPage">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Layout<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="staffset">
+          <div class="subhead">Page</div>
           <span class="lab">Format</span><div class="btns" id="viewList" role="group" aria-label="Format"><button class="tb" data-v="score">Score</button><button class="tb" data-v="parts">Parts</button><button class="tb" data-v="choir">Choirbook</button></div>
           <span class="lab">Size</span><div class="btns" id="paperSeg" role="group" aria-label="Paper size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button><button class="tb" data-v="web">Web</button></div>
           <span class="lab">Orientation</span><div class="btns" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
-          <label class="ctl" for="size">Staff size</label><input type="range" id="size" min="1" max="7" step="0.05">
+          <div class="subhead">Staves &amp; Notes</div>
+          <label class="ctl" for="size">Staff size</label><div class="rng-wrap" data-for="size"><input type="range" id="size" min="1" max="7" step="0.05"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
+          <span class="lab-lock"><label class="ctl" for="noteSize">Note size</label><button type="button" class="lockbtn" id="sizeLock" aria-pressed="true" aria-label="Lock note size to staff size" title="Locked to staff size — click to adjust independently"></button></span><div class="rng-wrap" data-for="noteSize"><input type="range" id="noteSize" min="1" max="7" step="0.05"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
           <span class="lab">Staff colour</span><div class="swatches" id="staffSeg" role="group" aria-label="Staff colour"></div>
-          <label class="ctl" for="thickL" title="Thicker staff lines, barlines and ledger lines">Staff line thickness</label><input type="range" id="thickL" min="0" max="0.16" step="0.005">
-          <label class="ctl" for="thick" title="Thicker notes, rests, clefs, signs, stems and ties">Note thickness</label><input type="range" id="thick" min="0" max="0.16" step="0.005">
-          <label class="ctl" for="hs">Horizontal spacing</label><input type="range" id="hs" min="-0.4" max="1.2" step="0.01">
-          <label class="ctl" for="vs">Vertical spacing</label><input type="range" id="vs" min="0" max="2" step="0.02">
+          <span class="lab-lock"><span class="lab">Note colour</span><button type="button" class="lockbtn" id="colLock" aria-pressed="true" aria-label="Lock note colour to staff colour" title="Locked to staff colour — click to adjust independently"></button></span><div class="swatches" id="noteColSeg" role="group" aria-label="Note colour"></div>
+          <label class="ctl" for="thickL" title="Thicker staff lines, barlines and ledger lines">Staff line thickness</label><div class="rng-wrap" data-for="thickL"><input type="range" id="thickL" min="0" max="0.16" step="0.005"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
+          <label class="ctl" for="thick" title="Thicker notes, rests, clefs, signs, stems and ties">Note thickness</label><div class="rng-wrap" data-for="thick"><input type="range" id="thick" min="0" max="0.16" step="0.005"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
+          <div class="subhead">Spacing</div>
+          <label class="ctl" for="hs">Horizontal spacing</label><div class="rng-wrap" data-for="hs"><input type="range" id="hs" min="-0.4" max="1.2" step="0.01"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
+          <label class="ctl" for="vs">Vertical spacing</label><div class="rng-wrap" data-for="vs"><input type="range" id="vs" min="0" max="2" step="0.02"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
           <span class="lab">Equal staff distances</span><div class="btns" id="eqSeg" role="group" aria-label="Equal staff distances"><button class="tb" data-v="on" title="All staves of a system the same distance apart">On</button><button class="tb" data-v="off" title="Each staff as close to the one above as its notes, stems and words allow">Off</button></div>
-          <label class="ctl" for="ss">Space between systems</label><input type="range" id="ss" min="0" max="3" step="0.05">
+          <label class="ctl" for="ss">Space between systems</label><div class="rng-wrap" data-for="ss"><input type="range" id="ss" min="0" max="3" step="0.05"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
         </div></div>
       </div></div>
       <div class="podg"><div class="pop" id="popLook">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Engraving<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="staffset">
+          <div class="subhead">Notation</div>
           <span class="lab">Notation</span><div class="btns" id="notaSeg" role="group" aria-label="Notation"><button class="tb" data-v="real" title="White mensural notation">White</button><button class="tb" data-v="black" title="Black mensural notation, for this piece only: filled notes, the semiminima with a flag, coloration in red">Black</button><button class="tb" data-v="fake" title="Modern rhythm, with ties and triplets">Modern</button></div>
           <span class="lab" id="headLab">Note heads</span><div class="btns" id="headSeg" role="group" aria-label="Note heads in modern notation"><button class="tb" data-v="modern" title="Round modern note heads (in modern notation)">Modern</button><button class="tb" data-v="old" title="Lozenge note heads (in modern notation)">Old</button></div>
           <span class="lab">Ligatures</span><div class="btns" id="ligSeg" role="group" aria-label="Ligatures"><button class="tb" data-v="on" title="Ligatures drawn as ligatures (in mensural notation)">On</button><button class="tb" data-v="off" title="The notes of a ligature written one by one, under a bracket">Off</button></div>
           <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
           <span class="lab">Staff lines</span><div class="btns" id="linesSeg" role="group" aria-label="Staff lines"><button class="tb" data-v="5">Five</button><button class="tb" data-v="4">Four</button></div>
+          <div class="subhead">Bars &amp; Accidentals</div>
           <span class="lab">Barlines</span><div class="btns" id="barSeg" role="group" aria-label="Barlines"><button class="tb" data-v="none">None</button><button class="tb" data-v="tick">Ticks</button><button class="tb" data-v="out" title="Short ticks above and below the staff, nothing across it">Outside ticks</button><button class="tb" data-v="full">Through the staff</button></div>
-          <label class="lab" for="bnumSel">Bar numbers</label><select id="bnumSel" title="Bar numbers above the staff, placed by time: they work with the barlines hidden too"><option value="off">None</option><option value="line">At the start of every line</option><option value="1">Every bar</option><option value="2">Every 2 bars</option><option value="4">Every 4 bars</option><option value="5">Every 5 bars</option><option value="10">Every 10 bars</option></select>
+          <label class="lab" for="bnumSel">Bar numbers</label><select id="bnumSel" title="Bar numbers above the staff, placed by time: they work with the barlines hidden too"><option value="off">None</option><option value="line">At the start of every line</option><option value="1">Every bar</option><option value="5">Every 5 bars</option><option value="10">Every 10 bars</option></select>
           <label class="lab bnx" for="bunitSel">A bar is</label><select class="bnx" id="bunitSel" title="What one bar is when counting"><option value="bar">From barline to barline</option><option value="mens">A breve of the mensuration sign</option><option value="S">A semibreve</option><option value="B">A breve</option><option value="Bp">A perfect breve (dotted)</option><option value="L">A long</option><option value="Lp">A perfect long</option></select>
           <span class="lab bnx">Bar numbers over</span><div class="btns bnx" id="bposSeg" role="group" aria-label="Bar numbers over"><button class="tb" data-v="top" title="Above the highest staff of each system">Top staff</button><button class="tb" data-v="all" title="Above every staff">Every staff</button></div>
           <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
+          <div class="subhead">Lyrics</div>
+          <label class="lab" for="lyrFontSel">Font</label><select id="lyrFontSel" title="Font used for lyrics"></select>
+          <label class="ctl" for="lyrSize">Lyrics size</label><div class="rng-wrap" data-for="lyrSize"><input type="range" id="lyrSize" min="1" max="2.8" step="0.05"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
           <span class="lab">Syllable dashes</span><div class="btns" id="dashSeg" role="group" aria-label="Syllable dashes"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <span class="lab" id="verseLab">Verse</span><div class="btns" id="verseSeg" role="group" aria-label="Verse"></div>
           <span class="lab pslab">Presets</span><div id="presetBox"><div id="presetList"></div><div id="presetNew"><button class="tb" id="presetAdd">Save current settings as preset</button><span id="presetForm" hidden><input id="presetName" type="text" placeholder="Name" maxlength="30" autocomplete="off"><button class="tb" id="presetOk">Save</button></span></div></div>
@@ -1010,28 +1020,37 @@ function chooseClef(v, mode){
 let DOCK = null;     /* where the site page says the browser window is, when embedded: {top, vh, pageTop} */
 const KEY = APP.store + ':v1';
 const st = {
-  inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', dashes: 'on', ed: 'on', heads: 'modern',
-  size: 1.75, hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
+  inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', noteCol: 'black', colLock: 'off', dashes: 'on', ed: 'on', heads: 'modern',
+  size: 1.75, noteSize: 1.75, sizeLock: 'on', lyrFont: 'fell', lyrSize: 1.7, bounds: {},
+  hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
   ...(APP.defaults || {})
 };
 const HAD_SAVED = !!localStorage.getItem(KEY);
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
 if (!st.tempoV2) { if (st.tempo === 90 || st.tempo === undefined) st.tempo = 60; if (!st.unit) st.unit = 'S'; st.tempoV2 = 1; }
+if (st.bnum === '2' || st.bnum === '4') st.bnum = '5';
+if (!st.bounds || typeof st.bounds !== 'object') st.bounds = {};
 delete st.ctlMode;   /* the old Controls setting (On movement | At the edges) is gone: the controls always wake on movement */
 /* the spacing sliders now cover only their tight end */
 /* every piece opens with the same look: staff size and spacing */
 const LOOK = {size: 1.5, hs: 0.47, vs: 0.6, ss: 0.8};
-function resetLook(){ Object.assign(st, LOOK); save(); for (const k of ['size', 'hs', 'vs', 'ss']) { const el = document.getElementById(k); if (el) el.value = st[k]; } }
+function resetLook(){ Object.assign(st, LOOK); st.noteSize = st.size; st.sizeLock = 'on'; save(); for (const k of ['size', 'noteSize', 'hs', 'vs', 'ss']) { const el = document.getElementById(k); if (el) el.value = st[k]; } }
 for (const [k, v] of Object.entries(LOOK)) if (typeof st[k] !== 'number' || !isFinite(st[k])) st[k] = v;
-st.hs = Math.max(-0.4, Math.min(1.2, st.hs)); st.vs = Math.max(0, Math.min(2, st.vs)); st.ss = Math.max(0, Math.min(3, st.ss));
+if (typeof st.noteSize !== 'number' || !isFinite(st.noteSize) || st.sizeLock !== 'off') st.noteSize = st.size;
+if (st.sizeLock !== 'off') st.sizeLock = 'on';
+if (!st.noteCol) st.noteCol = 'black';
+if (st.colLock !== 'on' && st.colLock !== 'off') st.colLock = st.staff === st.noteCol ? 'on' : 'off';
+if (!st.lyrFont) st.lyrFont = 'fell';
+if (typeof st.lyrSize !== 'number' || !isFinite(st.lyrSize)) st.lyrSize = 1.7;
+st.hs = Math.max(-2, Math.min(10, st.hs)); st.vs = Math.max(0, Math.min(10, st.vs)); st.ss = Math.max(0, Math.min(10, st.ss));
 if (st.bars === 'mstrich') st.bars = 'full';
 /* barlines now stand in each staff only; everyone starts again from those */
 if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
 /* presets (shared by the apps through the browser): the two built-in ones and the ones Samuel saves; one of them opens every score */
-const PRESET_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'orient', 'flow'];
-const MENS1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'black', lines: '5', paperCol: 'white', size: 1.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', orient: 'portrait', flow: 'vertical'};
-const MENS2 = {...MENS1, clefs: 'mens', size: 1.65, dashes: 'off'};
-const CF1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', lines: '5', paperCol: 'parchment', size: 3.6, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web'};
+const PRESET_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrSize', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'orient', 'flow'];
+const MENS1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'black', noteCol: 'black', colLock: 'on', lines: '5', paperCol: 'white', size: 1.5, noteSize: 1.5, sizeLock: 'on', lyrFont: 'fell', lyrSize: 1.7, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', orient: 'portrait', flow: 'vertical'};
+const MENS2 = {...MENS1, clefs: 'mens', size: 1.65, noteSize: 1.65, dashes: 'off'};
+const CF1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', noteCol: 'black', colLock: 'off', lines: '5', paperCol: 'parchment', size: 3.6, noteSize: 3.6, sizeLock: 'on', lyrFont: 'fell', lyrSize: 1.7, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web'};
 const CF2 = {...CF1, clefs: 'mens', dashes: 'off'};
 const IS_CF = APP.id === 'cantus-firmus';
 const IS_REDIX = APP.id === 'redix-melodia' || APP.id === 'redix-contrapunctus';
@@ -1040,10 +1059,10 @@ const PKEY = IS_CF ? 'scriptorium:presets:cf' : IS_REDIX ? 'scriptorium:presets:
 function presetStore(){ let o = {}; try { o = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch (e) {} return {custom: Array.isArray(o.custom) ? o.custom : [], active: o.active === undefined || o.active === 'Mensural 1' ? 'Preset 1' : o.active === 'Mensural 2' ? 'Preset 2' : o.active}; }
 function presetPut(o){ try { localStorage.setItem(PKEY, JSON.stringify(o)); } catch (e) {} }
 const presetAll = () => [...BUILTIN, ...presetStore().custom];
-function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; }
-{ const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } if (IS_REDIX) { st.paperCol = 'white'; st.staff = 'black'; st.clefs = 'modern'; if (APP.id === 'redix-melodia') { st.view = 'score'; st.paper = 'web'; } } }
+function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; if (pr.s.noteSize === undefined || st.sizeLock !== 'off') st.noteSize = st.size; if (pr.s.noteCol === undefined) st.noteCol = 'black'; if (pr.s.colLock === undefined) st.colLock = st.staff === st.noteCol ? 'on' : 'off'; }
+{ const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } if (IS_REDIX) { st.paperCol = 'white'; st.staff = 'black'; st.noteCol = 'black'; st.colLock = 'on'; st.clefs = 'modern'; if (APP.id === 'redix-melodia') { st.view = 'score'; st.paper = 'web'; } } }
 /* changing an engraving setting unticks the ticked preset: the settings are now "current settings" of their own */
-const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'lines', 'paperCol', 'size', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
+const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrSize', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
 function presetDrift(){
   const S = presetStore(); if (!S.active) return;
   const P = presetAll().find(q => q.name === S.active);
@@ -1150,9 +1169,21 @@ function vis(i){
 /* ------------------------------------------------------------------ */
 /* Text measuring                                                      */
 /* ------------------------------------------------------------------ */
+const LYR_FONTS = [
+  ['fell', 'IM Fell English', '"IM Fell English", Georgia, serif'],
+  ['garamond', 'Garamond', '"EB Garamond", Garamond, "Adobe Garamond Pro", Georgia, serif'],
+  ['palatino', 'Palatino', '"Palatino Linotype", Palatino, "Book Antiqua", serif'],
+  ['baskerville', 'Baskerville', 'Baskerville, "Libre Baskerville", Georgia, serif'],
+  ['georgia', 'Georgia', 'Georgia, "Times New Roman", serif'],
+  ['times', 'Times', '"Times New Roman", Times, serif'],
+  ['sans', 'Sans-serif', 'system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif']
+];
+const lyrFontCss = () => (LYR_FONTS.find(x => x[0] === st.lyrFont) || LYR_FONTS[0])[2];
+const lyrSize = () => Math.max(0.5, Math.min(6, +st.lyrSize || 1.7));
+const noteScale = () => (st.sizeLock === 'off' && +st.noteSize > 0 && +st.size > 0) ? Math.max(0.3, Math.min(3, +st.noteSize / +st.size)) : 1;
 const mctx = document.createElement('canvas').getContext('2d');
-function textW(s, size, italic){
-  mctx.font = `${italic ? 'italic ' : ''}100px "IM Fell English", Georgia, serif`;
+function textW(s, size, italic, fontCss){
+  mctx.font = `${italic ? 'italic ' : ''}100px ${fontCss || '"IM Fell English", Georgia, serif'}`;
   return mctx.measureText(s).width / 100 * size;
 }
 
@@ -1162,7 +1193,7 @@ function textW(s, size, italic){
 const LYR = 1.7;   /* lyric size, staff spaces */
 const decoder = document.createElement('textarea');
 function prepare(){
-  const mode = st.nota;
+  const mode = st.nota, ls = lyrSize(), lf = lyrFontCss(), ns = noteScale();
   BLACK = isBlack(); MODERN = st.nota === 'fake' && st.heads !== 'old'; blackSync();
   try { iconsSync(); } catch (e) {}   /* the note value icons in the notation in use (defined with the edit tools, later) */
   piece.voices.forEach((v, i) => {
@@ -1177,6 +1208,7 @@ function prepare(){
       const g = s.rest ? SHAPE_REST[s.g] : BLACK ? BLACK_G[s.g] || s.g + 'c' : MODERN ? MOD_G[s.g] || s.g : s.g + (s.col ? 'c' : '');
       s.glyph = g; s.red = BLACK && !s.rest && !!s.col;
       s.hw = s.phantom ? 1.2 : s.rest ? (s.g === 'Mx' ? 1.2 : s.g === 'Sm' || s.g === 'F' || s.g === 'Sf' ? gw(g) : 0.42) : gw(g);
+      const nsExtra = ns > 1 ? s.hw * (ns - 1) * 0.5 : 0;
       /* accidental before the head (written ones only; key signature ones are implied) */
       s.acc = null; s.edAcc = null;
       if (!s.rest && s.alt !== null && s.alt !== undefined) {
@@ -1186,14 +1218,14 @@ function prepare(){
         if (s.ed) { if (a !== sigAlt && st.ed === 'on') s.edAcc = ACCG[a]; }
         else if (a !== sigAlt) s.acc = ACCG[a];
       }
-      s.left = s.acc ? gw(s.acc) + 0.35 : 0;
+      s.left = (s.acc ? (gw(s.acc) + 0.35) * Math.max(1, ns) : 0) + nsExtra;
       s.vi = i;
       s.keyc = s.t > EPS && !s.cont ? v.keys.find(q => Math.abs(q.t - s.t) < EPS) || null : null;
       s.clefc = s.t > EPS && !s.cont ? v.clefs.find(q => q.t > EPS && Math.abs(q.t - s.t) < EPS && KERN_CLEF[q.c]) || null : null;
       if (s.clefc) s.left += clefW(s.clef) + 0.9;
       if (s.keyc) { s.keyN = keyChangeGlyphs(v, s.keyc).length; s.left += s.keyN * 1.0 + 0.9; }
       if (s.mens) s.left += mensW(s.mens) + 1.3;
-      s.right = s.hw + (s.dot ? 0.75 : 0);
+      s.right = s.hw + nsExtra + (s.dot ? 0.75 * Math.max(1, ns) : 0);
       const sy = s.syl && s.syl[Math.min(st.verse, s.syl.length - 1)] !== undefined ? s.syl[Math.min(st.verse, (s.syl.length || 1) - 1)] : null;
       s.text = null; s.hy = false; s.hyRaw = false; s.cont = false; s.ww = 0; s.lyo = 0;
       if (sy && sy !== '.') {
@@ -1201,7 +1233,7 @@ function prepare(){
         if (/-$/.test(tx)) { s.hyRaw = true; s.hy = st.dashes === 'on'; tx = tx.slice(0, -1); }
         tx = tx.replace(/\|\|?/g, '').replace(/_/g, ' ').trim();
         if (tx.includes('&')) { decoder.innerHTML = tx; tx = decoder.value; }
-        s.text = tx; s.tw = textW(tx, LYR);
+        s.text = tx; s.tw = textW(tx, ls, false, lf);
         /* a long note whose stem hangs down through the lyric row: its syllable starts beside the stem, so the row need not drop below the stem (and the staves stay close) */
         if (!s.rest && s.pos !== null && s.pos !== undefined && (STEMMED[s.g] ? isFlipped(s) : TAILED[s.g] ? !isFlipped(s) : false) && 4 - s.pos * 0.5 + 3.6 > 5.1) s.lyo = s.tw / 2 + 0.4 + (TAILED[s.g] ? s.hw / 2 : 0);
       }
@@ -1215,7 +1247,7 @@ function prepare(){
         if (owner && owner.last.hyRaw) { q.cont = true; owner.word += q.text; owner.last = q; }
         else { owner = q; q.word = q.text; q.last = q; }
       }
-      for (const q of syms) if (q.text && !q.cont) { q.ww = textW(q.word, LYR); delete q.last; }
+      for (const q of syms) if (q.text && !q.cont) { q.ww = textW(q.word, ls, false, lf); delete q.last; }
     }
     syms.forEach((q, k) => { q.id = 'n' + i + '-' + k; });
     v.syms = syms;
@@ -1490,32 +1522,39 @@ function symSvg(s, X, top, showNotes){
 function symInner(s, X, top){
   let o = '';
   let hx = X;
+  const ns = noteScale(), cx = hx + s.hw / 2;
   if (s.mens || s.keyc || s.clefc) o += markSvg(s, X, top);
-  if (s.rest) { o += restSvg(s, hx + s.hw / 2, top); return o; }
+  if (s.rest) {
+    const r = restSvg(s, cx, top);
+    o += Math.abs(ns - 1) > 0.005 ? `<g transform="translate(${f(cx)} ${f(top + 2)}) scale(${f(ns)}) translate(${f(-cx)} ${f(-(top + 2))})">${r}</g>` : r;
+    return o;
+  }
   const y = top + 4 - s.pos * 0.5;
-  o += ledgers(s.pos, hx, s.hw, top);
-  if (s.acc) o += use(s.acc, hx - gw(s.acc) - 0.3, y);
+  o += ledgers(s.pos, hx - s.hw * (ns - 1) * 0.5, s.hw * ns, top);
+  let body = '';
+  if (s.acc) body += use(s.acc, hx - gw(s.acc) - 0.3, y);
   if (s.ligSvg) { o += s.ligSvg; }
   else {
     const gm = isFlipped(s) ? useT(s.glyph, hx, y, 1, -1) : use(s.glyph, hx, y);
     if (s.cut > 0.02) {
       const upStem = isFlipped(s) ? !!TAILED[s.g] : !!STEMMED[s.g];
       const y0 = upStem ? y - 3.7 + s.cut : y - 1.5, y1 = upStem ? y + 1.5 : y + 3.7 - s.cut;
-      o += `<clipPath id="c-${s.id}"><rect x="${f(hx - 1)}" y="${f(y0)}" width="${f(s.hw + 3)}" height="${f(y1 - y0)}"/></clipPath><g clip-path="url(#c-${s.id})"${s.red ? ' class="red"' : ''}>${gm}</g>`;
-    } else o += s.red ? `<g class="red">${gm}</g>` : gm;
+      body += `<clipPath id="c-${s.id}"><rect x="${f(hx - 1)}" y="${f(y0)}" width="${f(s.hw + 3)}" height="${f(y1 - y0)}"/></clipPath><g clip-path="url(#c-${s.id})"${s.red ? ' class="red"' : ''}>${gm}</g>`;
+    } else body += s.red ? `<g class="red">${gm}</g>` : gm;
   }
   if (s.dot && !s.ligSvg) {
     const dx = hx + s.hw + (s.dd ? 0.55 : 0.4), dy = top + 4 - (s.pos % 2 === 0 ? s.pos + 1 : s.pos) * 0.5, dk = s.dd ? 'D' : 'A';
-    o += `<g class="dothit"><title>Punctus ${s.dd ? 'divisionis' : 'additionis'}</title><circle class="hit" cx="${f(dx)}" cy="${f(dy)}" r="0.55" fill="transparent"/><circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.19"/><text class="dotkind hit" x="${f(dx + 0.34)}" y="${f(dy + 0.24)}" font-size="0.85" font-style="normal">${dk}</text></g>`;
+    body += `<g class="dothit"><title>Punctus ${s.dd ? 'divisionis' : 'additionis'}</title><circle class="hit" cx="${f(dx)}" cy="${f(dy)}" r="0.55" fill="transparent"/><circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.19"/><text class="dotkind hit" x="${f(dx + 0.34)}" y="${f(dy + 0.24)}" font-size="0.85" font-style="normal">${dk}</text></g>`;
   }
   if (s.edAcc) {
     const ay = Math.min(top - 0.9, y - (isFlipped(s) ? 1.6 : (STEMMED[s.g] ? 4.3 : 1.7)));
-    o += `<g transform="translate(${f(hx + s.hw / 2 - gw(s.edAcc) * 0.36)} ${f(ay)}) scale(0.72)">${use(s.edAcc, 0, 0)}</g>`;
+    body += `<g transform="translate(${f(hx + s.hw / 2 - gw(s.edAcc) * 0.36)} ${f(ay)}) scale(0.72)">${use(s.edAcc, 0, 0)}</g>`;
   }
   if (s.ferm) {
     const fy = Math.min(top - 0.7, y - (STEMMED[s.g] && !isFlipped(s) ? 4.1 : 1.2));
-    o += fermata(hx + s.hw / 2, fy);
+    body += fermata(hx + s.hw / 2, fy);
   }
+  o += Math.abs(ns - 1) > 0.005 && body ? `<g transform="translate(${f(cx)} ${f(y)}) scale(${f(ns)}) translate(${f(-cx)} ${f(-y)})">${body}</g>` : body;
   return o;
 }
 function custosSvg(s, x, top){
@@ -1685,7 +1724,7 @@ function staffLine(o){
     const X = o.xs[i];
     s += symSvg(sym, X, top, show);
     if (o.showLyr && sym.text && st.dashes !== 'off') {
-      s += `<text class="lyr" data-s="${sym.id}" x="${f(X + sym.hw / 2 + sym.lyo)}" y="${f(o.lyrY)}" font-size="${LYR}" text-anchor="middle">${esc(sym.text)}</text>`;
+      s += `<text class="lyr" data-s="${sym.id}" x="${f(X + sym.hw / 2 + sym.lyo)}" y="${f(o.lyrY)}" font-size="${f(lyrSize())}" text-anchor="middle">${esc(sym.text)}</text>`;
     }
   }
   /* hyphens between syllables, ties */
@@ -1710,7 +1749,7 @@ function staffLine(o){
       for (let j = k + 1; j < syms.length; j++) { const q = syms[j][0]; if (!q.text) continue; if (!q.cont) break; w += q.text; }
       /* a word that goes on past the line is written whole when it fits in the margin */
       if (!sym.cont) { sym.drewAll = w === sym.word || x + sym.ww <= o.lineEnd + 1.2; if (sym.drewAll) w = sym.word; }
-      s += `<text class="lyr" data-s="${sym.id}" x="${f(x)}" y="${f(o.lyrY)}" font-size="${LYR}">${esc(w)}</text>`;
+      s += `<text class="lyr" data-s="${sym.id}" x="${f(x)}" y="${f(o.lyrY)}" font-size="${f(lyrSize())}">${esc(w)}</text>`;
       open = true;
     });
   }
@@ -1719,14 +1758,14 @@ function staffLine(o){
       if (sym.text) {
         if (prevSyl && prevSyl[0].hy) {
           const a = prevSyl[1] + prevSyl[0].hw / 2 + prevSyl[0].lyo + prevSyl[0].tw / 2, b = X + sym.hw / 2 + sym.lyo - sym.tw / 2;
-          if (b - a > 0.6) s += hl((a + b) / 2 - 0.3, (a + b) / 2 + 0.3, o.lyrY - 0.45, 'barl', 0.1);
+          if (b - a > 0.6) s += hl((a + b) / 2 - 0.3, (a + b) / 2 + 0.3, o.lyrY - 0.265 * lyrSize(), 'barl', 0.1);
         }
         prevSyl = [sym, X];
       }
     }
     if (prevSyl && prevSyl[0].hy && !o.last) {
       const a = prevSyl[1] + prevSyl[0].hw / 2 + prevSyl[0].lyo + prevSyl[0].tw / 2;
-      if (o.lineEnd - a > 0.8) s += hl(a + 0.3, a + 0.9, o.lyrY - 0.45, 'barl', 0.1);
+      if (o.lineEnd - a > 0.8) s += hl(a + 0.3, a + 0.9, o.lyrY - 0.265 * lyrSize(), 'barl', 0.1);
     }
   }
   if (show) {
@@ -1857,7 +1896,8 @@ function lineRoom(v, line){
   const txt2 = hiTxt.map((x, i) => Math.max(x, hiTxt[i - 1] ?? 0, hiTxt[i + 1] ?? 0));
   let above = -Math.min(...lo2), below = Math.max(...hi2) - 4;
   const lyr = vis(v.idx).lyr && v.syms.some(s => s.text);
-  const lyrY = Math.max(4 + 1.5 + 1.1 * m, 4 + (Math.max(...txt2) - 4) + 0.9 + 0.6 * m);
+  const ls = lyrSize(), lyrExtra = Math.max(0, ls - 1.7) * 0.75, lyrDesc = 0.41 * ls;
+  const lyrY = Math.max(4 + 1.5 + 1.1 * m, 4 + (Math.max(...txt2) - 4) + 0.9 + 0.6 * m) + lyrExtra;
   if (lyr) {
     /* the lyric row only claims room where a syllable (or its dash) really stands, so a neighbouring staff's stems may pass the empty stretches of the row */
     const hit = new Array(n).fill(!line.xs), sy = [];
@@ -1870,8 +1910,8 @@ function lineRoom(v, line){
       else if (q.hy) hiX = line.x1;
       for (let j = line.from; j < line.to; j++) { const mx = line.xs[j] + 0.65; if (mx >= lo && mx <= hiX) hit[j - line.from] = true; }
     });
-    for (const H of [hi2, hiS, hiB]) for (let i = 0; i < n; i++) if (hit[i] || hit[i - 1] || hit[i + 1]) H[i] = Math.max(H[i], lyrY + 0.7);
-    below = Math.max(lyrY + 0.7, ...hi2) - 4;
+    for (const H of [hi2, hiS, hiB]) for (let i = 0; i < n; i++) if (hit[i] || hit[i - 1] || hit[i + 1]) H[i] = Math.max(H[i], lyrY + lyrDesc);
+    below = Math.max(lyrY + lyrDesc, ...hi2) - 4;
   }
   return {above, below, lyrY, lo: lo2, hi: hi2, loS, hiS, loB, hiB};
 }
@@ -2042,7 +2082,7 @@ function drawSystem(vlist, line, y, opts = {}){
   for (let k = 0; k + 1 < vlist.length; k++) {
     const a = tops[k] + 4, b = tops[k + 1];
     const hasLyr = vis(vlist[k].idx).lyr && vlist[k].syms.some(q => q.text);
-    if (hasLyr) { const ly = tops[k] + rooms[k].lyrY; segs.push([[a, ly - 1.7], [ly + 0.7, b]]); }
+    if (hasLyr) { const ly = tops[k] + rooms[k].lyrY, ls = lyrSize(); segs.push([[a, ly - ls], [ly + 0.41 * ls, b]]); }
     else segs.push([[a, b]]);
   }
   for (let i = line.from; i < line.to; i++) {
@@ -2834,7 +2874,41 @@ async function buildPieceList(){
 /* Controls                                                            */
 /* ------------------------------------------------------------------ */
 const STAFF_COLORS = [['red', '#8E2A1E', 'Red'], ['black', '#2A2218', 'Black'], ['brown', '#8A6A44', 'Brown'], ['blue', '#2F4F8F', 'Blue'], ['grey', '#9A9286', 'Grey']];
-$('#staffSeg').innerHTML = STAFF_COLORS.map(([k, c, n]) => `<button class="tb swatch" data-v="${k}" style="--c:${c}" aria-label="${n}" title="${n}"><i></i></button>`).join('');
+const SWATCH_HTML = STAFF_COLORS.map(([k, c, n]) => `<button class="tb swatch" data-v="${k}" style="--c:${c}" aria-label="${n}" title="${n}"><i></i></button>`).join('');
+$('#staffSeg').innerHTML = SWATCH_HTML;
+$('#noteColSeg').innerHTML = SWATCH_HTML;
+$('#lyrFontSel').innerHTML = LYR_FONTS.map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join('');
+const LOCK_ON_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 7V5.2a3 3 0 0 1 6 0V7h.8c.66 0 1.2.54 1.2 1.2v5.1c0 .66-.54 1.2-1.2 1.2H4.2c-.66 0-1.2-.54-1.2-1.2V8.2C3 7.54 3.54 7 4.2 7H5Zm1.4 0h3.2V5.2a1.6 1.6 0 0 0-3.2 0V7Z"/></svg>';
+const LOCK_OFF_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.4 4.8a1.6 1.6 0 0 0-3-.75l-1.3-.54A3 3 0 0 1 11.8 5v2h.2c.66 0 1.2.54 1.2 1.2v5.1c0 .66-.54 1.2-1.2 1.2H4.2c-.66 0-1.2-.54-1.2-1.2V8.2C3 7.54 3.54 7 4.2 7h6.2V4.8Z"/></svg>';
+const RNG_DEF = {
+  size: [1, 7, 0.05, 0.3, 20],
+  noteSize: [1, 7, 0.05, 0.3, 20],
+  thickL: [0, 0.16, 0.005, 0, 1],
+  thick: [0, 0.16, 0.005, 0, 1],
+  hs: [-0.4, 1.2, 0.01, -2, 10],
+  vs: [0, 2, 0.02, 0, 10],
+  ss: [0, 3, 0.05, 0, 10],
+  lyrSize: [1, 2.8, 0.05, 0.5, 6]
+};
+const rngFmt = v => String(+(+v).toFixed(3));
+function rngSync(k){
+  const wrap = document.querySelector(`.rng-wrap[data-for="${k}"]`); if (!wrap) return;
+  const inp = wrap.querySelector('input[type="range"]'); if (!inp) return;
+  const def = RNG_DEF[k] || [+inp.min, +inp.max, +inp.step || 0.05, -100, 100];
+  const b = st.bounds && Array.isArray(st.bounds[k]) ? st.bounds[k] : null;
+  const mn = b && isFinite(b[0]) ? b[0] : def[0];
+  const mx = b && isFinite(b[1]) ? b[1] : def[1];
+  inp.min = String(mn); inp.max = String(mx);
+  const val = k === 'thick' || k === 'thickL' ? (st[k] || 0) : (st[k] !== undefined ? st[k] : +inp.value);
+  inp.value = String(val);
+  const bMin = wrap.querySelector('.rng-bound[data-end="min"]');
+  const bMax = wrap.querySelector('.rng-bound[data-end="max"]');
+  const vEl = wrap.querySelector('.rng-val');
+  if (bMin) bMin.textContent = rngFmt(mn);
+  if (bMax) bMax.textContent = rngFmt(mx);
+  if (vEl) vEl.textContent = rngFmt(val);
+}
+function rngSyncAll(){ for (const k of Object.keys(RNG_DEF)) rngSync(k); }
 const PAPER_COLORS = [['parchment', '#F3E8CE', 'Paper texture'], ['beige', '#F0E8D8', 'Beige'], ['white', '#FFFFFF', 'White']];
 $('#paperColSeg').innerHTML = `<div class="texpop" id="texPop">` +
   `<button class="tb swatch" id="mainPaperSwatch" data-v="parchment" style="--c:#F3E8CE" aria-label="Paper texture" title="Paper texture (hover to choose)"><i style="background:#F3E8CE var(--paper);background-size:160px"></i></button>` +
@@ -2889,16 +2963,25 @@ function segInit(id, key, after){
 }
 function syncUI(){
   if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
-  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#bposSeg': 'bpos'};
+  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#clefSeg': 'clefs', '#barSeg': 'bars', '#paperSeg': 'paper', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#bposSeg': 'bpos'};
   $('#bnumSel').value = st.bnum || 'off'; $('#bunitSel').value = st.bunit || 'bar';
+  $('#lyrFontSel').value = st.lyrFont || 'fell';
   document.querySelectorAll('.bnx').forEach(el => { el.hidden = !st.bnum || st.bnum === 'off'; });
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
-  for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).value = st[k];
-  $('#thick').value = st.thick || 0; $('#thickL').value = st.thickL || 0;
+  const sLocked = st.sizeLock !== 'off', cLocked = st.colLock !== 'off';
+  if (sLocked) st.noteSize = st.size;
+  const slBtn = $('#sizeLock'), clBtn = $('#colLock');
+  if (slBtn) { slBtn.setAttribute('aria-pressed', String(sLocked)); slBtn.innerHTML = sLocked ? LOCK_ON_SVG : LOCK_OFF_SVG; slBtn.title = sLocked ? 'Locked to staff size — click to adjust independently' : 'Unlocked — click to lock note size to staff size'; }
+  if (clBtn) { clBtn.setAttribute('aria-pressed', String(cLocked)); clBtn.innerHTML = cLocked ? LOCK_ON_SVG : LOCK_OFF_SVG; clBtn.title = cLocked ? 'Locked to staff colour — click to adjust independently' : 'Unlocked — click to lock note colour to staff colour'; }
+  rngSyncAll();
   blackSync();
   Organ.sync();
   if ($('#audition')) $('#audition').checked = !!st.audition;
   document.documentElement.style.setProperty('--staff', (STAFF_COLORS.find(c => c[0] === st.staff) || STAFF_COLORS[0])[1]);
+  const nc = STAFF_COLORS.find(c => c[0] === st.noteCol);
+  if (nc && nc[0] !== 'black') document.documentElement.style.setProperty('--note-ink', nc[1]);
+  else document.documentElement.style.removeProperty('--note-ink');
+  document.documentElement.style.setProperty('--lyr-font', lyrFontCss());
   applyPaper(); if (typeof incSync === 'function') incSync();
   const horiz = isHoriz();
   viewerEl.classList.toggle('horiz', horiz); $('.viewwrap').classList.toggle('horiz', horiz);
@@ -3031,15 +3114,66 @@ segInit('#eqSeg', 'eq'); segInit('#viewList', 'view'); $('#notaSeg').addEventLis
   else { st.nota = 'real'; if (pieceKey) { if (b.dataset.v === 'black') st.black[pieceKey] = 1; else delete st.black[pieceKey]; } }
   save(); syncUI(); render();
 }); segInit('#headSeg', 'heads'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars'); segInit('#bposSeg', 'bpos');
-[['#bnumSel', 'bnum'], ['#bunitSel', 'bunit']].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; save(); syncUI(); render(); }));
-segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); }); segInit('#staffSeg', 'staff'); segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#edSeg', 'ed');
+[['#bnumSel', 'bnum'], ['#bunitSel', 'bunit'], ['#lyrFontSel', 'lyrFont']].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; save(); syncUI(); render(); }));
+segInit('#paperSeg', 'paper'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); });
+$('#staffSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.staff = b.dataset.v; if (st.colLock !== 'off') st.noteCol = st.staff; save(); syncUI(); render(); });
+$('#noteColSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.noteCol = b.dataset.v; if (st.colLock !== 'off') st.staff = st.noteCol; save(); syncUI(); render(); });
+$('#sizeLock').addEventListener('click', () => { st.sizeLock = st.sizeLock === 'off' ? 'on' : 'off'; if (st.sizeLock === 'on') st.noteSize = st.size; save(); syncUI(); render(); });
+$('#colLock').addEventListener('click', () => { st.colLock = st.colLock === 'off' ? 'on' : 'off'; if (st.colLock === 'on') st.noteCol = st.staff; save(); syncUI(); render(); });
+segInit('#dashSeg', 'dashes'); segInit('#linesSeg', 'lines'); segInit('#darkSeg', 'dark', () => { if (H.dark) H.dark(); }); segInit('#edSeg', 'ed');
  segInit('#ligSeg', 'lig'); segInit('#scrollSeg', 'webScroll', () => { viewerEl.scrollLeft = 0; });
 $('#verseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.verse = +b.dataset.v; save(); syncUI(); render(); });
 let rq = 0;
 const later = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(render); };
-for (const k of ['size', 'hs', 'vs', 'ss']) $('#' + k).addEventListener('input', e => { st[k] = +e.target.value; save(); later(); });
-$('#thick').addEventListener('input', e => { st.thick = +e.target.value; save(); applyThick(); });
-$('#thickL').addEventListener('input', e => { st.thickL = +e.target.value; save(); applyThick(); });
+$('#size').addEventListener('input', e => { st.size = +e.target.value; if (st.sizeLock !== 'off') { st.noteSize = st.size; rngSync('noteSize'); } rngSync('size'); save(); later(); });
+$('#noteSize').addEventListener('input', e => { st.noteSize = +e.target.value; if (st.sizeLock !== 'off') { st.size = st.noteSize; rngSync('size'); } rngSync('noteSize'); save(); later(); });
+for (const k of ['hs', 'vs', 'ss', 'lyrSize']) $('#' + k).addEventListener('input', e => { st[k] = +e.target.value; rngSync(k); save(); later(); });
+$('#thick').addEventListener('input', e => { st.thick = +e.target.value; rngSync('thick'); save(); applyThick(); });
+$('#thickL').addEventListener('input', e => { st.thickL = +e.target.value; rngSync('thickL'); save(); applyThick(); });
+document.addEventListener('pointerdown', e => {
+  const w = e.target.closest('.rng-wrap');
+  document.querySelectorAll('.rng-wrap.active').forEach(el => { if (el !== w) el.classList.remove('active'); });
+  if (w) w.classList.add('active');
+});
+document.querySelectorAll('.rng-wrap .rng-bound').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const wrap = btn.closest('.rng-wrap'), k = wrap.dataset.for, end = btn.dataset.end;
+    const inp = wrap.querySelector('input[type="range"]'), def = RNG_DEF[k];
+    if (!inp || !def || btn.querySelector('input')) return;
+    const ed = document.createElement('input');
+    ed.type = 'number'; ed.step = 'any'; ed.className = 'rng-edit';
+    ed.value = end === 'min' ? inp.min : inp.max;
+    ed.setAttribute('aria-label', end === 'min' ? 'Minimum value' : 'Maximum value');
+    btn.hidden = true;
+    btn.parentNode.insertBefore(ed, btn);
+    ed.focus(); ed.select();
+    let done = false;
+    const finish = commit => {
+      if (done) return; done = true;
+      const v = parseFloat(ed.value);
+      ed.remove(); btn.hidden = false;
+      if (!commit || !isFinite(v)) return;
+      const curMin = +inp.min, curMax = +inp.max;
+      let mn = end === 'min' ? v : curMin, mx = end === 'max' ? v : curMax;
+      mn = Math.max(def[3], Math.min(def[4], mn));
+      mx = Math.max(def[3], Math.min(def[4], mx));
+      if (mx <= mn + 1e-6) return;
+      if (!st.bounds || typeof st.bounds !== 'object') st.bounds = {};
+      st.bounds[k] = [mn, mx];
+      if ((k === 'size' || k === 'noteSize') && st.sizeLock !== 'off') st.bounds[k === 'size' ? 'noteSize' : 'size'] = [mn, mx];
+      let changed = false;
+      if (st[k] < mn) { st[k] = mn; changed = true; }
+      else if (st[k] > mx) { st[k] = mx; changed = true; }
+      if ((k === 'size' || k === 'noteSize') && st.sizeLock !== 'off') { st.size = st.noteSize = st[k]; rngSync('size'); rngSync('noteSize'); }
+      else rngSync(k);
+      save();
+      if (changed) { if (k === 'thick' || k === 'thickL') applyThick(); else later(); }
+    };
+    ed.addEventListener('keydown', ev => { ev.stopPropagation(); if (ev.key === 'Enter') finish(true); else if (ev.key === 'Escape') finish(false); });
+    ed.addEventListener('blur', () => finish(true));
+  });
+});
 /* ---------------- Voices: name, clef, add, remove, open in CantusFirmus ---------------- */
 /* the clefs, as CantusFirmus offers them (Samuel prefers its clef menu): short name and full name */
 const CLEF_MENU = [['treble8', 'G2 8', 'G clef on line 2, octave lower (tenor)'], ['treble', 'G2', 'G clef on line 2'], ['g1', 'G1', 'G clef on line 1'],
@@ -6086,7 +6220,7 @@ function sizeViewer(){
   };
   const zoomBy = k => {
     if (!piece || !isFinite(k) || k <= 0) return;
-    if (st.paper === 'web') { st.size = Math.max(1, Math.min(7, Math.round(st.size * k * 100) / 100)); $('#size').value = st.size; }
+    if (st.paper === 'web') { const sb = st.bounds && st.bounds.size; const mn = sb ? sb[0] : 1, mx = sb ? sb[1] : 7; st.size = Math.max(mn, Math.min(mx, Math.round(st.size * k * 100) / 100)); if (st.sizeLock !== 'off') st.noteSize = st.size; rngSync('size'); rngSync('noteSize'); }
     else st.zoom = Math.max(0.5, Math.min(3, (st.zoom || 1) * k));
     save();
     if (!zRaf) zRaf = requestAnimationFrame(() => { zRaf = 0; applyZoomFast(); });
@@ -6510,7 +6644,7 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
    too tall for the room, it gets a scroll bar of its own; if it only stands a little too high or low, it is moved over. */
 {
   const CAND = '.popbody, .menu, #library, .library';
-  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}html,body,body *:not(input):not(textarea):not([contenteditable]){-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none !important}input,textarea,[contenteditable]{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default !important}#popView .staffset{grid-template-columns:auto minmax(150px,auto)}#pages .ed-grid{pointer-events:none}#pages .ed-grid .eg-tick{stroke:var(--sel);stroke-width:.11;opacity:.45}#pages .ed-grid .eg-tick.maj{stroke-width:.15;opacity:.75}#pages .ed-grid .eg-line{stroke:var(--sel);stroke-width:.08;stroke-dasharray:.26 .26;opacity:.13}#pages .ed-grid .eg-line.maj{opacity:.24}#pages .ed-grid .eg-line.tail{opacity:.24}@media print{#pages .ed-grid{display:none !important}}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}#library[data-mode="rep"]{min-height:min(62vh,520px)}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
+  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}html,body,body *:not(input):not(textarea):not([contenteditable]){-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none !important}input,textarea,[contenteditable]{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default !important}#popView .staffset{grid-template-columns:auto minmax(150px,auto)}#pages svg .ledger,#pages svg .barl,#pages svg .tie,#pages svg .ms{stroke:var(--note-ink,var(--leaf-ink))}#pages svg use,#pages svg .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) use,html.playing #pages g.sel:not(.on) .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) .ledger{stroke:var(--note-ink,var(--leaf-ink))}#pages svg text.lyr{font-family:var(--lyr-font,"IM Fell English","Palatino Linotype",Palatino,Georgia,serif)}.staffset .subhead{grid-column:1/-1;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);opacity:.78;padding-top:6px;margin-top:2px;border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent)}.staffset .subhead:first-child{padding-top:0;margin-top:0;border-top:0}.staffset .lab-lock{display:inline-flex;align-items:center;gap:5px}.lockbtn{display:inline-grid;place-items:center;width:22px;height:22px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--muted);cursor:pointer;opacity:.55;transition:opacity .12s,background .12s,color .12s}.lockbtn svg{width:14px;height:14px;fill:currentColor}.lockbtn[aria-pressed="true"]{color:var(--accent);opacity:.9}.lockbtn:hover{background:color-mix(in srgb,var(--ink) 8%,transparent);opacity:1}.rng-wrap{display:flex;flex-direction:column;min-width:150px}.rng-wrap input[type=range]{width:100%;margin:0}.rng-meta{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:11px;line-height:1.2;font-variant-numeric:tabular-nums;opacity:0;max-height:0;overflow:hidden;margin-top:0;pointer-events:none;transition:opacity .14s ease,max-height .14s ease,margin-top .14s ease}.rng-wrap:hover .rng-meta,.rng-wrap:focus-within .rng-meta,.rng-wrap.active .rng-meta{opacity:1;max-height:22px;margin-top:2px;pointer-events:auto}.rng-bound{appearance:none;border:0;background:transparent;padding:0 3px;margin:0;font:inherit;color:var(--muted);cursor:pointer;border-radius:3px;border-bottom:1px dotted color-mix(in srgb,var(--muted) 55%,transparent)}.rng-bound:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 7%,transparent)}.rng-val{color:var(--accent);font-weight:600;padding:0 4px}.rng-edit{width:46px;font:inherit;font-size:11px;padding:0 3px;border:1px solid var(--accent);border-radius:3px;background:var(--ground,#FBF7EF);color:var(--ink);text-align:center;outline:none}.rng-edit::-webkit-inner-spin-button,.rng-edit::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}#pages .ed-grid{pointer-events:none}#pages .ed-grid .eg-tick{stroke:var(--sel);stroke-width:.11;opacity:.45}#pages .ed-grid .eg-tick.maj{stroke-width:.15;opacity:.75}#pages .ed-grid .eg-line{stroke:var(--sel);stroke-width:.08;stroke-dasharray:.26 .26;opacity:.13}#pages .ed-grid .eg-line.maj{opacity:.24}#pages .ed-grid .eg-line.tail{opacity:.24}@media print{#pages .ed-grid{display:none !important}}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}#library[data-mode="rep"]{min-height:min(62vh,520px)}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
   {
     const gr = $('#glassRange');
     const applyGlass = v => {
