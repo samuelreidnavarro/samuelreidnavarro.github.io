@@ -299,6 +299,11 @@ function shiftPath(d, dy){
   const flag2 = GLY.F2.d.slice(GLY.F.d.length);
   GLY.Sf = {d: GLY.F2.d, b: GLY.F2.b};
   GLY.F3 = {d: GLY.F2.d + shiftPath(flag2, 0.45), b: GLY.F2.b};
+  /* coloured small values (sesquialtera / triplet semiminima, fusa, semifusa): since Mc already uses the unflagged
+     black diamond shape, coloured Sm (1/6) takes 1 flag (F), coloured F (1/12) takes 2 flags (Sf), coloured Sf takes 3 (F3) */
+  GLY.Smc = {d: GLY.F.d, b: GLY.F.b};
+  GLY.Fc = {d: GLY.Sf.d, b: GLY.Sf.b};
+  GLY.Sfc = {d: GLY.F3.d, b: GLY.F3.b};
   const flagU = 'M1.13 -3.5H1.25C1.33 -2.8 2.15 -2.45 1.9 -1.25C1.86 -2.15 1.45 -2.45 1.25 -2.55Z';
   const flagD = 'M0.05 3.5H0.17C0.25 2.8 1.07 2.45 0.82 1.25C0.78 2.15 0.37 2.45 0.17 2.55Z';
   GLY.nX = {d: GLY.nE.d + shiftPath(flagU, 0.6), b: GLY.nE.b};
@@ -666,7 +671,7 @@ function shapeReal(w, T, P, M = 2, X = 2){
     const imperfectLevel = g === 'B' ? T === 2 : g === 'S' ? P === 2 : g === 'L' ? M === 2 : g === 'Mx' ? X === 2 : true;
     if (imperfectLevel && eq(w, v * 1.5)) return {g, dot:true};
   }
-  for (const [g, v] of tab) if (eq(w * 1.5, v) && g !== 'Sm' && g !== 'F' && g !== 'Sf') return {g, col:true};
+  for (const [g, v] of tab) if (eq(w * 1.5, v)) return {g, col:true};
   /* last resort, before splitting into tied notes: a dot of addition even on a perfect value */
   for (const [g, v] of tab) if (eq(w, v * 1.5)) return {g, dot:true};
   return null;
@@ -679,8 +684,8 @@ function shapeAlt(w, T, P, M, X){
 /* a note the source writes black (CMME): the white shape it is two thirds of (the usual coloration), three quarters of
    (minor colour: a black breve with a black semibreve), or the same value blackened (semibreves in a hemiola under 3) */
 function shapeCol(w, T, P, M, X){
-  const tab = valueTable(T, P, M, X).filter(([g]) => g !== 'Sm' && g !== 'F' && g !== 'Sf');
-  for (const f of [1.5, 4 / 3, 1]) for (const [g, v] of tab) if (eq(w * f, v) && (f !== 1 || g !== 'M')) return {g, col:true};
+  const tab = valueTable(T, P, M, X);
+  for (const f of [1.5, 4 / 3, 1]) for (const [g, v] of tab) if (eq(w * f, v) && (f !== 1 || (g !== 'M' && g !== 'Sm' && g !== 'F' && g !== 'Sf'))) return {g, col:true};
   return null;
 }
 function shapeFake(d){
@@ -994,10 +999,15 @@ function notate(piece, v, mode){
       i = j - 1;
     }
   }
-  /* coloration in perfect tempus: imperfect breves that cut across the perfection grid are black, with their neighbours */
+  /* coloration in perfect tempus: imperfect breves that cut across the perfection grid are black, with their neighbours;
+     and in sesquialtera coloration, a 1/2 note immediately before a coloured semiminima (1/6) is a dotted coloured minima (Mc.) */
   if (mode === 'real') {
     for (let i = 0; i < out.length; i++) {
       const s = out[i];
+      if (!s.rest && !s.col && !s.dot && s.g === 'M' && eq(s.w, 0.5)) {
+        const nx = out[i + 1];
+        if (nx && !nx.rest && nx.col && nx.g === 'Sm') { s.col = true; s.dot = true; }
+      }
       if (!s.imp) continue;
       const mi = mensInfo(s.sign), B = mi.T * (mi.P === 3 ? 1.5 : 1);
       if (s.pos + s.w > B + EPS) {
@@ -1652,7 +1662,7 @@ function symSvg(s, X, top, showNotes, suppressMark, rdy){
 function chordHeadSvg(s, x, y){
   const g = s.glyph;
   if (g === 'M') return use('S', x, y);
-  if (g === 'Mc' || g === 'Sm' || g === 'F' || g === 'F2' || g === 'F3' || g === 'Sf') return use('Sc', x, y);
+  if (g === 'Mc' || g === 'Sm' || g === 'Smc' || g === 'F' || g === 'Fc' || g === 'F2' || g === 'F3' || g === 'Sf' || g === 'Sfc') return use('Sc', x, y);
   if (g === 'L') return use('B', x, y);
   if (g === 'Lc') return use('Bc', x, y);
   if (g === 'nM') return use('nS', x, y);
