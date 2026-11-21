@@ -21,7 +21,7 @@ const escH = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>'
     ? `<button class="tb openfile" id="libBtn" aria-haspopup="true" aria-expanded="false" aria-controls="library"><span class="of-t">${esc(L.lib)}</span><span class="of-f">${esc(LIBSUB)}</span></button>`
     : `<button class="tb" id="libBtn" aria-haspopup="true" aria-expanded="false" aria-controls="library">${esc(L.lib)}</button>`;
   /* Open menu order (Samuel 2026-11-14): Repertoire, Open file, New score, then Recent scores and My scores */
-  const OPENBTN = `<button class="tb openfile" id="openBtn"${APP.openFile === false ? ' hidden' : ''}><span class="of-t">Open file</span><span class="of-f">.mxl · MuseScore · MIDI · LilyPond · .krn · .gabc · CMME</span></button>`;
+  const OPENBTN = `<button class="tb openfile" id="openBtn"${APP.openFile === false ? ' hidden' : ''}><span class="of-t">Open file</span><span class="of-f">.mxl · MuseScore · MEI · MIDI · LilyPond · .krn · .gabc · CMME</span></button>`;
   const NEWBTN = `<button class="tb" id="newBtn" title="${esc(L.newTitle)}">${esc(L.newScore)}</button>`;
   document.body.insertAdjacentHTML('afterbegin', `<main class="wrap">
   <header class="top"><h1>${esc(APP.name)}</h1></header>
@@ -137,7 +137,7 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
           </div>
         </div>
       </div>
-      <input type="file" id="fileIn" accept=".krn,.kern,.txt,.musicxml,.xml,.mxl,.mscz,.mscx,.mid,.midi,.ly,.gabc,.cmme" hidden>
+      <input type="file" id="fileIn" accept=".krn,.kern,.txt,.musicxml,.xml,.mxl,.mscz,.mscx,.mei,.mid,.midi,.ly,.gabc,.cmme" hidden>
     </div>
     <div class="bar editbar" id="editBar" hidden></div>
   </section>
@@ -4172,15 +4172,336 @@ function cmmeToKernRich(text, fileName){
   }
   return kern;
 }
+/* MEI (.mei) importer: supports both CMN (measure-based) and Mensural MEI (CRIM, Verovio, Measuring Polyphony, etc.) */
+function meiToKern(txt, fileName){
+  const doc = new DOMParser().parseFromString(txt, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('This MEI file could not be parsed as XML.');
+  const byLocal = (root, name) => {
+    const out = [];
+    const walk = el => { for (const c of el.children) { if (c.localName === name) out.push(c); walk(c); } };
+    if (root) walk(root);
+    return out;
+  };
+  const firstLocal = (root, name) => byLocal(root, name)[0] || null;
+  const attr = (el, k) => el && el.getAttribute(k);
+  const titleEl = firstLocal(firstLocal(doc, 'meiHead'), 'title');
+  const title = (titleEl && titleEl.textContent.trim()) || (fileName || 'Untitled').replace(/\.mei(\.xml)?$/i, '');
+  let composer = '';
+  const compEl = firstLocal(firstLocal(doc, 'meiHead'), 'composer') || byLocal(firstLocal(doc, 'meiHead'), 'persName').find(e => /comp/i.test(attr(e, 'role') || ''));
+  if (compEl) composer = compEl.textContent.trim();
+
+  const clefMap = (shape, line, dis, disPlace) => {
+    const sh = (shape || 'G').toUpperCase(), ln = line || (sh === 'F' ? '4' : sh === 'C' ? '3' : '2');
+    if (sh === 'G' && ln === '2' && dis === '8' && disPlace === 'below') return 'Gv2';
+    const k = sh + ln;
+    return KERN_CLEF[k] ? k : (sh === 'F' ? 'F4' : sh === 'C' ? 'C3' : 'G2');
+  };
+  const keySigAlts = sig => {
+    const m = /^(\d+)([fs])$/i.exec(String(sig || '').trim());
+    if (!m) return {};
+    const n = Math.min(7, +m[1]), sharp = m[2].toLowerCase() === 's';
+    const ord = sharp ? 'fcgdaeb' : 'beadgcf';
+    const alts = {};
+    for (let i = 0; i < n; i++) alts[ord[i]] = sharp ? 1 : -1;
+    return alts;
+  };
+  const mensFromEl = el => {
+    if (!el) return null;
+    const sign = attr(el, 'mensur.sign') || attr(el, 'sign');
+    const slash = attr(el, 'mensur.slash') || attr(el, 'slash');
+    const dot = attr(el, 'mensur.dot') || attr(el, 'dot');
+    const T = +(attr(el, 'mensur.tempus') || attr(el, 'tempus') || 0);
+    const P = +(attr(el, 'mensur.prolatio') || attr(el, 'prolatio') || 0);
+    if (sign) {
+      let s = sign.toUpperCase() === 'O' ? 'O' : 'C';
+      if (dot === 'true' || dot === '1' || P === 3) s += '.';
+      if (slash && slash !== '0' && slash !== 'false') s += '|';
+      return s;
+    }
+    if (T || P) return (T === 3 ? 'O' : 'C') + (P === 3 ? '.' : '');
+    const mc = attr(el, 'meter.count') || attr(el, 'count'), mu = attr(el, 'meter.unit') || attr(el, 'unit');
+    const ms = attr(el, 'meter.sym') || attr(el, 'sym');
+    if (ms === 'cut') return 'C|';
+    if (ms === 'common') return 'C';
+    if (mc && mu) {
+      const len = +mc / +mu;
+      return eq(len, 1.5) || (+mc === 3 && +mu <= 2) ? 'O' : 'C';
+    }
+    return null;
+  };
+
+  /* Collect staffDefs from the first scoreDef */
+  const sdefs = new Map();
+  const sdefOrder = [];
+  const scoreDef = firstLocal(doc, 'scoreDef');
+  const globKey = scoreDef ? (attr(scoreDef, 'key.sig') || attr(scoreDef, 'keysig') || '') : '';
+  const globMens = mensFromEl(scoreDef);
+  const globMeterLen = scoreDef && attr(scoreDef, 'meter.count') && attr(scoreDef, 'meter.unit') ? (+attr(scoreDef, 'meter.count') / +attr(scoreDef, 'meter.unit')) : 2;
+  for (const sd of byLocal(doc, 'staffDef')) {
+    const n = attr(sd, 'n') || String(sdefOrder.length + 1);
+    if (sdefs.has(n)) continue;
+    const lblEl = firstLocal(sd, 'label');
+    const name = attr(sd, 'label') || (lblEl && lblEl.textContent.trim()) || ('Voice ' + n);
+    const clefEl = firstLocal(sd, 'clef');
+    const cShape = attr(sd, 'clef.shape') || (clefEl && attr(clefEl, 'shape')) || 'G';
+    const cLine = attr(sd, 'clef.line') || (clefEl && attr(clefEl, 'line')) || '2';
+    const cDis = attr(sd, 'clef.dis') || (clefEl && attr(clefEl, 'dis')) || '';
+    const cDisP = attr(sd, 'clef.dis.place') || (clefEl && attr(clefEl, 'dis.place')) || '';
+    const kSig = attr(sd, 'key.sig') || attr(sd, 'keysig') || globKey;
+    const mens = mensFromEl(sd) || mensFromEl(firstLocal(sd, 'mensur')) || globMens || 'C';
+    const mc = attr(sd, 'meter.count'), mu = attr(sd, 'meter.unit');
+    const meterLen = mc && mu ? (+mc / +mu) : globMeterLen;
+    sdefs.set(n, {n, name, clef: clefMap(cShape, cLine, cDis, cDisP), alts: keySigAlts(kSig), mens, meterLen});
+    sdefOrder.push(n);
+  }
+  if (!sdefOrder.length) {
+    const seen = new Set();
+    for (const stEl of byLocal(doc, 'staff')) { const n = attr(stEl, 'n') || '1'; if (!seen.has(n)) { seen.add(n); sdefs.set(n, {n, name: 'Voice ' + n, clef: 'G2', alts: {}, mens: 'C', meterLen: 2}); sdefOrder.push(n); } }
+  }
+  if (!sdefOrder.length) throw new Error('No music staves found in this MEI file.');
+
+  /* Collect tie and fermata control events referenced by xml:id */
+  const tieStarts = new Set(), tieEnds = new Set(), fermIds = new Set();
+  for (const t of byLocal(doc, 'tie')) {
+    const s = (attr(t, 'startid') || '').replace(/^#/, ''), e = (attr(t, 'endid') || '').replace(/^#/, '');
+    if (s) tieStarts.add(s);
+    if (e) tieEnds.add(e);
+  }
+  for (const fm of byLocal(doc, 'fermata')) {
+    const s = (attr(fm, 'startid') || '').replace(/^#/, '');
+    if (s) fermIds.add(s);
+  }
+
+  /* Create voices per (staff n, layer n); layer > 1 becomes a *divisi sub-voice */
+  const voiceMap = new Map(); /* key "staffN:layerN" -> voice */
+  const getVoice = (sn, ln) => {
+    const key = sn + ':' + ln;
+    if (voiceMap.has(key)) return voiceMap.get(key);
+    const sd = sdefs.get(sn) || {name: 'Voice ' + sn, clef: 'G2', alts: {}, mens: 'C', meterLen: 2};
+    const v = {
+      name: ln === '1' ? sd.name : sd.name + ' ' + ln, abbr: '', kclef: sd.clef,
+      events: [], mets: [{t: 0, sign: sd.mens, ei: 0}],
+      keys: Object.keys(sd.alts).length ? [{t: 0, alts: Object.assign({}, sd.alts), ei: 0}] : [],
+      clefs: [{t: 0, c: sd.clef, ei: 0}], verses: 0, t: 0, _sn: sn, _ln: ln, _meterLen: sd.meterLen, _ligN: 0, _prop: 1
+    };
+    voiceMap.set(key, v);
+    return v;
+  };
+  for (const sn of sdefOrder) getVoice(sn, '1');
+
+  const DUR_BASE = {maxima: 8, long: 4, longa: 4, breve: 2, brevis: 2, semibrevis: 1, '1': 1, minima: 0.5, '2': 0.5, semiminima: 0.25, '4': 0.25, fusa: 0.125, '8': 0.125, semifusa: 0.0625, '16': 0.0625, '32': 0.03125, '64': 0.015625, '128': 0.0078125};
+  const accVal = a => !a ? null : (a === 's' || a === 'xs' ? 1 : a === 'ss' || a === 'x' ? 2 : a === 'f' ? -1 : a === 'ff' ? -2 : a === 'n' ? 0 : null);
+  const parseMeiPitch = el => {
+    const pn = (attr(el, 'pname') || '').toLowerCase(), oc = parseInt(attr(el, 'oct'), 10);
+    const li = LETTERS.indexOf(pn);
+    if (li < 0 || !isFinite(oc)) return null;
+    const step = 7 * oc + li;
+    let alt = accVal(attr(el, 'accid')), ed = false;
+    const accEl = Array.from(el.children).find(c => c.localName === 'accid');
+    if (accEl) {
+      const a2 = accVal(attr(accEl, 'accid'));
+      if (a2 !== null) alt = a2;
+      if (attr(accEl, 'func') === 'edit') ed = true;
+    }
+    if (alt === null) { const ag = accVal(attr(el, 'accid.ges')); if (ag !== null) alt = ag; }
+    return {step, alt, ed};
+  };
+  const calcDur = (el, v, tupScale) => {
+    const raw = (attr(el, 'dur') || '4').toLowerCase();
+    const curSign = v.mets.length ? v.mets[v.mets.length - 1].sign : 'C';
+    const mi = mensInfo(curSign);
+    let d = DUR_BASE[raw];
+    if (d === undefined) d = 0.25;
+    if (raw === 'semibrevis' && mi.P === 3) d = 1.5;
+    else if (raw === 'brevis') d = mi.T * (mi.P === 3 ? 1.5 : 1);
+    else if (raw === 'longa') d = mi.M * mi.T * (mi.P === 3 ? 1.5 : 1);
+    else if (raw === 'maxima') d = mi.X * mi.M * mi.T * (mi.P === 3 ? 1.5 : 1);
+    const num = parseFloat(attr(el, 'num')), numbase = parseFloat(attr(el, 'numbase'));
+    if (num > 0 && numbase > 0) d = d * numbase / num;
+    else if (attr(el, 'colored') === 'true') d = d * 2 / 3;
+    const dots = parseInt(attr(el, 'dots') || '0', 10);
+    if (dots > 0) d *= 2 - Math.pow(0.5, dots);
+    return rt(d * tupScale / (v._prop || 1));
+  };
+
+  const bars = [], sections = [];
+  const addBar = (t, type) => { if (t > EPS && !bars.some(b => eq(b.t, t))) bars.push({t: rt(t), type}); };
+  const walkLayer = (node, v, tupScale, ligId) => {
+    const ch = Array.from(node.children);
+    for (let i = 0; i < ch.length; i++) {
+      const el = ch[i], tag = el.localName;
+      if (tag === 'beam' || tag === 'bTrem' || tag === 'fTrem') { walkLayer(el, v, tupScale, ligId); continue; }
+      if (tag === 'ligature') { v._ligN++; walkLayer(el, v, tupScale, v._ligN); continue; }
+      if (tag === 'tuplet') {
+        const num = parseFloat(attr(el, 'num')) || 3, nb = parseFloat(attr(el, 'numbase')) || 2;
+        walkLayer(el, v, tupScale * nb / num, ligId);
+        continue;
+      }
+      if (tag === 'clef') {
+        const c = clefMap(attr(el, 'shape'), attr(el, 'line'), attr(el, 'dis'), attr(el, 'dis.place'));
+        if (v.t < EPS && v.clefs.length) v.clefs[0].c = c;
+        else v.clefs.push({t: rt(v.t), c, ei: v.events.length});
+        continue;
+      }
+      if (tag === 'mensur') {
+        const ms = mensFromEl(el);
+        if (ms) {
+          if (v.t < EPS && v.mets.length) v.mets[0].sign = ms;
+          else v.mets.push({t: rt(v.t), sign: ms, ei: v.events.length});
+        }
+        continue;
+      }
+      if (tag === 'proport') {
+        const num = parseFloat(attr(el, 'num')), nb = parseFloat(attr(el, 'numbase'));
+        if (num > 0 && nb > 0) v._prop = num / nb;
+        continue;
+      }
+      if (tag === 'barLine') {
+        const fm = attr(el, 'form') || 'single';
+        if (fm === 'dbl' || fm === 'rptend') addBar(v.t, 'double');
+        else if (fm !== 'invis') addBar(v.t, 'single');
+        continue;
+      }
+      if (tag === 'dot') {
+        const prev = v.events[v.events.length - 1];
+        if (prev && !prev.rest) {
+          if (attr(el, 'form') === 'div') prev.dd = true;
+          else { const add = rt(prev.d * 0.5); prev.d = rt(prev.d + add); prev.kd = prev.d; v.t = rt(v.t + add); }
+        }
+        continue;
+      }
+      if (tag === 'rest' || tag === 'space') {
+        const d = calcDur(el, v, tupScale);
+        v.events.push({t: rt(v.t), d, kd: d, rest: true, syl: []});
+        v.t = rt(v.t + d);
+        continue;
+      }
+      if (tag === 'mRest' || tag === 'mSpace') {
+        const d = rt(v._meterLen || 2);
+        v.events.push({t: rt(v.t), d, kd: d, rest: true, syl: []});
+        v.t = rt(v.t + d);
+        continue;
+      }
+      if (tag === 'multiRest') {
+        const cnt = Math.max(1, parseInt(attr(el, 'num') || '1', 10));
+        const d = rt((v._meterLen || 2) * cnt);
+        v.events.push({t: rt(v.t), d, kd: d, rest: true, syl: []});
+        v.t = rt(v.t + d);
+        continue;
+      }
+      if (tag === 'chord') {
+        const notes = Array.from(el.children).filter(c => c.localName === 'note');
+        const ps = notes.map(parseMeiPitch).filter(Boolean);
+        if (!ps.length) continue;
+        const d = calcDur(el, v, tupScale);
+        const ev = {t: rt(v.t), d, kd: d, rest: false, step: ps[0].step, alt: ps[0].alt, ed: ps[0].ed, syl: []};
+        if (ps.length > 1) ev.chord = ps.slice(1).sort((a, b) => a.step - b.step);
+        if (attr(el, 'colored') === 'true') ev.colH = true;
+        if (attr(el, 'fermata')) ev.ferm = true;
+        v.events.push(ev); v.t = rt(v.t + d);
+        continue;
+      }
+      if (tag === 'note') {
+        const p = parseMeiPitch(el); if (!p) continue;
+        const d = calcDur(el, v, tupScale);
+        const id = attr(el, 'xml:id') || attr(el, 'id') || '';
+        const tieAttr = attr(el, 'tie') || '';
+        const ev = {t: rt(v.t), d, kd: d, rest: false, step: p.step, alt: p.alt, ed: p.ed, syl: []};
+        if (tieAttr === 'i' || (id && tieStarts.has(id))) ev.tieStart = true;
+        if (tieAttr === 't' || (id && tieEnds.has(id))) ev.tieEnd = true;
+        if (tieAttr === 'm' || (ev.tieStart && ev.tieEnd)) { ev.tieMid = true; ev.tieStart = ev.tieEnd = false; }
+        if (attr(el, 'colored') === 'true') ev.colH = true;
+        if (attr(el, 'fermata') || (id && fermIds.has(id))) ev.ferm = true;
+        if (ligId) ev.lig = ligId;
+        for (const ve of Array.from(el.children).filter(c => c.localName === 'verse')) {
+          const vn = Math.max(0, parseInt(attr(ve, 'n') || '1', 10) - 1);
+          const sy = firstLocal(ve, 'syl');
+          if (sy) {
+            let tx = sy.textContent.trim().replace(/\s+/g, '_');
+            const wp = attr(sy, 'wordpos') || '';
+            if (wp === 'i') tx = tx + '-';
+            else if (wp === 'm') tx = '-' + tx + '-';
+            else if (wp === 't') tx = '-' + tx;
+            if (tx) { ev.syl[vn] = tx; v.verses = Math.max(v.verses, vn + 1); }
+          }
+        }
+        v.events.push(ev); v.t = rt(v.t + d);
+      }
+    }
+  };
+
+  /* Walk <section>s (handles both <measure>-wrapped CMN and unmeasured Mensural MEI) */
+  const measures = byLocal(doc, 'measure');
+  if (measures.length) {
+    for (const ms of measures) {
+      let mStart = 0;
+      for (const v of voiceMap.values()) mStart = Math.max(mStart, v.t);
+      for (const v of voiceMap.values()) {
+        if (v.t < mStart - EPS) { const pad = rt(mStart - v.t); v.events.push({t: rt(v.t), d: pad, kd: pad, rest: true, syl: []}); v.t = mStart; }
+      }
+      const reh = firstLocal(ms, 'reh');
+      if (reh && reh.textContent.trim()) sections.push({t: rt(mStart), label: reh.textContent.trim()});
+      for (const stEl of Array.from(ms.children).filter(c => c.localName === 'staff')) {
+        const sn = attr(stEl, 'n') || '1';
+        const layers = Array.from(stEl.children).filter(c => c.localName === 'layer');
+        layers.forEach((ly, li) => {
+          const ln = attr(ly, 'n') || String(li + 1);
+          const v = getVoice(sn, ln);
+          if (v.t < mStart - EPS) { const pad = rt(mStart - v.t); v.events.push({t: rt(v.t), d: pad, kd: pad, rest: true, syl: []}); v.t = mStart; }
+          walkLayer(ly, v, 1, 0);
+        });
+      }
+      let mEnd = mStart;
+      for (const v of voiceMap.values()) mEnd = Math.max(mEnd, v.t);
+      const rBar = attr(ms, 'right') || 'single';
+      if (rBar === 'dbl' || rBar === 'rptend') addBar(mEnd, 'double');
+      else if (rBar !== 'invis' && rBar !== 'end') addBar(mEnd, 'single');
+    }
+  } else {
+    for (const stEl of byLocal(doc, 'staff')) {
+      const sn = attr(stEl, 'n') || '1';
+      const layers = Array.from(stEl.children).filter(c => c.localName === 'layer');
+      layers.forEach((ly, li) => {
+        const ln = attr(ly, 'n') || String(li + 1);
+        walkLayer(ly, getVoice(sn, ln), 1, 0);
+      });
+    }
+  }
+
+  /* Order voices by staffDef order, attaching layer > 1 right after layer 1 as *divisi sub-voices */
+  const voices = [];
+  for (const sn of sdefOrder) {
+    const group = [...voiceMap.values()].filter(v => v._sn === sn).sort((a, b) => (+a._ln || 1) - (+b._ln || 1));
+    if (!group.length) continue;
+    const pIdx = voices.length;
+    group.forEach((v, idx) => {
+      if (idx > 0 && !v.events.some(e => !e.rest)) return; /* drop empty extra layers */
+      v.end = v.t;
+      if (idx > 0) v.subOf = pIdx;
+      voices.push(v);
+    });
+  }
+  const end = Math.max(0, ...voices.map(v => v.end));
+  if (!voices.length || end <= EPS) throw new Error('No playable notes found in this MEI file.');
+  const meta = {OTL: title};
+  if (composer) meta.COM = composer;
+  const P = {title, composer, voices, bars: bars.filter(b => b.t > EPS && b.t < end - EPS), sections, end, meta, barNums: []};
+  return writeKern(P);
+}
 function openFile(file){
   const fail = err => { stopPlay(); pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; };
   const imp = f => f.text().then(txt => {
+    if (/\.mei(\.xml)?$/i.test(file.name) || /<mei\b/i.test(txt.slice(0, 1200))) {
+      loadText(file.name, meiToKern(txt, file.name));
+      return;
+    }
     if (/\.cmme(\.xml)?$/i.test(file.name) || /<Piece\b[^>]*cmme/i.test(txt.slice(0, 800))) {
       const k = cmmeToKernRich(txt, file.name);
       if (k) { loadText(file.name, k); return; }
     }
     return ScoreImport.toKern(f).then(k => loadText(file.name, k));
   }).catch(fail);
+  if (/\.mei(\.xml)?$/i.test(file.name)) { imp(file); return; }
   if (window.ScoreImport && ScoreImport.accepts(file.name)) { imp(file); return; }
   /* any other name: a zip, MIDI or XML score is still read as one (renamed or saved without its extension); plain text as **kern */
   file.arrayBuffer().then(buf => {
@@ -4189,18 +4510,18 @@ function openFile(file){
     const ext = (/\.([^.]+)$/.exec(file.name) || [, ''])[1].toLowerCase();
     if (window.ScoreImport && b[0] === 0x50 && b[1] === 0x4B) imp(new File([buf], file.name + '.zip'));
     else if (window.ScoreImport && b[0] === 0x4D && b[1] === 0x54 && b[2] === 0x68 && b[3] === 0x64) imp(new File([buf], file.name + '.mid'));
-    else if (window.ScoreImport && /^<(\?xml|!DOCTYPE score|museScore|score-partwise|score-timewise)\b/.test(head)) imp(new File([buf], file.name + '.xml'));
+    else if (/^<(\?xml|!DOCTYPE |mei\b|museScore|score-partwise|score-timewise)\b/i.test(head)) imp(new File([buf], /<mei\b/i.test(head) ? file.name + '.mei' : file.name + '.xml'));
     else if (/\*\*(kern|mens)/.test(new TextDecoder().decode(buf)) || /^(krn|kern|txt)$/.test(ext)) loadText(file.name, new TextDecoder().decode(buf));
     else fail(new Error(unreadable(ext)));
   }, fail);
 }
 /* the message for a file the app cannot read: what it is, and what to do */
 function unreadable(ext){
-  const FMT = {pdf: 'a PDF (a picture of the music, not its notes)', sib: 'a Sibelius file', musx: 'a Finale file', mus: 'a Finale file', dorico: 'a Dorico file', mscs: 'a MuseScore 4 folder file', mei: 'an MEI file', abc: 'an ABC file',
+  const FMT = {pdf: 'a PDF (a picture of the music, not its notes)', sib: 'a Sibelius file', musx: 'a Finale file', mus: 'a Finale file', dorico: 'a Dorico file', mscs: 'a MuseScore 4 folder file', abc: 'an ABC file',
     png: 'an image', jpg: 'an image', jpeg: 'an image', heic: 'an image', mp3: 'a recording', wav: 'a recording', m4a: 'a recording', doc: 'a Word document', docx: 'a Word document'};
   const what = FMT[ext] ? 'This is ' + FMT[ext] + ', which ' + APP.name + ' cannot read.' : APP.name + ' cannot read ' + (ext ? '.' + ext + ' files.' : 'this file.');
-  const fix = /^(sib|musx|mus|dorico|mscs|mei|abc)$/.test(ext) ? ' Please export it from that program as MusicXML (.musicxml or .mxl) and open that.' : '';
-  return what + fix + ' ' + APP.name + ' opens MuseScore (.mscz, .mscx), MusicXML (.musicxml, .mxl, .xml), MIDI (.mid), LilyPond (.ly), GABC (.gabc), CMME (.cmme.xml) and **kern (.krn).';
+  const fix = /^(sib|musx|mus|dorico|mscs|abc)$/.test(ext) ? ' Please export it from that program as MusicXML (.musicxml or .mxl) and open that.' : '';
+  return what + fix + ' ' + APP.name + ' opens MuseScore (.mscz, .mscx), MusicXML (.musicxml, .mxl, .xml), MEI (.mei), MIDI (.mid), LilyPond (.ly), GABC (.gabc), CMME (.cmme.xml) and **kern (.krn).';
 }
 $('#printBtn').addEventListener('click', () => {
   /* Download PDF: a PDF file at once, at the paper size chosen in View (no print window) */
