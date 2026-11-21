@@ -4521,6 +4521,7 @@ function insertEvent(vi, at, step, isRest, pad = 0, alt){
   const d = mensRulesOn() ? rt(nomD(v, t, ed.val) * (ed.colArm ? 2 / 3 : 1) * (dotted ? 1.5 : 1)) : rt(val / propAt(v, t) * (ed.colArm ? 2 / 3 : 1) * (dotted ? 1.5 : 1));
   commit(() => {
     const e = {d, rest: !!isRest, step, alt: alt0, ed: edAcc, syl: [], t};
+    if (!isRest && ed.colArm) e.colH = true;
     if (divDot || perfAdd) { if (divDot) e.dd = true; else e.pa = true; if (!mensRulesOn()) { const mi = mensInfo(metAt(v, t)); e.d = rt(nomW(ed.val, mi.T, mi.P, mi.M, mi.X) / mi.p); } }
     /* past the end: a rest up to the place clicked */
     if (pad > EPS && at >= v.events.length) { v.events.push({d: rt(pad), rest: true, alt: null, ed: false, syl: [], t: v.end}); at = v.events.length; }
@@ -6208,6 +6209,19 @@ const CBA = {
      the notes entered from now on are coloured, until it is pressed again */
   toggleCol(){
     if (!CBA.guard()) return;
+    if (ed.range || ed.picks) {
+      const it = selItems().filter(x => !x.e.rest && writable(x.v));
+      if (!it.length) return;
+      const anyWhite = it.some(x => { const q = symAt(x.v.idx, x.v.events.indexOf(x.e)); return q && !isColoured(q); });
+      commit(() => {
+        for (const {v, e} of it) {
+          if (anyWhite) { if (!e.colH) { e.d = rt(e.d * 2 / 3); e.colH = true; } }
+          else { if (e.colH) { e.colH = false; e.d = rt(e.d * 1.5); } }
+          e.tieStart = e.tieEnd = e.tieMid = false;
+        }
+      });
+      return;
+    }
     const s = selSym(), v = curVoice();
     if (!s || s.rest) { ed.colArm = !ed.colArm; syncEdit(); toast(ed.colArm ? 'Coloration: the notes you enter now are black, two thirds of their value.' : 'Coloration off.'); return; }
     if (!v) return;
@@ -6215,9 +6229,15 @@ const CBA = {
     commit(() => {
       const e = v.events[first];
       const total = s.src.reduce((a, i) => a + v.events[i].d, 0);
-      /* black as written in the source file: white again with the same sound */
-      if (e.colH && !on) { e.colH = false; e.d = rt(total); }
-      else { e.d = rt(on ? total * 2 / 3 : total * 1.5); e.colH = false; }
+      if (on) {
+        e.d = rt(total * 2 / 3); e.colH = true;
+      } else {
+        const mi = mensInfo(metAt(v, e.t)), tab = valueTable(mi.T, mi.P, mi.M, mi.X);
+        const w = rt(total * mi.p);
+        const wasSameSound = e.colH && tab.some(([, val]) => eq(w, val));
+        e.colH = false;
+        e.d = wasSameSound ? rt(total) : rt(total * 1.5);
+      }
       e.tieStart = e.tieEnd = e.tieMid = false;
       dropEvents(v, s.src.slice(1));
     });
