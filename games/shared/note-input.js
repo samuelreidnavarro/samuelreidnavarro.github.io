@@ -371,7 +371,7 @@ function sync(A){
     $('#navSum').innerHTML = '<span class="navlab">Grid</span>' + (src ? src.innerHTML : '') + CHEV;
     document.querySelectorAll('#navBtns button').forEach(b => setPressed(b, b.dataset.n === n));
   }
-  const ob = $('#ovrBtn'); if (ob) { ob.textContent = S.ovr ? 'Overwrite' : 'Insert'; setPressed(ob, !!S.ovr); }
+  const ob = $('#ovrBtn'); if (ob) { ob.textContent = S.ovr ? 'Overwrite' : 'Insert'; setPressed(ob, !S.ovr); }
   $('#stepUp').disabled = $('#stepDown').disabled = (!t || t.r) && !S.range;
   $('#del').disabled = !t && !S.range && !S.signSel;
   $('#selPrev').disabled = $('#selNext').disabled = !S.hasNotes;
