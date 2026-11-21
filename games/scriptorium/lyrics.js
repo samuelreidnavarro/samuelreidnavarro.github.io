@@ -10,8 +10,7 @@
   const list = $('#addList'); if (!list) return;
   list.insertAdjacentHTML('beforeend',
     '<button class="tb" id="addLyr" title="Type the words under the selected note: Space goes on to the next note, a hyphen joins the syllables of a word, underscore leaves a note without one; paste a whole text to fill the notes (L, or click a syllable)">Lyrics</button>' +
-    '<button class="tb" id="addVerse" title="A further verse: another line of words under the same notes">New verse</button>' +
-    '<button class="tb" id="delLyr" title="Take the words off the selected notes (in the verse shown)">Remove lyrics</button>');
+    '<button class="tb" id="addVerse" title="A further verse: another line of words under the same notes">New verse</button>');
 
   const L = {inp: null, vi: -1, ei: -1, verse: 0, busy: false};
   /* the notes a syllable can go on: a note's start, not a rest, nor the later parts of a tied note */
@@ -219,16 +218,6 @@
     if (!ed.sel && !ed.range && !ed.picks) { const f = v.events.findIndex(e => sylNote(e) && e.syl && e.syl[0] && e.syl[0] !== '.'); if (f >= 0) ei = f; }
     open(p.vi, ei, n);
     if (L.inp) toast('Verse ' + (n + 1) + '. Engraving > Verse shows the others.');
-  });
-  $('#delLyr').addEventListener('click', () => {
-    if (!piece || !CBA.guard()) return;
-    const verse = verseOf();
-    let it = selItems();
-    if (!it.length && ed.sel) { const v = piece.voices[ed.sel.vi], s = selSym(); if (v && s) it = s.src.map(i => ({v, e: v.events[i]})); }
-    it = it.filter(x => x.e && cur(x.e) && writable(x.v));
-    if (!it.length) { toast(ed.sel || ed.range || ed.picks ? 'The selected notes have no words in this verse.' : 'Select the notes first (Shift-click for a passage, Ctrl+A for all).'); return; }
-    const vs = new Set(it.map(x => x.v));
-    commit(() => { for (const {e} of it) { e.syl = e.syl.slice(); e.syl[verse] = undefined; } for (const v of vs) relink(v, verse); trimVerses(); });
   });
   /* lyrics are edited in any mode: a click on a syllable, or L on a selected note, opens its field */
   /* a click on any syllable opens it. The staff below reaches up over the line of words with its writing area,
