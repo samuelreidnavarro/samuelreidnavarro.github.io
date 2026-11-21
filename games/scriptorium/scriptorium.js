@@ -62,6 +62,7 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Notation</span><div class="btns" id="notaSeg" role="group" aria-label="Notation"><button class="tb" data-v="real" title="White mensural notation">White</button><button class="tb" data-v="black" title="Black mensural notation, for this piece only: filled notes, the semiminima with a flag, coloration in red">Black</button><button class="tb" data-v="fake" title="Modern rhythm, with ties and triplets">Modern</button></div>
           <span class="lab" id="headLab">Note heads</span><div class="btns" id="headSeg" role="group" aria-label="Note heads in modern notation"><button class="tb" data-v="modern" title="Round modern note heads (in modern notation)">Modern</button><button class="tb" data-v="old" title="Lozenge note heads (in modern notation)">Old</button></div>
           <span class="lab">Ligatures</span><div class="btns" id="ligSeg" role="group" aria-label="Ligatures"><button class="tb" data-v="on" title="Ligatures drawn as ligatures (in mensural notation)">On</button><button class="tb" data-v="off" title="The notes of a ligature written one by one, under a bracket">Off</button></div>
+          <span class="lab">Stem direction</span><div class="btns" id="stemSeg" role="group" aria-label="Stem direction"><button class="tb" data-v="adaptive" title="Stems flip automatically near the top or bottom of the staff">Adaptive</button><button class="tb" data-v="strict" title="Historical mensural stem directions: minima, semiminima and fusa stems always point up; longa and maxima tails always point down (on single-voice staves)">Strict</button></div>
           <span class="lab">Clefs</span><div class="btns" id="clefSeg" role="group" aria-label="Clefs"><button class="tb" data-v="modern">Modern</button><button class="tb" data-v="mens">Old</button></div>
           <span class="lab">Staff lines</span><div class="btns lines-ctl" id="linesSeg" role="group" aria-label="Staff lines"><button class="tb" data-v="5">Five</button><button class="tb" data-v="4">Four</button><input type="number" id="linesNum" min="1" max="15" step="1" inputmode="numeric" title="Custom number of staff lines (1–15)" aria-label="Number of staff lines"></div>
           <div class="subhead">Bars &amp; Accidentals</div>
@@ -1038,7 +1039,7 @@ function chooseClef(v, mode){
 let DOCK = null;     /* where the site page says the browser window is, when embedded: {top, vh, pageTop} */
 const KEY = APP.store + ':v1';
 const st = {
-  inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', noteCol: 'black', colLock: 'off', dashes: 'on', ed: 'on', heads: 'modern',
+  inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', noteCol: 'black', colLock: 'off', dashes: 'on', ed: 'on', heads: 'modern', stems: 'adaptive',
   size: 1.75, noteSize: 1.75, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, printPaper: 'A4', bounds: {}, staves: {},
   hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
   ...(APP.defaults || {})
@@ -1059,6 +1060,7 @@ if (st.sizeLock !== 'off') st.sizeLock = 'on';
 if (!st.noteCol) st.noteCol = 'black';
 if (st.colLock !== 'on' && st.colLock !== 'off') st.colLock = st.staff === st.noteCol ? 'on' : 'off';
 if (!st.lyrFont) st.lyrFont = 'fell';
+if (!st.stems) st.stems = 'adaptive';
 if (typeof st.lyrPt !== 'number' || !isFinite(st.lyrPt)) st.lyrPt = typeof st.lyrSize === 'number' && isFinite(st.lyrSize) ? Math.round(st.lyrSize * 5 * 2) / 2 : 8.5;
 if (!st.printPaper || st.printPaper === 'web') st.printPaper = st.paper && st.paper !== 'web' ? st.paper : 'A4';
 st.hs = Math.max(-2, Math.min(10, st.hs)); st.vs = Math.max(0, Math.min(10, st.vs)); st.ss = Math.max(0, Math.min(10, st.ss));
@@ -1066,10 +1068,10 @@ if (st.bars === 'mstrich') st.bars = 'full';
 /* barlines now stand in each staff only; everyone starts again from those */
 if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
 /* presets (shared by the apps through the browser): the two built-in ones and the ones Samuel saves; one of them opens every score */
-const PRESET_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'printPaper', 'orient', 'flow'];
-const MENS1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'black', noteCol: 'black', colLock: 'on', lines: '5', paperCol: 'white', size: 1.5, noteSize: 1.5, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', printPaper: 'A4', orient: 'portrait', flow: 'vertical'};
+const PRESET_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'printPaper', 'orient', 'flow'];
+const MENS1 = {eq: 'off', nota: 'real', stems: 'adaptive', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'black', noteCol: 'black', colLock: 'on', lines: '5', paperCol: 'white', size: 1.5, noteSize: 1.5, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', printPaper: 'A4', orient: 'portrait', flow: 'vertical'};
 const MENS2 = {...MENS1, clefs: 'mens', size: 1.65, noteSize: 1.65, dashes: 'off'};
-const CF1 = {eq: 'off', nota: 'real', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', noteCol: 'black', colLock: 'off', lines: '5', paperCol: 'parchment', size: 3.6, noteSize: 3.6, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web', printPaper: 'A4'};
+const CF1 = {eq: 'off', nota: 'real', stems: 'adaptive', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', noteCol: 'black', colLock: 'off', lines: '5', paperCol: 'parchment', size: 3.6, noteSize: 3.6, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web', printPaper: 'A4'};
 const CF2 = {...CF1, clefs: 'mens', dashes: 'off'};
 const IS_CF = APP.id === 'cantus-firmus';
 const IS_REDIX = APP.id === 'redix-melodia' || APP.id === 'redix-contrapunctus';
@@ -1081,7 +1083,7 @@ const presetAll = () => [...BUILTIN, ...presetStore().custom];
 function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; if (pr.s.noteSize === undefined || st.sizeLock !== 'off') st.noteSize = st.size; if (pr.s.noteCol === undefined) st.noteCol = 'black'; if (pr.s.colLock === undefined) st.colLock = st.staff === st.noteCol ? 'on' : 'off'; }
 { const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } if (IS_REDIX) { st.paperCol = 'white'; st.staff = 'black'; st.noteCol = 'black'; st.colLock = 'on'; st.clefs = 'modern'; if (APP.id === 'redix-melodia') { st.view = 'score'; st.paper = 'web'; } } }
 /* changing an engraving setting unticks the ticked preset: the settings are now "current settings" of their own */
-const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
+const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
 function presetDrift(){
   const S = presetStore(); if (!S.active) return;
   const P = presetAll().find(q => q.name === S.active);
@@ -1579,7 +1581,7 @@ function extent(s, L = 3.6){
   if (s.ferm) lo = Math.min(lo, y - 2.2, -1.6);
   return [lo, hi];
 }
-const isFlipped = s => s.stemDir === 1 ? !!TAILED[s.g] : s.stemDir === -1 ? !!STEMMED[s.g] : (STEMMED[s.g] && s.pos >= 7) || (TAILED[s.g] && s.pos <= -1);
+const isFlipped = s => s.stemDir === 1 ? !!TAILED[s.g] : s.stemDir === -1 ? !!STEMMED[s.g] : st.stems === 'strict' ? false : (STEMMED[s.g] && s.pos >= 7) || (TAILED[s.g] && s.pos <= -1);
 
 /* a key change in the middle of a line: naturals for what is cancelled, then the new signature */
 function keyChangeGlyphs(v, kc){
@@ -3216,7 +3218,7 @@ function segInit(id, key, after){
 }
 function syncUI(){
   if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
-  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#bposSeg': 'bpos'};
+  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#stemSeg': 'stems', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#bposSeg': 'bpos'};
   $('#bnumSel').value = st.bnum || 'off'; $('#bunitSel').value = st.bunit || 'bar';
   $('#lyrFontSel').value = st.lyrFont || 'fell';
   if ($('#lyrPt') && document.activeElement !== $('#lyrPt')) $('#lyrPt').value = String(+(+st.lyrPt || 8.5).toFixed(2));
@@ -3382,7 +3384,7 @@ segInit('#eqSeg', 'eq'); segInit('#viewList', 'view'); $('#notaSeg').addEventLis
   if (b.dataset.v === 'fake') st.nota = 'fake';
   else { st.nota = 'real'; if (pieceKey) { if (b.dataset.v === 'black') st.black[pieceKey] = 1; else delete st.black[pieceKey]; } }
   save(); syncUI(); render();
-}); segInit('#headSeg', 'heads'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars'); segInit('#bposSeg', 'bpos');
+}); segInit('#headSeg', 'heads'); segInit('#stemSeg', 'stems'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars'); segInit('#bposSeg', 'bpos');
 [['#bnumSel', 'bnum'], ['#bunitSel', 'bunit'], ['#lyrFontSel', 'lyrFont']].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; save(); syncUI(); render(); }));
 $('#paperSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.printPaper = b.dataset.v; if (st.paper !== 'web') st.paper = b.dataset.v; save(); syncUI(); render(); });
 $('#dispSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.v === 'web') { if (st.paper !== 'web') st.printPaper = st.paper; st.paper = 'web'; } else { st.paper = st.printPaper || 'A4'; } save(); syncUI(); render(); });
@@ -5063,7 +5065,7 @@ pagesEl.addEventListener('pointermove', e => {
   }
   const tp = timePlace(rect, tg); if (tp) tg.x = tp.x;
   const g = ed.val, w = ed.inRest ? 0.42 : gw(g), x = tg.x - w / 2, y = tg.top + 4 - tg.pos * 0.5;
-  const flip = (STEMMED[g] && tg.pos >= 7) || (TAILED[g] && tg.pos <= -1);
+  const flip = st.stems === 'strict' ? false : (STEMMED[g] && tg.pos >= 7) || (TAILED[g] && tg.pos <= -1);
   let html = ed.inRest ? restSvg({g, glyph: SHAPE_REST[g]}, tg.x, tg.top) : ledgers(tg.pos, x, w, tg.top) + (flip ? useT(g, x, y, 1, -1) : use(g, x, y));
   /* past the end of the music: a faint piece of staff for the note to stand on, plus a rest-gap cue if clicking here adds a rest first */
   if (tg.x > tg.end) {
