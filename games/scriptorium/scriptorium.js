@@ -32,7 +32,7 @@ const escH = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>'
 ${APP.popsBeforeVoices || ''}
       <div class="podg"><div class="pop" id="popVoices">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Voices<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-        <div class="popbody"><table class="voices" id="voiceTable"></table></div>
+        <div class="popbody"><table class="voices" id="voiceTable"></table><div id="staffCombine" hidden></div></div>
       </div></div>
       <div class="podg"><div class="pop" id="popPage">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Layout<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
@@ -443,8 +443,20 @@ function recipDur(tok){
   d *= 2 - Math.pow(0.5, k);
   return {d, dots: k, rational: !!m[2], rest: tok.slice(0, m.index) + tok.slice(m.index + m[0].length)};
 }
-function parseNoteTok(tok){
-  tok = tok.split(' ')[0];
+function parsePitchAlt(rest){
+  const pm = rest.match(/([a-gA-G])\1*/);
+  if (/r/.test(rest) || !pm) return null;
+  const L = pm[0], ch = L[0], idx = LETTERS.indexOf(ch.toLowerCase());
+  const step = ch === ch.toLowerCase() ? 28 + 7 * (L.length - 1) + idx : 28 - 7 * L.length + idx;
+  const after = rest.slice(rest.indexOf(L) + L.length);
+  const am = after.match(/^(#+|-+|n)?(i)?/);
+  let alt = null, ed = false;
+  if (am && am[1]) { alt = am[1][0] === '#' ? am[1].length : am[1][0] === '-' ? -am[1].length : 0; ed = !!am[2]; }
+  return {step, alt, ed};
+}
+function parseNoteTok(raw){
+  const parts = raw.trim().split(/\s+/);
+  const tok = parts[0];
   const r = recipDur(tok);
   if (!r) return null;
   const rest = r.rest;
@@ -457,14 +469,18 @@ function parseNoteTok(tok){
   ev.pa = tok.includes('W');      /* punctus additionis on an already-perfect value: keeps it perfect, adds nothing */
   ev.long = /l/.test(rest.replace(/[a-gA-G]/g, ''));
   ev.tupS = tok.includes('V'); ev.tupE = tok.includes('Z');
-  const pm = rest.match(/([a-gA-G])\1*/);
-  if (/r/.test(rest) || !pm) { ev.rest = true; return ev; }
-  const L = pm[0], ch = L[0], idx = LETTERS.indexOf(ch.toLowerCase());
-  ev.step = ch === ch.toLowerCase() ? 28 + 7 * (L.length - 1) + idx : 28 - 7 * L.length + idx;
-  const after = rest.slice(rest.indexOf(L) + L.length);
-  const am = after.match(/^(#+|-+|n)?(i)?/);
-  ev.alt = null; ev.ed = false;
-  if (am && am[1]) { ev.alt = am[1][0] === '#' ? am[1].length : am[1][0] === '-' ? -am[1].length : 0; ev.ed = !!am[2]; }
+  const p0 = parsePitchAlt(rest);
+  if (!p0) { ev.rest = true; return ev; }
+  ev.step = p0.step; ev.alt = p0.alt; ev.ed = p0.ed;
+  if (parts.length > 1) {
+    const chord = [];
+    for (let i = 1; i < parts.length; i++) {
+      const ri = recipDur(parts[i]);
+      const pi = parsePitchAlt(ri ? ri.rest : parts[i]);
+      if (pi && pi.step !== ev.step && !chord.some(c => c.step === pi.step)) chord.push(pi);
+    }
+    if (chord.length) { chord.sort((a, b) => a.step - b.step); ev.chord = chord; }
+  }
   return ev;
 }
 function prettyName(s){
@@ -911,7 +927,7 @@ function notate(piece, v, mode){
       curSign = sign; segStart = e.t;
     }
     const mi = mensInfo(sign);
-    const base = {t: e.t, d: e.d, rest: !!e.rest, step: e.step, alt: e.alt, ed: e.ed, syl: e.syl, ferm: e.ferm, mens, sign, src: e.src, lig: e.rest ? 0 : (e.lig || 0)};
+    const base = {t: e.t, d: e.d, rest: !!e.rest, step: e.step, alt: e.alt, ed: e.ed, chord: !e.rest && e.chord && e.chord.length ? e.chord.map(c => ({step: c.step, alt: c.alt, ed: c.ed})) : null, syl: e.syl, ferm: e.ferm, mens, sign, src: e.src, lig: e.rest ? 0 : (e.lig || 0)};
     if (e.tupS) inTup = true;
     if (mode === 'fake') {
       const wd = rt(e.d * mi.p);
@@ -1023,7 +1039,7 @@ let DOCK = null;     /* where the site page says the browser window is, when emb
 const KEY = APP.store + ':v1';
 const st = {
   inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', noteCol: 'black', colLock: 'off', dashes: 'on', ed: 'on', heads: 'modern',
-  size: 1.75, noteSize: 1.75, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, printPaper: 'A4', bounds: {},
+  size: 1.75, noteSize: 1.75, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, printPaper: 'A4', bounds: {}, staves: {},
   hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
   ...(APP.defaults || {})
 };
@@ -1079,6 +1095,7 @@ function styleObj(){
   let pk = null, pc = null; try { pk = pieceKey; pc = piece; } catch (e) {}
   const o = {_k: pk}; for (const k of STYLE_KEYS) o[k] = st[k];
   o.inc = JSON.parse(JSON.stringify(st.inc || {}));
+  o.staves = JSON.parse(JSON.stringify((st.staves && pk && st.staves[pk]) || null));
   o.black = !!(pk && st.black && st.black[pk]);
   if (pc) o.vis = pc.voices.map(v => { const q = vis(v.idx); return [q.on, q.notes, q.lyr, q.play]; });
   return o;
@@ -1100,6 +1117,7 @@ function styleApply(snap){
   styleBusy = true;
   for (const k of STYLE_KEYS) if (snap[k] !== undefined) st[k] = snap[k];
   st.inc = snap.inc || {};
+  if (snap.staves !== undefined && snap._k) { if (!st.staves || typeof st.staves !== 'object') st.staves = {}; if (snap.staves) st.staves[snap._k] = snap.staves; else delete st.staves[snap._k]; }
   if (snap.black !== undefined && snap._k) { if (!st.black || typeof st.black !== 'object') st.black = {}; if (snap.black) st.black[snap._k] = 1; else delete st.black[snap._k]; }
   if (snap.vis && piece) snap.vis.forEach((a, i) => { const v = piece.voices[i]; if (!v) return; const q = vis(v.idx); [q.on, q.notes, q.lyr, q.play] = a; });
   try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
@@ -1195,18 +1213,68 @@ function textW(s, size, italic, fontCss){
 /* ------------------------------------------------------------------ */
 const LYR = 1.7;   /* lyric size, staff spaces */
 const decoder = document.createElement('textarea');
+function staffCfg(){
+  if (!st.staves || typeof st.staves !== 'object' || !pieceKey) return null;
+  const c = st.staves[pieceKey];
+  return c && c.map && typeof c.map === 'object' ? c : null;
+}
+function staffGroups(vlist){
+  const cfg = st.view === 'score' ? staffCfg() : null;
+  if (!cfg || vlist.length < 2) return vlist.map(v => ({id: v.idx, voices: [v]}));
+  const byId = new Map(), order = [];
+  for (const v of vlist) {
+    const id = cfg.map[v.idx] !== undefined ? +cfg.map[v.idx] : v.idx;
+    if (!byId.has(id)) { const g = {id, voices: []}; byId.set(id, g); order.push(g); }
+    byId.get(id).voices.push(v);
+  }
+  return order;
+}
+function chooseGroupClef(voices, staffId){
+  const cfg = staffCfg();
+  if (cfg && cfg.clefs && cfg.clefs[staffId] && CLEFS[cfg.clefs[staffId]]) return cfg.clefs[staffId];
+  const steps = [];
+  for (const v of voices) for (const e of v.events) if (!e.rest && !e.tieEnd && !e.tieMid) {
+    steps.push(e.step);
+    if (e.chord) for (const c of e.chord) steps.push(c.step);
+  }
+  if (!steps.length) return chooseClef(voices[0], st.clefs);
+  const cands = st.clefs === 'modern' ? ['treble', 'treble8', 'bass'] : MENS_CLEFS;
+  let best = cands[0], bestCost = Infinity;
+  for (const k of cands) {
+    const b = CLEFS[k].bottom;
+    let cost = 0;
+    for (const s of steps) { const p = s - b; if (p < -1) cost += Math.ceil((-1 - p) / 2); else if (p > 9) cost += Math.ceil((p - 9) / 2); }
+    if (cost < bestCost - 1e-9) { bestCost = cost; best = k; }
+  }
+  return best;
+}
 function prepare(){
   const mode = st.nota, ls = lyrSize(), lf = lyrFontCss(), ns = noteScale();
   BLACK = isBlack(); MODERN = st.nota === 'fake' && st.heads !== 'old'; blackSync();
   try { iconsSync(); } catch (e) {}   /* the note value icons in the notation in use (defined with the edit tools, later) */
+  piece.voices.forEach((v, i) => { v.idx = i; });
+  const sharedMeta = new Map();
+  if (st.view === 'score') {
+    for (const grp of staffGroups(piece.voices.filter(v => vis(v.idx).on))) {
+      if (grp.voices.length > 1) {
+        const clef = chooseGroupClef(grp.voices, grp.id);
+        grp.voices.forEach((v, gi) => {
+          const dir = gi === 0 ? 1 : gi === grp.voices.length - 1 ? -1 : 0;
+          sharedMeta.set(v.idx, {clef, dir});
+        });
+      }
+    }
+  }
   piece.voices.forEach((v, i) => {
     v.idx = i;
-    v.clef = (vis(i).clef && CLEFS[vis(i).clef]) ? vis(i).clef : chooseClef(v, st.clefs);
+    const sm = sharedMeta.get(i);
+    v.clef = sm ? sm.clef : (vis(i).clef && CLEFS[vis(i).clef]) ? vis(i).clef : chooseClef(v, st.clefs);
     const syms = notate(piece, v, mode);
     /* a voice with no notes yet still shows its staff, clef and sign, and a place where the first note will stand */
     if (!syms.length) { const m0 = v.mets.find(q => q.t < EPS); syms.push({t: 0, d: 2, rest: true, phantom: true, g: 'B', alt: null, syl: [], src: [], lig: 0, mens: m0 ? m0.sign : null, sign: m0 ? m0.sign : null}); }
     for (const s of syms) {
-      s.clef = clefAt(v, s.t);
+      s.stemDir = sm ? sm.dir : 0;
+      s.clef = sm ? sm.clef : clefAt(v, s.t);
       s.pos = s.rest ? null : s.step - CLEFS[s.clef].bottom;
       const g = s.rest ? SHAPE_REST[s.g] : BLACK ? BLACK_G[s.g] || s.g + 'c' : MODERN ? MOD_G[s.g] || s.g : s.g + (s.col ? 'c' : '');
       s.glyph = g; s.red = BLACK && !s.rest && !!s.col;
@@ -1222,13 +1290,27 @@ function prepare(){
         else if (a !== sigAlt) s.acc = ACCG[a];
       }
       s.left = (s.acc ? (gw(s.acc) + 0.35) * Math.max(1, ns) : 0) + nsExtra;
+      if (s.chord && s.chord.length) {
+        const key = keyAt(v, s.t);
+        for (const c of s.chord) {
+          c.pos = c.step - CLEFS[s.clef].bottom;
+          c.acc = null; c.edAcc = null;
+          if (c.alt !== null && c.alt !== undefined) {
+            const letter = LETTERS[((c.step % 7) + 7) % 7], sigAlt = key[letter] || 0, a = Math.max(-1, Math.min(1, c.alt));
+            if (c.ed) { if (a !== sigAlt && st.ed === 'on') c.edAcc = ACCG[a]; }
+            else if (a !== sigAlt) c.acc = ACCG[a];
+          }
+          if (c.acc) s.left = Math.max(s.left, (gw(c.acc) + 0.35) * Math.max(1, ns) + (s.acc ? gw(s.acc) + 0.25 : 0) + nsExtra);
+        }
+      }
       s.vi = i;
       s.keyc = s.t > EPS && !s.cont ? v.keys.find(q => Math.abs(q.t - s.t) < EPS) || null : null;
       s.clefc = s.t > EPS && !s.cont ? v.clefs.find(q => q.t > EPS && Math.abs(q.t - s.t) < EPS && KERN_CLEF[q.c]) || null : null;
       if (s.clefc) s.left += clefW(s.clef) + 0.9;
       if (s.keyc) { s.keyN = keyChangeGlyphs(v, s.keyc).length; s.left += s.keyN * 1.0 + 0.9; }
       if (s.mens) s.left += mensW(s.mens) + 1.3;
-      s.right = s.hw + nsExtra + (s.dot ? 0.75 * Math.max(1, ns) : 0);
+      const hasSec = s.chord && s.chord.length && [s.pos, ...s.chord.map(c => c.pos)].sort((a, b) => a - b).some((p, idx, arr) => idx > 0 && p - arr[idx - 1] <= 1);
+      s.right = s.hw + nsExtra + (hasSec ? s.hw * 0.85 * Math.max(1, ns) : 0) + (s.dot ? 0.75 * Math.max(1, ns) : 0);
       const sy = s.syl && s.syl[Math.min(st.verse, s.syl.length - 1)] !== undefined ? s.syl[Math.min(st.verse, (s.syl.length || 1) - 1)] : null;
       s.text = null; s.hy = false; s.hyRaw = false; s.cont = false; s.ww = 0; s.lyo = 0;
       if (sy && sy !== '.') {
@@ -1481,10 +1563,13 @@ function extent(s, L = 3.6){
   if (TAILED[s.g]) { if (flip) lo = y - L; else hi = y + L; }
   if (s.acc) { lo = Math.min(lo, y - (s.acc === 'fl' ? 2.1 : 1.6)); hi = Math.max(hi, y + 1.6); }
   if (s.edAcc) lo = Math.min(lo, Math.min(-0.9, y - (flip ? 1.6 : STEMMED[s.g] ? 4.3 : 1.7)) - 1.5);
+  if (s.chord && s.chord.length) {
+    for (const c of s.chord) { const cy = 4 - c.pos * 0.5; lo = Math.min(lo, cy - 0.8); hi = Math.max(hi, cy + 0.8); }
+  }
   if (s.ferm) lo = Math.min(lo, y - 2.2, -1.6);
   return [lo, hi];
 }
-const isFlipped = s => (STEMMED[s.g] && s.pos >= 7) || (TAILED[s.g] && s.pos <= -1);
+const isFlipped = s => s.stemDir === 1 ? !!TAILED[s.g] : s.stemDir === -1 ? !!STEMMED[s.g] : (STEMMED[s.g] && s.pos >= 7) || (TAILED[s.g] && s.pos <= -1);
 
 /* a key change in the middle of a line: naturals for what is cancelled, then the new signature */
 function keyChangeGlyphs(v, kc){
@@ -1522,6 +1607,16 @@ function symSvg(s, X, top, showNotes){
   if (s.phantom) return `<g class="${s.id} phantom"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/>${s.mens ? markSvg(s, X, top) : ''}</g>`;
   return `<g class="${s.id}"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top)}</g>`;
 }
+function chordHeadSvg(s, x, y){
+  const g = s.glyph;
+  if (g === 'M') return use('S', x, y);
+  if (g === 'Mc' || g === 'Sm' || g === 'F' || g === 'F2' || g === 'F3' || g === 'Sf') return use('Sc', x, y);
+  if (g === 'L') return use('B', x, y);
+  if (g === 'Lc') return use('Bc', x, y);
+  if (g === 'nM') return use('nS', x, y);
+  if (g === 'nQ' || g === 'nE' || g === 'nX') return `<ellipse class="ink" cx="0" cy="0" rx="0.54" ry="0.39" transform="translate(${f(x + s.hw * 0.5)} ${f(y)}) rotate(-20)"/>`;
+  return use(g, x, y);
+}
 function symInner(s, X, top){
   let o = '';
   let hx = X;
@@ -1544,6 +1639,34 @@ function symInner(s, X, top){
       const y0 = upStem ? y - 3.7 + s.cut : y - 1.5, y1 = upStem ? y + 1.5 : y + 3.7 - s.cut;
       body += `<clipPath id="c-${s.id}"><rect x="${f(hx - 1)}" y="${f(y0)}" width="${f(s.hw + 3)}" height="${f(y1 - y0)}"/></clipPath><g clip-path="url(#c-${s.id})"${s.red ? ' class="red"' : ''}>${gm}</g>`;
     } else body += s.red ? `<g class="red">${gm}</g>` : gm;
+    if (s.chord && s.chord.length) {
+      const all = [{pos: s.pos, main: true}, ...s.chord.map(c => ({pos: c.pos, acc: c.acc, main: false}))].sort((a, b) => a.pos - b.pos);
+      let accOff = s.acc ? gw(s.acc) + 0.35 : 0;
+      let prevPos = -999, prevOff = false;
+      for (const n of all) {
+        const off = n.pos - prevPos <= 1 && !prevOff;
+        n.dx = off ? s.hw * 0.85 : 0;
+        prevPos = n.pos; prevOff = off;
+      }
+      let extra = '';
+      for (const n of all) {
+        if (n.main) continue;
+        const cy = top + 4 - n.pos * 0.5, nx = hx + n.dx;
+        o += ledgers(n.pos, nx - s.hw * (ns - 1) * 0.5, s.hw * ns, top);
+        extra += chordHeadSvg(s, nx, cy);
+        if (n.acc) { extra += use(n.acc, hx - gw(n.acc) - 0.3 - accOff, cy); accOff += gw(n.acc) + 0.22; }
+        if (s.dot) {
+          const dx = hx + s.hw + (n.dx ? n.dx : 0) + (s.dd ? 0.55 : 0.4), dy = top + 4 - (n.pos % 2 === 0 ? n.pos + 1 : n.pos) * 0.5;
+          extra += `<circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.19"/>`;
+        }
+      }
+      if (STEMMED[s.g] || TAILED[s.g]) {
+        const yMin = top + 4 - all[all.length - 1].pos * 0.5, yMax = top + 4 - all[0].pos * 0.5;
+        const sx = MODERN ? (isFlipped(s) ? hx + 0.04 : hx + s.hw - 0.14) : (TAILED[s.g] ? hx + s.hw - 0.12 : hx + s.hw * 0.5 - 0.06);
+        extra += `<rect class="ink" x="${f(sx)}" y="${f(yMin)}" width="0.12" height="${f(Math.max(0.1, yMax - yMin))}"/>`;
+      }
+      body += s.red ? `<g class="red">${extra}</g>` : extra;
+    }
   }
   if (s.dot && !s.ligSvg) {
     const dx = hx + s.hw + (s.dd ? 0.55 : 0.4), dy = top + 4 - (s.pos % 2 === 0 ? s.pos + 1 : s.pos) * 0.5, dk = s.dd ? 'D' : 'A';
@@ -1713,87 +1836,129 @@ function staffLine(o){
     s += `<g class="keyhit" data-v="${v.idx}"><rect x="${f(kx - 0.1)}" y="${f(top - 2.6)}" width="${f(kw + 0.9)}" height="9.2" fill="transparent"/>${g}` +
       `<g class="ksarr" data-ks="1"><rect x="${f(cx - 0.9)}" y="${f(top - 2.6)}" width="1.8" height="2" fill="transparent"/><path d="M${f(cx - 0.6)} ${f(top - 0.8)}L${f(cx + 0.6)} ${f(top - 0.8)}L${f(cx)} ${f(top - 1.9)}Z"/></g>` +
       `<g class="ksarr" data-ks="-1"><rect x="${f(cx - 0.9)}" y="${f(top + 4.6)}" width="1.8" height="2" fill="transparent"/><path d="M${f(cx - 0.6)} ${f(top + 4.8)}L${f(cx + 0.6)} ${f(top + 4.8)}L${f(cx)} ${f(top + 5.9)}Z"/></g></g>`; }
-  /* notes */
-  const show = o.showNotes;
-  let ligOut = '';
-  if (show) {
-    const list = [];
-    for (let i = o.from; i < o.to; i++) { const sym = o.cols[i].items.get(v); if (sym) list.push([sym, o.xs[i]]); }
-    ligOut = ligatures(v, list, top);
-  }
-  for (let i = o.from; i < o.to; i++) {
-    const c = o.cols[i], sym = c.items.get(v);
-    if (!sym) continue;
-    const X = o.xs[i];
-    s += symSvg(sym, X, top, show);
-    if (o.showLyr && sym.text && st.dashes !== 'off') {
-      s += `<text class="lyr" data-s="${sym.id}" x="${f(X + sym.hw / 2 + sym.lyo)}" y="${f(o.lyrY)}" font-size="${f(lyrSize())}" text-anchor="middle">${esc(sym.text)}</text>`;
+  /* notes (single voice or shared multi-voice staff) */
+  const drawLayer = (lv, lShow, lShowLyr, lyrY, dxMap, restDyMap, skipSet, drawCustos) => {
+    let out = '', ligOut = '';
+    if (lShow) {
+      const list = [];
+      for (let i = o.from; i < o.to; i++) { const sym = o.cols[i].items.get(lv); if (sym && (!skipSet || !skipSet.has(sym))) list.push([sym, o.xs[i] + (dxMap ? (dxMap.get(sym) || 0) : 0)]); }
+      ligOut = ligatures(lv, list, top);
     }
-  }
-  /* hyphens between syllables, ties */
-  let prevSyl = null;
-  const syms = [];
-  for (let i = o.from; i < o.to; i++) { const sym = o.cols[i].items.get(v); if (sym) syms.push([sym, o.xs[i]]); }
-  /* without dashes: each word whole, starting where its first syllable starts (a word that runs over the line goes on from its next syllable) */
-  if (o.showLyr && st.dashes === 'off') {
-    let open = false;
-    syms.forEach(([sym, X], k) => {
-      if (!sym.text) return;
-      if (sym.cont && open) return;
-      const x = X + sym.hw / 2 + sym.lyo - sym.tw / 2;
-      if (sym.cont) {
-        /* the line begins inside a word: nothing more if the line before wrote it whole */
-        let i = v.syms.indexOf(sym) - 1;
-        while (i >= 0 && (!v.syms[i].text || v.syms[i].cont)) i--;
-        open = true;
-        if (i >= 0 && v.syms[i].drewAll) return;
+    for (let i = o.from; i < o.to; i++) {
+      const c = o.cols[i], sym = c.items.get(lv);
+      if (!sym) continue;
+      const X = o.xs[i] + (dxMap ? (dxMap.get(sym) || 0) : 0);
+      const rdy = restDyMap ? (restDyMap.get(sym) || 0) : 0;
+      if (!skipSet || !skipSet.has(sym)) out += symSvg(sym, X, top + rdy, lShow);
+      if (lShowLyr && sym.text && st.dashes !== 'off') {
+        out += `<text class="lyr" data-s="${sym.id}" x="${f(X + sym.hw / 2 + sym.lyo)}" y="${f(lyrY)}" font-size="${f(lyrSize())}" text-anchor="middle">${esc(sym.text)}</text>`;
       }
-      let w = sym.text;
-      for (let j = k + 1; j < syms.length; j++) { const q = syms[j][0]; if (!q.text) continue; if (!q.cont) break; w += q.text; }
-      /* a word that goes on past the line is written whole when it fits in the margin */
-      if (!sym.cont) { sym.drewAll = w === sym.word || x + sym.ww <= o.lineEnd + 1.2; if (sym.drewAll) w = sym.word; }
-      s += `<text class="lyr" data-s="${sym.id}" x="${f(x)}" y="${f(o.lyrY)}" font-size="${f(lyrSize())}">${esc(w)}</text>`;
-      open = true;
-    });
-  }
-  if (o.showLyr) {
-    for (const [sym, X] of syms) {
-      if (sym.text) {
-        if (prevSyl && prevSyl[0].hy) {
-          const a = prevSyl[1] + prevSyl[0].hw / 2 + prevSyl[0].lyo + prevSyl[0].tw / 2, b = X + sym.hw / 2 + sym.lyo - sym.tw / 2;
-          if (b - a > 0.6) s += hl((a + b) / 2 - 0.3, (a + b) / 2 + 0.3, o.lyrY - 0.265 * lyrSize(), 'barl', 0.1);
+    }
+    let prevSyl = null;
+    const syms = [];
+    for (let i = o.from; i < o.to; i++) { const sym = o.cols[i].items.get(lv); if (sym) syms.push([sym, o.xs[i] + (dxMap ? (dxMap.get(sym) || 0) : 0)]); }
+    if (lShowLyr && st.dashes === 'off') {
+      let open = false;
+      syms.forEach(([sym, X], k) => {
+        if (!sym.text) return;
+        if (sym.cont && open) return;
+        const x = X + sym.hw / 2 + sym.lyo - sym.tw / 2;
+        if (sym.cont) {
+          let i = lv.syms.indexOf(sym) - 1;
+          while (i >= 0 && (!lv.syms[i].text || lv.syms[i].cont)) i--;
+          open = true;
+          if (i >= 0 && lv.syms[i].drewAll) return;
         }
-        prevSyl = [sym, X];
+        let w = sym.text;
+        for (let j = k + 1; j < syms.length; j++) { const q = syms[j][0]; if (!q.text) continue; if (!q.cont) break; w += q.text; }
+        if (!sym.cont) { sym.drewAll = w === sym.word || x + sym.ww <= o.lineEnd + 1.2; if (sym.drewAll) w = sym.word; }
+        out += `<text class="lyr" data-s="${sym.id}" x="${f(x)}" y="${f(lyrY)}" font-size="${f(lyrSize())}">${esc(w)}</text>`;
+        open = true;
+      });
+    }
+    if (lShowLyr) {
+      for (const [sym, X] of syms) {
+        if (sym.text) {
+          if (prevSyl && prevSyl[0].hy) {
+            const a = prevSyl[1] + prevSyl[0].hw / 2 + prevSyl[0].lyo + prevSyl[0].tw / 2, b = X + sym.hw / 2 + sym.lyo - sym.tw / 2;
+            if (b - a > 0.6) out += hl((a + b) / 2 - 0.3, (a + b) / 2 + 0.3, lyrY - 0.265 * lyrSize(), 'barl', 0.1);
+          }
+          prevSyl = [sym, X];
+        }
+      }
+      if (prevSyl && prevSyl[0].hy && !o.last) {
+        const a = prevSyl[1] + prevSyl[0].hw / 2 + prevSyl[0].lyo + prevSyl[0].tw / 2;
+        if (o.lineEnd - a > 0.8) out += hl(a + 0.3, a + 0.9, lyrY - 0.265 * lyrSize(), 'barl', 0.1);
       }
     }
-    if (prevSyl && prevSyl[0].hy && !o.last) {
-      const a = prevSyl[1] + prevSyl[0].hw / 2 + prevSyl[0].lyo + prevSyl[0].tw / 2;
-      if (o.lineEnd - a > 0.8) s += hl(a + 0.3, a + 0.9, o.lyrY - 0.265 * lyrSize(), 'barl', 0.1);
+    if (lShow) {
+      for (let k = 0; k < syms.length; k++) {
+        const [sym, X] = syms[k];
+        if (sym.tieNext && !sym.rest && st.nota !== 'real') {
+          const nx = syms[k + 1];
+          const xa = X + sym.hw + 0.15, xb = nx ? nx[1] - 0.15 : o.lineEnd - 1.4;
+          const dir = sym.stemDir === 1 ? -1 : sym.stemDir === -1 ? 1 : (sym.pos >= 4 ? -1 : 1);
+          const y = top + 4 - sym.pos * 0.5 + dir * 0.9;
+          out += `<path class="tie" fill="none" stroke-width="0.13" d="M${f(xa)} ${f(y)}Q${f((xa + xb) / 2)} ${f(y + dir * 0.9)} ${f(xb)} ${f(y)}"/>`;
+        }
+        if (sym.tup === 'start') {
+          let k2 = k;
+          while (k2 + 1 < syms.length && syms[k2 + 1][0].tup === 'in') k2++;
+          const xa = X, xb = syms[k2][1] + syms[k2][0].hw;
+          let lo = 0;
+          for (let q = k; q <= k2; q++) lo = Math.min(lo, extent(syms[q][0])[0]);
+          out += `<text x="${f((xa + xb) / 2)}" y="${f(top + lo - 0.5)}" font-size="1.7" text-anchor="middle" font-style="italic">3</text>`;
+        }
+      }
     }
+    out += ligOut;
+    if (drawCustos && !o.last && lShow) { const nx = nextSym(lv, o.tEnd); if (nx) out += custosSvg(nx, x1 - 2.0, top); }
+    return out;
+  };
+  if (o.group && o.group.length > 1) {
+    const grp = o.group, dxMap = new Map(), restDyMap = new Map(), skipSet = new Set();
+    for (let i = o.from; i < o.to; i++) {
+      const items = grp.map((gv, gi) => [gi, o.cols[i].items.get(gv)]).filter(([, sym]) => !!sym);
+      if (items.length < 2) {
+        if (items.length === 1 && items[0][1].rest) {
+          const gi = items[0][0];
+          restDyMap.set(items[0][1], gi === 0 ? -1.1 : gi === grp.length - 1 ? 1.1 : 0);
+        }
+        continue;
+      }
+      const notes = items.filter(([, sym]) => !sym.rest), rests = items.filter(([, sym]) => sym.rest);
+      if (rests.length === items.length && rests.every(([, r]) => r.g === rests[0][1].g)) {
+        for (let k = 1; k < rests.length; k++) skipSet.add(rests[k][1]);
+      } else {
+        for (const [gi, r] of rests) restDyMap.set(r, gi === 0 ? -1.15 : gi === grp.length - 1 ? 1.15 : 0);
+      }
+      for (let a = 0; a < notes.length; a++) {
+        for (let b = a + 1; b < notes.length; b++) {
+          const sa = notes[a][1], sb = notes[b][1];
+          const diff = Math.abs(sa.pos - sb.pos);
+          if (diff === 1 || (diff === 0 && (sa.glyph !== sb.glyph || sa.col !== sb.col))) {
+            dxMap.set(sb, Math.max(dxMap.get(sb) || 0, sa.hw * (diff === 1 ? 0.85 : 0.95)));
+          }
+        }
+      }
+    }
+    let sharedLyrDrawn = false;
+    grp.forEach((gv, gi) => {
+      const sh = vis(gv.idx);
+      let lShowLyr = false, ly = o.lyrY;
+      if (sh.lyr) {
+        if (o.diffLyr) {
+          if (gi === 0) { lShowLyr = true; ly = o.lyrTopY; }
+          else if (gi === grp.length - 1) { lShowLyr = true; ly = o.lyrY; }
+        } else if (!sharedLyrDrawn && gv.syms.some(q => q.text)) {
+          lShowLyr = true; ly = o.lyrY; sharedLyrDrawn = true;
+        }
+      }
+      s += drawLayer(gv, sh.notes, lShowLyr, ly, dxMap, restDyMap, skipSet, gi === 0);
+    });
+  } else {
+    s += drawLayer(v, o.showNotes, o.showLyr, o.lyrY, null, null, null, true);
   }
-  if (show) {
-    for (let k = 0; k < syms.length; k++) {
-      const [sym, X] = syms[k];
-      /* mensural notation has no ties: a value that no single note can show is written as the notes that make it up, the arc is only for modern notation */
-      if (sym.tieNext && !sym.rest && st.nota !== 'real') {
-        const nx = syms[k + 1];
-        const xa = X + sym.hw + 0.15, xb = nx ? nx[1] - 0.15 : o.lineEnd - 1.4;
-        const y = top + 4 - sym.pos * 0.5 + (sym.pos >= 4 ? -0.9 : 0.9), dir = sym.pos >= 4 ? -1 : 1;
-        s += `<path class="tie" fill="none" stroke-width="0.13" d="M${f(xa)} ${f(y)}Q${f((xa + xb) / 2)} ${f(y + dir * 0.9)} ${f(xb)} ${f(y)}"/>`;
-      }
-      if (sym.tup === 'start') {
-        let k2 = k;
-        while (k2 + 1 < syms.length && syms[k2 + 1][0].tup === 'in') k2++;
-        const xa = X, xb = syms[k2][1] + syms[k2][0].hw;
-        let lo = 0;
-        for (let q = k; q <= k2; q++) lo = Math.min(lo, extent(syms[q][0])[0]);
-        s += `<text x="${f((xa + xb) / 2)}" y="${f(top + lo - 0.5)}" font-size="1.7" text-anchor="middle" font-style="italic">3</text>`;
-      }
-    }
-  }
-  s += ligOut;
-  /* custos at the end of the line */
-  if (!o.last && show && o.next) s += custosSvg(o.next, x1 - 2.0, top);
   return s;
 }
 
@@ -2028,16 +2193,59 @@ function incipitSvg(q, x0, top){
   }
   return `<g class="incipit">${o}</g>`;
 }
-/* draw one system (several voices stacked) at y; returns {svg, h} */
+function groupLyricsDiffer(voices, line){
+  if (voices.length < 2) return false;
+  const topV = voices[0], botV = voices[voices.length - 1];
+  const topOn = vis(topV.idx).lyr, botOn = vis(botV.idx).lyr;
+  if (!topOn || !botOn) return false;
+  let anyTop = false, anyBot = false, diff = false;
+  for (let i = line.from; i < line.to; i++) {
+    const a = line.cols[i].items.get(topV), b = line.cols[i].items.get(botV);
+    const ta = a && a.text ? a.text : '', tb = b && b.text ? b.text : '';
+    if (ta) anyTop = true;
+    if (tb) anyBot = true;
+    if (ta !== tb) diff = true;
+  }
+  return anyTop && anyBot && diff;
+}
+function groupRoom(grp, line){
+  if (grp.voices.length === 1) return lineRoom(grp.voices[0], line);
+  const rs = grp.voices.map(v => lineRoom(v, line));
+  const n = rs[0].lo.length;
+  const lo = new Array(n), hi = new Array(n), loS = new Array(n), hiS = new Array(n), loB = new Array(n), hiB = new Array(n);
+  for (let i = 0; i < n; i++) {
+    lo[i] = Math.min(...rs.map(r => r.lo[i]));
+    hi[i] = Math.max(...rs.map(r => r.hi[i]));
+    loS[i] = Math.min(...rs.map(r => r.loS[i]));
+    hiS[i] = Math.max(...rs.map(r => r.hiS[i]));
+    loB[i] = Math.min(...rs.map(r => r.loB[i]));
+    hiB[i] = Math.max(...rs.map(r => r.hiB[i]));
+  }
+  let above = Math.max(...rs.map(r => r.above));
+  const below = Math.max(...rs.map(r => r.below));
+  const lyrY = Math.max(...rs.map(r => r.lyrY));
+  const diffLyr = groupLyricsDiffer(grp.voices, line);
+  let lyrTopY = 0;
+  if (diffLyr) {
+    const ls = lyrSize();
+    lyrTopY = -(above + 0.55);
+    const topEdge = lyrTopY - ls;
+    above = Math.max(above, -topEdge + 0.3);
+    for (let i = 0; i < n; i++) { loS[i] = Math.min(loS[i], topEdge); loB[i] = Math.min(loB[i], topEdge); }
+  }
+  return {above, below, lyrY, lyrTopY, diffLyr, lo, hi, loS, hiS, loB, hiB};
+}
+/* draw one system (several voices stacked, or combined onto shared staves) at y; returns {svg, h} */
 function drawSystem(vlist, line, y, opts = {}){
-  const rooms = vlist.map(v => lineRoom(v, line));
+  const groups = st.view === 'score' ? staffGroups(vlist) : vlist.map(v => ({id: v.idx, voices: [v]}));
+  const rooms = groups.map(grp => groupRoom(grp, line));
   const gap = Math.max(0.3, 0.5 * st.vs);
   const tops = [];
   let yy = y;
   const secRoom = piece.sections.some(sec => sec.t >= line.t0 - EPS && sec.t < line.tEnd - EPS) ? 2.6 : 0;
   yy += secRoom;
   /* the distance each staff needs from the one above: only where both have something in the same place (or, with equal distances, the largest of them for every pair) */
-  const need = vlist.map((v, k) => {
+  const need = groups.map((grp, k) => {
     if (!k) return 0;
     const A = rooms[k - 1], B = rooms[k];
     let d = 0;
@@ -2045,46 +2253,61 @@ function drawSystem(vlist, line, y, opts = {}){
     return d + gap;
   });
   /* bar numbers: above the top staff, or above every staff; they get room of their own where the music leaves none */
-  const bnums = barNumbersFor(line), bnAll = st.bpos === 'all' && vlist.length > 1;
-  if (bnums.length && bnAll) vlist.forEach((v, k) => { if (k) for (const q of bnums) need[k] = Math.max(need[k], (rooms[k - 1].hiS[q.ci] ?? 4) - 4 - barNumY(rooms[k], q.ci) + 1.4); });
-  if (st.eq === 'on' && vlist.length > 1) { const D = Math.max(...need.slice(1)); for (let k = 1; k < need.length; k++) need[k] = D; }
+  const bnums = barNumbersFor(line), bnAll = st.bpos === 'all' && groups.length > 1;
+  if (bnums.length && bnAll) groups.forEach((grp, k) => { if (k) for (const q of bnums) need[k] = Math.max(need[k], (rooms[k - 1].hiS[q.ci] ?? 4) - 4 - barNumY(rooms[k], q.ci) + 1.4); });
+  if (st.eq === 'on' && groups.length > 1) { const D = Math.max(...need.slice(1)); for (let k = 1; k < need.length; k++) need[k] = D; }
   if (bnums.length) yy += Math.max(0, Math.max(...bnums.map(q => -barNumY(rooms[0], q.ci) + 1.4)) - rooms[0].above);
   yy += rooms[0].above;
-  vlist.forEach((v, k) => {
+  groups.forEach((grp, k) => {
     if (k) yy += need[k] + 4;
     tops.push(yy);
   });
-  yy += 4 + rooms[vlist.length - 1].below;
+  yy += 4 + rooms[groups.length - 1].below;
   /* stems that would reach into what the neighbouring staff has at that place (its notes, accidentals or lyrics) are drawn shorter, not the staves further apart */
   for (const v of vlist) for (let i = line.from; i < line.to; i++) { const q = line.cols[i].items.get(v); if (q) q.cut = 0; }
-  vlist.forEach((v, k) => {
-    for (let i = line.from; i < line.to; i++) {
-      const q = v.syms && line.cols[i].items.get(v);
-      if (!q || q.rest || q.pos === null || q.pos === undefined || !CUTTABLE[q.glyph] || q.ligSvg) continue;
-      const ci = i - line.from, y = 4 - q.pos * 0.5, upStem = isFlipped(q) ? !!TAILED[q.g] : !!STEMMED[q.g];
-      const max = 3.544 - STEM_MIN;
-      if (upStem && k > 0) { const floor = tops[k - 1] + rooms[k - 1].hiB[ci] + 0.1, tip = tops[k] + y - 3.544; if (tip < floor) q.cut = Math.min(max, floor - tip); }
-      else if (!upStem && k + 1 < vlist.length) { const ceil = tops[k + 1] + rooms[k + 1].loB[ci] - 0.1, tip = tops[k] + y + 3.544; if (tip > ceil) q.cut = Math.min(max, tip - ceil); }
+  groups.forEach((grp, k) => {
+    for (const v of grp.voices) {
+      for (let i = line.from; i < line.to; i++) {
+        const q = v.syms && line.cols[i].items.get(v);
+        if (!q || q.rest || q.pos === null || q.pos === undefined || !CUTTABLE[q.glyph] || q.ligSvg) continue;
+        const ci = i - line.from, y = 4 - q.pos * 0.5, upStem = isFlipped(q) ? !!TAILED[q.g] : !!STEMMED[q.g];
+        const max = 3.544 - STEM_MIN;
+        if (upStem && k > 0) { const floor = tops[k - 1] + rooms[k - 1].hiB[ci] + 0.1, tip = tops[k] + y - 3.544; if (tip < floor) q.cut = Math.min(max, floor - tip); }
+        else if (!upStem && k + 1 < groups.length) { const ceil = tops[k + 1] + rooms[k + 1].loB[ci] - 0.1, tip = tops[k] + y + 3.544; if (tip > ceil) q.cut = Math.min(max, tip - ceil); }
+      }
     }
   });
   let s = '';
   if (secRoom) s += sectionLabels(line, tops[0] - rooms[0].above - 0.4, line.x1);
-  vlist.forEach((v, k) => {
-    const sh = vis(v.idx);
+  groups.forEach((grp, k) => {
+    const v = grp.voices[0], sh = vis(v.idx);
     let k0 = null, k1 = null;
     for (let ci = line.from; ci < line.to; ci++) { const q = line.cols[ci].items.get(v); if (q) { const kk = +q.id.split('-')[1]; if (k0 === null) k0 = kk; k1 = kk; } }
-    s += staffLine({v, k0, k1, cols: line.cols, from: line.from, to: line.to, xs: line.xs, top: tops[k], x0: line.x0, x1: line.x1,
-      last: line.endsPiece, tail: line.last ? line.W : null, t0: line.t0, showNotes: sh.notes, showLyr: sh.lyr, lyrY: tops[k] + rooms[k].lyrY, lineEnd: line.x1,
+    s += staffLine({v, group: grp.voices.length > 1 ? grp.voices : null, k0, k1, cols: line.cols, from: line.from, to: line.to, xs: line.xs, top: tops[k], x0: line.x0, x1: line.x1,
+      last: line.endsPiece, tail: line.last ? line.W : null, t0: line.t0, showNotes: sh.notes, showLyr: sh.lyr, lyrY: tops[k] + rooms[k].lyrY, lyrTopY: tops[k] + (rooms[k].lyrTopY || 0), diffLyr: !!rooms[k].diffLyr, lineEnd: line.x1,
       next: nextSym(v, line.tEnd), tEnd: line.tEnd});
-    if (opts.inc) s += incipitSvg(INC.snap[v.idx], line.x0 - opts.inc, tops[k]);
-    if (opts.names && opts.names[k]) s += `<text class="vnamehit" data-v="${v.idx}" x="${f(line.x0 - 0.8 - (opts.inc || 0))}" y="${f(tops[k] + 2.6)}" font-size="1.8" text-anchor="end" font-style="italic">${esc(opts.names[k])}</text>`;
+    if (opts.inc && grp.voices.length === 1) s += incipitSvg(INC.snap[v.idx], line.x0 - opts.inc, tops[k]);
+    if (opts.names) {
+      const nX = line.x0 - 0.8 - (opts.inc || 0);
+      if (grp.voices.length === 1) {
+        const vi = vlist.indexOf(v);
+        if (vi >= 0 && opts.names[vi]) s += `<text class="vnamehit" data-v="${v.idx}" x="${f(nX)}" y="${f(tops[k] + 2.6)}" font-size="1.8" text-anchor="end" font-style="italic">${esc(opts.names[vi])}</text>`;
+      } else {
+        const gn = grp.voices.map(gv => ({v: gv, name: opts.names[vlist.indexOf(gv)] || ''})).filter(x => x.name);
+        const step = Math.min(2.1, 4.4 / Math.max(1, gn.length));
+        const y0 = tops[k] + 2.6 - (gn.length - 1) * step * 0.5;
+        gn.forEach((item, idx) => {
+          s += `<text class="vnamehit" data-v="${item.v.idx}" x="${f(nX)}" y="${f(y0 + idx * step)}" font-size="1.65" text-anchor="end" font-style="italic">${esc(item.name)}</text>`;
+        });
+      }
+    }
   });
   /* barlines */
-  const single = vlist.length === 1;
+  const single = groups.length === 1;
   const segs = [];
-  for (let k = 0; k + 1 < vlist.length; k++) {
+  for (let k = 0; k + 1 < groups.length; k++) {
     const a = tops[k] + 4, b = tops[k + 1];
-    const hasLyr = vis(vlist[k].idx).lyr && vlist[k].syms.some(q => q.text);
+    const hasLyr = groups[k].voices.some(gv => vis(gv.idx).lyr && gv.syms.some(q => q.text));
     if (hasLyr) { const ly = tops[k] + rooms[k].lyrY, ls = lyrSize(); segs.push([[a, ly - ls], [ly + 0.41 * ls, b]]); }
     else segs.push([[a, b]]);
   }
@@ -2108,7 +2331,7 @@ function drawSystem(vlist, line, y, opts = {}){
     s += `<text class="barnum" x="${f(q.x)}" y="${f(top + barNumY(rooms[k], q.ci))}" font-size="1.6" font-style="italic" text-anchor="${q.start ? 'start' : 'middle'}">${q.n}</text>`;
   });
   /* left edge: a thin line joining the staves in score */
-  if (vlist.length > 1 && opts.join) s += vl(line.x0, tops[0], tops[tops.length - 1] + 4, 'barl', 0.14);
+  if (groups.length > 1 && opts.join) s += vl(line.x0, tops[0], tops[tops.length - 1] + 4, 'barl', 0.14);
   return {svg: s, h: yy - y, tops};
 }
 
@@ -3016,8 +3239,12 @@ function syncUI(){
         `<td><button class="vbtn vexp" data-op="cf" data-i="${v.idx}" title="Open in CantusFirmus" aria-label="Open ${esc(v.name)} in CantusFirmus"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3.5h6.5V10h-2V6.9l-6.8 6.8-1.4-1.4 6.8-6.8H14ZM4.5 6.5h7v2h-5v9h9v-5h2v7h-13Z"/></svg></button></td>` +
         `<td><button class="vbtn vdel" data-op="del" data-i="${v.idx}" aria-label="Remove ${esc(v.name)}" title="Remove this voice">×</button></td></tr>`;
     };
+    const grpN = piece.voices.length >= 2 ? staffGroups(piece.voices.filter(v => vis(v.idx).on)).length : 0;
+    const isComb = piece.voices.length >= 2 && !!staffCfg() && grpN < piece.voices.filter(v => vis(v.idx).on).length;
+    const combBtn = piece.voices.length >= 2 ? ` <button data-op="combine" class="vcomb" title="Combine multiple voices onto shared staves (short score)">${isComb ? `Staves (${grpN})` : 'Combine on staves…'}</button>` : '';
     $('#voiceTable').innerHTML = `<thead><tr><th></th><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th><th>Playback</th><th></th><th></th></tr></thead><tbody>` + piece.voices.map((v, i) => { v.idx = i; return row(v); }).join('') +
-      `</tbody><tfoot><tr><td colspan="8"><button data-op="add">+ New voice</button></td></tr></tfoot>`;
+      `</tbody><tfoot><tr><td colspan="8"><div class="vfoot"><button data-op="add">+ New voice</button>${combBtn}</div></td></tr></tfoot>`;
+    if (!$('#staffCombine').hidden && typeof renderStaffCombine === 'function') { if (piece.voices.length < 2) openStaffCombine(false); else renderStaffCombine(); }
     }
     if (document.activeElement !== $('#metaTitle')) $('#metaTitle').value = (piece.meta.OTL || piece.title || '').replace(/\s*\.\.\.\s*/g, ' … ');
     if (document.activeElement !== $('#metaComp')) $('#metaComp').value = piece.meta.COM || piece.meta.COA || '';
@@ -3286,12 +3513,83 @@ const VOICE_OPS = {
     toast(`${name} removed. Undo brings it back.`);
   }
 };
+function renderStaffCombine(){
+  const box = $('#staffCombine'); if (!box || !piece) return;
+  const vs = piece.voices, n = vs.length;
+  const cfg = staffCfg() || {map: {}, clefs: {}};
+  const getId = i => cfg.map[i] !== undefined ? +cfg.map[i] : i;
+  const maxSt = Math.min(n, Math.max(2, n));
+  const groups = staffGroups(vs);
+  const shared = groups.filter(g => g.voices.length > 1);
+  const clefOpts = (cur, auto) => `<option value=""${!cur ? ' selected' : ''}>Auto (${esc((CLEF_MENU.find(c => c[0] === auto) || [auto, auto])[1])})</option>` +
+    CLEF_MENU.filter(c => c[0] !== 'none').map(([k, lbl]) => `<option value="${k}"${cur === k ? ' selected' : ''}>${esc(lbl)}</option>`).join('');
+  box.innerHTML =
+    `<div class="sc-head"><button type="button" class="tb sc-back" data-sc="back">← Voices</button><span class="sc-title">Voices per staff</span></div>` +
+    `<div class="sc-presets"><button type="button" class="tb" data-sc="sep">Separate staves</button>` +
+      (n >= 3 ? `<button type="button" class="tb" data-sc="short">${n === 4 ? 'Short score (SA / TB)' : 'Pair voices'}</button>` : '') + `</div>` +
+    `<div class="sc-rows">` + vs.map((v, i) => {
+      const cur = getId(i);
+      const pills = Array.from({length: maxSt}, (_, si) => `<button type="button" class="sc-pill" data-vi="${i}" data-si="${si}" aria-pressed="${cur === si}">${si + 1}</button>`).join('');
+      return `<div class="sc-row"><span class="sc-name">${esc(v.name)}</span><div class="sc-pills">${pills}</div></div>`;
+    }).join('') + `</div>` +
+    (shared.length ? `<div class="sc-staves"><div class="sc-sub">Shared staff clefs</div>` + shared.map((g, idx) => {
+      const auto = chooseGroupClef(g.voices, -999);
+      const cur = (cfg.clefs && cfg.clefs[g.id]) || '';
+      return `<div class="sc-srow"><span class="sc-slbl">Staff ${g.id + 1}: ${esc(g.voices.map(v => v.name).join(' + '))}</span><select class="sc-clef" data-sid="${g.id}">${clefOpts(cur, auto)}</select></div>`;
+    }).join('') + `</div>` : '');
+}
+function ensureStaffCfg(){
+  if (!st.staves || typeof st.staves !== 'object') st.staves = {};
+  if (!st.staves[pieceKey]) st.staves[pieceKey] = {map: {}, clefs: {}};
+  if (!st.staves[pieceKey].map) st.staves[pieceKey].map = {};
+  if (!st.staves[pieceKey].clefs) st.staves[pieceKey].clefs = {};
+  return st.staves[pieceKey];
+}
+function openStaffCombine(on){
+  $('#voiceTable').hidden = !!on;
+  $('#staffCombine').hidden = !on;
+  if (on) renderStaffCombine();
+}
+$('#staffCombine').addEventListener('click', e => {
+  e.stopPropagation();
+  const act = e.target.closest('[data-sc]');
+  if (act) {
+    const a = act.dataset.sc;
+    if (a === 'back') { openStaffCombine(false); return; }
+    if (a === 'sep') { if (st.staves && pieceKey) delete st.staves[pieceKey]; save(); syncUI(); render(); renderStaffCombine(); return; }
+    if (a === 'short' && piece) {
+      const c = ensureStaffCfg();
+      c.map = {}; c.clefs = {};
+      piece.voices.forEach((v, i) => { c.map[i] = Math.floor(i / 2); });
+      if (st.view !== 'score') st.view = 'score';
+      save(); syncUI(); render(); renderStaffCombine();
+      return;
+    }
+  }
+  const pill = e.target.closest('.sc-pill');
+  if (pill && piece) {
+    const vi = +pill.dataset.vi, si = +pill.dataset.si;
+    const c = ensureStaffCfg();
+    piece.voices.forEach((v, i) => { if (c.map[i] === undefined) c.map[i] = i; });
+    c.map[vi] = si;
+    if (st.view !== 'score') st.view = 'score';
+    save(); syncUI(); render(); renderStaffCombine();
+  }
+});
+$('#staffCombine').addEventListener('change', e => {
+  const sel = e.target.closest('.sc-clef'); if (!sel) return;
+  e.stopPropagation();
+  const c = ensureStaffCfg(), sid = +sel.dataset.sid;
+  if (sel.value) c.clefs[sid] = sel.value; else delete c.clefs[sid];
+  save(); syncUI(); render(); renderStaffCombine();
+});
 $('#voiceTable').addEventListener('click', e => {
   const b = e.target.closest('button[data-op]'); if (!b) return;
   e.stopPropagation();
   const i = +b.dataset.i;
   if (b.dataset.op === 'cf') sendTo('cantus-firmus', i);
   else if (b.dataset.op === 'del') VOICE_OPS.remove(i);
+  else if (b.dataset.op === 'combine') openStaffCombine(true);
   else VOICE_OPS.add('above');
 });
 $('#voiceTable').addEventListener('change', e => {
@@ -3832,7 +4130,7 @@ function pitchTok(step){
   const oct = Math.floor(step / 7), L = LETTERS[((step % 7) + 7) % 7];
   return oct >= 4 ? L.repeat(oct - 3) : L.toUpperCase().repeat(4 - oct);
 }
-function noteTok(e, tie){
+function singleNoteTok(e, tie){
   let s = recipOf(e.d);
   if (e.rest) s += 'r';
   else {
@@ -3849,6 +4147,12 @@ function noteTok(e, tie){
   if (e.dd && !e.rest) s += 'Y';
   if (e.pa && !e.rest) s += 'W';
   return s;
+}
+function noteTok(e, tie){
+  if (!e.rest && e.chord && e.chord.length) {
+    return [singleNoteTok(e, tie), ...e.chord.map(c => singleNoteTok({...e, step: c.step, alt: c.alt, ed: c.ed, ferm: false}, tie))].join(' ');
+  }
+  return singleNoteTok(e, tie);
 }
 function retime(v){
   let t = 0;
@@ -5300,7 +5604,7 @@ pagesEl.addEventListener('click', e => {
     /* Alt-click: what was copied is pasted there */
     if (n && e.altKey && ed.on) { e.stopImmediatePropagation(); ed.range = null; ed.picks = null; ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1}; rangePaste(); return; }
     const off = ed.on && n && !e.shiftKey ? offPitch(n, e) : null;
-    if (n && (!ed.on || !n.s.rest || e.shiftKey) && !off) {
+    if (n && (!ed.on || !n.s.rest || e.shiftKey) && !off && !(ed.on && ed.divisi && !e.shiftKey && !n.s.rest && n.s.chord && n.s.chord.length)) {
       e.stopImmediatePropagation();
       ed.range = null; ed.picks = null;
       if (n.s.rest) n.s = pickRest(n.vi, n.s);
@@ -5323,6 +5627,42 @@ pagesEl.addEventListener('click', e => {
   }
   const offN = ed.on && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey ? offPitch(noteAt(e), e) : null;
   const rect = offN ? offN.rect : ed.on && !e.shiftKey ? stafFor(e.target) : null;
+  if (rect && ed.divisi && ed.on && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const tg = offN ? offN.tg : staffTarget(rect, e);
+    if (tg) {
+      const v = tg.v;
+      let targetEv = null, targetEi = -1;
+      const n0 = noteAt(e);
+      if (n0 && !n0.s.rest && n0.vi === tg.vi) { targetEi = n0.s.src[0]; targetEv = v.events[targetEi]; }
+      else {
+        const tp0 = timePlace(rect, tg);
+        if (tp0 && tp0.ei >= 0 && v.events[tp0.ei] && !v.events[tp0.ei].rest) { targetEi = tp0.ei; targetEv = v.events[targetEi]; }
+        else if (ed.sel && ed.sel.vi === tg.vi && v.events[ed.sel.ei] && !v.events[ed.sel.ei].rest) { targetEi = ed.sel.ei; targetEv = v.events[targetEi]; }
+      }
+      if (targetEv && !targetEv.rest) {
+        e.stopImmediatePropagation();
+        clearGhost(); ed.range = null; ed.picks = null;
+        const step = tg.step;
+        commit(() => {
+          const ev = piece.voices[tg.vi].events[targetEi];
+          if (!ev || ev.rest) return;
+          if (!Array.isArray(ev.chord)) ev.chord = [];
+          if (step === ev.step) {
+            if (ev.chord.length) { const nxt = ev.chord.shift(); ev.step = nxt.step; ev.alt = nxt.alt; ev.ed = nxt.ed; }
+          } else {
+            const idx = ev.chord.findIndex(c => c.step === step);
+            if (idx >= 0) ev.chord.splice(idx, 1);
+            else { ev.chord.push({step, alt: ed.accArm, ed: !!ed.accEd}); ev.chord.sort((a, b) => a.step - b.step); }
+          }
+          if (!ev.chord.length) delete ev.chord;
+        });
+        ed.sel = {vi: tg.vi, ei: targetEi}; ed.ins = {vi: tg.vi, ei: targetEi + 1};
+        hear(step, ed.accArm);
+        showSel(); syncEdit();
+        return;
+      }
+    }
+  }
   if (rect) {
     e.stopImmediatePropagation();
     const tg = offN ? offN.tg : staffTarget(rect, e); if (!tg) return;
@@ -6146,6 +6486,25 @@ function iconsSync(){
 }
 NoteInput.fill(CBA, glyphIcon);
 NoteInput.wire(CBA);
+/* Divisi (stacked notes of the same value in one voice): toggle button next to Ligature */
+{
+  const lb = $('#ligBtn');
+  if (lb) {
+    const db = document.createElement('button');
+    db.className = 'ib'; db.id = 'divisiBtn';
+    db.setAttribute('aria-pressed', 'false');
+    db.setAttribute('aria-label', 'Divisi (stacked notes)');
+    db.title = 'Divisi: click above or below an existing note to stack another note of the same value (click an existing note in the stack to remove it)';
+    db.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4 16.5 6.9 12 11.4 7.5 6.9Zm0 2.5L9.9 6.9 12 9 14.1 6.9ZM12 12.6 16.5 17.1 12 21.6 7.5 17.1Zm0 2.5L9.9 17.1 12 19.2 14.1 17.1Z"/></svg>';
+    db.addEventListener('click', () => {
+      if (!piece) return;
+      ed.divisi = !ed.divisi;
+      if (ed.divisi && !ed.on) setEdit(true);
+      db.setAttribute('aria-pressed', String(!!ed.divisi));
+    });
+    lb.insertAdjacentElement('afterend', db);
+  }
+}
 /* Punctus additionis (.A) and a hover dropdown below it for Punctus divisionis (.D) */
 {
   const db = $('#dotBtn');
@@ -6386,8 +6745,11 @@ function startPlay(from, again){
       const chainEnd = v.syms[j].t + v.syms[j].d;
       let struck = false;
       for (let q = k; q <= j; q++) {
-        const p = v.syms[q], strike = !struck && p.t + p.d > from + EPS, pt = toPlayT(p.t);
-        events.push({id: p.id, t: pt, d: toPlayT(p.t + p.d) - pt, midi: muted ? null : midiOf({step: p.step, alt: p.alt === null || p.alt === undefined ? implied(v, p.step, p.t) : p.alt}), silent: !strike, hold: strike ? toPlayT(chainEnd) - pt : undefined, ch: v.idx});
+        const p = v.syms[q], strike = !struck && p.t + p.d > from + EPS, pt = toPlayT(p.t), pd = toPlayT(p.t + p.d) - pt, ph = strike ? toPlayT(chainEnd) - pt : undefined;
+        events.push({id: p.id, t: pt, d: pd, midi: muted ? null : midiOf({step: p.step, alt: p.alt === null || p.alt === undefined ? implied(v, p.step, p.t) : p.alt}), silent: !strike, hold: ph, ch: v.idx});
+        if (!muted && p.chord && p.chord.length) {
+          for (const c of p.chord) events.push({id: p.id, t: pt, d: pd, midi: midiOf({step: c.step, alt: c.alt === null || c.alt === undefined ? implied(v, c.step, p.t) : c.alt}), silent: !strike, hold: ph, ch: v.idx});
+        }
         if (strike) struck = true;
       }
       k = j;
@@ -6722,7 +7084,7 @@ for (const a of (APP.addons || [])) eval('(' + a + ')')();
    too tall for the room, it gets a scroll bar of its own; if it only stands a little too high or low, it is moved over. */
 {
   const CAND = '.popbody, .menu, #library, .library';
-  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}html,body,body *:not(input):not(textarea):not([contenteditable]){-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none !important}input,textarea,[contenteditable]{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default !important}#popView .staffset{grid-template-columns:auto minmax(150px,auto)}#pages svg .ledger,#pages svg .barl,#pages svg .tie,#pages svg .ms{stroke:var(--note-ink,var(--leaf-ink))}#pages svg use,#pages svg .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) use,html.playing #pages g.sel:not(.on) .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) .ledger{stroke:var(--note-ink,var(--leaf-ink))}#pages svg text.lyr{font-family:var(--lyr-font,"IM Fell English","Palatino Linotype",Palatino,Georgia,serif)}.staffset .subhead{grid-column:1/-1;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);opacity:.78;padding-top:6px;margin-top:2px;border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent)}.staffset .subhead:first-child{padding-top:0;margin-top:0;border-top:0}.staffset .lab-lock{display:inline-flex;align-items:center;gap:5px}.lockbtn{display:inline-grid;place-items:center;width:22px;height:22px;padding:0;border:0 !important;outline:none;box-shadow:none !important;border-radius:5px;background:transparent !important;color:var(--muted) !important;cursor:pointer;opacity:.78;transition:opacity .12s,background .12s}.lockbtn svg{width:14px;height:14px;fill:currentColor;display:block}.lockbtn[aria-pressed="true"]{color:var(--muted) !important;background:transparent !important;box-shadow:none !important;border:0 !important;opacity:.85}.lockbtn:hover,.lockbtn[aria-pressed="true"]:hover:not(:disabled){background:color-mix(in srgb,var(--ink) 8%,transparent) !important;color:var(--muted) !important;border-color:transparent !important;opacity:1}.pt-field{display:inline-flex;align-items:center;gap:5px}.pt-field input{width:62px;height:var(--h);padding:0 7px;border:1px solid var(--line);border-radius:6px;background:var(--surface,#F4EDE0);color:var(--ink);font:inherit;font-size:14px;font-variant-numeric:tabular-nums}.pt-field span{color:var(--muted);font-size:13px}#pages .seclab{cursor:pointer}@media (hover:hover){#pages .seclab:hover{fill:var(--accent);color:var(--accent)}}.sec-ed{position:absolute;z-index:40;min-width:140px;max-width:280px;padding:3px 7px;border:1.5px solid var(--accent);border-radius:5px;background:var(--ground,#FBF7EF);color:var(--ink);font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif;font-style:italic;font-size:15px;box-shadow:0 4px 14px rgba(42,34,24,.22);outline:none}.rng-wrap{display:flex;flex-direction:column;min-width:150px}.rng-wrap input[type=range]{width:100%;margin:0}.rng-meta{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:11px;line-height:1.2;font-variant-numeric:tabular-nums;opacity:0;max-height:0;overflow:hidden;margin-top:0;pointer-events:none;transition:opacity .14s ease,max-height .14s ease,margin-top .14s ease}.rng-wrap:hover .rng-meta,.rng-wrap:focus-within .rng-meta,.rng-wrap.active .rng-meta{opacity:1;max-height:22px;margin-top:2px;pointer-events:auto}.rng-bound{appearance:none;border:0;background:transparent;padding:0 3px;margin:0;font:inherit;color:var(--muted);cursor:pointer;border-radius:3px;border-bottom:1px dotted color-mix(in srgb,var(--muted) 55%,transparent)}.rng-bound:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 7%,transparent)}.rng-val{color:var(--accent);font-weight:600;padding:0 4px}.rng-edit{width:46px;font:inherit;font-size:11px;padding:0 3px;border:1px solid var(--accent);border-radius:3px;background:var(--ground,#FBF7EF);color:var(--ink);text-align:center;outline:none}.rng-edit::-webkit-inner-spin-button,.rng-edit::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}#pages .ed-grid{pointer-events:none}#pages .ed-grid .eg-tick{stroke:var(--sel);stroke-width:.11;opacity:.45}#pages .ed-grid .eg-tick.maj{stroke-width:.15;opacity:.75}#pages .ed-grid .eg-line{stroke:var(--sel);stroke-width:.08;stroke-dasharray:.26 .26;opacity:.13}#pages .ed-grid .eg-line.maj{opacity:.24}#pages .ed-grid .eg-line.tail{opacity:.24}@media print{#pages .ed-grid{display:none !important}}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}#library[data-mode="rep"]{min-height:min(62vh,520px)}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
+  document.head.insertAdjacentHTML('beforeend', '<style>:root{--glass-bg:58%}html,body,body *:not(input):not(textarea):not([contenteditable]){-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none !important}input,textarea,[contenteditable]{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default !important}#popView .staffset{grid-template-columns:auto minmax(150px,auto)}#pages svg .ledger,#pages svg .barl,#pages svg .tie,#pages svg .ms{stroke:var(--note-ink,var(--leaf-ink))}#pages svg use,#pages svg .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) use,html.playing #pages g.sel:not(.on) .ink{fill:var(--note-ink,var(--leaf-ink));color:var(--note-ink,var(--leaf-ink))}html.playing #pages g.sel:not(.on) .ledger{stroke:var(--note-ink,var(--leaf-ink))}#pages svg text.lyr{font-family:var(--lyr-font,"IM Fell English","Palatino Linotype",Palatino,Georgia,serif)}.staffset .subhead{grid-column:1/-1;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);opacity:.78;padding-top:6px;margin-top:2px;border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent)}.staffset .subhead:first-child{padding-top:0;margin-top:0;border-top:0}.staffset .lab-lock{display:inline-flex;align-items:center;gap:5px}.lockbtn{display:inline-grid;place-items:center;width:22px;height:22px;padding:0;border:0 !important;outline:none;box-shadow:none !important;border-radius:5px;background:transparent !important;color:var(--muted) !important;cursor:pointer;opacity:.78;transition:opacity .12s,background .12s}.lockbtn svg{width:14px;height:14px;fill:currentColor;display:block}.lockbtn[aria-pressed="true"]{color:var(--muted) !important;background:transparent !important;box-shadow:none !important;border:0 !important;opacity:.85}.lockbtn:hover,.lockbtn[aria-pressed="true"]:hover:not(:disabled){background:color-mix(in srgb,var(--ink) 8%,transparent) !important;color:var(--muted) !important;border-color:transparent !important;opacity:1}.pt-field{display:inline-flex;align-items:center;gap:5px}.pt-field input{width:62px;height:var(--h);padding:0 7px;border:1px solid var(--line);border-radius:6px;background:var(--surface,#F4EDE0);color:var(--ink);font:inherit;font-size:14px;font-variant-numeric:tabular-nums}.pt-field span{color:var(--muted);font-size:13px}#pages .seclab{cursor:pointer}@media (hover:hover){#pages .seclab:hover{fill:var(--accent);color:var(--accent)}}.sec-ed{position:absolute;z-index:40;min-width:140px;max-width:280px;padding:3px 7px;border:1.5px solid var(--accent);border-radius:5px;background:var(--ground,#FBF7EF);color:var(--ink);font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif;font-style:italic;font-size:15px;box-shadow:0 4px 14px rgba(42,34,24,.22);outline:none}.vfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}#staffCombine{padding:6px 8px;min-width:260px;max-width:340px;display:flex;flex-direction:column;gap:8px}#staffCombine[hidden]{display:none !important}.sc-head{display:flex;align-items:center;gap:8px}.sc-title{font-size:13px;font-weight:700;color:var(--ink)}.sc-presets{display:flex;gap:6px;flex-wrap:wrap}.sc-presets .tb,.sc-back{font-size:12px;height:26px;padding:0 9px}.sc-rows{display:flex;flex-direction:column;gap:5px}.sc-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.sc-name{font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}.sc-pills{display:flex;gap:3px}.sc-pill{min-width:26px;height:24px;padding:0 6px;border:1px solid var(--line);border-radius:5px;background:transparent;color:var(--muted);font:inherit;font-size:12px;cursor:pointer}.sc-pill[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.sc-staves{border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent);padding-top:6px;display:flex;flex-direction:column;gap:5px}.sc-sub{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.sc-srow{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--ink)}.sc-slbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}.sc-clef{font-size:12px;height:26px}.rng-wrap{display:flex;flex-direction:column;min-width:150px}.rng-wrap input[type=range]{width:100%;margin:0}.rng-meta{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:11px;line-height:1.2;font-variant-numeric:tabular-nums;opacity:0;max-height:0;overflow:hidden;margin-top:0;pointer-events:none;transition:opacity .14s ease,max-height .14s ease,margin-top .14s ease}.rng-wrap:hover .rng-meta,.rng-wrap:focus-within .rng-meta,.rng-wrap.active .rng-meta{opacity:1;max-height:22px;margin-top:2px;pointer-events:auto}.rng-bound{appearance:none;border:0;background:transparent;padding:0 3px;margin:0;font:inherit;color:var(--muted);cursor:pointer;border-radius:3px;border-bottom:1px dotted color-mix(in srgb,var(--muted) 55%,transparent)}.rng-bound:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 7%,transparent)}.rng-val{color:var(--accent);font-weight:600;padding:0 4px}.rng-edit{width:46px;font:inherit;font-size:11px;padding:0 3px;border:1px solid var(--accent);border-radius:3px;background:var(--ground,#FBF7EF);color:var(--ink);text-align:center;outline:none}.rng-edit::-webkit-inner-spin-button,.rng-edit::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}#pages .ed-grid{pointer-events:none}#pages .ed-grid .eg-tick{stroke:var(--sel);stroke-width:.11;opacity:.45}#pages .ed-grid .eg-tick.maj{stroke-width:.15;opacity:.75}#pages .ed-grid .eg-line{stroke:var(--sel);stroke-width:.08;stroke-dasharray:.26 .26;opacity:.13}#pages .ed-grid .eg-line.maj{opacity:.24}#pages .ed-grid .eg-line.tail{opacity:.24}@media print{#pages .ed-grid{display:none !important}}.popbody:not(.pop-scroll-y),.tools .bar .popbody:not(.pop-scroll-y),.transport .popbody:not(.pop-scroll-y){overflow:visible !important;max-height:none !important}.popbody.pop-scroll-y,.tools .bar .popbody.pop-scroll-y,.transport .popbody.pop-scroll-y{overflow-y:auto !important;overflow-x:hidden !important;scrollbar-width:thin !important}.popbody.pop-scroll-y::after{bottom:0 !important;right:0 !important}.popbody,.menu,.library,#library,.handpop,#tpSide,.tools .podg,.transport .podg{background-color:var(--surface,#F4EDE0) !important;background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important;-webkit-backdrop-filter:blur(10px) saturate(1.08) !important;backdrop-filter:blur(10px) saturate(1.08) !important}.popbody,.menu,.library,#library,.handpop,#tpSide{border:1px solid color-mix(in srgb,var(--line) 78%,rgba(255,255,255,.45)) !important;box-shadow:0 12px 32px -10px rgba(42,34,24,.28),inset 0 1px 0 rgba(255,255,255,.38) !important}#library::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}#library[data-mode="rep"]{min-height:min(62vh,520px)}.library .libtools{background:color-mix(in srgb,var(--ground,#FBF7EF) 88%,transparent) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:6px}html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{box-shadow:0 14px 34px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08) !important}.tools:has(#library:not([hidden])){z-index:70 !important}#libPod:has(#library:not([hidden])),.podg:has(#library:not([hidden])){z-index:60 !important}.bar .podg:has(#library:not([hidden])){transform:none !important;filter:none !important}.podg:has(.pop:hover),.podg:has(.pop.open),.podg:has(:focus-visible),.podg:has(#library:not([hidden])),.libwrap:has(#library:not([hidden])),html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}html.no-glass .popbody,html.no-glass .menu,html.no-glass .library,html.no-glass #library,html.no-glass .handpop,html.no-glass #tpSide,html.no-glass .tools .podg,html.no-glass .transport .podg,html.no-glass .library .libtools{background:var(--ground,#FBF7EF) !important}</style>');
   {
     const gr = $('#glassRange');
     const applyGlass = v => {
