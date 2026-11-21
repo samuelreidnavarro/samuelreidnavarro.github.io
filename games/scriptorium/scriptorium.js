@@ -1608,14 +1608,14 @@ function markSvg(s, X, top){
   if (s.mens) o += `<g class="menshit" data-t="${s.t}"><rect x="${f(ox - 0.2)}" y="${f(top - 0.5)}" width="${f(X - ox - 0.1)}" height="5" fill="transparent"/>${mensSvg(s.mens, ox, top)}</g>`;
   return o;
 }
-function symSvg(s, X, top, showNotes, suppressMark){
+function symSvg(s, X, top, showNotes, suppressMark, rdy){
   /* with the notes hidden, the key change and mensuration sign stay, like the clef */
   if (!showNotes) return !suppressMark && (s.keyc || s.mens || s.clefc) ? markSvg(s, X, top) : '';
   if (s.ligSvg && s.ligX != null) X = s.ligX;   /* a note of a drawn ligature stands where the ligature puts it */
-  const hy = s.rest ? top + 0.5 : top + 4 - s.pos * 0.5 - 1;
+  const hy = s.rest ? top + (rdy || 0) + 0.5 : top + 4 - s.pos * 0.5 - 1;
   /* the place of a first note in an empty voice: nothing drawn but the sign before it and the cursor's place */
   if (s.phantom) return `<g class="${s.id} phantom"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/>${!suppressMark && s.mens ? markSvg(s, X, top) : ''}</g>`;
-  return `<g class="${s.id}"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top, suppressMark)}</g>`;
+  return `<g class="${s.id}"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top, suppressMark, rdy)}</g>`;
 }
 function chordHeadSvg(s, x, y){
   const g = s.glyph;
@@ -1627,58 +1627,71 @@ function chordHeadSvg(s, x, y){
   if (g === 'nQ' || g === 'nE' || g === 'nX') return `<ellipse class="ink" cx="0" cy="0" rx="0.54" ry="0.39" transform="translate(${f(x + s.hw * 0.5)} ${f(y)}) rotate(-20)"/>`;
   return use(g, x, y);
 }
-function symInner(s, X, top, suppressMark){
+function symInner(s, X, top, suppressMark, rdy){
   let o = '';
   let hx = X;
   const ns = noteScale(), cx = hx + s.hw / 2;
   if (!suppressMark && (s.mens || s.keyc || s.clefc)) o += markSvg(s, X, top);
   if (s.rest) {
-    const r = restSvg(s, cx, top);
-    o += Math.abs(ns - 1) > 0.005 ? `<g transform="translate(${f(cx)} ${f(top + 2)}) scale(${f(ns)}) translate(${f(-cx)} ${f(-(top + 2))})">${r}</g>` : r;
+    const rtTop = top + (rdy || 0);
+    const r = restSvg(s, cx, rtTop);
+    o += Math.abs(ns - 1) > 0.005 ? `<g transform="translate(${f(cx)} ${f(rtTop + 2)}) scale(${f(ns)}) translate(${f(-cx)} ${f(-(rtTop + 2))})">${r}</g>` : r;
     return o;
   }
   const y = top + 4 - s.pos * 0.5;
-  o += ledgers(s.pos, hx - s.hw * (ns - 1) * 0.5, s.hw * ns, top);
   let body = '';
-  if (s.acc) body += use(s.acc, hx - gw(s.acc) - 0.3, y);
-  if (s.ligSvg) { o += s.ligSvg; }
-  else {
+  if (s.ligSvg) {
+    o += ledgers(s.pos, hx - s.hw * (ns - 1) * 0.5, s.hw * ns, top);
+    if (s.acc) body += use(s.acc, hx - gw(s.acc) - 0.3, y);
+    o += s.ligSvg;
+  } else if (s.chord && s.chord.length) {
+    const all = [{pos: s.pos, acc: s.acc, main: true}, ...s.chord.map(c => ({pos: c.pos, acc: c.acc, main: false}))].sort((a, b) => a.pos - b.pos);
+    let prevPos = -999, prevOff = false;
+    for (const n of all) {
+      const off = n.pos - prevPos <= 1 && !prevOff;
+      n.dx = off ? s.hw * 0.85 : 0;
+      prevPos = n.pos; prevOff = off;
+    }
+    const flip = isFlipped(s), upStem = flip ? !!TAILED[s.g] : !!STEMMED[s.g];
+    const hasStem = !!(STEMMED[s.g] || TAILED[s.g]);
+    /* place the stemmed/flagged glyph on the extreme notehead in the stem direction so the stem/flag never collides with inner heads */
+    const stemIdx = hasStem ? (upStem ? all.length - 1 : 0) : -1;
+    let accOff = 0, grp = '';
+    all.forEach((n, idx) => {
+      const cy = top + 4 - n.pos * 0.5, nx = hx + n.dx;
+      o += ledgers(n.pos, nx - s.hw * (ns - 1) * 0.5, s.hw * ns, top);
+      if (idx === stemIdx) {
+        const gm = flip ? useT(s.glyph, nx, cy, 1, -1) : use(s.glyph, nx, cy);
+        grp += gm;
+      } else {
+        grp += chordHeadSvg(s, nx, cy);
+      }
+      if (n.acc) { grp += use(n.acc, hx - gw(n.acc) - 0.3 - accOff, cy); accOff += gw(n.acc) + 0.22; }
+      if (s.dot) {
+        const dx = hx + s.hw + (all.some(q => q.dx) ? s.hw * 0.85 : 0) + (s.dd ? 0.55 : 0.4);
+        const dy = top + 4 - (n.pos % 2 === 0 ? n.pos + 1 : n.pos) * 0.5;
+        if (n.main) grp += `<g class="dothit"><title>Punctus ${s.dd ? 'divisionis' : 'additionis'}</title><circle class="hit" cx="${f(dx)}" cy="${f(dy)}" r="0.55" fill="transparent"/><circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.19"/><text class="dotkind hit" x="${f(dx + 0.34)}" y="${f(dy + 0.24)}" font-size="0.85" font-style="normal">${s.dd ? 'D' : 'A'}</text></g>`;
+        else grp += `<circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.19"/>`;
+      }
+    });
+    if (hasStem) {
+      const yTop = top + 4 - all[all.length - 1].pos * 0.5, yBot = top + 4 - all[0].pos * 0.5;
+      const anchorX = hx + all[stemIdx].dx;
+      const sx = MODERN ? (flip ? anchorX + 0.04 : anchorX + s.hw - 0.14) : (TAILED[s.g] ? anchorX + s.hw - 0.12 : anchorX + s.hw * 0.5 - 0.06);
+      grp += `<rect class="ink" x="${f(sx)}" y="${f(yTop)}" width="0.12" height="${f(Math.max(0.1, yBot - yTop))}"/>`;
+    }
+    body += s.red ? `<g class="red">${grp}</g>` : grp;
+  } else {
+    o += ledgers(s.pos, hx - s.hw * (ns - 1) * 0.5, s.hw * ns, top);
+    if (s.acc) body += use(s.acc, hx - gw(s.acc) - 0.3, y);
     const gm = isFlipped(s) ? useT(s.glyph, hx, y, 1, -1) : use(s.glyph, hx, y);
     if (s.cut > 0.02) {
       const upStem = isFlipped(s) ? !!TAILED[s.g] : !!STEMMED[s.g];
       const y0 = upStem ? y - 3.7 + s.cut : y - 1.5, y1 = upStem ? y + 1.5 : y + 3.7 - s.cut;
       body += `<clipPath id="c-${s.id}"><rect x="${f(hx - 1)}" y="${f(y0)}" width="${f(s.hw + 3)}" height="${f(y1 - y0)}"/></clipPath><g clip-path="url(#c-${s.id})"${s.red ? ' class="red"' : ''}>${gm}</g>`;
     } else body += s.red ? `<g class="red">${gm}</g>` : gm;
-    if (s.chord && s.chord.length) {
-      const all = [{pos: s.pos, main: true}, ...s.chord.map(c => ({pos: c.pos, acc: c.acc, main: false}))].sort((a, b) => a.pos - b.pos);
-      let accOff = s.acc ? gw(s.acc) + 0.35 : 0;
-      let prevPos = -999, prevOff = false;
-      for (const n of all) {
-        const off = n.pos - prevPos <= 1 && !prevOff;
-        n.dx = off ? s.hw * 0.85 : 0;
-        prevPos = n.pos; prevOff = off;
-      }
-      let extra = '';
-      for (const n of all) {
-        if (n.main) continue;
-        const cy = top + 4 - n.pos * 0.5, nx = hx + n.dx;
-        o += ledgers(n.pos, nx - s.hw * (ns - 1) * 0.5, s.hw * ns, top);
-        extra += chordHeadSvg(s, nx, cy);
-        if (n.acc) { extra += use(n.acc, hx - gw(n.acc) - 0.3 - accOff, cy); accOff += gw(n.acc) + 0.22; }
-        if (s.dot) {
-          const dx = hx + s.hw + (n.dx ? n.dx : 0) + (s.dd ? 0.55 : 0.4), dy = top + 4 - (n.pos % 2 === 0 ? n.pos + 1 : n.pos) * 0.5;
-          extra += `<circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.19"/>`;
-        }
-      }
-      if (STEMMED[s.g] || TAILED[s.g]) {
-        const yMin = top + 4 - all[all.length - 1].pos * 0.5, yMax = top + 4 - all[0].pos * 0.5;
-        const sx = MODERN ? (isFlipped(s) ? hx + 0.04 : hx + s.hw - 0.14) : (TAILED[s.g] ? hx + s.hw - 0.12 : hx + s.hw * 0.5 - 0.06);
-        extra += `<rect class="ink" x="${f(sx)}" y="${f(yMin)}" width="0.12" height="${f(Math.max(0.1, yMax - yMin))}"/>`;
-      }
-      body += s.red ? `<g class="red">${extra}</g>` : extra;
-    }
   }
-  if (s.dot && !s.ligSvg) {
+  if (s.dot && !s.ligSvg && !(s.chord && s.chord.length)) {
     const dx = hx + s.hw + (s.dd ? 0.55 : 0.4), dy = top + 4 - (s.pos % 2 === 0 ? s.pos + 1 : s.pos) * 0.5, dk = s.dd ? 'D' : 'A';
     body += `<g class="dothit"><title>Punctus ${s.dd ? 'divisionis' : 'additionis'}</title><circle class="hit" cx="${f(dx)}" cy="${f(dy)}" r="0.55" fill="transparent"/><circle class="ink" cx="${f(dx)}" cy="${f(dy)}" r="0.19"/><text class="dotkind hit" x="${f(dx + 0.34)}" y="${f(dy + 0.24)}" font-size="0.85" font-style="normal">${dk}</text></g>`;
   }
@@ -1859,7 +1872,7 @@ function staffLine(o){
       if (!sym) continue;
       const X = o.xs[i] + (dxMap ? (dxMap.get(sym) || 0) : 0);
       const rdy = restDyMap ? (restDyMap.get(sym) || 0) : 0;
-      if (!skipSet || !skipSet.has(sym)) out += symSvg(sym, X, top + rdy, lShow, suppressMark);
+      if (!skipSet || !skipSet.has(sym)) out += symSvg(sym, X, top, lShow, suppressMark, rdy);
       if (lShowLyr && sym.text && st.dashes !== 'off') {
         out += `<text class="lyr" data-s="${sym.id}" x="${f(X + sym.hw / 2 + sym.lyo)}" y="${f(lyrY)}" font-size="${f(lyrSize())}" text-anchor="middle">${esc(sym.text)}</text>`;
       }
@@ -4642,7 +4655,7 @@ const OPS = {
     const v = curVoice(); if (!v) return;
     const src = srcOf();
     /* a note becomes a rest of the same length so the other voices stay aligned; a rest is removed */
-    if (src.some(i => !v.events[i].rest)) { commit(() => { for (const i of src) { const e = v.events[i]; e.rest = true; e.tieStart = e.tieEnd = e.tieMid = false; const nx = v.events[i + 1]; if (e.syl && e.syl.some(Boolean) && nx && !nx.rest && !(nx.syl || []).some(Boolean)) nx.syl = e.syl; e.syl = []; } }); return; }
+    if (src.some(i => !v.events[i].rest)) { commit(() => { for (const i of src) { const e = v.events[i]; e.rest = true; delete e.chord; e.tieStart = e.tieEnd = e.tieMid = false; const nx = v.events[i + 1]; if (e.syl && e.syl.some(Boolean) && nx && !nx.rest && !(nx.syl || []).some(Boolean)) nx.syl = e.syl; e.syl = []; } }); return; }
     commit(() => dropEvents(v, src));
     if (ed.sel) ed.sel.ei = Math.max(0, Math.min(src[0], piece.voices[ed.sel.vi].events.length - 1));
     render();
@@ -5035,6 +5048,19 @@ pagesEl.addEventListener('pointermove', e => {
   const rect = off ? off.rect : stafFor(e.target);
   if (!rect) { clearGhost(); return; }
   const tg = off ? off.tg : staffTarget(rect, e); if (!tg) { clearGhost(); return; }
+  if (ed.divisi) {
+    const dt = divisiTarget(rect, e);
+    if (dt && dt.sym) {
+      const sg = rect.ownerSVGElement && rect.ownerSVGElement.querySelector('g.' + dt.sym.id + ' rect.hit');
+      if (sg) {
+        const sx = +sg.getAttribute('x') + 0.3, w = dt.sym.hw, y = tg.top + 4 - tg.pos * 0.5;
+        const html = ledgers(tg.pos, sx, w, tg.top) + chordHeadSvg(dt.sym, sx, y);
+        if (!ghostEl || ghostEl.parentNode !== tg.g) { clearGhost(); ghostEl = document.createElementNS('http://www.w3.org/2000/svg', 'g'); ghostEl.setAttribute('class', 'ghost'); tg.g.appendChild(ghostEl); }
+        ghostEl.innerHTML = html;
+        return;
+      }
+    }
+  }
   const tp = timePlace(rect, tg); if (tp) tg.x = tp.x;
   const g = ed.val, w = ed.inRest ? 0.42 : gw(g), x = tg.x - w / 2, y = tg.top + 4 - tg.pos * 0.5;
   const flip = (STEMMED[g] && tg.pos >= 7) || (TAILED[g] && tg.pos <= -1);
@@ -5623,6 +5649,53 @@ function keyStep(vi, dir, t){
   });
   toast((n === 0 ? 'No sharps or flats in the signature' : Math.abs(n) + (n < 0 ? ' flat' : ' sharp') + (Math.abs(n) > 1 ? 's' : '') + ' in the signature') + (mid ? '' : keyOnly ? ', in ' + (v.name || 'this voice') + ' only.' : ', in all voices. Click the signature to change one voice only.'));
 }
+function divisiTarget(rect, e){
+  const tg = staffTarget(rect, e); if (!tg) return null;
+  const v = tg.v; if (!v || !v.syms) return null;
+  const svg = rect.ownerSVGElement; if (!svg) return null;
+  let best = null, bestDx = Infinity;
+  const k0 = rect.dataset.k0 !== undefined && rect.dataset.k0 !== '' ? +rect.dataset.k0 : 0;
+  const k1 = rect.dataset.k1 !== undefined && rect.dataset.k1 !== '' ? +rect.dataset.k1 : v.syms.length - 1;
+  for (let k = k0; k <= k1 && k < v.syms.length; k++) {
+    const sym = v.syms[k];
+    if (!sym || sym.rest || sym.phantom) continue;
+    const g = svg.querySelector('g.' + sym.id);
+    if (!g) continue;
+    const r = g.getBoundingClientRect();
+    const cx = (r.left + r.right) / 2;
+    const dx = Math.abs(e.clientX - cx);
+    if (dx < bestDx) { bestDx = dx; best = sym; }
+  }
+  if (best && bestDx <= 46) return {vi: tg.vi, ei: best.src[0], step: tg.step, sym: best};
+  if (ed.sel && ed.sel.vi === tg.vi && v.events[ed.sel.ei] && !v.events[ed.sel.ei].rest) {
+    return {vi: tg.vi, ei: ed.sel.ei, step: tg.step, sym: selSym()};
+  }
+  return null;
+}
+function toggleDivisiNote(vi, ei, step){
+  const v0 = piece && piece.voices[vi];
+  if (!v0 || !v0.events[ei] || v0.events[ei].rest) return false;
+  clearGhost(); ed.range = null; ed.picks = null;
+  const arm = ed.accArm, armEd = !!ed.accEd;
+  commit(() => {
+    const ev = piece.voices[vi].events[ei];
+    if (!ev || ev.rest) return;
+    if (!Array.isArray(ev.chord)) ev.chord = [];
+    if (step === ev.step) {
+      if (ev.chord.length) { const nxt = ev.chord.shift(); ev.step = nxt.step; ev.alt = nxt.alt; ev.ed = nxt.ed; }
+    } else {
+      const idx = ev.chord.findIndex(c => c.step === step);
+      if (idx >= 0) ev.chord.splice(idx, 1);
+      else { ev.chord.push({step, alt: arm, ed: armEd}); ev.chord.sort((a, b) => a.step - b.step); }
+    }
+    if (!ev.chord.length) delete ev.chord;
+  });
+  ed.accArm = null; ed.accEd = false;
+  ed.sel = {vi, ei}; ed.ins = {vi, ei: ei + 1};
+  hear(step, arm);
+  showSel(); syncEdit();
+  return true;
+}
 pagesEl.addEventListener('click', e => {
   const ka = e.target.closest && e.target.closest('.ksarr');
   if (ka && piece && window.matchMedia('(hover:none)').matches && !ka.closest('.keyhit').classList.contains('ks-on')) { e.stopImmediatePropagation(); e.preventDefault(); pagesEl.querySelectorAll('.ks-on,.mensadd.on').forEach(g => g.classList.remove('ks-on', 'on')); ka.closest('.keyhit').classList.add('ks-on'); return; }
@@ -5631,6 +5704,14 @@ pagesEl.addEventListener('click', e => {
   if (kh && piece) { e.stopImmediatePropagation(); e.preventDefault(); openKeyMenu(+kh.dataset.v, kh.dataset.t !== undefined ? +kh.dataset.t : 0, e); return; }
   const ch = e.target.closest && e.target.closest('.clefhit');
   if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e, ch.dataset.t !== undefined ? +ch.dataset.t : undefined); return; }
+  /* Divisi mode: clicking anywhere in the horizontal zone of a note (or on the selected note's staff) stacks/toggles that pitch */
+  if (ed.on && ed.divisi && piece && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const rDiv = stafFor(e.target) || (e.target.closest && e.target.closest('svg') && [...e.target.closest('svg').querySelectorAll('rect.stafhit')].find(r => { const b = r.getBoundingClientRect(); return e.clientY >= b.top - 24 && e.clientY <= b.bottom + 24 && e.clientX >= b.left && e.clientX <= b.right; }));
+    if (rDiv) {
+      const dt = divisiTarget(rDiv, e);
+      if (dt) { e.stopImmediatePropagation(); toggleDivisiNote(dt.vi, dt.ei, dt.step); return; }
+    }
+  }
   /* a click on a note selects it, in any mode (the staff's writing area lies over the notes: look underneath it too) */
   if (typeof noteAt === 'function') {
     const n = noteAt(e);
@@ -5662,42 +5743,6 @@ pagesEl.addEventListener('click', e => {
   }
   const offN = ed.on && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey ? offPitch(noteAt(e), e) : null;
   const rect = offN ? offN.rect : ed.on && !e.shiftKey ? stafFor(e.target) : null;
-  if (rect && ed.divisi && ed.on && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    const tg = offN ? offN.tg : staffTarget(rect, e);
-    if (tg) {
-      const v = tg.v;
-      let targetEv = null, targetEi = -1;
-      const n0 = noteAt(e);
-      if (n0 && !n0.s.rest && n0.vi === tg.vi) { targetEi = n0.s.src[0]; targetEv = v.events[targetEi]; }
-      else {
-        const tp0 = timePlace(rect, tg);
-        if (tp0 && tp0.ei >= 0 && v.events[tp0.ei] && !v.events[tp0.ei].rest) { targetEi = tp0.ei; targetEv = v.events[targetEi]; }
-        else if (ed.sel && ed.sel.vi === tg.vi && v.events[ed.sel.ei] && !v.events[ed.sel.ei].rest) { targetEi = ed.sel.ei; targetEv = v.events[targetEi]; }
-      }
-      if (targetEv && !targetEv.rest) {
-        e.stopImmediatePropagation();
-        clearGhost(); ed.range = null; ed.picks = null;
-        const step = tg.step;
-        commit(() => {
-          const ev = piece.voices[tg.vi].events[targetEi];
-          if (!ev || ev.rest) return;
-          if (!Array.isArray(ev.chord)) ev.chord = [];
-          if (step === ev.step) {
-            if (ev.chord.length) { const nxt = ev.chord.shift(); ev.step = nxt.step; ev.alt = nxt.alt; ev.ed = nxt.ed; }
-          } else {
-            const idx = ev.chord.findIndex(c => c.step === step);
-            if (idx >= 0) ev.chord.splice(idx, 1);
-            else { ev.chord.push({step, alt: ed.accArm, ed: !!ed.accEd}); ev.chord.sort((a, b) => a.step - b.step); }
-          }
-          if (!ev.chord.length) delete ev.chord;
-        });
-        ed.sel = {vi: tg.vi, ei: targetEi}; ed.ins = {vi: tg.vi, ei: targetEi + 1};
-        hear(step, ed.accArm);
-        showSel(); syncEdit();
-        return;
-      }
-    }
-  }
   if (rect) {
     e.stopImmediatePropagation();
     const tg = offN ? offN.tg : staffTarget(rect, e); if (!tg) return;
@@ -6307,7 +6352,27 @@ const CBA = {
   typeNote(L){
     if (!CBA.guard()) return;
     const v = curVoice(); if (!v) return;
-    const idx = insertionIndex(v), ref = refStepBefore(v, idx + (!ed.sel && ed.ins && ed.ins.off > EPS ? 1 : 0)), li = 'CDEFGAB'.indexOf(L);
+    const li = 'CDEFGAB'.indexOf(L);
+    if (ed.divisi) {
+      let ei = -1;
+      if (ed.sel && ed.sel.vi === v.idx && v.events[ed.sel.ei] && !v.events[ed.sel.ei].rest) ei = ed.sel.ei;
+      else if (ed.ins && ed.ins.vi === v.idx) {
+        if (v.events[ed.ins.ei] && !v.events[ed.ins.ei].rest) ei = ed.ins.ei;
+        else if (ed.ins.ei > 0 && v.events[ed.ins.ei - 1] && !v.events[ed.ins.ei - 1].rest) ei = ed.ins.ei - 1;
+      }
+      if (ei >= 0) {
+        const ref = v.events[ei].step;
+        let best = null;
+        for (let o = 0; o <= 8; o++) {
+          const s = 7 * o + li;
+          if (s < STEP_MIN || s > STEP_MAX) continue;
+          if (best === null || Math.abs(s - ref) < Math.abs(best - ref)) best = s;
+        }
+        if (best === ref && !(v.events[ei].chord && v.events[ei].chord.length)) best = best + 7 <= STEP_MAX ? best + 7 : best - 7;
+        if (best !== null) { toggleDivisiNote(v.idx, ei, best); return; }
+      }
+    }
+    const idx = insertionIndex(v), ref = refStepBefore(v, idx + (!ed.sel && ed.ins && ed.ins.off > EPS ? 1 : 0));
     let best = null;
     for (let o = 0; o <= 8; o++) {
       const s = 7 * o + li;
