@@ -1241,12 +1241,17 @@ function chooseGroupClef(voices, staffId){
     if (e.chord) for (const c of e.chord) steps.push(c.step);
   }
   if (!steps.length) return chooseClef(voices[0], st.clefs);
-  const cands = st.clefs === 'modern' ? ['treble', 'treble8', 'bass'] : MENS_CLEFS;
+  const cands = st.clefs === 'modern' ? ['bass', 'treble8', 'treble'] : MENS_CLEFS;
   let best = cands[0], bestCost = Infinity;
   for (const k of cands) {
     const b = CLEFS[k].bottom;
     let cost = 0;
-    for (const s of steps) { const p = s - b; if (p < -1) cost += Math.ceil((-1 - p) / 2); else if (p > 9) cost += Math.ceil((p - 9) / 2); }
+    for (const s of steps) {
+      const p = s - b;
+      if (p < -1) cost += Math.ceil((-1 - p) / 2) * 10;
+      else if (p > 9) cost += Math.ceil((p - 9) / 2) * 10;
+      cost += Math.abs(p - 4) * 0.25;
+    }
     if (cost < bestCost - 1e-9) { bestCost = cost; best = k; }
   }
   return best;
@@ -1272,6 +1277,7 @@ function prepare(){
     v.idx = i;
     const sm = sharedMeta.get(i);
     v.clef = sm ? sm.clef : (vis(i).clef && CLEFS[vis(i).clef]) ? vis(i).clef : chooseClef(v, st.clefs);
+    v.sharedStaff = !!sm;
     const syms = notate(piece, v, mode);
     /* a voice with no notes yet still shows its staff, clef and sign, and a place where the first note will stand */
     if (!syms.length) { const m0 = v.mets.find(q => q.t < EPS); syms.push({t: 0, d: 2, rest: true, phantom: true, g: 'B', alt: null, syl: [], src: [], lig: 0, mens: m0 ? m0.sign : null, sign: m0 ? m0.sign : null}); }
@@ -1343,12 +1349,13 @@ function prepare(){
 }
 /* the clef in force at time t: the voice's own, until a clef change (Add > Clef change, or a *clef inside the music) */
 function clefAt(v, t){
+  if (v.sharedStaff) return v.clef;
   let c = v.clef;
   for (const m of v.clefs) if (m.t > EPS && m.t <= t + EPS && KERN_CLEF[m.c]) c = KERN_CLEF[m.c];
   return c;
 }
 /* the clef a line starts with: where a clef change stands at the very start of a line, the line starts with the old clef and the change is drawn as such */
-function lineClef(v, t){ return t > EPS && v.clefs.some(m => m.t > EPS && Math.abs(m.t - t) < EPS) ? clefAt(v, t - 0.01) : clefAt(v, t); }
+function lineClef(v, t){ if (v.sharedStaff) return v.clef; return t > EPS && v.clefs.some(m => m.t > EPS && Math.abs(m.t - t) < EPS) ? clefAt(v, t - 0.01) : clefAt(v, t); }
 /* the clef change that governs time t, if there is one (the clef is then edited there, not at the start of the voice) */
 function clefChangeAt(v, t){ let g = null; for (const m of v.clefs) if (m.t > EPS && m.t <= t + EPS && KERN_CLEF[m.c]) g = m; return g; }
 function keyAt(v, t){
@@ -3466,7 +3473,16 @@ function shiftVis(at, by){
 const VOICE_OPS = {
   rename(i, name){ name = name.trim().slice(0, 40); if (piece.voices[i].name === name) return; commit(() => { piece.voices[i].name = name; }); },
   clef(i, c){
-    const v = piece.voices[i], oldC = (vis(i).clef && CLEFS[vis(i).clef]) ? vis(i).clef : chooseClef(v, st.clefs);
+    const v = piece.voices[i];
+    if (v && v.sharedStaff && st.view === 'score') {
+      const grp = staffGroups(visibleVoices()).find(g => g.voices.includes(v));
+      if (grp && grp.voices.length > 1) {
+        const cfg = ensureStaffCfg();
+        if (c) cfg.clefs[grp.id] = c; else delete cfg.clefs[grp.id];
+        save(); syncUI(); render(); return;
+      }
+    }
+    const oldC = (vis(i).clef && CLEFS[vis(i).clef]) ? vis(i).clef : chooseClef(v, st.clefs);
     vis(i).clef = c || null; save();
     const newC = (c && CLEFS[c]) ? c : chooseClef(v, st.clefs);
     const dStep = (APP.noClef && (oldC === 'none' || newC === 'none') && oldC !== newC)
