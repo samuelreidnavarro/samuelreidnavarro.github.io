@@ -71,7 +71,7 @@ ${APP.popsBeforeVoices || ''}
           <label class="lab bnx" for="bunitSel">A bar is</label><select class="bnx" id="bunitSel" title="What one bar is when counting"><option value="bar">From barline to barline</option><option value="mens">A breve of the mensuration sign</option><option value="S">A semibreve</option><option value="B">A breve</option><option value="Bp">A perfect breve (dotted)</option><option value="L">A long</option><option value="Lp">A perfect long</option></select>
           <span class="lab bnx">Bar numbers over</span><div class="btns bnx" id="bposSeg" role="group" aria-label="Bar numbers over"><button class="tb" data-v="top" title="Above the highest staff of each system">Top staff</button><button class="tb" data-v="all" title="Above every staff">Every staff</button></div>
           <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
-          <span class="lab">Accidentals</span><div class="btns" id="accSeg" role="group" aria-label="Accidental style"><button class="tb" data-v="modern" title="Standard vertical sharp and natural">Modern</button><button class="tb" data-v="old" title="Renaissance diagonal double-cross sharp (diesis) and square b quadratum">Old</button><button class="tb" data-v="early" title="Early single diagonal cross sharp (×) and square b quadratum">Early</button></div>
+          <span class="lab">Accidentals</span><div class="btns" id="accSeg" role="group" aria-label="Accidental style"><button class="tb" data-v="modern" title="Standard vertical sharp and natural">Modern</button><button class="tb" data-v="old" title="Renaissance diagonal double-cross sharp (diesis) and square b quadratum">Old</button></div>
           <div class="subhead">Lyrics</div>
           <label class="lab" for="lyrFontSel">Font</label><select id="lyrFontSel" title="Font used for lyrics"></select>
           <label class="ctl" for="lyrPt">Size</label><span class="pt-field"><input type="number" id="lyrPt" min="4" max="36" step="0.5" inputmode="decimal" aria-label="Lyrics size in points"><span>pt</span></span>
@@ -340,7 +340,6 @@ const NATSC = 1.3;   /* the natural sign is drawn a little larger than its glyph
 const accGlyph = k => {
   const s = typeof st !== 'undefined' ? st.accStyle : 'modern';
   if (s === 'old') return k === 'sh' ? 'shO' : k === 'na' ? 'naO' : k;
-  if (s === 'early') return k === 'sh' ? 'shX' : k === 'na' ? 'naO' : k;
   return k;
 };
 const gw = k => { const g = accGlyph(k); return (GLY[g].b[2] - GLY[g].b[0]) * (g === 'na' ? NATSC : 1); };
@@ -1111,7 +1110,7 @@ if (!st.noteCol) st.noteCol = 'black';
 if (st.colLock !== 'on' && st.colLock !== 'off') st.colLock = st.staff === st.noteCol ? 'on' : 'off';
 if (!st.lyrFont) st.lyrFont = 'fell';
 if (!st.stems) st.stems = 'adaptive';
-if (!st.accStyle) st.accStyle = 'modern';
+if (st.accStyle !== 'old') st.accStyle = 'modern';
 if (typeof st.lyrPt !== 'number' || !isFinite(st.lyrPt)) st.lyrPt = typeof st.lyrSize === 'number' && isFinite(st.lyrSize) ? Math.round(st.lyrSize * 5 * 2) / 2 : 8.5;
 if (!st.printPaper || st.printPaper === 'web') st.printPaper = st.paper && st.paper !== 'web' ? st.paper : 'A4';
 st.hs = Math.max(-2, Math.min(10, st.hs)); st.vs = Math.max(0, Math.min(10, st.vs)); st.ss = Math.max(0, Math.min(10, st.ss));
