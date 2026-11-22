@@ -63,7 +63,7 @@
             else {
               const L = 'cdefgab'[((e.step % 7) + 7) % 7];
               const alt = e.alt !== null && e.alt !== undefined ? e.alt : (keyAt(v, e.t)[L] || 0);
-              tok = pitch(e, alt) + (e.ed && e.alt !== null && e.alt !== undefined ? '?' : '') + dur;
+              tok = (e.look === 'red' ? '\\once \\override NoteHead.color = #red ' : '') + pitch(e, alt) + (e.ed && e.alt !== null && e.alt !== undefined ? '?' : '') + dur;
               if (k < vals.length - 1 || tieOut) tok += ' ~';
               const first = !tieIn && k === 0;
               if (first) {
@@ -86,7 +86,8 @@
       const hasLyr = lyr.some(x => x !== '_');
       return {id, name: v.name || 'Voice ' + (vi + 1), abbr: v.abbr || '', body: `${id} = {\n${notes}}\n` + (hasLyr ? `${id}Words = \\lyricmode {\n    ${lyr.join(' ')}\n}\n` : ''), hasLyr};
     });
-    let out = `\\version "2.24.0"\n\n\\header {\n  title = ${lq(P.title || '')}\n${P.composer ? `  composer = ${lq(P.composer)}\n` : ''}  tagline = ##f\n}\n\n`;
+    const cr = (P.ext && P.ext.credits) || {};
+    let out = `\\version "2.24.0"\n\n\\header {\n  title = ${lq(P.title || '')}\n${cr.source ? `  subtitle = ${lq(cr.source)}\n` : ''}${P.composer ? `  composer = ${lq(P.composer)}\n` : ''}${cr.editor ? `  arranger = ${lq('Ed. ' + cr.editor)}\n` : ''}${cr.licence ? `  copyright = ${lq(cr.licence)}\n` : ''}  tagline = ##f\n}\n\n`;
     out += staves.map(s => s.body).join('\n');
     out += `\n\\score {\n  <<\n    \\new StaffGroup <<\n` + staves.map(s => `      \\new Staff \\with { instrumentName = ${lq(s.name)} } {\n        \\new Voice = ${lq(s.id)} \\${s.id}\n      }\n` + (s.hasLyr ? `      \\new Lyrics \\lyricsto ${lq(s.id)} \\${s.id}Words\n` : '')).join('') + `    >>\n  >>\n  \\layout {\n    \\context { \\Score \\override SpacingSpanner.base-shortest-duration = #(ly:make-moment 1/16) }\n  }\n}\n`;
     return out;

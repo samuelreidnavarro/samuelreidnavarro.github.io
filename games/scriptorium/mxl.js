@@ -55,7 +55,7 @@
           vals.forEach((w, k) => {
             const dur = ticks(d) === 0 ? 0 : Math.round((w.tm ? 2 / 3 : 1) * TYPES.find(q => q[1] === w.type)[0] * (w.dots === 1 ? 1.5 : w.dots === 2 ? 1.75 : 1));
             const ti = tieIn || k > 0, to = tieOut || k < vals.length - 1;
-            x += '<note>';
+            x += `<note${!e.rest && e.look === 'red' ? ' color="#8B2E22"' : ''}>`;
             if (e.rest) x += '<rest/>';
             else {
               const L = 'CDEFGAB'[((e.step % 7) + 7) % 7], oct = Math.floor(e.step / 7) - 0;
@@ -65,6 +65,7 @@
             x += `<duration>${dur}</duration>`;
             if (!e.rest) { if (ti) x += '<tie type="stop"/>'; if (to) x += '<tie type="start"/>'; }
             x += `<voice>1</voice><type>${w.type}</type>` + '<dot/>'.repeat(w.dots);
+            if (!e.rest && (e.look === 'black' || e.look === 'white')) x += `<notehead filled="${e.look === 'black' ? 'yes' : 'no'}">normal</notehead>`;
             if (w.tm) x += '<time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>';
             if (!e.rest && e.alt !== null && e.alt !== undefined && !ti) x += `<accidental${e.ed ? ' editorial="yes" parentheses="yes"' : ''}>${e.alt < 0 ? 'flat' : e.alt > 0 ? 'sharp' : 'natural'}</accidental>`;
             if (!e.rest && (ti || to)) x += `<notations>${ti ? '<tied type="stop"/>' : ''}${to ? '<tied type="start"/>' : ''}</notations>`;
@@ -86,10 +87,11 @@
       return `<part id="P${pi + 1}">${x}</part>`;
     });
     const list = P.voices.map((v, pi) => `<score-part id="P${pi + 1}"><part-name>${xesc(v.name)}</part-name></score-part>`).join('');
+    const cr = (P.ext && P.ext.credits) || {};
     return `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
 <score-partwise version="4.0"><work><work-title>${xesc(P.title || '')}</work-title></work>` +
-      `<identification>${P.composer ? `<creator type="composer">${xesc(P.composer)}</creator>` : ''}<encoding><software>${xesc(APP.name)} (Scriptorium)</software></encoding></identification>` +
+      `<identification>${P.composer ? `<creator type="composer">${xesc(P.composer)}</creator>` : ''}${cr.editor ? `<creator type="editor">${xesc(cr.editor)}</creator>` : ''}${cr.licence ? `<rights>${xesc(cr.licence)}</rights>` : ''}<encoding><software>${xesc(APP.name)} (Scriptorium)</software></encoding>${cr.source ? `<source>${xesc(cr.source)}</source>` : ''}</identification>` +
       `<part-list>${list}</part-list>${parts.join('')}</score-partwise>`;
   }
   /* a zip of stored (uncompressed) files, enough for .mxl */
