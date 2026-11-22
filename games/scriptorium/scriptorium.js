@@ -151,6 +151,7 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
     <button class="pagenav prev" id="pgPrev" aria-label="Previous page" title="Previous page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12 17 6.2Z"/></svg></button>
     <div id="countBox" aria-live="off" hidden></div>
     <ul id="clefPick" class="menu" role="menu" aria-label="Clef" hidden></ul>
+    <ul id="notePick" class="menu" role="menu" aria-label="Note" hidden></ul>
     <button class="pagenav next" id="pgNext" aria-label="Next page" title="Next page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button>
     <div class="handbox" id="handBox" title="The tactus: the hand drops on one beat and lifts on the next" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="handRot"></g></svg></div><div class="handbox pendbox" id="pendBox" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="pendG"><path d="M66 158 H130 L120 142 H76Z" fill="currentColor"/><g id="pendRot"><line x1="98" y1="150" x2="98" y2="-16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="84" y="14" width="28" height="34" rx="4" fill="currentColor"/></g></g></svg></div><div class="handpop" id="handPop" role="group" aria-label="Hand settings" hidden><label for="handSizeP">Size</label><input type="range" id="handSizeP" min="0.4" max="2.5" step="0.05"><label for="handOpP">Opacity</label><input type="range" id="handOpP" min="0.05" max="1" step="0.05"></div>
   </div>
@@ -460,6 +461,10 @@ function parsePitchAlt(rest){
   if (am && am[1]) { alt = am[1][0] === '#' ? am[1].length : am[1][0] === '-' ? -am[1].length : 0; ed = !!am[2]; }
   return {step, alt, ed};
 }
+/* Note appearance, for the eye only (Clemens Goldberg's editions: a black note against a white one in the same chord
+   marks the supplementary note, not coloration). Kern signifiers: N black, + white, j red. */
+const LOOK_SIG = {black: 'N', white: '+', red: 'j'};
+function lookOfTok(tok){ return tok.includes('N') ? 'black' : tok.includes('j') ? 'red' : tok.includes('+') ? 'white' : null; }
 function parseNoteTok(raw){
   const parts = raw.trim().split(/\s+/);
   const tok = parts[0];
@@ -470,6 +475,7 @@ function parseNoteTok(raw){
   ev.tieStart = tok.includes('['); ev.tieEnd = tok.includes(']'); ev.tieMid = tok.includes('_');
   ev.ferm = tok.includes(';');
   ev.colH = tok.includes('@');   /* coloured as written (CMME), user signifier */
+  { const lk = lookOfTok(tok); if (lk) ev.look = lk; }   /* how the note is shown only (black, white, red): no effect on its value */
   ev.altd = tok.includes('~');
   ev.dd = tok.includes('Y');      /* punctus divisionis: divides the perfection, adds nothing */
   ev.pa = tok.includes('W');      /* punctus additionis on an already-perfect value: keeps it perfect, adds nothing */
@@ -483,7 +489,7 @@ function parseNoteTok(raw){
     for (let i = 1; i < parts.length; i++) {
       const ri = recipDur(parts[i]);
       const pi = parsePitchAlt(ri ? ri.rest : parts[i]);
-      if (pi && pi.step !== ev.step && !chord.some(c => c.step === pi.step)) chord.push(pi);
+      if (pi && pi.step !== ev.step && !chord.some(c => c.step === pi.step)) { const lk = lookOfTok(parts[i]); if (lk) pi.look = lk; chord.push(pi); }
     }
     if (chord.length) { chord.sort((a, b) => a.step - b.step); ev.chord = chord; }
   }
@@ -942,7 +948,7 @@ function notate(piece, v, mode){
       curSign = sign; segStart = e.t;
     }
     const mi = mensInfo(sign);
-    const base = {t: e.t, d: e.d, rest: !!e.rest, step: e.step, alt: e.alt, ed: e.ed, chord: !e.rest && e.chord && e.chord.length ? e.chord.map(c => ({step: c.step, alt: c.alt, ed: c.ed})) : null, syl: e.syl, ferm: e.ferm, mens, sign, src: e.src, lig: e.rest ? 0 : (e.lig || 0)};
+    const base = {t: e.t, d: e.d, rest: !!e.rest, step: e.step, alt: e.alt, ed: e.ed, chord: !e.rest && e.chord && e.chord.length ? e.chord.map(c => ({step: c.step, alt: c.alt, ed: c.ed, look: c.look})) : null, look: e.rest ? null : e.look || null, syl: e.syl, ferm: e.ferm, mens, sign, src: e.src, lig: e.rest ? 0 : (e.lig || 0)};
     if (e.tupS) inTup = true;
     if (mode === 'fake') {
       const wd = rt(e.d * mi.p);
@@ -1329,6 +1335,8 @@ function prepare(){
       s.pos = s.rest ? null : s.step - CLEFS[s.clef].bottom;
       const g = s.rest ? SHAPE_REST[s.g] : BLACK ? BLACK_G[s.g] || s.g + 'c' : MODERN ? MOD_G[s.g] || s.g : s.g + (s.col ? 'c' : '');
       s.glyph = g; s.red = BLACK && !s.rest && !!s.col;
+      s.glyphAuto = s.glyph; s.redAuto = s.red;
+      if (s.look && !s.rest) { const lk = lookGlyph(s, s.look); s.glyph = lk.g; s.red = lk.red; }
       s.hw = s.phantom ? 1.2 : s.rest ? (s.g === 'Mx' ? 1.2 : s.g === 'Sm' || s.g === 'F' || s.g === 'Sf' ? gw(g) : 0.42) : gw(g);
       const nsExtra = ns > 1 ? s.hw * (ns - 1) * 0.5 : 0;
       /* accidental before the head (written ones only; key signature ones are implied) */
@@ -1659,8 +1667,19 @@ function symSvg(s, X, top, showNotes, suppressMark, rdy){
   if (s.phantom) return `<g class="${s.id} phantom"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/>${!suppressMark && s.mens ? markSvg(s, X, top) : ''}</g>`;
   return `<g class="${s.id}"><rect class="selbg" x="${f(X - 0.5)}" y="${f(top - 1.4)}" width="${f(s.hw + 1)}" height="6.8" rx="0.35"/><rect class="hit" x="${f(X - 0.3)}" y="${f(hy)}" width="${f(s.hw + 0.6)}" height="${s.rest ? 3 : 2}"/>${symInner(s, X, top, suppressMark, rdy)}</g>`;
 }
-function chordHeadSvg(s, x, y){
-  const g = s.glyph;
+/* the glyph of a note (or of one head of a chord) with a chosen appearance; only the shapes that can be white or
+   black (maxima to minima) change between the two, red works on all; modern notation shows red only */
+const LOOK_SHAPES = {Mx: 1, L: 1, B: 1, S: 1, M: 1};
+function lookGlyph(s, look){
+  const auto = {g: s.glyphAuto || s.glyph, red: s.glyphAuto ? !!s.redAuto : !!s.red};
+  if (!look || s.rest || s.phantom) return auto;
+  const filled = BLACK ? BLACK_G[s.g] || s.g + 'c' : GLY[s.g + 'c'] ? s.g + 'c' : auto.g;
+  if (look === 'red') return {g: MODERN ? auto.g : filled, red: true};
+  if (MODERN || !LOOK_SHAPES[s.g]) return {g: auto.g, red: false};
+  return {g: look === 'black' ? filled : s.g, red: false};
+}
+function chordHeadSvg(s, x, y, glyph){
+  const g = glyph || s.glyph;
   if (g === 'M') return use('S', x, y);
   if (g === 'Mc' || g === 'Sm' || g === 'Smc' || g === 'F' || g === 'Fc' || g === 'F2' || g === 'F3' || g === 'Sf' || g === 'Sfc') return use('Sc', x, y);
   if (g === 'L') return use('B', x, y);
@@ -1687,7 +1706,8 @@ function symInner(s, X, top, suppressMark, rdy){
     if (s.acc) body += use(s.acc, hx - gw(s.acc) - 0.3, y);
     o += s.ligSvg;
   } else if (s.chord && s.chord.length) {
-    const all = [{pos: s.pos, acc: s.acc, main: true}, ...s.chord.map(c => ({pos: c.pos, acc: c.acc, main: false}))].sort((a, b) => a.pos - b.pos);
+    const all = [{pos: s.pos, acc: s.acc, main: true, look: s.look}, ...s.chord.map(c => ({pos: c.pos, acc: c.acc, main: false, look: c.look}))].sort((a, b) => a.pos - b.pos);
+    const anyLook = all.some(n => n.look);
     let prevPos = -999, prevOff = false;
     for (const n of all) {
       const off = n.pos - prevPos <= 1 && !prevOff;
@@ -1702,12 +1722,12 @@ function symInner(s, X, top, suppressMark, rdy){
     all.forEach((n, idx) => {
       const cy = top + 4 - n.pos * 0.5, nx = hx + n.dx;
       o += ledgers(n.pos, nx - s.hw * (ns - 1) * 0.5, s.hw * ns, top);
-      if (idx === stemIdx) {
-        const gm = flip ? useT(s.glyph, nx, cy, 1, -1) : use(s.glyph, nx, cy);
-        grp += gm;
-      } else {
-        grp += chordHeadSvg(s, nx, cy);
-      }
+      /* each head keeps its own appearance (a white main note with a black supplementary one) */
+      const lk = anyLook ? lookGlyph(s, n.look) : {g: s.glyph, red: false};
+      let hd;
+      if (idx === stemIdx) hd = flip ? useT(lk.g, nx, cy, 1, -1) : use(lk.g, nx, cy);
+      else hd = chordHeadSvg(s, nx, cy, lk.g);
+      grp += anyLook && lk.red ? `<g class="red">${hd}</g>` : hd;
       if (n.acc) { grp += use(n.acc, hx - gw(n.acc) - 0.3 - accOff, cy); accOff += gw(n.acc) + 0.22; }
       if (s.dot) {
         const dx = hx + s.hw + (all.some(q => q.dx) ? s.hw * 0.85 : 0) + (s.dd ? 0.55 : 0.4);
@@ -1722,7 +1742,7 @@ function symInner(s, X, top, suppressMark, rdy){
       const sx = MODERN ? (flip ? anchorX + 0.04 : anchorX + s.hw - 0.14) : (TAILED[s.g] ? anchorX + s.hw - 0.12 : anchorX + s.hw * 0.5 - 0.06);
       grp += `<rect class="ink" x="${f(sx)}" y="${f(yTop)}" width="0.12" height="${f(Math.max(0.1, yBot - yTop))}"/>`;
     }
-    body += s.red ? `<g class="red">${grp}</g>` : grp;
+    body += s.red && !anyLook ? `<g class="red">${grp}</g>` : grp;
   } else {
     o += ledgers(s.pos, hx - s.hw * (ns - 1) * 0.5, s.hw * ns, top);
     if (s.acc) body += use(s.acc, hx - gw(s.acc) - 0.3, y);
@@ -4043,7 +4063,31 @@ function cmmeToKernRich(text, fileName){
       const evs = [];
       const walk = list => { for (const e of list) {
         const tag = e.localName;
-        if (tag === 'MultiEvent') { walk([...e.children]); continue; }
+        /* notes sounding together in one voice (a chord, divisi): one event with the others as its chord. Where some are
+           coloured and others not, the colour only tells the supplementary note from the main one (Clemens Goldberg's
+           editions): the chord takes the white note's value and the black note is shown black, for the eye only */
+        if (tag === 'MultiEvent') {
+          const kids = [...e.children], notes = kids.filter(c => c.localName === 'Note');
+          walk(notes.length ? kids.filter(c => c.localName !== 'Note' && c.localName !== 'Rest') : kids);
+          if (!notes.length) continue;
+          const n0 = evs.length, tStart = t, open0 = open;
+          walk(notes);
+          const grp = evs.splice(n0).filter(q => !q.rest);
+          t = tStart;
+          if (!grp.length) continue;
+          const mixed = grp.some(q => q.col) && grp.some(q => !q.col);
+          const cand = mixed ? grp.filter(q => !q.col) : grp;
+          const main = cand.reduce((a, q) => q.d > a.d ? q : a, cand[0]);
+          const others = grp.filter(q => q !== main && q.step !== main.step);
+          main.syl = (grp.find(q => q.syl) || {}).syl;
+          if (!main.syl) open = open0;
+          if (grp.some(q => q.ligNext)) main.ligNext = true;
+          if (grp.some(q => q.ferm)) main.ferm = true;
+          if (others.length) main.chord = others.map(q => ({step: q.step, alt: q.alt, ed: q.ed, look: mixed && q.col ? 'black' : undefined}));
+          main.t = Math.round(t);
+          evs.push(main); t += main.d;
+          continue;
+        }
         if (tag === 'VariantReadings') {
           const rd = ch(e, 'Reading').find(r => ch(r, 'VariantVersionID').some(x => x.textContent.trim().toUpperCase() === 'DEFAULT'));
           if (rd) walk([...(c1(rd, 'Music') || rd).children]);
@@ -4153,7 +4197,7 @@ function cmmeToKernRich(text, fileName){
     if (V.keyAlts) V.key = -Object.keys(V.keyAlts).length;
     V.clef = !V.oclef ? null : /^F/.test(V.oclef) ? 'F4' : /^(G|C1|C2)/.test(V.oclef) ? 'G2' : 'Gv2';
   }
-  const S = {title, composer, attributed, source, voices, bars, doubles, rdf: ['@ = coloured (black) note']};
+  const S = {title, composer, attributed, source, voices, bars, doubles, rdf: ['@ = coloured (black) note', 'N = shown black only (no effect on the value)']};
   let kern = ScoreImport._.toKern(S, fileName);
   /* attach '~' (altered) and 'Y' (punctus divisionis) onto the corresponding **kern note tokens */
   const P = parseKern(kern);
@@ -4162,10 +4206,13 @@ function cmmeToKernRich(text, fileName){
     P.voices.forEach((pv, vi) => {
       const sv = vs[vi];
       for (const se of sv.events) {
-        if (!se.altd && !se.dd) continue;
-        const t = rt(se.t * 2 / W);
+        if (!se.altd && !se.dd && !se.chord) continue;
+        const t = rt(se.t / W);   /* W is a semibreve, as the events count */
         const pe = pv.events.find(e => !e.rest && eq(e.t, t));
-        if (pe) { if (se.altd) pe.altd = true; if (se.dd) pe.dd = true; }
+        if (pe) {
+          if (se.altd) pe.altd = true; if (se.dd) pe.dd = true;
+          if (se.chord) pe.chord = se.chord.map(c => { const o = {step: c.step, alt: c.alt, ed: c.ed}; if (c.look) o.look = c.look; return o; }).sort((a, b) => a.step - b.step);
+        }
       }
     });
     kern = writeKern(P);
@@ -4565,11 +4612,12 @@ function singleNoteTok(e, tie){
   if (e.altd && !e.rest) s += '~';
   if (e.dd && !e.rest) s += 'Y';
   if (e.pa && !e.rest) s += 'W';
+  if (e.look && !e.rest && LOOK_SIG[e.look]) s += LOOK_SIG[e.look];
   return s;
 }
 function noteTok(e, tie){
   if (!e.rest && e.chord && e.chord.length) {
-    return [singleNoteTok(e, tie), ...e.chord.map(c => singleNoteTok({...e, step: c.step, alt: c.alt, ed: c.ed, ferm: false}, tie))].join(' ');
+    return [singleNoteTok(e, tie), ...e.chord.map(c => singleNoteTok({...e, step: c.step, alt: c.alt, ed: c.ed, look: c.look, ferm: false}, tie))].join(' ');
   }
   return singleNoteTok(e, tie);
 }
@@ -6816,6 +6864,7 @@ const CBA = {
   key(e){
     if (!piece) return false;
     const k = e.key, mod = e.ctrlKey || e.metaKey, has = !!(ed.sel || ed.range || ed.picks);
+    if ((k === 'K' || k === 'k') && e.shiftKey && !mod && !e.altKey && has) { cycleLook(); return true; }
     if (!/^Arrow/.test(k)) return false;
     if (!ed.on && !has) return false;
     const horiz = k === 'ArrowLeft' || k === 'ArrowRight';
@@ -6921,8 +6970,101 @@ pagesEl.addEventListener('contextmenu', e => {
   /* on a Mac, Ctrl-click arrives as a right-click: it adds to the selection, as Ctrl/Cmd-click does */
   if (e.ctrlKey && e.button === 0) { if (ed.sel || ed.range || ed.picks) togglePick(n.vi, n.s); return; }
   if (!writable(piece.voices[n.vi])) { refuse(); return; }
-  toRestOrRemove(n.vi, n.s);
+  /* a rest is removed at once; a note opens a small menu: Rest, and how the note looks */
+  if (n.s.rest) { toRestOrRemove(n.vi, n.s); return; }
+  openNotePick(n, e);
 });
+/* Note appearance: black, white or red for the eye only. The value, the sound and the mensural reading stay as they
+   are (event field look, kern N / + / j). On a chord the head under the pointer is changed. */
+const LOOKS = [['', 'As notated'], ['black', 'Black'], ['white', 'White'], ['red', 'Red']];
+const notePick = $('#notePick');
+notePick.tabIndex = -1;
+let notePickAt = null;
+function headAt(n, e){
+  const s = n.s;
+  if (!s.chord || !s.chord.length) return null;
+  const hit = n.g.querySelector('rect.hit'), m = n.g.getScreenCTM();
+  if (!hit || !m) return null;
+  const y = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse()).y, y0 = +hit.getAttribute('y') + 1;
+  const pos = s.pos + (y0 - y) / 0.5;
+  let best = {step: s.step, d: Math.abs(pos - s.pos), main: true};
+  for (const c of s.chord) { const d = Math.abs(pos - c.pos); if (d < best.d) best = {step: c.step, d, main: false}; }
+  return best.main ? 'main' : best.step;
+}
+function lookEvents(v, s, head, fn){
+  for (const i of s.src) {
+    const ev = v.events[i]; if (!ev || ev.rest) continue;
+    if (head === null || head === 'main') fn(ev);
+    if (ev.chord) for (const c of ev.chord) if (head === null || c.step === head) fn(c);
+  }
+}
+function setLook(v, s, head, look){
+  commit(() => lookEvents(v, s, head, o => { if (look) o.look = look; else delete o.look; }));
+}
+function openNotePick(n, e){
+  const v = piece.voices[n.vi], head = headAt(n, e);
+  let cur = '';
+  lookEvents(v, n.s, head, o => { if (!cur && o.look) cur = o.look; });
+  notePickAt = {vi: n.vi, t: n.s.t, head};
+  const sw = k => {
+    const g = k ? lookGlyph(n.s, k) : {g: n.s.glyphAuto || n.s.glyph, red: n.s.glyphAuto ? n.s.redAuto : n.s.red};
+    const gl = chordHeadGlyph(g.g);
+    return `<span class="lookico${g.red ? ' red' : ''}">${glyphIcon(gl, 3)}</span>`;
+  };
+  notePick.innerHTML = `<li role="menuitem" data-a="rest"><span class="lookico"></span><span>Rest</span></li><li class="sep" role="separator"></li>` +
+    `<li class="hd" role="presentation">Appearance</li>` +
+    LOOKS.map(([k, l]) => `<li role="menuitemradio" data-look="${k}" aria-checked="${k === cur}" aria-selected="${k === cur}" title="${k ? 'Shown ' + l.toLowerCase() + ' only: the value and the sound stay as they are' : 'As the notation gives it'}">${sw(k)}<span>${l}</span></li>`).join('');
+  const wr = $('.viewwrap').getBoundingClientRect();
+  notePick.hidden = false;
+  notePick.style.left = Math.max(4, Math.min(wr.width - notePick.offsetWidth - 4, e.clientX - wr.left)) + 'px';
+  notePick.style.top = (e.clientY - wr.top + 10) + 'px';
+  notePick.focus({preventScroll: true});
+}
+function chordHeadGlyph(g){ return GLY[g] ? g : 'B'; }
+function notePickDo(li){
+  const at = notePickAt; notePick.hidden = true; notePickAt = null;
+  if (!li || !at || !piece) return;
+  const v = piece.voices[at.vi], s = v && (v.syms || []).find(q => q.src && !q.rest && Math.abs(q.t - at.t) < EPS);
+  if (!s || !writable(v)) return;
+  if (li.dataset.a === 'rest') { toRestOrRemove(at.vi, s); return; }
+  if (li.dataset.look === undefined) return;
+  setLook(v, s, at.head, li.dataset.look);
+}
+notePick.addEventListener('click', e => { const li = e.target.closest('li[data-a],li[data-look]'); if (li) notePickDo(li); });
+notePick.addEventListener('keydown', e => {
+  e.stopPropagation();
+  const items = [...notePick.querySelectorAll('li[data-a],li[data-look]')];
+  let i = items.findIndex(li => li.classList.contains('active'));
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault(); i = (i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length;
+    items.forEach((li, k) => li.classList.toggle('active', k === i));
+  } else if ((e.key === 'Enter' || e.key === ' ') && i >= 0) { e.preventDefault(); notePickDo(items[i]); }
+  else if (e.key === 'Escape' || e.key === 'Tab') { notePick.hidden = true; notePickAt = null; }
+});
+document.addEventListener('pointerdown', e => { if (!notePick.hidden && !e.target.closest('#notePick')) { notePick.hidden = true; notePickAt = null; } });
+/* touch: holding a finger on a note opens the same menu (iPhones send no right-click) */
+let notePress = null;
+pagesEl.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'touch' || !piece) return;
+  const n = noteAt(e); if (!n || n.s.rest) return;
+  const x = e.clientX, y = e.clientY, ev = {clientX: x, clientY: y};
+  clearTimeout(notePress && notePress.tm);
+  notePress = {x, y, tm: setTimeout(() => { notePress = null; if (!writable(piece.voices[n.vi])) return; clearGhost(); openNotePick(n, ev); }, 550)};
+});
+const notePressEnd = e => { if (!notePress) return; if (e.type !== 'pointermove' || Math.hypot(e.clientX - notePress.x, e.clientY - notePress.y) > 10) { clearTimeout(notePress.tm); notePress = null; } };
+['pointermove', 'pointerup', 'pointercancel'].forEach(t => pagesEl.addEventListener(t, notePressEnd));
+/* Shift+K: the selected notes go through the appearances (as notated, black, white, red) */
+function cycleLook(){
+  if (!piece || !CBA.guard()) return;
+  let it = [];
+  if (ed.range || ed.picks) it = selItems().filter(x => !x.e.rest && writable(x.v)).map(x => ({v: x.v, evs: [x.e]}));
+  else { const s = selSym(), v = curVoice(); if (s && !s.rest && v && writable(v)) it = [{v, evs: s.src.map(i => v.events[i])}]; }
+  if (!it.length) { toast('Select a note first, then Shift+K changes how it looks.'); return; }
+  const order = ['', 'black', 'white', 'red'], first = it[0].evs[0];
+  const next = order[(order.indexOf(first.look || '') + 1) % order.length];
+  commit(() => { for (const x of it) for (const ev of x.evs) for (const o of [ev, ...(ev.chord || [])]) { if (next) o.look = next; else delete o.look; } });
+  toast(next ? 'Shown ' + next + ' (for the eye only: the value and the sound stay as they are).' : 'Shown as notated.');
+}
 let noteDrag = null;
 pagesEl.addEventListener('pointerdown', e => {
   if (e.button !== 0 || e.pointerType !== 'mouse' || e.shiftKey) return;
