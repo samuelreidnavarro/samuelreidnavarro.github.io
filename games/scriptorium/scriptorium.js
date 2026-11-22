@@ -1073,7 +1073,7 @@ function notate(piece, v, mode){
         /* breve and long rests stand on the breve grid (a rest is never imperfect: two semibreves of rest in O are two semibreve rests) */
         const Bv = tab[2][1], posB = ((rt(t - segStart) * mi.p) % Bv + Bv) % Bv;
         const room = eq(posB, 0) || eq(posB, Bv) ? r : Math.min(r, Bv - posB);
-        let pick = tab.find(([g, val]) => val <= room + EPS && g !== 'Mx');
+        let pick = tab.find(([g, val]) => val <= room + EPS && (g !== 'Mx' || eq(posB, 0) && room >= val - EPS));
         /* a rest inside a coloured group counts two thirds of its value */
         const cp = tab.find(([g, val]) => eq(r * 1.5, val));
         if (cp && !tab.some(([g, val]) => eq(r, val))) pick = [cp[0], r];
@@ -4332,6 +4332,7 @@ function cmmeToKernRich(text, fileName){
       let t = t0, effP = 1, curTc = baseTc, curSign = 'C', open = false;
       let sig = V.keys.length ? Object.assign({}, V.keys[V.keys.length - 1].alts) : {};
       let sigDirty = false;
+      const pendingAcc = {};
       const evs = [];
 
       const parseNoteEl = e => {
@@ -4348,8 +4349,14 @@ function cmmeToKernRich(text, fileName){
         if (ev.step === null) { ev.rest = true; delete ev.step; return ev; }
         const L = tx(e, 'LetterName').toLowerCase(), ma = c1(e, 'ModernAccidental'), s0 = sig[L] || 0;
         const a = ma ? Math.max(-1, Math.min(1, Math.round(+tx(ma, 'PitchOffset') || 0))) : 0;
-        ev.alt = a === s0 ? null : a;
-        ev.ed = a !== s0;
+        if (L in pendingAcc) {
+          ev.alt = pendingAcc[L];
+          ev.ed = false;
+          delete pendingAcc[L];
+        } else {
+          ev.alt = a === s0 ? null : a;
+          ev.ed = a !== s0;
+        }
         if (c1(e, 'Colored')) ev.colH = true;
         if (c1(e, 'Corona')) ev.ferm = true;
         if (c1(e, 'Signum')) ev.signum = true;
@@ -4450,6 +4457,10 @@ function cmmeToKernRich(text, fileName){
             const L = tx(pc, 'LetterName').toLowerCase();
             if (/^Bmol/i.test(app)) { sig[L] = -1; sigDirty = true; }
             else if (/^(Diesis|Sharp)/i.test(app)) { sig[L] = 1; sigDirty = true; }
+          } else if (pc && /^(Bmol|Diesis|Sharp|Bqua|Natural)/i.test(app)) {
+            /* CMME encodes inline source-written accidentals as <Clef> without <Signature/> */
+            const L = tx(pc, 'LetterName').toLowerCase();
+            pendingAcc[L] = /^Bmol/i.test(app) ? -1 : /^(Diesis|Sharp)/i.test(app) ? 1 : 0;
           } else if (/^[CFG]$/.test(app) && loc % 2) {
             const cName = app + ((loc + 1) / 2);
             if (!V.oclef && t < EPS) V.oclef = cName;
@@ -4475,6 +4486,8 @@ function cmmeToKernRich(text, fileName){
             sign = (tp === 3 ? 'O' : 'C') + (pr === 3 ? '.' : '');
           }
           if (!sign) continue;
+          /* In CMME, each <Mensuration> resets TempoChange to 1/1 unless explicitly specified in <MensInfo><TempoChange> */
+          curTc = 1;
           if (minf) {
             if (+tx(minf, 'ModusMinor') === 3) sign += ';mp';
             if (+tx(minf, 'ModusMaior') === 3) sign += ';xp';
