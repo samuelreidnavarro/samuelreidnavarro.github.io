@@ -646,7 +646,10 @@ function mensInfo(sign){
   const T = circle || num === '3' || (fr && +fr[1] === 3) ? 3 : 2;
   const P = dot ? 3 : 2;
   /* proportions: JRP gives sounding values, so written = sounding x p */
-  const p = fr ? +fr[1] / +fr[2] : num === '3' ? 1.5 : num === '2' ? 2 : 1;
+  /* ;sf=N (not drawn): this voice's written values sound N times as long as the sign alone says, as in a tenor sung in
+     doubled values by a canon (CMME: the tempo change in the mensuration of that voice) */
+  const sfm = ext.match(/;sf=([\d.]+)/), sf = sfm && +sfm[1] > 0 ? +sfm[1] : 1;
+  const p = (fr ? +fr[1] / +fr[2] : num === '3' ? 1.5 : num === '2' ? 2 : 1) / sf;
   const eqm = ext.match(/;eq=([MSBL])/);
   const M = /mp/.test(ext) ? 3 : 2, X = /xp/.test(ext) ? 3 : 2;
   return {T, P, p, eq: eqm ? eqm[1] : '', M, X};
@@ -4029,6 +4032,35 @@ document.addEventListener('drop', e => {
 }
 /* **kern is read as it is; MusicXML, MuseScore, MIDI, LilyPond, GABC and CMME are turned into **kern first (shared/score-import.js) */
 /* Enhanced CMME reader: preserves explicit <Type> (distinguishing altered notes '~' from imperfected ones) and <Dot> (punctus divisionis 'Y' vs additionis) */
+function retimeByTempo(pend, t0, W){
+  const ref = pend[0];
+  if (!ref.evs.length) return;
+  /* the clock: the first voice's sounding time (written length / tempo) against its own place in the score */
+  const knots = []; let sc = 0, at = t0;
+  for (const e of ref.evs) { const s1 = sc + e.lm / e.tp; knots.push({s0: sc, s1, a0: at, a1: at + e.d}); sc = s1; at += e.d; }
+  const G = s => {
+    if (!knots.length) return t0;
+    let k = knots.find(q => s < q.s1 - 1e-9) || knots[knots.length - 1];
+    return k.a0 + (s - k.s0) * (k.a1 - k.a0) / (k.s1 - k.s0);
+  };
+  for (const q of pend.slice(1)) {
+    let s = 0; const sp = [];
+    for (const e of q.evs) { sp.push([s, s + e.lm / e.tp]); s += e.lm / e.tp; }
+    const xs = q.evs.map((e, i) => { const own = e.lm * W / 2 / e.pp; return own > 0 ? (G(sp[i][1]) - G(sp[i][0])) / own : 1; })
+      .map(x => Math.abs(x - 1) < 1e-4 ? 1 : Math.round(x * 1000) / 1000);
+    if (xs.every(x => x === 1)) continue;
+    const secMets = q.V.mets.filter(m => m.t >= t0 - 0.5);
+    q.V.mets = q.V.mets.filter(m => m.t < t0 - 0.5);
+    let key = null, cur = null, t = t0;
+    q.evs.forEach((e, i) => {
+      const a = Math.round(G(sp[i][0])), b = Math.round(G(sp[i][1]));
+      e.t = a; e.d = b - a; t = b;
+      const base = mensBase(e.sg), k = base + '|' + xs[i];
+      if (k !== key) { key = k; q.V.mets.push({t: a, sign: base + (xs[i] !== 1 ? ';sf=' + xs[i] : '')}); }
+    });
+    q.t = t;
+  }
+}
 function cmmeToKernRich(text, fileName){
   const doc = new DOMParser().parseFromString(text, 'application/xml'), root = doc.documentElement;
   if (!root || root.localName !== 'Piece') return null;
@@ -4051,15 +4083,16 @@ function cmmeToKernRich(text, fileName){
   const len = el => { const l = c1(el, 'Length'); return l ? (+tx(l, 'Num') || 0) / (+tx(l, 'Den') || 1) : 0; };
   const TYPE_G = {Maxima: 'Mx', Longa: 'L', Brevis: 'B', Semibrevis: 'S', Minima: 'M', Semiminima: 'Sm', Fusa: 'F', Semifusa: 'Sf'};
   const doubles = [], bars = [];
-  let t0 = 0;
+  let t0 = 0, hasTempo = false;
   for (const ms of ch(root, 'MusicSection')) {
     const mm = c1(ms, 'MensuralMusic');
     if (!mm) continue;
     let secEnd = t0;
+    const pend = [];
     for (const vx of ch(mm, 'Voice')) {
       const vi = (+tx(vx, 'VoiceNum') || 1) - 1, V = voices[vi];
       if (!V) continue;
-      let t = t0, p = 1, curSign = 'C', open = false, sig = V.keyAlts || {};
+      let t = t0, p = 1, curSign = 'C', open = false, sig = V.keyAlts || {}, tempo = 1, propF = 1;
       const evs = [];
       const walk = list => { for (const e of list) {
         const tag = e.localName;
@@ -4102,8 +4135,12 @@ function cmmeToKernRich(text, fileName){
           } else if (/^[CFG]$/.test(app) && !V.oclef && loc % 2) V.oclef = app + ((loc + 1) / 2);
           continue;
         }
+        /* a proportion event: notes sound shorter by its ratio until the next mensuration */
+        if (tag === 'Proportion') { const n1 = +tx(e, 'Num'), d1 = +tx(e, 'Den'); if (n1 > 0 && d1 > 0) propF *= n1 / d1; continue; }
         if (tag === 'Mensuration') {
           const sg = c1(e, 'Sign'), num = c1(e, 'Number');
+          /* CMME's tempo change: sounding length = written length / tempo; a mensuration without one counts 1 */
+          { const tc = c1(c1(e, 'MensInfo'), 'TempoChange'); tempo = tc && +tx(tc, 'Den') > 0 && +tx(tc, 'Num') > 0 ? +tx(tc, 'Num') / +tx(tc, 'Den') : 1; propF = 1; if (tc) hasTempo = true; }
           let sign = '';
           if (sg) {
             sign = tx(sg, 'MainSymbol') === 'O' ? 'O' : 'C';
@@ -4130,7 +4167,7 @@ function cmmeToKernRich(text, fileName){
         if (tag !== 'Note' && tag !== 'Rest') continue;
         const lMin = len(e), d = lMin * W / 2 / p;
         if (d <= 0) continue;
-        const ev = {t: Math.round(t), d: Math.round(d)};
+        const ev = {t: Math.round(t), d: Math.round(d), lm: lMin, tp: tempo * propF, pp: p, sg: curSign};
         if (tag === 'Rest') ev.rest = true;
         else {
           ev.step = pitchOf(e);
@@ -4172,9 +4209,14 @@ function cmmeToKernRich(text, fileName){
         if (!e.ligNext) lig = 0;
         delete e.ligNext;
       }
-      V.events.push(...evs);
-      secEnd = Math.max(secEnd, t);
+      pend.push({V, vi, evs, t});
     }
+    /* Voices that move at different speeds (a canon: the tenor in doubled values, written in the same sign as the others):
+       the file's tempo changes give every note its real sounding length, and the first voice sets the clock. A voice that
+       sounds longer or shorter than its own sign says gets that factor on its sign (;sf=N, not drawn), so its values read
+       and add up right and every voice ends together. */
+    if (hasTempo && pend.length > 1) retimeByTempo(pend, t0, W);
+    for (const q of pend) { q.V.events.push(...q.evs); secEnd = Math.max(secEnd, q.t); }
     secEnd = Math.round(secEnd);
     let fin = secEnd;
     for (const V of voices) {
@@ -4193,7 +4235,7 @@ function cmmeToKernRich(text, fileName){
     t0 = secEnd;
   }
   for (const V of voices) {
-    V.events.forEach(e => { delete e.longa; delete e.isDottedAdd; });
+    V.events.forEach(e => { delete e.longa; delete e.isDottedAdd; delete e.lm; delete e.tp; delete e.pp; delete e.sg; });
     if (V.keyAlts) V.key = -Object.keys(V.keyAlts).length;
     V.clef = !V.oclef ? null : /^F/.test(V.oclef) ? 'F4' : /^(G|C1|C2)/.test(V.oclef) ? 'G2' : 'Gv2';
   }
