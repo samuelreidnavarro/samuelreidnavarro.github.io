@@ -572,10 +572,10 @@ function parsePitchAlt(rest){
   const L = pm[0], ch = L[0], idx = LETTERS.indexOf(ch.toLowerCase());
   const step = ch === ch.toLowerCase() ? 28 + 7 * (L.length - 1) + idx : 28 - 7 * L.length + idx;
   const after = rest.slice(rest.indexOf(L) + L.length);
-  const am = after.match(/^(#+|-+|n)?(i)?/);
-  let alt = null, ed = false;
-  if (am && am[1]) { alt = am[1][0] === '#' ? am[1].length : am[1][0] === '-' ? -am[1].length : 0; ed = !!am[2]; }
-  return {step, alt, ed};
+  const am = after.match(/^(#+|-+|n)?(i)?(?:X([#\-n]))?/);
+  let alt = null, ed = false, sg;
+  if (am && am[1]) { alt = am[1][0] === '#' ? am[1].length : am[1][0] === '-' ? -am[1].length : 0; ed = !!am[2]; if (am[3]) sg = am[3]; }
+  return sg ? {step, alt, ed, sg} : {step, alt, ed};
 }
 /* Note appearance, for the eye only (Clemens Goldberg's editions: a black note against a white one in the same chord
    marks the supplementary note, not coloration). Kern signifiers: N black, + white, j red. */
@@ -603,7 +603,7 @@ function parseNoteTok(raw){
   ev.tupS = tok.includes('V'); ev.tupE = tok.includes('Z');
   const p0 = parsePitchAlt(rest);
   if (!p0) { ev.rest = true; return ev; }
-  ev.step = p0.step; ev.alt = p0.alt; ev.ed = p0.ed;
+  ev.step = p0.step; ev.alt = p0.alt; ev.ed = p0.ed; if (p0.sg) ev.sg = p0.sg;
   if (parts.length > 1) {
     const chord = [];
     for (let i = 1; i < parts.length; i++) {
@@ -1126,7 +1126,7 @@ function notate(piece, v, mode){
       curSign = sign; segStart = e.t;
     }
     const mi = mensInfo(sign);
-    const base = {t: e.t, d: e.d, rest: !!e.rest, step: e.step, alt: e.alt, ed: e.ed, chord: !e.rest && e.chord && e.chord.length ? e.chord.map(c => ({step: c.step, alt: c.alt, ed: c.ed, look: c.look})) : null, look: e.rest ? null : e.look || null, syl: e.syl, ferm: e.ferm, signum: !!e.signum, stemDirOvr: e.stemDirOvr || '', stemSideOvr: e.stemSideOvr || '', mens, sign, src: e.src, lig: e.rest ? 0 : (e.lig || 0)};
+    const base = {t: e.t, d: e.d, rest: !!e.rest, step: e.step, alt: e.alt, ed: e.ed, sg: e.rest ? null : e.sg || null, chord: !e.rest && e.chord && e.chord.length ? e.chord.map(c => ({step: c.step, alt: c.alt, ed: c.ed, sg: c.sg || null, look: c.look})) : null, look: e.rest ? null : e.look || null, syl: e.syl, ferm: e.ferm, signum: !!e.signum, stemDirOvr: e.stemDirOvr || '', stemSideOvr: e.stemSideOvr || '', mens, sign, src: e.src, lig: e.rest ? 0 : (e.lig || 0)};
     if (e.tupS) inTup = true;
     if (mode === 'fake') {
       const wd = rt(e.d * mi.p);
@@ -1537,6 +1537,7 @@ function prepare(){
     /* a voice with no notes yet still shows its staff, clef and sign, and a place where the first note will stand */
     if (!syms.length) { const m0 = v.mets.find(q => q.t < EPS); syms.push({t: 0, d: 2, rest: true, phantom: true, g: 'B', alt: null, syl: [], src: [], lig: 0, mens: m0 ? m0.sign : null, sign: m0 ? m0.sign : null}); }
     const ext = ensureExt(piece);
+    let prevS = null;
     for (const s of syms) {
       const ek = i + ':' + rt(s.t);
       s.restOvr = s.rest && ext.rests[ek] ? ext.rests[ek] : null;
@@ -1557,9 +1558,15 @@ function prepare(){
         const key = keyAt(v, s.t), letter = LETTERS[((s.step % 7) + 7) % 7];
         const sigAlt = key[letter] || 0;
         const a = Math.max(-1, Math.min(1, s.alt));
-        if (s.ed) { if (a !== sigAlt && st.ed === 'on') s.edAcc = ACCG[a]; }
-        else if (a !== sigAlt) s.acc = ACCG[a];
+        /* a sign written on the page is drawn as written (a sharp over a B that sounds natural, a natural over a natural); otherwise a sign shows where the note differs from the signature */
+        const drawn = s.sg ? SG_ALT[s.sg] : a;
+        if (s.sg || a !== sigAlt) {
+          /* a note repeated straight after a note of the same pitch and sign does not get the sign again */
+          const again = !s.sg && prevS && !prevS.rest && prevS.step === s.step && prevS.alt === s.alt && !prevS.sg;
+          if (!again) { if (s.ed) { if (st.ed === 'on') s.edAcc = ACCG[drawn]; } else s.acc = ACCG[drawn]; }
+        }
       }
+      prevS = s;
       s.left = (s.acc ? (gw(s.acc) + 0.35) * Math.max(1, ns) : 0) + nsExtra;
       if (s.chord && s.chord.length) {
         const key = keyAt(v, s.t);
@@ -1568,8 +1575,8 @@ function prepare(){
           c.acc = null; c.edAcc = null;
           if (c.alt !== null && c.alt !== undefined) {
             const letter = LETTERS[((c.step % 7) + 7) % 7], sigAlt = key[letter] || 0, a = Math.max(-1, Math.min(1, c.alt));
-            if (c.ed) { if (a !== sigAlt && st.ed === 'on') c.edAcc = ACCG[a]; }
-            else if (a !== sigAlt) c.acc = ACCG[a];
+            const drawn = c.sg ? SG_ALT[c.sg] : a;
+            if (c.sg || a !== sigAlt) { if (c.ed) { if (st.ed === 'on') c.edAcc = ACCG[drawn]; } else c.acc = ACCG[drawn]; }
           }
           if (c.acc) s.left = Math.max(s.left, (gw(c.acc) + 0.35) * Math.max(1, ns) + (s.acc ? gw(s.acc) + 0.25 : 0) + nsExtra);
         }
@@ -5750,6 +5757,7 @@ function singleNoteTok(e, tie){
     s = (tie === 'start' ? '[' : '') + s + pitchTok(e.step);
     if (e.alt !== null && e.alt !== undefined) s += e.alt < 0 ? '-'.repeat(-e.alt) : e.alt > 0 ? '#'.repeat(e.alt) : 'n';
     if (e.ed) s += 'i';
+    if (e.sg && e.alt !== null && e.alt !== undefined) s += 'X' + e.sg;   /* the sign as it stands on the page, when that is not just what the note sounds as */
     if (tie === 'mid') s += '_';
     if (tie === 'end') s += ']';
   }
@@ -5771,7 +5779,7 @@ function singleNoteTok(e, tie){
 }
 function noteTok(e, tie){
   if (!e.rest && e.chord && e.chord.length) {
-    return [singleNoteTok(e, tie), ...e.chord.map(c => singleNoteTok({...e, step: c.step, alt: c.alt, ed: c.ed, look: c.look, ferm: false}, tie))].join(' ');
+    return [singleNoteTok(e, tie), ...e.chord.map(c => singleNoteTok({...e, step: c.step, alt: c.alt, ed: c.ed, sg: c.sg, look: c.look, ferm: false}, tie))].join(' ');
   }
   return singleNoteTok(e, tie);
 }
@@ -6049,6 +6057,37 @@ function applyText(text){
   if (H.applyEnd) H.applyEnd(ha);
   syncEdit(); syncUI(); render();
 }
+const SG_ALT = {'#': 1, '-': -1, n: 0}, sgOfKey = k => k === 'b' ? '-' : k,   /* the keys call a flat 'b', the file calls it '-' */
+   signOfAlt = a => a > 0 ? '#' : a < 0 ? '-' : 'n';
+/* What a sign means on a note in this music (musica ficta): a sharp raises the note a semitone, a flat lowers it, a natural
+   makes it natural. There are no double signs, no B sharp or E sharp (a sharp over them leaves them natural, or makes a flat
+   one natural) and no C flat or F flat (a flat over them leaves them natural, or makes a sharp one natural). */
+function fictaAlt(step, cur, sign){
+  const L = LETTERS[((step % 7) + 7) % 7];
+  if (sign === 'n') return 0;
+  if (sign === '#') { const c = Math.min(1, cur + 1); return L === 'b' || L === 'e' ? Math.min(c, 0) : c; }
+  const c = Math.max(-1, cur - 1); return L === 'c' || L === 'f' ? Math.max(c, 0) : c;
+}
+/* the sounding alter and the sign to keep on the page for a sign put on a note: the sign is kept (sg) whenever it is not
+   simply what the note sounds as, or when it only repeats the key signature (a flat over a B that is flat already) */
+function signedAlt(step, cur, sign, sig){
+  const alt = fictaAlt(step, cur, sign);
+  return {alt, sg: signOfAlt(alt) !== sign || alt === sig ? sign : undefined};
+}
+/* the sign standing on a note's page: the one written over it, or none */
+function writtenSign(v, e){
+  if (e.alt === null || e.alt === undefined) return null;
+  if (e.sg) return e.sg;
+  return e.alt !== (implied(v, e.step, e.t) || 0) ? signOfAlt(e.alt) : null;
+}
+/* a note moved to another step: a sign written on it goes with it, still editorial if it was; with none it follows the signature */
+function stepCarry(v, e, ns){
+  const w = writtenSign(v, e), was = !!e.ed;
+  e.step = ns;
+  const sig = implied(v, ns, e.t);
+  if (w) { const r = signedAlt(ns, sig || 0, w, sig || 0); e.alt = r.alt; e.sg = r.sg; e.ed = was; }
+  else { e.alt = sig; e.sg = undefined; e.ed = false; }
+}
 function implied(v, step, t){
   const k = keyAt(v, t), L = LETTERS[((step % 7) + 7) % 7];
   return k[L] ? k[L] : null;
@@ -6084,20 +6123,26 @@ function insertEvent(vi, at, step, isRest, pad = 0, alt){
   /* alt: a sharp, flat or natural of its own (the keyboard's black and white keys); otherwise the signature's */
   const imp = isRest ? null : implied(v, step, t);
   /* a flat, sharp, natural or dot pressed before the note: this note takes it (once) */
-  let altU = alt, armedAcc = false;
+  let altU = alt, armedAcc = false, sgNew;
   if (!isRest && alt === undefined && ed.accArm) {
-    const cur = imp || 0;
-    altU = ed.accArm === 'n' ? 0 : ed.accArm === '#' ? Math.min(1, cur + 1) : Math.max(-1, cur - 1);
+    const r = signedAlt(step, imp || 0, sgOfKey(ed.accArm), imp || 0);
+    altU = r.alt; sgNew = r.sg;
     armedAcc = true;
   }
-  const alt0 = isRest ? null : altU === undefined ? imp : altU === 0 && !imp ? null : altU;
-  const edAcc = armedAcc && !!ed.accEd && alt0 !== null;
+  let alt0 = isRest ? null : altU === undefined ? imp : altU === 0 && !imp && !sgNew ? null : altU, inheritEd = false;
+  /* a note repeated straight after a note of the same pitch keeps that note's accidental */
+  if (!isRest && alt === undefined && !armedAcc && off === 0 && at > 0 && at <= v.events.length) {
+    const pv = v.events[at - 1];
+    if (pv && !pv.rest && pv.step === step && pv.alt !== null && pv.alt !== undefined && pv.alt !== (imp || 0)) { alt0 = pv.alt; inheritEd = !!pv.ed; }
+  }
+  const edAcc = (armedAcc && !!ed.accEd && alt0 !== null) || inheritEd;
   let dotted = !isRest && (ed.dotArm === true || ed.dotArm === 'add'), divDot = !isRest && ed.dotArm === 'div', perfAdd = false;
   if (dotted && perfectShape(v, t, ed.val)) { dotted = false; perfAdd = true; }
   if (!isRest) { ed.accArm = null; ed.accEd = false; ed.dotArm = false; }
   const d = mensRulesOn() ? rt(nomD(v, t, ed.val) * (ed.colArm ? 2 / 3 : 1) * (dotted ? 1.5 : 1)) : rt(val / propAt(v, t) * (ed.colArm ? 2 / 3 : 1) * (dotted ? 1.5 : 1));
   commit(() => {
     const e = {d, rest: !!isRest, step, alt: alt0, ed: edAcc, syl: [], t};
+    if (sgNew) e.sg = sgNew;
     if (!isRest && ed.colArm) { e.colH = true; if (dotted) e.cdot = true; }   /* black and dotted: the dot stays, and it sounds two thirds of the dotted value */
     if (divDot || perfAdd) { if (divDot) e.dd = true; else e.pa = true; if (!mensRulesOn()) { const mi = mensInfo(metAt(v, t)); e.d = rt(nomW(ed.val, mi.T, mi.P, mi.M, mi.X) / mi.p); } }
     /* past the end: a rest up to the place clicked */
@@ -6189,7 +6234,7 @@ function moveCaret(dir){
 const OPS = {
   step(dir){
     const v = curVoice(); if (!v) return;
-    commit(() => { for (const i of srcOf()) { const e = v.events[i]; if (e.rest) continue; e.step += dir; e.alt = implied(v, e.step, e.t); e.ed = false; } });
+    commit(() => { for (const i of srcOf()) { const e = v.events[i]; if (e.rest) continue; stepCarry(v, e, e.step + dir); } });
   },
   acc(a){
     const v = curVoice(); if (!v) return;
@@ -6226,7 +6271,7 @@ const OPS = {
         const e = v.events[i];
         if (e.rest) {
           let j = i - 1; while (j >= 0 && v.events[j].rest) j--;
-          e.rest = false; e.step = j >= 0 ? v.events[j].step : CLEFS[clefAt(v, e.t) || 'c3'].bottom + 4; e.alt = implied(v, e.step, e.t); e.ed = false;
+          e.rest = false; e.step = j >= 0 ? v.events[j].step : CLEFS[clefAt(v, e.t) || 'c3'].bottom + 4; e.alt = implied(v, e.step, e.t); e.ed = false; e.sg = undefined;
         } else { e.rest = true; e.tieStart = e.tieEnd = e.tieMid = false; }
       }
     });
@@ -6298,7 +6343,7 @@ const OPS = {
     commit(() => {
       for (const e of v.events) {
         if (kind === 'octup' || kind === 'octdn') { if (!e.rest) e.step += kind === 'octup' ? 7 : -7; }
-        else if (kind === 'tonup' || kind === 'tondn') { if (!e.rest) { e.step += kind === 'tonup' ? 1 : -1; e.alt = implied(v, e.step, e.t); e.ed = false; } }
+        else if (kind === 'tonup' || kind === 'tondn') { if (!e.rest) stepCarry(v, e, e.step + (kind === 'tonup' ? 1 : -1)); }
         else if (kind === 'dbl') e.d = rt(e.d * 2);
         else if (kind === 'hlv') e.d = rt(e.d / 2);
       }
@@ -7405,17 +7450,20 @@ function toggleDivisiNote(vi, ei, step){
     if (!ev || ev.rest) return;
     if (!Array.isArray(ev.chord)) ev.chord = [];
     if (step === ev.step) {
-      if (ev.chord.length) { const nxt = ev.chord.shift(); ev.step = nxt.step; ev.alt = nxt.alt; ev.ed = nxt.ed; }
+      if (ev.chord.length) { const nxt = ev.chord.shift(); ev.step = nxt.step; ev.alt = nxt.alt; ev.ed = nxt.ed; ev.sg = nxt.sg; }
     } else {
       const idx = ev.chord.findIndex(c => c.step === step);
       if (idx >= 0) ev.chord.splice(idx, 1);
-      else { ev.chord.push({step, alt: arm, ed: armEd}); ev.chord.sort((a, b) => a.step - b.step); }
+      else {
+        const sig = implied(piece.voices[vi], step, ev.t) || 0, r = arm ? signedAlt(step, sig, sgOfKey(arm), sig) : null;
+        ev.chord.push(r ? {step, alt: r.alt, ed: armEd, sg: r.sg} : {step, alt: null, ed: false}); ev.chord.sort((a, b) => a.step - b.step);
+      }
     }
     if (!ev.chord.length) delete ev.chord;
   });
   ed.accArm = null; ed.accEd = false;
   ed.sel = {vi, ei}; ed.ins = {vi, ei: ei + 1};
-  hear(step, arm);
+  hear(step, arm ? fictaAlt(step, implied(v0, step, v0.events[ei].t) || 0, sgOfKey(arm)) : implied(v0, step, v0.events[ei].t) || 0);
   showSel(); syncEdit();
   return true;
 }
@@ -7608,11 +7656,7 @@ function refStepBefore(v, idx){
   return CLEFS[v.clef || 'c3'].bottom + 4;
 }
 /* a pitch change keeps a written sharp or flat, and follows the signature otherwise */
-function moveStep(v, e, s){
-  const followed = (e.alt || 0) === (implied(v, e.step, e.t) || 0);
-  e.step = s; e.ed = false;
-  if (followed) e.alt = implied(v, s, e.t);
-}
+function moveStep(v, e, s){ stepCarry(v, e, s); }
 function toRestOrRemove(vi, s){
   const v = piece.voices[vi];
   if (s.rest) commit(() => { dropEvents(v, s.src); ed.sel = null; ed.ins = {vi, ei: s.src[0]}; });
@@ -7912,16 +7956,15 @@ const CBA = {
   toggleAcc(a){
     if (!CBA.guard()) return;
     /* as in the 16th century a sharp sign raises the note a semitone from where it stands, a flat sign lowers it: a flat in the signature plus a sharp makes a natural, a sharp plus a flat makes a natural (never a double sign) */
-    const to = (v, e) => {
-      const cur = e.alt !== null && e.alt !== undefined ? e.alt : (implied(v, e.step, e.t) || 0);
-      return a === 'n' ? 0 : a === '#' ? Math.min(1, cur + 1) : Math.max(-1, cur - 1);
-    };
+    /* the sign goes on as it is written (a sharp over a B stays a sharp on the page and sounds natural; a natural over a natural stays too) */
+    const put = (v, e) => { const sig = implied(v, e.step, e.t) || 0, cur = e.alt !== null && e.alt !== undefined ? e.alt : sig, r = signedAlt(e.step, cur, sgOfKey(a), sig); e.alt = r.alt; e.sg = r.sg; };
+    const clear = (v, e) => { e.alt = implied(v, e.step, e.t); e.sg = undefined; };
     /* several notes selected: all of them (all of them already have it: it comes off) */
     if (ed.range || ed.picks) {
       const it = selItems().filter(x => writable(x.v) && !x.e.rest); if (!it.length) return;
       const has = x => { const q = symAt(x.v.idx, x.v.events.indexOf(x.e)); return !!q && accOf(q) === a; };
       const off = it.every(has), edit = !!ed.edArm && !off; ed.edArm = false;
-      commit(() => { for (const x of it) { x.e.alt = off ? implied(x.v, x.e.step, x.e.t) : to(x.v, x.e); x.e.ed = edit; } });
+      commit(() => { for (const x of it) { if (off) clear(x.v, x.e); else put(x.v, x.e); x.e.ed = edit; } });
       return;
     }
     const t = accTarget(), v = curVoice();
@@ -7937,8 +7980,9 @@ const CBA = {
     const off = accOf(t) === a;
     const edit = !!ed.edArm && !off; ed.edArm = false;
     commit(() => { for (const i of t.src) {
-      const e = v.events[i], cur = e.alt !== null && e.alt !== undefined ? e.alt : (implied(v, e.step, e.t) || 0);
-      e.alt = off || (a !== 'n' && to(v, e) === cur && e.alt !== null && e.alt !== undefined) ? implied(v, e.step, e.t) : to(v, e); e.ed = edit;
+      const e = v.events[i];
+      if (off) clear(v, e); else put(v, e);
+      e.ed = edit;
     } });
     const e = curVoice().events[t.src[0]]; if (e) hear(e.step, e.alt);
   },
@@ -8250,7 +8294,7 @@ const CBA = {
   setXform(t){ ed.xf = t; },
   setPitch(h, s, alter){
     const e = h.e, imp = implied(h.v, s, e.t);
-    e.step = s; e.ed = false;
+    e.step = s; e.ed = false; e.sg = undefined;
     e.alt = alter === null ? imp : alter === 0 && !imp ? null : alter;
   },
   range: [STEP_MIN, STEP_MAX],
@@ -10135,7 +10179,7 @@ const HELP_ENTRIES = [
    desc:'Click a note to select it. Hold Shift and click another note to select every note in between (across voices too in mensural scores), or press Shift+ArrowLeft/Right to extend or shrink the selection in either direction. Hold Cmd/Ctrl and click to pick non-contiguous notes. Works identically in both mensural and plainchant (GABC) modes.'},
   {id:'accidentals', cat:'Note Input', title:'Accidentals (Flat, Natural, Sharp)', keys:'- · Q · =', tags:'accidental flat sharp natural bmol diesis quadratum musica ficta',
    where:'Editing bar → Accidentals', sel:'#accBtns', openEditBar:true,
-   desc:'Applies or toggles a flat (-), natural (Q), or sharp (=) on the selected note(s), or arms it for the next note. Toggle Ed. to place the accidental editorially above the staff (musica ficta).'},
+   desc:'Applies or toggles a flat (-), natural (Q), or sharp (=) on the selected note(s), or arms it for the next note. The sign is kept as you pressed it, even when it only repeats the key signature (a natural over a natural, a flat over a B that is flat already). A sharp over a B or E leaves it natural, a flat over a C or F leaves it natural, and there are no double signs. A note repeated straight after a note with a sign keeps it. Toggle Ed. to place the accidental editorially above the staff (musica ficta); moving the note up or down keeps an editorial sign editorial.'},
   {id:'editorial-acc', cat:'Note Input', title:'Editorial accidentals (Musica ficta)', keys:'Ed.', tags:'ficta editorial accidental above staff',
    where:'Editing bar → Ed.', sel:'#edBtn', openEditBar:true,
    desc:'Marks an accidental as editorial so it prints in smaller type above the staff rather than inline. You can globally show or hide editorial accidentals under Engraving → Editorial accidentals.'},
