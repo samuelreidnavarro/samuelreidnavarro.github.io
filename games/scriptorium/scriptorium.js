@@ -6587,7 +6587,8 @@ function staffGridMap(rect, v){
   };
   return {pts, tMin: pts[0][0], tb, xb, g, sw, xOf, tOf};
 }
-window.__staffGridMap = staffGridMap;   /* for checking the grid from outside */
+window.__staffGridMap = staffGridMap;
+window.__notate = (pc, v, mode) => notate(pc, v, mode || 'real');   /* for checking the notation from outside */   /* for checking the grid from outside */
 function timePlace(rect, tg){
   const v = tg.v, M = staffGridMap(rect, v.subOf >= 0 ? piece.voices[v.subOf] : v);
   if (!M) return null;
