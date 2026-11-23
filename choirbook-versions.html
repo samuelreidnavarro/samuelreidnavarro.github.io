@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Version history | Samuel Reid Navarro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+Double+Pica:ital@0;1&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap">
+  <link rel="stylesheet" href="style.css?v=26">
+  <style>
+    .ack { max-width: 44rem; margin: 2.2rem auto 4rem; padding: 0 1.2rem; font-family: "IM Fell English", Garamond, serif; font-size: 1.2rem; line-height: 1.6; color: var(--text, #2a2218); }
+    .ack h1 { font-family: "IM Fell Double Pica", Garamond, serif; font-weight: 400; font-size: 2.2rem; text-align: center; margin: 0 0 1.4rem; }
+    .ack h2 { font-family: "IM Fell Double Pica", Garamond, serif; font-weight: 400; font-size: 1.4rem; margin: 2rem 0 .5rem; }
+    .ack p { margin: 0 0 1rem; }
+    .ack ul { list-style: none; padding: 0; margin: 0; }
+    .ack li { margin: 0 0 .35rem; }
+    .ack a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+    .ack a:hover { color: var(--mark, #8e2a1e); }
+  </style>
+</head>
+<body>
+  <header class="banner">
+    <a href="index.html"><p class="site-name">Samuel Reid Navarro</p></a>
+  </header>
+  <nav class="nav" aria-label="Main">
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="music.html">Timelines</a></li>
+      <li><a href="choirbook.html" aria-current="page">ChoirBook</a></li>
+      <li><a href="cantus-firmus.html">CantusFirmus</a></li>
+      <li><a href="about.html">About</a></li>
+      <li class="has-menu"><a href="mensurator.html">More</a>
+        <ul class="menu">
+          <li><a href="mensurator.html">Mensurator</a></li>
+          <li><a href="canon.html">Canon Canonum</a></li>
+          <li><a href="canon-maker.html">Canon Maker</a></li>
+          <li><a href="redix-progressio.html">ReDiX Progressio</a></li>
+          <li><a href="redix-melodia.html">ReDiX Melodia</a></li>
+          <li><a href="redix-contrapunctus.html">ReDiX Contrapunctus</a></li>
+          <li><a href="compressor.html">Magic black and white PDF compressor</a></li>
+          <li><a href="chants.html">Chant Sources</a></li>
+          <li><a href="jargon.html">Samuel's Musical Lexicon</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+    <main class="ack">
+    <h1>Version history</h1>
+    <p>ChoirBook and its sister apps (CantusFirmus, Canon Maker, ReDiX Melodia and ReDiX Contrapunctus) are made by <strong>Samuel Reid Navarro</strong>. Every time the site is updated, this page gets a short list of what is new and what was fixed. The full technical record, with every change, is on <a href="https://github.com/samuelreidnavarro/samuelreidnavarro.github.io" target="_blank" rel="noopener">GitHub</a>.</p>
+
+    <h2>v0.1.14 &middot; 23 November 2026</h2>
+    <p><em>New</em></p>
+    <ul>
+      <li>The ChoirBook file, <strong>.choirbook.xml</strong>: one file with the music and words, the layout, the incipit, the clefs and the staves. Export it, and open it again (or drop it on the page) to get the piece back exactly as it was.</li>
+      <li>Natural signs can be forced on any note, and the editorial version of a flat, natural or sharp now sits in a small menu under each button (hover on a computer, hold on a touch screen). The Ed. button is gone. An editorial sign stays editorial when you move or transpose the note.</li>
+      <li>A sign written over a note is kept as written, following the rules of this music: no B sharp or E sharp, no C flat or F flat, no double signs. A note repeated straight after one with a sign keeps it.</li>
+      <li>Grid in Note input: evenly spaced lines, every note sits on a line (also after black notes and triplets), clicks and the caret always land on a line, and Layout has a new <strong>Allow measures across systems</strong> setting (No: every system ends at a barline, with the lines filled evenly).</li>
+      <li>View: <strong>Grid intensity</strong> and <strong>Even spacing in Edit Mode</strong>.</li>
+      <li>Modern clefs now choose F, G or octave G for each voice by its range, and the clefs of an incipit can be changed by clicking them.</li>
+      <li>Between two staves the pointer stays with the staff it came from, into its ledger lines, until it is really on the next one.</li>
+      <li>This version history, About and a link to GitHub.</li>
+    </ul>
+    <p><em>Fixed</em></p>
+    <ul>
+      <li>Dotting a note no longer turns the next note into a rest: it is shortened and keeps its pitch.</li>
+      <li>In a small window in dark mode, the menus of the editing bar and the top bar were cut off. They open again.</li>
+      <li>The More menu on phones, and choosing an organ sound in the Sound panel, no longer close the menu.</li>
+    </ul>
+
+    <h2>v0.1.13 &middot; 23 November 2026</h2>
+    <ul>
+      <li>Search bar (the / key, or &#8984;K) that finds any command, with fuzzy typing.</li>
+      <li>R repeats the selected note or passage. Export and Help were reorganised, and there is a dark mode.</li>
+      <li>Black dotted notes, a shared grid across voices, and Gemini&rsquo;s CMME, plainchant and divisi work.</li>
+    </ul>
+
+    <h2>v0.1.12 &middot; 21 November 2026</h2>
+    <ul>
+      <li>Prolatio maior coloration, chords and divisi (+v) with a second layer, Overwrite as the default, coloured small values, and .mei import.</li>
+    </ul>
+
+    <h2>v0.1.11 &middot; 21 November 2026</h2>
+    <ul>
+      <li>Layout, Engraving and View menus redesigned; note size and colour locks, colour pickers, lyrics font and size, staff text, combining voices on a staff, 1 to 15 staff lines, strict or adaptive stems.</li>
+    </ul>
+
+    <h2>v0.1.10 and earlier</h2>
+    <ul>
+      <li><strong>v0.1.10</strong> (21 Nov): tempo defaults to 60; ReDiX apps start with white paper, black staves and modern clefs.</li>
+      <li><strong>v0.1.9</strong> (20 Nov): text selection and the iOS pop-up are switched off on the music.</li>
+      <li><strong>v0.1.7</strong> (20 Nov): ReDiX Melodia and ReDiX Contrapunctus added.</li>
+      <li><strong>v0.1.6</strong> (19 Nov): punctus additionis and divisionis, rich CMME import, window transparency, paper textures.</li>
+      <li><strong>v0.1.5</strong> (16 Nov): keyboard menu with glissando.</li>
+      <li><strong>v0.1.4</strong> (16 Nov): Overwrite cuts notes, thickness sliders, vector PDF.</li>
+      <li><strong>v0.1.3</strong> (16 Nov): Note input, editing a selected note, mensural rules, semifusa.</li>
+    </ul>
+
+    <h2>About</h2>
+    <p>Made by <strong>Samuel Reid Navarro</strong>. The apps run in the browser, keep your scores on your own computer, and need no account. The source is on <a href="https://github.com/samuelreidnavarro/samuelreidnavarro.github.io" target="_blank" rel="noopener">GitHub</a>. See also <a href="choirbook-acknowledgements.html">Acknowledgments</a> and <a href="about.html">the About page</a>.</p>
+  </main>
+  <script src="menu.js?v=2"></script>
+</body>
+</html>

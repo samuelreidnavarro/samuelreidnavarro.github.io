@@ -203,7 +203,7 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
       </div>
       <div class="helpcats" id="helpCats" role="tablist"></div>
       <div class="helplist" id="helpList"></div>
-      <div class="helpfoot"><button type="button" class="chbtn" id="ackBtn" aria-haspopup="dialog" title="Who made the apps, and what they are built on">Acknowledgments</button></div>
+      <div class="helpfoot"><button type="button" class="chbtn" id="verBtn" title="What is new in each version, and what was fixed">Version history</button><button type="button" class="chbtn" id="ackBtn" aria-haspopup="dialog" title="Who made the apps, and what they are built on">Acknowledgments</button></div>
     </div>
   </div>
 
@@ -10534,6 +10534,9 @@ const HELP_ENTRIES = [
   {id:'my-scores', cat:'Export & Share', title:'My scores: keeping your work', keys:'', tags:'save keep my scores browser storage recent local autosave',
    where:'Export → Save to My scores; Open → My scores', sel:'#popExport .popbtn', openPop:'#popExport',
    desc:'Your scores are kept in this browser, not on a server: Save to My scores keeps a copy, and Open → My scores brings it back. Clearing the browser’s data removes them, so download a file (.krn or .cmme.xml) of anything you want to keep for good.'},
+  {id:'version-history', cat:'Getting started', title:'Version history', keys:'', tags:'version history changes new fixed release notes what is new about github',
+   where:'Help (?) → Version history (bottom right of this window)', sel:'#helpBtn',
+   desc:'What is new in each version of the apps and what was fixed, with a link to the project on GitHub and the name of the maker.'},
   {id:'acknowledgments', cat:'Getting started', title:'Acknowledgments', keys:'', tags:'acknowledgments acknowledgements credits thanks sources licence who made',
    where:'Help (?) → Acknowledgments (bottom right of this window)', sel:'#helpBtn',
    desc:'Who made the apps and the repertoire, which sources and tools they are built on, and the licences. It is at the bottom of this Help window.'},
@@ -11855,24 +11858,26 @@ window.__cb = Object.assign({st, get ed(){ return ed; }, noteAt, mensTest, mensC
    the first time someone uses the apps in a browser (the key carries a version: change it when the text changes materially). */
 {
   const ov = document.querySelector('#ackOv'), body = document.querySelector('#ackBody'), AKEY = 'scriptorium:ack:v1';
-  let loaded = false;
+  let loaded = '', cur = 'ack';
+  const PAGES = {ack: '../choirbook-acknowledgements.html', ver: '../choirbook-versions.html'};
   const fill = async () => {
-    if (loaded) return; loaded = true;
+    if (loaded === cur) return; loaded = cur;
     try {
-      const t = await (await fetch('../choirbook-acknowledgements.html')).text();
+      const t = await (await fetch(PAGES[cur] + '?v=1')).text();
       const m = new DOMParser().parseFromString(t, 'text/html').querySelector('main.ack');
       if (!m) throw 0;
       m.querySelectorAll('a').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
       body.innerHTML = m.innerHTML;
-    } catch (e) { loaded = false; body.innerHTML = '<p>The acknowledgments could not be loaded just now. <a href="../choirbook-acknowledgements.html" target="_top">Open the page</a>.</p>'; }
+    } catch (e) { loaded = ''; body.innerHTML = '<p>This page could not be loaded just now. <a href="' + PAGES[cur] + '" target="_top">Open the page</a>.</p>'; }
   };
   const remember = () => { try { localStorage.setItem(AKEY, '1'); } catch (e) {} };
-  const open = () => { fill(); const hv = document.querySelector('#helpOv'); if (hv) hv.hidden = true; ov.hidden = false; body.scrollTop = 0; document.querySelector('#ackX').focus({preventScroll: true}); };
+  const open = (which) => { if (which) cur = which; fill(); const hv = document.querySelector('#helpOv'); if (hv) hv.hidden = true; ov.hidden = false; body.scrollTop = 0; document.querySelector('#ackX').focus({preventScroll: true}); };
   const shut = () => { if (ov.hidden) return; ov.hidden = true; remember(); document.querySelector('#ackBtn').focus({preventScroll: true}); };
-  document.querySelector('#ackBtn').addEventListener('click', e => { e.stopPropagation(); ov.hidden ? open() : shut(); });
+  document.querySelector('#ackBtn').addEventListener('click', e => { e.stopPropagation(); ov.hidden || cur !== 'ack' ? open('ack') : shut(); });
+  document.querySelector('#verBtn').addEventListener('click', e => { e.stopPropagation(); ov.hidden || cur !== 'ver' ? open('ver') : shut(); });
   document.querySelector('#ackX').addEventListener('click', shut);
   ov.addEventListener('click', e => { if (e.target === ov) shut(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !ov.hidden) { e.stopPropagation(); shut(); } }, true);
   let seen = false; try { seen = !!localStorage.getItem(AKEY); } catch (e) { seen = true; }
-  if (!seen && !/[?&](print|example)=1/.test(location.search)) setTimeout(open, 600);
+  if (!seen && !/[?&](print|example)=1/.test(location.search)) setTimeout(() => open('ack'), 600);
 }
