@@ -76,6 +76,7 @@ ${APP.popsBeforeVoices || ''}
           <label class="lab" for="lyrFontSel">Font</label><select id="lyrFontSel" title="Font used for lyrics"></select>
           <label class="ctl" for="lyrPt">Size</label><span class="pt-field"><input type="number" id="lyrPt" min="4" max="36" step="0.5" inputmode="decimal" aria-label="Lyrics size in points"><span>pt</span></span>
           <span class="lab">Syllable dashes</span><div class="btns" id="dashSeg" role="group" aria-label="Syllable dashes"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
+          <span class="lab">Text layer</span><div class="btns" id="origTxtSeg" role="group" aria-label="Text layer"><button class="tb" data-v="modern" title="Modern edition lyrics only">Modern</button><button class="tb" data-v="orig" title="Original-orthography text only">Original</button><button class="tb" data-v="both" title="Modern lyrics with original spelling underneath">Both</button></div>
           <span class="lab" id="verseLab">Verse</span><div class="btns" id="verseSeg" role="group" aria-label="Verse"></div>
           <span class="lab pslab">Presets</span><div id="presetBox"><div id="presetList"></div><div id="presetNew"><button class="tb" id="presetAdd">Save current settings as preset</button><span id="presetForm" hidden><input id="presetName" type="text" placeholder="Name" maxlength="30" autocomplete="off"><button class="tb" id="presetOk">Save</button></span></div></div>
         </div></div>
@@ -89,28 +90,16 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Paper colour</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
           <span class="lab">Dark mode</span><div class="btns" id="darkSeg" role="group" aria-label="Dark mode"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <label class="ctl" for="glassRange" title="How transparent the menus and buttons are">Window transparency</label><input type="range" id="glassRange" min="0" max="0.95" step="0.01">
-        </div></div>
-      </div></div>
-      <div class="podg"><div class="pop" id="popAdv">
-        <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Advanced<span class="betapill">Beta</span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-        <div class="popbody"><div class="staffset advset">
-          <div class="subhead">Selected rest / ligature</div>
-          <span class="lab">Rest shape</span><div class="btns" id="restSpSeg" role="group" aria-label="Rest span"><button class="tb" data-v="">Auto</button><button class="tb" data-v="1">1 sp</button><button class="tb" data-v="2">2 sp</button><button class="tb" data-v="3">3 sp</button><select id="restBotSel" title="Bottom staff line of rest (1–5)" aria-label="Rest bottom line"><option value="">Line</option><option value="1">L1</option><option value="2">L2</option><option value="3">L3</option><option value="4">L4</option><option value="5">L5</option></select></div>
-          <span class="lab">Ligature kind</span><div class="btns" id="ligKindSeg" role="group" aria-label="Ligature kind"><button class="tb" data-v="">Auto</button><button class="tb" data-v="recta">Recta</button><button class="tb" data-v="obliqua">Obliqua</button><button class="tb" data-v="cop">c.o.p.</button><button class="tb" data-v="sp">s.p.</button></div>
-          <div class="subhead">Text, Annotations &amp; Apparatus</div>
-          <span class="lab">Original text</span><div class="btns" id="origTxtSeg" role="group" aria-label="Original orthography layer"><button class="tb" data-v="off">Off</button><button class="tb" data-v="on">Show</button><button class="tb" id="editOrigTxtBtn" type="button" title="Add or edit original-orthography text on the selected note">Edit…</button></div>
-          <span class="lab">Annotations</span><div class="btns" id="annSeg" role="group" aria-label="Editorial annotations"><button class="tb" data-v="on">Show</button><button class="tb" data-v="off">Hide</button><button class="tb" id="addAnnBtn" type="button" title="Attach or edit an editorial note on the selected note">Add / edit…</button></div>
-          <div class="adv-list" id="annList" hidden></div>
-          <span class="lab">Variant reading</span><div class="btns" id="varCtl"><select id="varVerSel" aria-label="Active variant reading"></select><button class="tb" id="addVarBtn" type="button" title="Create a variant reading for the selected passage">+ Variant</button></div>
-          <div class="adv-list" id="varList" hidden></div>
-          <span class="lab">Plainchant</span><div class="btns"><button class="tb" id="addChantBtn" type="button" title="Insert a GABC plainchant section as its own 4-line chant system">+ Chant section (GABC)</button></div>
-          <div class="adv-list" id="chantList" hidden></div>
+          <div class="subhead">Critical apparatus</div>
+          <span class="lab">Commentary</span><div class="btns" id="annSeg" role="group" aria-label="Editorial commentary"><button class="tb" data-v="on">Show</button><button class="tb" data-v="off">Hide</button><button class="tb" id="openCritBtn" type="button" title="Open the Critical Notes drawer">Notes…</button></div>
+          <span class="lab">Ossias</span><div class="btns" id="ossiaSeg" role="group" aria-label="Variant ossias"><button class="tb" data-v="on">Show</button><button class="tb" data-v="off">Hide</button></div>
         </div></div>
       </div></div>
       <div class="podg"><div class="pop" id="popAdd">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Add<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="btns col" id="addList">
           <button class="tb" id="addInc" title="The original clefs, mensuration signs and first notes of every voice, before the staves">Incipit</button>
+          <button class="tb" id="addChantBtn" title="Insert a 4-line Gregorian plainchant section (GABC) as its own system">Plainchant (GABC)</button>
           <button class="tb" id="addMens" title="Put a mensuration sign at the selected note, in the selected voice or voices only (select several voices to give them all one)">Mensuration sign</button>
           <button class="tb" id="addClef" title="A new clef at the selected note, in the selected voice or voices only; click it to choose which. Again to take it off">Clef change</button>
           <button class="tb" id="addKey" title="A new key signature at the selected note, in the selected voice or voices only; hover (tap on a phone) it to change it. Again to take it off">Key signature change</button>
@@ -121,7 +110,14 @@ ${APP.popsBeforeVoices || ''}
           <button class="tb" id="addSec" title="A section line through all the staves at the selected note or the caret, apart from the barlines; click it to make it double or take it off">Section line</button>
           <button class="tb" id="addMark" title="A rehearsal mark, [A], [B] and so on, over the selected note (again to take it off)">Rehearsal mark</button>
           <button class="tb" id="addText" title="Text above the staff at the selected note or caret (e.g. Prima pars, Patrem omnipotentem); click existing staff text to edit or clear it">Staff text</button>
+          <button class="tb" id="addOrigBtn" title="Type original-orthography syllables inline under the selected note (Shift+L)">Original text</button>
+          <button class="tb" id="addAnnBtn" title="Attach or edit a marginalia commentary note on the selected note or rest">Editorial commentary</button>
+          <button class="tb" id="addVarBtn" title="Create or edit an alternate source reading (ossia) for the selected passage">Variant reading (Ossia)</button>
         </div></div>
+      </div></div>
+      <div class="podg" id="readingPod" hidden><div class="pop" id="popReading">
+        <button class="tb popbtn" id="readingBtn" aria-haspopup="true" aria-expanded="false" title="Switch active source reading (updates notation and playback)">Reading: Default<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
+        <div class="popbody"><div class="btns col" id="readingList"></div></div>
       </div></div>
       <div class="grow">
         <div class="podg"><button class="tb" id="ackBtn" aria-haspopup="dialog">Acknowledgments</button></div>
@@ -156,6 +152,10 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
             <div class="popbody"><div class="btns col" id="sendList"></div></div>
           </div>
         </div>
+        <div class="podg" id="findHelpPod">
+          <button type="button" class="ib" id="findBtn" aria-label="Find feature" title="Find any tool or feature in the app (⌘K / /)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.2 15.2 20.4 20.4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+          <button type="button" class="ib" id="helpBtn" aria-label="Help &amp; Glossary" title="Help &amp; Glossary: search any term (?)"><span style="font-family:Georgia,serif;font-weight:700;font-size:16px;line-height:1">?</span></button>
+        </div>
       </div>
       <input type="file" id="fileIn" accept=".krn,.kern,.txt,.musicxml,.xml,.mxl,.mscz,.mscx,.mei,.mid,.midi,.ly,.gabc,.cmme" hidden>
     </div>
@@ -172,8 +172,27 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
     <div id="countBox" aria-live="off" hidden></div>
     <ul id="clefPick" class="menu" role="menu" aria-label="Clef" hidden></ul>
     <ul id="notePick" class="menu" role="menu" aria-label="Note" hidden></ul>
+    <div id="margCard" class="floatcard" role="dialog" aria-label="Editorial commentary" hidden></div>
+    <div id="ossiaCard" class="floatcard ossiacard" role="dialog" aria-label="Variant reading" hidden></div>
+    <aside id="critDrawer" class="critdrawer" role="dialog" aria-label="Critical notes" hidden></aside>
     <button class="pagenav next" id="pgNext" aria-label="Next page" title="Next page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button>
     <div class="handbox" id="handBox" title="The tactus: the hand drops on one beat and lifts on the next" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="handRot"></g></svg></div><div class="handbox pendbox" id="pendBox" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="pendG"><path d="M66 158 H130 L120 142 H76Z" fill="currentColor"/><g id="pendRot"><line x1="98" y1="150" x2="98" y2="-16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="84" y="14" width="28" height="34" rx="4" fill="currentColor"/></g></g></svg></div><div class="handpop" id="handPop" role="group" aria-label="Hand settings" hidden><label for="handSizeP">Size</label><input type="range" id="handSizeP" min="0.4" max="2.5" step="0.05"><label for="handOpP">Opacity</label><input type="range" id="handOpP" min="0.05" max="1" step="0.05"></div>
+  </div>
+  <div id="findPop" class="findpop" role="dialog" aria-label="Find feature" hidden>
+    <div class="findhead"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.2 15.2 20.4 20.4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><input id="findInput" type="search" placeholder="Find any tool or feature (e.g. rest, ligature, gregorian, clef, ossia)…" autocomplete="off"><button type="button" class="findx" id="findX" aria-label="Close">×</button></div>
+    <div class="findlist" id="findList" role="listbox"></div>
+  </div>
+  <div id="spotTip" class="spottip" hidden></div>
+  <div id="helpOv" class="helpov" role="dialog" aria-label="Help and Glossary" hidden>
+    <div class="helpbox">
+      <div class="helphead">
+        <h2>Help &amp; Glossary</h2>
+        <input id="helpSearch" type="search" placeholder="Search any term (e.g. ligature, coloration, punctus, plainchant, ossia, custos)…" autocomplete="off">
+        <button type="button" class="helpx" id="helpX" aria-label="Close" title="Close (Esc)">×</button>
+      </div>
+      <div class="helpcats" id="helpCats" role="tablist"></div>
+      <div class="helplist" id="helpList"></div>
+    </div>
   </div>
 
   <div class="chbar" id="chantBar" role="toolbar" aria-label="Plainchant editor" hidden>
@@ -1233,7 +1252,7 @@ function chooseClef(v, mode){
 let DOCK = null;     /* where the site page says the browser window is, when embedded: {top, vh, pageTop} */
 const KEY = APP.store + ':v1';
 const st = {
-  inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', noteCol: 'black', colLock: 'off', dashes: 'on', ed: 'on', heads: 'modern', stems: 'adaptive', accStyle: 'modern', origText: 'off', ann: 'on',
+  inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', noteCol: 'black', colLock: 'off', dashes: 'on', ed: 'on', heads: 'modern', stems: 'adaptive', accStyle: 'modern', origText: 'modern', ann: 'on', ossia: 'on',
   size: 1.75, noteSize: 1.75, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, printPaper: 'A4', bounds: {}, staves: {},
   hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
   ...(APP.defaults || {})
@@ -1242,6 +1261,9 @@ const HAD_SAVED = !!localStorage.getItem(KEY);
 try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
 if (!st.tempoV2) { if (st.tempo === 90 || st.tempo === undefined) st.tempo = 60; if (!st.unit) st.unit = 'S'; st.tempoV2 = 1; }
 if (st.bnum === '2' || st.bnum === '4') st.bnum = '5';
+if (st.origText === 'off' || !st.origText) st.origText = 'modern';
+else if (st.origText === 'on') st.origText = 'both';
+if (!st.ossia) st.ossia = 'on';
 if (!st.bounds || typeof st.bounds !== 'object') st.bounds = {};
 delete st.ctlMode;   /* the old Controls setting (On movement | At the edges) is gone: the controls always wake on movement */
 /* the spacing sliders now cover only their tight end */
@@ -2138,20 +2160,22 @@ function staffLine(o){
       for (let i = o.from; i < o.to; i++) { const sym = o.cols[i].items.get(lv); if (sym && (!skipSet || !skipSet.has(sym))) list.push([sym, o.xs[i] + (dxMap ? (dxMap.get(sym) || 0) : 0)]); }
       ligOut = ligatures(lv, list, top);
     }
+    const origMode = st.origText === 'orig' ? 'orig' : (st.origText === 'both' || st.origText === 'on') ? 'both' : 'modern';
+    const drawModernLyr = lShowLyr && origMode !== 'orig';
     for (let i = o.from; i < o.to; i++) {
       const c = o.cols[i], sym = c.items.get(lv);
       if (!sym) continue;
       const X = o.xs[i] + (dxMap ? (dxMap.get(sym) || 0) : 0);
       const rdy = restDyMap ? (restDyMap.get(sym) || 0) : 0;
       if (!skipSet || !skipSet.has(sym)) out += symSvg(sym, X, top, lShow, suppressMark, rdy);
-      if (lShowLyr && sym.text && st.dashes !== 'off') {
+      if (drawModernLyr && sym.text && st.dashes !== 'off') {
         out += `<text class="lyr" data-s="${sym.id}" x="${f(X + sym.hw / 2 + sym.lyo)}" y="${f(lyrY)}" font-size="${f(lyrSize())}" text-anchor="middle">${esc(sym.text)}</text>`;
       }
     }
     let prevSyl = null;
     const syms = [];
     for (let i = o.from; i < o.to; i++) { const sym = o.cols[i].items.get(lv); if (sym) syms.push([sym, o.xs[i] + (dxMap ? (dxMap.get(sym) || 0) : 0)]); }
-    if (lShowLyr && st.dashes === 'off') {
+    if (drawModernLyr && st.dashes === 'off') {
       let open = false;
       syms.forEach(([sym, X], k) => {
         if (!sym.text) return;
@@ -2170,7 +2194,7 @@ function staffLine(o){
         open = true;
       });
     }
-    if (lShowLyr) {
+    if (drawModernLyr) {
       for (const [sym, X] of syms) {
         if (sym.text) {
           if (prevSyl && prevSyl[0].hy) {
@@ -2212,10 +2236,11 @@ function staffLine(o){
       for (let i = o.from; i < o.to; i++) if (o.cols[i].t >= t - EPS) return o.xs[i];
       return x1 - 2.0;
     };
-    if (lShowLyr && st.origText === 'on') {
-      const origY = lyrY + lyrSize() * 1.08;
+    if (lShowLyr && (origMode === 'orig' || origMode === 'both')) {
+      const origY = origMode === 'orig' ? lyrY : lyrY + lyrSize() * 1.08;
+      const origFs = origMode === 'orig' ? lyrSize() : lyrSize() * 0.88;
       for (const [sym, X] of syms) {
-        if (sym.origText) out += `<text class="orig-lyr" data-s="${sym.id}" x="${f(X + sym.hw / 2 + sym.lyo)}" y="${f(origY)}" font-size="${f(lyrSize() * 0.88)}" text-anchor="middle">${esc(sym.origText)}</text>`;
+        if (sym.origText) out += `<text class="orig-lyr" data-s="${sym.id}" data-orig-vi="${lv.idx}" data-orig-ei="${sym.src ? sym.src[0] : -1}" x="${f(X + sym.hw / 2 + sym.lyo)}" y="${f(origY)}" font-size="${f(origFs)}" text-anchor="middle">${esc(sym.origText)}</text>`;
       }
     }
     if (lShow && ext.custos.length) {
@@ -2239,19 +2264,24 @@ function staffLine(o){
       ext.ann.forEach((an, ai) => {
         if (an.vi === lv.idx && an.t >= o.t0 - EPS && an.t <= o.tEnd + EPS) {
           const ax = colX(an.t) + 0.5, ay = top - 1.5;
-          out += `<g class="ann-badge" data-ann="${esc(an.id || String(ai))}"><title>${esc(an.text)}</title><rect x="${f(ax - 0.75)}" y="${f(ay - 0.95)}" width="1.5" height="1.25" rx="0.25"/><text x="${f(ax)}" y="${f(ay)}" font-size="0.95" text-anchor="middle">${ai + 1}</text></g>`;
+          out += `<g class="ann-badge" data-ann="${esc(an.id || String(ai))}"><title>${esc((an.cat ? '[' + an.cat + '] ' : '') + an.text)}</title><rect x="${f(ax - 0.78)}" y="${f(ay - 0.96)}" width="1.56" height="1.28" rx="0.3"/><text x="${f(ax)}" y="${f(ay)}" font-size="0.92" text-anchor="middle">${ai + 1}</text></g>`;
         }
       });
     }
-    if (lShow && ext.variants.length) {
-      for (const vr of ext.variants) {
+    if (lShow && st.ossia !== 'off' && ext.variants.length) {
+      ext.variants.forEach((vr, viIdx) => {
         if (vr.vi === lv.idx && vr.endT > o.t0 + EPS && vr.t < o.tEnd - EPS) {
           const xa = Math.max(x0 + 2, colX(Math.max(vr.t, o.t0)) - 0.2);
-          const xb = Math.min(x1 - 0.5, Math.max(xa + 2.0, colX(Math.min(vr.endT, o.tEnd))));
-          const by = top - 1.1;
-          out += `<g class="var-br"><path fill="none" stroke-width="0.11" stroke-dasharray="0.4 0.3" d="M${f(xa)} ${f(by + 0.4)}V${f(by)}H${f(xb)}V${f(by + 0.4)}"/><text x="${f((xa + xb) / 2)}" y="${f(by - 0.25)}" font-size="0.88" text-anchor="middle">${esc(ext.activeVer || 'var')}</text></g>`;
+          const xb = Math.min(x1 - 0.5, Math.max(xa + 2.2, colX(Math.min(vr.endT, o.tEnd))));
+          const by = top - 1.2;
+          const alts = (vr.readings || []).filter(r => r.ver && r.ver.toUpperCase() !== 'DEFAULT');
+          const lbl = ext.activeVer && alts.some(r => r.ver === ext.activeVer)
+            ? ext.activeVer
+            : (alts.length ? (alts[0].ver + (alts.length > 1 ? ' +' + (alts.length - 1) : '')) : 'Ossia');
+          const pw = Math.max(2.6, lbl.length * 0.56 + 0.9), mx = (xa + xb) / 2;
+          out += `<g class="var-br" data-var-id="${esc(vr.id || String(viIdx))}"><title>Click to view or edit variant reading (${esc(lbl)})</title><path fill="none" stroke-width="0.11" stroke-dasharray="0.4 0.3" d="M${f(xa)} ${f(by + 0.4)}V${f(by)}H${f(xb)}V${f(by + 0.4)}"/><rect class="var-pill" x="${f(mx - pw / 2)}" y="${f(by - 1.25)}" width="${f(pw)}" height="1.15" rx="0.3"/><text x="${f(mx)}" y="${f(by - 0.35)}" font-size="0.82" text-anchor="middle">${esc(lbl)}</text></g>`;
         }
-      }
+      });
     }
     if (drawCustos && !o.last && lShow) { const nx = nextSym(lv, o.tEnd); if (nx) out += custosSvg(nx, x1 - 2.0, top); }
     return out;
@@ -2412,13 +2442,15 @@ function lineRoom(v, line){
   for (let i = line.from; i < line.to; i++) { const s = line.cols[i].items.get(v); if (s) hiTxt[i - line.from] = Math.max(hiTxt[i - line.from], extent(s, 0)[1] + pad); }
   const txt2 = hiTxt.map((x, i) => Math.max(x, hiTxt[i - 1] ?? 0, hiTxt[i + 1] ?? 0));
   let above = -Math.min(...lo2), below = Math.max(...hi2) - 4;
-  const lyr = vis(v.idx).lyr && v.syms.some(s => s.text);
-  const ls = lyrSize(), lyrExtra = Math.max(0, ls - 1.7) * 0.75, lyrDesc = 0.41 * ls;
+  const origMode = st.origText === 'orig' ? 'orig' : (st.origText === 'both' || st.origText === 'on') ? 'both' : 'modern';
+  const hasMod = v.syms.some(s => s.text), hasOrig = v.syms.some(s => s.origText);
+  const lyr = vis(v.idx).lyr && (origMode === 'orig' ? hasOrig : origMode === 'both' ? (hasMod || hasOrig) : hasMod);
+  const ls = lyrSize(), lyrExtra = Math.max(0, ls - 1.7) * 0.75, lyrDesc = 0.41 * ls + (origMode === 'both' && hasOrig ? ls * 1.15 : 0);
   const lyrY = Math.max(4 + 1.5 + 1.1 * m, 4 + (Math.max(...txt2) - 4) + 0.9 + 0.6 * m) + lyrExtra;
   if (lyr) {
     /* the lyric row only claims room where a syllable (or its dash) really stands, so a neighbouring staff's stems may pass the empty stretches of the row */
     const hit = new Array(n).fill(!line.xs), sy = [];
-    if (line.xs) for (let i = line.from; i < line.to; i++) { const q = line.cols[i].items.get(v); if (q && q.text) sy.push([q, line.xs[i]]); }
+    if (line.xs) for (let i = line.from; i < line.to; i++) { const q = line.cols[i].items.get(v); if (q && (q.text || (origMode !== 'modern' && q.origText))) sy.push([q, line.xs[i]]); }
     sy.forEach(([q, X], k) => {
       const cx = X + q.hw / 2 + q.lyo;
       let lo = cx - q.tw / 2 - 0.4, hiX = cx + q.tw / 2 + 0.4;
@@ -4952,19 +4984,29 @@ function cmmeToKernRich(text, fileName){
         if (tag === 'VariantReadings') {
           const rds = ch(e, 'Reading');
           const defRd = rds.find(r => ch(r, 'VariantVersionID').some(x => x.textContent.trim().toUpperCase() === 'DEFAULT')) || rds[0];
-          const vStart = rt(t);
+          const vStart = rt(t), evIdxBefore = evs.length;
           if (defRd) walk([...(c1(defRd, 'Music') || defRd).children]);
           const vEnd = rt(t);
+          const defEvents = evs.slice(evIdxBefore).map(ev => ({d: ev.d, kd: ev.kd, step: ev.step, alt: ev.alt, rest: !!ev.rest, ed: !!ev.ed, look: ev.look || ''}));
           const altReadings = [];
           for (const r of rds) {
             const vids = ch(r, 'VariantVersionID').map(x => x.textContent.trim()).filter(Boolean);
             const ver = vids.join(', ') || 'Alt';
             const rMusic = c1(r, 'Music') || r;
-            const rNotes = ch(rMusic, 'Note').concat(ch(rMusic, 'Rest')).map(x => {
-              const tp = tx(x, 'Type'), ln = tx(x, 'LetterName'), oc = tx(x, 'OctaveNum');
-              return x.localName === 'Rest' ? tp + ' rest' : tp + ' ' + ln + oc;
-            });
-            altReadings.push({ver, summary: rNotes.join(', '), xml: new XMLSerializer().serializeToString(r)});
+            const isDef = r === defRd || ver.toUpperCase() === 'DEFAULT';
+            let rEvents = [];
+            if (isDef) {
+              rEvents = defEvents.map(x => Object.assign({}, x));
+            } else {
+              for (const child of [...rMusic.children]) {
+                if (child.localName === 'Note' || child.localName === 'Rest') {
+                  const pe = parseNoteEl(child);
+                  if (pe) rEvents.push({d: pe.d, kd: pe.kd, step: pe.step, alt: pe.alt, rest: !!pe.rest, ed: !!pe.ed, look: pe.look || ''});
+                }
+              }
+            }
+            const rNotes = rEvents.map(ev => ev.rest ? 'rest' : ('CDEFGAB'[((ev.step % 7) + 7) % 7] + (Math.floor(ev.step / 7) + 1) + (ev.alt === -1 ? '♭' : ev.alt === 1 ? '♯' : '')));
+            altReadings.push({ver: isDef ? 'Default' : ver, summary: rNotes.join(' '), events: rEvents, xml: new XMLSerializer().serializeToString(r)});
           }
           if (altReadings.length > 1) {
             ext.variants.push({id: 'v' + (ext.variants.length + 1), vi, t: vStart, endT: vEnd, readings: altReadings});
@@ -8209,25 +8251,21 @@ function setStemDir(v, s, dir){
   });
 }
 function openNotePick(n, e){
-  const v = piece.voices[n.vi], s = n.s;
+  const v = piece.voices[n.vi], s = n.s, ext = ensureExt(piece);
+  const hasAnn = ext.ann.some(a => a.vi === n.vi && eq(a.t, s.t));
+  const apparatusItems =
+    (!s.rest ? `<li role="menuitem" data-act="orig"><span class="lookico" style="align-items:center;justify-content:center;font-size:13px;font-style:italic">T</span><span>Original text…</span></li>` : '') +
+    `<li role="menuitem" data-act="ann"><span class="lookico" style="align-items:center;justify-content:center;font-size:13px">§</span><span>${hasAnn ? 'Edit commentary…' : 'Add commentary…'}</span></li>` +
+    `<li role="menuitem" data-act="var"><span class="lookico" style="align-items:center;justify-content:center;font-size:13px">≈</span><span>Add variant reading…</span></li>`;
   if (s.rest) {
-    const ext = ensureExt(piece), ek = n.vi + ':' + rt(s.t), ro = ext.rests[ek] || null;
-    const curSp = ro ? String(ro.sp) : '', curBot = ro && ro.bot ? String(ro.bot) : '';
-    notePickAt = {vi: n.vi, t: s.t, rest: true};
-    notePick.innerHTML = `<li class="hd" role="presentation">Rest shape</li>` +
-      [['', 'Auto'], ['1', '1 space'], ['2', '2 spaces'], ['3', '3 spaces']].map(([k, l]) =>
-        `<li role="menuitemradio" data-rsp="${k}" aria-checked="${k === curSp}" aria-selected="${k === curSp}"><span class="lookico"></span><span>${l}</span></li>`
-      ).join('') +
-      `<li class="sep" role="separator"></li><li class="hd" role="presentation">Bottom line</li>` +
-      ['1', '2', '3', '4', '5'].map(k =>
-        `<li role="menuitemradio" data-rbot="${k}" aria-checked="${k === curBot}" aria-selected="${k === curBot}"><span class="lookico"></span><span>Line ${k}</span></li>`
-      ).join('');
+    notePickAt = {vi: n.vi, t: s.t, ei: s.src[0], rest: true, x: e.clientX, y: e.clientY};
+    notePick.innerHTML = `<li class="hd" role="presentation">Critical apparatus</li>` + apparatusItems;
   } else {
     const head = headAt(n, e);
     let cur = '', curStem = '';
     lookEvents(v, s, head, o => { if (!cur && o.look) cur = o.look; });
     for (const i of s.src) { const ev = v.events[i]; if (ev && !ev.rest && ev.stemDirOvr) { curStem = ev.stemDirOvr; break; } }
-    notePickAt = {vi: n.vi, t: s.t, head, rest: false};
+    notePickAt = {vi: n.vi, t: s.t, ei: s.src[0], head, rest: false, x: e.clientX, y: e.clientY};
     const sw = k => {
       const g = k ? lookGlyph(s, k) : {g: s.glyphAuto || s.glyph, red: s.glyphAuto ? s.redAuto : s.red};
       const gl = chordHeadGlyph(g.g);
@@ -8237,7 +8275,8 @@ function openNotePick(n, e){
     notePick.innerHTML = `<li class="hd" role="presentation">Appearance</li>` +
       LOOKS.map(([k, l]) => `<li role="menuitemradio" data-look="${k}" aria-checked="${k === cur}" aria-selected="${k === cur}" title="${k ? 'Shown ' + l.toLowerCase() + ' only: the value and the sound stay as they are' : 'As the notation gives it'}">${sw(k)}<span>${l}</span></li>`).join('') +
       `<li class="sep" role="separator"></li><li class="hd" role="presentation">Stem direction</li>` +
-      STEMS_MENU.map(([k, l]) => `<li role="menuitemradio" data-stem="${k}" aria-checked="${k === curStem}" aria-selected="${k === curStem}"><span class="lookico" style="align-items:center;justify-content:center;font-size:14px">${stemIco(k)}</span><span>${l}</span></li>`).join('');
+      STEMS_MENU.map(([k, l]) => `<li role="menuitemradio" data-stem="${k}" aria-checked="${k === curStem}" aria-selected="${k === curStem}"><span class="lookico" style="align-items:center;justify-content:center;font-size:14px">${stemIco(k)}</span><span>${l}</span></li>`).join('') +
+      `<li class="sep" role="separator"></li><li class="hd" role="presentation">Critical apparatus</li>` + apparatusItems;
   }
   const wr = $('.viewwrap').getBoundingClientRect();
   notePick.hidden = false;
@@ -8250,32 +8289,22 @@ function notePickDo(li){
   const at = notePickAt; notePick.hidden = true; notePickAt = null;
   if (!li || !at || !piece) return;
   const v = piece.voices[at.vi], s = v && (v.syms || []).find(q => q.src && !!q.rest === !!at.rest && Math.abs(q.t - at.t) < EPS);
-  if (!s || !writable(v)) return;
-  if (at.rest) {
-    const ek = at.vi + ':' + rt(s.t);
-    if (li.dataset.rsp !== undefined) {
-      const sp = +li.dataset.rsp || 0;
-      commit(() => {
-        const ext = ensureExt(piece);
-        if (!sp) delete ext.rests[ek];
-        else ext.rests[ek] = {bot: (ext.rests[ek] && ext.rests[ek].bot) || 2, sp};
-      });
-    } else if (li.dataset.rbot !== undefined) {
-      const bot = +li.dataset.rbot || 2;
-      commit(() => {
-        const ext = ensureExt(piece);
-        ext.rests[ek] = {bot, sp: (ext.rests[ek] && ext.rests[ek].sp) || 1};
-      });
-    }
+  if (!s) return;
+  if (li.dataset.act === 'orig') { openOrigEditor(at.vi, s.src[0]); return; }
+  if (li.dataset.act === 'ann') { openMarginaliaAt(at.vi, s.t, at.x, at.y); return; }
+  if (li.dataset.act === 'var') {
+    if (!inSel(at.vi, s)) { ed.range = null; ed.picks = null; ed.sel = {vi: at.vi, ei: s.src[0]}; showSel(); }
+    openNewVariantEditor(at.x, at.y);
     return;
   }
+  if (!writable(v)) return;
   if (li.dataset.look !== undefined) { setLook(v, s, at.head, li.dataset.look); return; }
   if (li.dataset.stem !== undefined) { setStemDir(v, s, li.dataset.stem); return; }
 }
-notePick.addEventListener('click', e => { const li = e.target.closest('li[data-look],li[data-stem],li[data-rsp],li[data-rbot]'); if (li) notePickDo(li); });
+notePick.addEventListener('click', e => { const li = e.target.closest('li[data-look],li[data-stem],li[data-act]'); if (li) notePickDo(li); });
 notePick.addEventListener('keydown', e => {
   e.stopPropagation();
-  const items = [...notePick.querySelectorAll('li[data-look],li[data-stem],li[data-rsp],li[data-rbot]')];
+  const items = [...notePick.querySelectorAll('li[data-look],li[data-stem],li[data-act]')];
   let i = items.findIndex(li => li.classList.contains('active'));
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault(); i = (i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length;
@@ -8568,7 +8597,43 @@ function swapDivisiSelection(){
       }
     });
   }
-  document.head.insertAdjacentHTML('beforeend', '<style>#popDot.open .popbody{display:block !important}#popDot .popbody{left:50% !important;right:auto !important;transform:translateX(-50%);padding:3px !important}#pages .dothit .dotkind{opacity:0;pointer-events:none;fill:var(--sel);font-family:"IM Fell English",Georgia,serif;transition:opacity .12s}#pages .dothit:hover .dotkind{opacity:1}@media print{#pages .dotkind{display:none !important}}#mensMenu .meq{border-top:1px solid var(--line);margin-top:4px;padding-top:2px}#mensMenu .meq .mlev{flex-direction:column;align-items:stretch;gap:3px}#mensMenu .meq .mslab{width:auto;font-size:13px;color:var(--muted)}#mensMenu .meq .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}#mensMenu .meq .tb{padding:3px 2px;font-size:12.5px;justify-content:center}.texpop{position:relative;display:inline-flex}.texmenu{display:none;position:absolute;left:-4px;top:calc(100% + 2px);z-index:85;padding:5px;border-radius:8px;background:var(--surface,#FAF5EA);border:1px solid var(--line);box-shadow:0 12px 28px -10px rgba(42,34,24,.38);flex-direction:column;gap:2px;min-width:170px}.texmenu::before{content:"";position:absolute;left:0;right:0;top:-6px;height:8px}.texpop:hover .texmenu,.texpop:focus-within .texmenu,.texpop.open .texmenu{display:flex}.texopt{display:flex !important;align-items:center;justify-content:flex-start !important;gap:8px;padding:4px 8px !important;min-height:30px !important;height:auto !important;font-size:13.5px !important;white-space:nowrap}.texsw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(42,34,24,.28);flex:none;display:inline-block}</style>');
+  /* Ligature button (#ligBtn) + hover dropdown (#popLig) for Ligature kind: Auto | Recta | Obliqua | c.o.p. | s.p. */
+  const lb = $('#ligBtn');
+  if (lb) {
+    const popL = document.createElement('div');
+    popL.className = 'pop'; popL.id = 'popLig';
+    lb.parentNode.insertBefore(popL, lb);
+    popL.appendChild(lb);
+    const bodyL = document.createElement('div');
+    bodyL.className = 'popbody';
+    bodyL.innerHTML = `<div class="btns col" id="ligKindSeg" role="group" aria-label="Ligature kind">` +
+      [['', 'Auto', 'Choose recta or obliqua automatically'], ['recta', 'Recta', 'Square ligature (ligatura recta)'], ['obliqua', 'Obliqua', 'Diagonal oblique ligature'], ['cop', 'c.o.p.', 'Cum opposita proprietate (two semibreves)'], ['sp', 's.p.', 'Sine proprietate (initial longa)']]
+        .map(([k, l, ti]) => `<button type="button" class="tb" data-v="${k}" title="${ti}">${l}</button>`).join('') +
+      `</div>`;
+    popL.appendChild(bodyL);
+    bodyL.addEventListener('click', e => {
+      const b = e.target.closest('button[data-v]'); if (!b || !piece) return;
+      const it = selEvents().filter(x => !x.e.rest);
+      if (!it.length) { toast('Select a ligature (or 2+ notes with Shift-click) first.'); return; }
+      if (it.some(x => !writable(x.v))) { refuse(); return; }
+      const val = b.dataset.v;
+      /* If 2+ notes are selected and not yet joined in a ligature, join them AND apply the chosen kind in one step */
+      if (it.length >= 2 && new Set(it.map(x => x.v)).size === 1 && !it[0].e.lig) {
+        CBA.toggleLig();
+      }
+      commit(() => {
+        const ext = ensureExt(piece);
+        const targetEv = selEvents().filter(x => !x.e.rest)[0] || it[0];
+        if (!targetEv) return;
+        const ek = piece.voices.indexOf(targetEv.v) + ':' + rt(targetEv.e.t);
+        if (!val) delete ext.ligKind[ek]; else ext.ligKind[ek] = val;
+      });
+      popL.classList.remove('open');
+      syncAdv();
+      toast(val ? 'Ligature kind: ' + b.textContent : 'Ligature kind: Auto');
+    });
+  }
+  document.head.insertAdjacentHTML('beforeend', '<style>#popDot.open .popbody,#popLig.open .popbody{display:block !important}#popDot .popbody,#popLig .popbody{left:50% !important;right:auto !important;transform:translateX(-50%);padding:4px !important}#popLig .tb{white-space:nowrap;min-width:74px;justify-content:center}#pages .dothit .dotkind{opacity:0;pointer-events:none;fill:var(--sel);font-family:"IM Fell English",Georgia,serif;transition:opacity .12s}#pages .dothit:hover .dotkind{opacity:1}@media print{#pages .dotkind{display:none !important}}#mensMenu .meq{border-top:1px solid var(--line);margin-top:4px;padding-top:2px}#mensMenu .meq .mlev{flex-direction:column;align-items:stretch;gap:3px}#mensMenu .meq .mslab{width:auto;font-size:13px;color:var(--muted)}#mensMenu .meq .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}#mensMenu .meq .tb{padding:3px 2px;font-size:12.5px;justify-content:center}.texpop{position:relative;display:inline-flex}.texmenu{display:none;position:absolute;left:-4px;top:calc(100% + 2px);z-index:85;padding:5px;border-radius:8px;background:var(--surface,#FAF5EA);border:1px solid var(--line);box-shadow:0 12px 28px -10px rgba(42,34,24,.38);flex-direction:column;gap:2px;min-width:170px}.texmenu::before{content:"";position:absolute;left:0;right:0;top:-6px;height:8px}.texpop:hover .texmenu,.texpop:focus-within .texmenu,.texpop.open .texmenu{display:flex}.texopt{display:flex !important;align-items:center;justify-content:flex-start !important;gap:8px;padding:4px 8px !important;min-height:30px !important;height:auto !important;font-size:13.5px !important;white-space:nowrap}.texsw{width:18px;height:18px;border-radius:4px;border:1px solid rgba(42,34,24,.28);flex:none;display:inline-block}</style>');
 }
 /* edit mode is always caret mode: the caret stands at the start until a note is clicked */
 function setEdit(on){
@@ -8612,7 +8677,12 @@ if ($('#cmmeBtn')) $('#cmmeBtn').addEventListener('click', () => {
   toast('Exported CMME XML (.cmme.xml).');
 });
 
-/* ---------------- Advanced (Beta) Menu & Apparatus ---------------- */
+/* ---------------- Critical Apparatus: Ligature kind, Original Text, Marginalia & Variant Ossias ---------------- */
+function normOrigMode(){
+  if (st.origText === 'orig') return 'orig';
+  if (st.origText === 'both' || st.origText === 'on') return 'both';
+  return 'modern';
+}
 function syncAdv(){
   if (!piece) return;
   const ext = ensureExt(piece);
@@ -8620,195 +8690,545 @@ function syncAdv(){
   const first = it[0] || null;
   const vi = first ? piece.voices.indexOf(first.v) : -1;
   const ek = first ? vi + ':' + rt(first.e.t) : '';
-  const lookVal = first && !first.e.rest ? (first.e.look || '') : '';
-  const sdVal = first && !first.e.rest ? (first.e.stemDirOvr || '') : '';
-  const ssVal = first && !first.e.rest ? (first.e.stemSideOvr || '') : '';
-  const ro = first && first.e.rest ? ext.rests[ek] : null;
   const lkVal = first && !first.e.rest ? (ext.ligKind[ek] || '') : '';
   const setSeg = (id, val) => { const g = $(id); if (g) g.querySelectorAll('button[data-v]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === String(val)))); };
-  setSeg('#lookSeg', lookVal);
-  setSeg('#stemOvrSeg', sdVal);
-  setSeg('#stemSideSeg', ssVal);
-  setSeg('#restSpSeg', ro ? String(ro.sp) : '');
-  if ($('#restBotSel')) $('#restBotSel').value = ro && ro.bot ? String(ro.bot) : '';
   setSeg('#ligKindSeg', lkVal);
-  setSeg('#origTxtSeg', st.origText || 'off');
+  setSeg('#origTxtSeg', normOrigMode());
   setSeg('#annSeg', st.ann || 'on');
-  const al = $('#annList');
-  if (al) {
-    if (ext.ann.length) {
-      al.hidden = false;
-      al.innerHTML = ext.ann.map((a, idx) => `<div class="adv-item"><span>[${idx + 1}] V${a.vi + 1}: ${esc(a.text)}</span><button type="button" class="adv-del" data-del-ann="${idx}" title="Delete annotation">×</button></div>`).join('');
-    } else { al.hidden = true; al.innerHTML = ''; }
+  setSeg('#ossiaSeg', st.ossia || 'on');
+  /* Top-bar Source / Reading switcher (appears cleanly only when the score has variant readings) */
+  const rPod = $('#readingPod'), rBtn = $('#readingBtn'), rList = $('#readingList');
+  if (rPod && rBtn && rList) {
+    const vers = [...new Set(ext.variants.flatMap(vr => (vr.readings || []).map(r => r.ver)).filter(v => v && v.toUpperCase() !== 'DEFAULT'))];
+    rPod.hidden = !vers.length;
+    if (vers.length) {
+      const cur = ext.activeVer || '';
+      const chev = '<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg>';
+      rBtn.innerHTML = `Reading: ${esc(cur || 'Default')}${chev}`;
+      rList.innerHTML = [['', 'Default (Main)']].concat(vers.map(v => [v, v])).map(([val, lbl]) =>
+        `<button type="button" class="tb" data-reading="${esc(val)}" aria-pressed="${String(cur === val)}">${esc(lbl)}</button>`
+      ).join('');
+    }
   }
-  const vsel = $('#varVerSel'), vl = $('#varList');
-  if (vsel) {
-    const vers = [...new Set(ext.variants.flatMap(vr => (vr.readings || []).map(r => r.ver)).filter(Boolean))];
-    vsel.innerHTML = `<option value="">Default</option>` + vers.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
-    vsel.value = ext.activeVer || '';
-  }
-  if (vl) {
-    if (ext.variants.length) {
-      vl.hidden = false;
-      vl.innerHTML = ext.variants.map((vr, idx) => `<div class="adv-item"><span>V${vr.vi + 1} (${vr.readings.map(r => r.ver).join(' / ')})</span><button type="button" class="adv-del" data-del-var="${idx}" title="Delete variant">×</button></div>`).join('');
-    } else { vl.hidden = true; vl.innerHTML = ''; }
-  }
-  const cl = $('#chantList');
-  if (cl) {
-    if (ext.chants.length) {
-      cl.hidden = false;
-      cl.innerHTML = ext.chants.map((ch, idx) => `<div class="adv-item"><span class="chant-ed-item" data-ed-chant="${idx}" style="cursor:pointer" title="Click to edit">${esc(ch.title || '(Untitled chant)')}</span><button type="button" class="adv-del" data-del-chant="${idx}" title="Delete chant section">×</button></div>`).join('');
-    } else { cl.hidden = true; cl.innerHTML = ''; }
-  }
+  if ($('#critDrawer') && !$('#critDrawer').hidden) renderCritDrawer();
 }
-if ($('#lookSeg')) $('#lookSeg').addEventListener('click', e => {
-  const b = e.target.closest('button[data-v]'); if (!b || !piece) return;
-  const it = selEvents().filter(x => !x.e.rest);
-  if (!it.length) { toast('Select a note first.'); return; }
-  if (it.some(x => !writable(x.v))) { refuse(); return; }
-  const val = b.dataset.v;
-  commit(() => { for (const {e: ev} of it) ev.look = val; });
-  syncAdv();
-});
-if ($('#stemOvrSeg')) $('#stemOvrSeg').addEventListener('click', e => {
-  const b = e.target.closest('button[data-v]'); if (!b || !piece) return;
-  const it = selEvents().filter(x => !x.e.rest);
-  if (!it.length) { toast('Select a note first.'); return; }
-  if (it.some(x => !writable(x.v))) { refuse(); return; }
-  const val = b.dataset.v;
-  commit(() => { for (const {e: ev} of it) ev.stemDirOvr = val; });
-  syncAdv();
-});
-if ($('#stemSideSeg')) $('#stemSideSeg').addEventListener('click', e => {
-  const b = e.target.closest('button[data-v]'); if (!b || !piece) return;
-  const it = selEvents().filter(x => !x.e.rest);
-  if (!it.length) { toast('Select a note first.'); return; }
-  if (it.some(x => !writable(x.v))) { refuse(); return; }
-  const val = b.dataset.v;
-  commit(() => { for (const {e: ev} of it) ev.stemSideOvr = val; });
-  syncAdv();
-});
-if ($('#restSpSeg')) $('#restSpSeg').addEventListener('click', e => {
-  const b = e.target.closest('button[data-v]'); if (!b || !piece) return;
-  const it = selEvents().filter(x => x.e.rest);
-  if (!it.length) { toast('Select a rest first.'); return; }
-  if (it.some(x => !writable(x.v))) { refuse(); return; }
-  const sp = +b.dataset.v || 0, bot = +($('#restBotSel') && $('#restBotSel').value) || 2;
-  commit(() => {
-    const ext = ensureExt(piece);
-    for (const {v, e: ev} of it) {
-      const ek = piece.voices.indexOf(v) + ':' + rt(ev.t);
-      if (!sp) delete ext.rests[ek];
-      else ext.rests[ek] = {bot: (ext.rests[ek] && ext.rests[ek].bot) || bot, sp};
-    }
-  });
-  syncAdv();
-});
-if ($('#restBotSel')) $('#restBotSel').addEventListener('change', e => {
-  if (!piece) return;
-  const it = selEvents().filter(x => x.e.rest);
-  if (!it.length) { toast('Select a rest first.'); return; }
-  const bot = +e.target.value || 0;
-  commit(() => {
-    const ext = ensureExt(piece);
-    for (const {v, e: ev} of it) {
-      const ek = piece.voices.indexOf(v) + ':' + rt(ev.t);
-      if (!bot) delete ext.rests[ek];
-      else ext.rests[ek] = {bot, sp: (ext.rests[ek] && ext.rests[ek].sp) || 1};
-    }
-  });
-  syncAdv();
-});
-if ($('#ligKindSeg')) $('#ligKindSeg').addEventListener('click', e => {
-  const b = e.target.closest('button[data-v]'); if (!b || !piece) return;
-  const it = selEvents().filter(x => !x.e.rest);
-  if (!it.length) { toast('Select the first note of a ligature first.'); return; }
-  const val = b.dataset.v;
-  commit(() => {
-    const ext = ensureExt(piece);
-    for (const {v, e: ev} of it) {
-      const ek = piece.voices.indexOf(v) + ':' + rt(ev.t);
-      if (!val) delete ext.ligKind[ek]; else ext.ligKind[ek] = val;
-    }
-  });
-  syncAdv();
-});
+
 if ($('#origTxtSeg')) $('#origTxtSeg').addEventListener('click', e => {
   const b = e.target.closest('button[data-v]'); if (!b) return;
   st.origText = b.dataset.v; save(); render(); syncAdv();
-});
-if ($('#editOrigTxtBtn')) $('#editOrigTxtBtn').addEventListener('click', () => {
-  if (!piece) return;
-  const it = selEvents().filter(x => !x.e.rest);
-  if (!it.length) { toast('Select a note first.'); return; }
-  const {v, e: ev} = it[0], ek = piece.voices.indexOf(v) + ':' + rt(ev.t);
-  const ext = ensureExt(piece);
-  const cur = ext.origText[ek] || '';
-  const val = prompt('Original-orthography syllable / text for this note (empty to clear):', cur);
-  if (val === null) return;
-  commit(() => {
-    if (val.trim()) { ext.origText[ek] = val.trim(); st.origText = 'on'; save(); }
-    else delete ext.origText[ek];
-  });
-  syncAdv();
 });
 if ($('#annSeg')) $('#annSeg').addEventListener('click', e => {
   const b = e.target.closest('button[data-v]'); if (!b) return;
   st.ann = b.dataset.v; save(); render(); syncAdv();
 });
+if ($('#ossiaSeg')) $('#ossiaSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-v]'); if (!b) return;
+  st.ossia = b.dataset.v; save(); render(); syncAdv();
+});
+if ($('#openCritBtn')) $('#openCritBtn').addEventListener('click', () => { closePops(); openCritDrawer(); });
+if ($('#readingList')) $('#readingList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-reading]'); if (!b || !piece) return;
+  closePops();
+  switchReading(b.dataset.reading);
+});
+
+/* ---- 1. Inline Original Text Syllable Editor (matches lyrics.js UX) ---- */
+const origEd = {inp: null, vi: -1, ei: -1, busy: false};
+const origSylNote = e => e && !e.rest && !e.tieEnd && !e.tieMid;
+const origNextNote = (v, ei, dir) => { for (let i = ei + dir; i >= 0 && i < v.events.length; i += dir) if (origSylNote(v.events[i])) return i; return -1; };
+function placeOrigInput(){
+  const inp = origEd.inp; if (!inp || !piece) return;
+  const v = piece.voices[origEd.vi]; if (!v || !v.syms) return;
+  const k = v.syms.findIndex(q => q.src && q.src.includes(origEd.ei)); if (k < 0) return;
+  const g = pagesEl.querySelector('g.n' + origEd.vi + '-' + k); if (!g) return;
+  const par = g.parentNode;
+  let r = null;
+  for (const r2 of par.querySelectorAll('rect.stafhit[data-v="' + origEd.vi + '"]')) if (r2.dataset.k0 !== '' && +r2.dataset.k0 <= k && k <= +r2.dataset.k1) r = r2;
+  if (!r) return;
+  const own = par.querySelector('text.orig-lyr[data-s="n' + origEd.vi + '-' + k + '"]');
+  let ly = own ? +own.getAttribute('y') : null;
+  if (ly === null) {
+    for (const t of par.querySelectorAll('text.lyr')) {
+      const m = /^n(\d+)-(\d+)/.exec(t.dataset.s || '');
+      if (m && +m[1] === origEd.vi && +m[2] >= +r.dataset.k0 && +m[2] <= +r.dataset.k1) { ly = +t.getAttribute('y') + (normOrigMode() === 'both' ? lyrSize() * 1.08 : 0); break; }
+    }
+  }
+  if (ly === null) ly = +r.dataset.top + 7.4;
+  const bb = g.getBBox(), ctm = par.getScreenCTM ? par.getScreenCTM() : null; if (!ctm) return;
+  const q = (x, y) => new DOMPoint(x, y).matrixTransform(ctm);
+  const c = q(bb.x + bb.width / 2, ly - 0.5), unit = q(0, 1).y - q(0, 0).y;
+  const wr = $('.viewwrap').getBoundingClientRect();
+  const fs = Math.max(12.5, Math.min(23, unit * 1.55));
+  inp.style.fontSize = fs + 'px'; inp.style.height = Math.round(fs * 1.75) + 'px';
+  const w = Math.max(72, Math.min(240, (inp.value.length + 3) * fs * 0.58 + 18));
+  inp.style.width = w + 'px';
+  inp.style.left = Math.max(4, Math.min(wr.width - w - 4, c.x - wr.left - w / 2)) + 'px';
+  inp.style.top = (c.y - wr.top - inp.offsetHeight / 2) + 'px';
+}
+function saveOrigInput(){
+  if (!origEd.inp || !piece) return;
+  const v = piece.voices[origEd.vi], ev = v && v.events[origEd.ei];
+  if (!ev) return;
+  const ek = origEd.vi + ':' + rt(ev.t);
+  const val = origEd.inp.value.trim();
+  const ext = ensureExt(piece), cur = ext.origText[ek] || '';
+  if (val === cur) return;
+  origEd.busy = true;
+  commit(() => {
+    if (val) {
+      ext.origText[ek] = val;
+      if (normOrigMode() === 'modern') { st.origText = 'both'; save(); }
+    } else {
+      delete ext.origText[ek];
+    }
+  });
+  origEd.busy = false;
+  syncAdv();
+}
+function closeOrigEditor(){
+  if (!origEd.inp) return;
+  saveOrigInput();
+  origEd.inp.remove(); origEd.inp = null; origEd.vi = -1; origEd.ei = -1;
+}
+function goOrigEditor(vi, ei){
+  const v = piece.voices[vi]; if (!v || !v.events[ei]) return;
+  origEd.vi = vi; origEd.ei = ei;
+  ed.range = null; ed.picks = null; ed.sel = {vi, ei}; ed.ins = {vi, ei: ei + 1};
+  showSel(true);
+  const ek = vi + ':' + rt(v.events[ei].t);
+  origEd.inp.value = ensureExt(piece).origText[ek] || '';
+  placeOrigInput(); setTimeout(placeOrigInput, 50);
+  origEd.inp.focus({preventScroll: true}); origEd.inp.select();
+}
+function openOrigEditor(vi, ei){
+  if (!piece) return;
+  closePops(); closeFloatingCards();
+  if (vi === undefined || vi < 0) {
+    const it = selEvents().filter(x => !x.e.rest);
+    if (!it.length) { toast('Select a note first, then press Original text (or Shift+L).'); return; }
+    vi = piece.voices.indexOf(it[0].v); ei = it[0].v.events.indexOf(it[0].e);
+  }
+  const v = piece.voices[vi]; if (!v) return;
+  if (!origSylNote(v.events[ei])) {
+    ei = origNextNote(v, ei - 1, 1);
+    if (ei < 0) { toast('No note in this voice to attach original text to.'); return; }
+  }
+  if (normOrigMode() === 'modern') { st.origText = 'both'; save(); render(); syncAdv(); }
+  if (!origEd.inp) {
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'orig-lyrin';
+    inp.placeholder = 'Orig. text'; inp.setAttribute('aria-label', 'Original-orthography syllable');
+    inp.autocomplete = 'off'; inp.spellcheck = false;
+    inp.addEventListener('keydown', e => {
+      e.stopPropagation();
+      if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); closeOrigEditor(); return; }
+      if (e.key === 'Tab' || (e.key === ' ' && !e.shiftKey)) {
+        e.preventDefault();
+        saveOrigInput();
+        const dir = e.shiftKey ? -1 : 1;
+        const nv = piece.voices[origEd.vi], nxt = origNextNote(nv, origEd.ei, dir);
+        if (nxt >= 0) goOrigEditor(origEd.vi, nxt); else closeOrigEditor();
+        return;
+      }
+      if (e.key === '-' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (!inp.value.endsWith('-')) inp.value += '-';
+        e.preventDefault();
+        saveOrigInput();
+        const nv = piece.voices[origEd.vi], nxt = origNextNote(nv, origEd.ei, 1);
+        if (nxt >= 0) goOrigEditor(origEd.vi, nxt); else closeOrigEditor();
+        return;
+      }
+      if (e.key === 'Backspace' && !inp.value) {
+        e.preventDefault();
+        saveOrigInput();
+        const nv = piece.voices[origEd.vi], prv = origNextNote(nv, origEd.ei, -1);
+        if (prv >= 0) goOrigEditor(origEd.vi, prv);
+      }
+    });
+    inp.addEventListener('input', () => placeOrigInput());
+    inp.addEventListener('blur', () => { if (!origEd.busy) setTimeout(() => { if (origEd.inp && document.activeElement !== origEd.inp) closeOrigEditor(); }, 40); });
+    $('.viewwrap').appendChild(inp);
+    origEd.inp = inp;
+  }
+  goOrigEditor(vi, ei);
+}
+if ($('#addOrigBtn')) $('#addOrigBtn').addEventListener('click', () => openOrigEditor());
+pagesEl.addEventListener('click', e => {
+  const ot = e.target.closest && e.target.closest('text.orig-lyr');
+  if (!ot || !piece) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const vi = +ot.dataset.origVi, ei = +ot.dataset.origEi;
+  if (vi >= 0 && ei >= 0) openOrigEditor(vi, ei);
+}, true);
+
+/* ---- 2. Marginalia Popover Card & Critical Notes Drawer ---- */
+const ANN_CATS = ['Editorial', 'Source', 'Performance', 'Text'];
+function barNumAt(t){
+  const bs = typeof barStarts === 'function' ? barStarts() : [0];
+  let b = 1;
+  for (let i = 0; i < bs.length; i++) if (bs[i] <= t + EPS) b = i + 1; else break;
+  return b;
+}
+function anchorPosFor(vi, t, cx, cy){
+  const wr = $('.viewwrap').getBoundingClientRect();
+  if (cx !== undefined && cy !== undefined) return {x: cx - wr.left, y: cy - wr.top};
+  const v = piece && piece.voices[vi];
+  const k = v && v.syms ? v.syms.findIndex(q => q.src && Math.abs(q.t - t) < EPS) : -1;
+  const el = k >= 0 ? pagesEl.querySelector('g.n' + vi + '-' + k) : null;
+  if (el) {
+    const r = el.getBoundingClientRect();
+    return {x: r.left - wr.left + r.width / 2, y: r.top - wr.top};
+  }
+  return {x: wr.width / 2 - 150, y: 80};
+}
+function closeFloatingCards(){
+  const mc = $('#margCard'), oc = $('#ossiaCard');
+  if (mc) mc.hidden = true;
+  if (oc) { stopOssiaPlay(); oc.hidden = true; }
+}
+function openMarginaliaAt(vi, t, cx, cy){
+  if (!piece) return;
+  closePops(); closeFloatingCards();
+  const ext = ensureExt(piece);
+  const existing = ext.ann.find(a => a.vi === vi && eq(a.t, t)) || null;
+  const v = piece.voices[vi];
+  const vName = (v && v.name) || ('Voice ' + (vi + 1));
+  const bar = barNumAt(t);
+  let cat = (existing && existing.cat) || 'Editorial';
+  const card = $('#margCard');
+  card.innerHTML =
+    `<div class="fc-head"><div><div class="fc-title">Editorial Commentary</div><div class="fc-sub">${esc(vName)} · Bar ${bar}</div></div><button type="button" class="fc-x" aria-label="Close">×</button></div>` +
+    `<div class="fc-cats" role="group" aria-label="Category">${ANN_CATS.map(c => `<button type="button" class="fc-chip" data-cat="${c}" aria-pressed="${String(c === cat)}">${c}</button>`).join('')}</div>` +
+    `<textarea class="fc-ta" id="margTxt" rows="3" placeholder="Write editorial commentary, manuscript remark, or performance note…">${esc(existing ? existing.text : '')}</textarea>` +
+    `<div class="fc-foot">` +
+      `<button type="button" class="chbtn" id="margAll">All notes (${ext.ann.length})</button>` +
+      `<span style="flex:1"></span>` +
+      (existing ? `<button type="button" class="chbtn chdanger" id="margDel">Delete</button>` : '') +
+      `<button type="button" class="chbtn chprimary" id="margSave">Save</button>` +
+    `</div>`;
+  const wr = $('.viewwrap').getBoundingClientRect();
+  const pos = anchorPosFor(vi, t, cx, cy);
+  card.hidden = false;
+  card.style.left = Math.max(8, Math.min(wr.width - card.offsetWidth - 8, pos.x - 20)) + 'px';
+  card.style.top = Math.max(8, pos.y + 16) + 'px';
+  const ta = $('#margTxt');
+  card.querySelector('.fc-x').addEventListener('click', () => { card.hidden = true; });
+  card.querySelectorAll('.fc-chip').forEach(b => b.addEventListener('click', () => {
+    cat = b.dataset.cat;
+    card.querySelectorAll('.fc-chip').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  }));
+  $('#margAll').addEventListener('click', () => { card.hidden = true; openCritDrawer(); });
+  if ($('#margDel')) $('#margDel').addEventListener('click', () => {
+    commit(() => { ext.ann = ext.ann.filter(a => a !== existing); });
+    card.hidden = true; syncAdv(); toast('Commentary deleted.');
+  });
+  const doSave = () => {
+    const txt = ta.value.trim();
+    commit(() => {
+      if (!txt) { if (existing) ext.ann = ext.ann.filter(a => a !== existing); }
+      else if (existing) { existing.text = txt; existing.cat = cat; }
+      else { ext.ann.push({id: 'a' + (Date.now() % 100000), vi, t: rt(t), cat, text: txt}); st.ann = 'on'; save(); }
+    });
+    card.hidden = true; syncAdv();
+  };
+  $('#margSave').addEventListener('click', doSave);
+  ta.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doSave(); }
+    else if (e.key === 'Escape') { e.preventDefault(); card.hidden = true; }
+  });
+  ta.focus();
+}
+function renderCritDrawer(){
+  const dr = $('#critDrawer'); if (!dr || !piece) return;
+  const ext = ensureExt(piece);
+  const items = ext.ann.slice().sort((a, b) => a.t - b.t || a.vi - b.vi);
+  dr.innerHTML =
+    `<div class="fc-head"><div><div class="fc-title">Critical Notes</div><div class="fc-sub">${items.length} ${items.length === 1 ? 'note' : 'notes'}</div></div><button type="button" class="fc-x" id="critClose" aria-label="Close">×</button></div>` +
+    `<div class="crit-body">${items.length ? items.map((an, i) => {
+      const v = piece.voices[an.vi];
+      const vn = (v && v.name) || ('Voice ' + (an.vi + 1));
+      return `<div class="crit-item" data-jump-vi="${an.vi}" data-jump-t="${an.t}"><div class="crit-meta"><span class="crit-num">${i + 1}</span><strong>${esc(vn)}</strong> · Bar ${barNumAt(an.t)} <span class="crit-cat">${esc(an.cat || 'Editorial')}</span></div><div class="crit-txt">${esc(an.text)}</div></div>`;
+    }).join('') : '<div class="crit-empty">No editorial commentary yet.<br>Right-click any note or rest → <b>Add commentary…</b></div>'}</div>` +
+    `<div class="fc-foot"><button type="button" class="chbtn chprimary" id="critAdd">+ Add note at selection</button></div>`;
+  $('#critClose').addEventListener('click', () => { dr.hidden = true; });
+  $('#critAdd').addEventListener('click', () => {
+    const it = selEvents();
+    if (!it.length) { toast('Select a note or rest on the score first.'); return; }
+    openMarginaliaAt(piece.voices.indexOf(it[0].v), it[0].e.t);
+  });
+  dr.querySelectorAll('.crit-item').forEach(el => el.addEventListener('click', () => {
+    const vi = +el.dataset.jumpVi, t = +el.dataset.jumpT;
+    const v = piece.voices[vi];
+    if (v) {
+      const ei = v.events.findIndex(e => eq(e.t, t));
+      if (ei >= 0) { ed.range = null; ed.picks = null; ed.sel = {vi, ei}; showSel(true); }
+    }
+    openMarginaliaAt(vi, t);
+  }));
+}
+function openCritDrawer(){
+  const dr = $('#critDrawer'); if (!dr || !piece) return;
+  renderCritDrawer();
+  dr.hidden = false;
+}
 if ($('#addAnnBtn')) $('#addAnnBtn').addEventListener('click', () => {
+  closePops();
   if (!piece) return;
   const it = selEvents();
   if (!it.length) { toast('Select a note or rest first.'); return; }
-  const {v, e: ev} = it[0], vi = piece.voices.indexOf(v);
+  openMarginaliaAt(piece.voices.indexOf(it[0].v), it[0].e.t);
+});
+
+/* ---- 3. Variant Readings: Active Source Switcher + Visual Miniature Ossia Staff & Editor ---- */
+function snapVoiceRange(v, t0, t1){
+  return v.events.filter(e => e.t >= t0 - EPS && e.t < t1 - EPS).map(e => ({
+    d: e.d, kd: e.kd || e.d, step: e.step, alt: e.alt ?? null, rest: !!e.rest, ed: !!e.ed, look: e.look || '', syl: e.syl ? e.syl.slice() : []
+  }));
+}
+function applyEventsToVoice(v, t0, t1, newEvs){
+  if (!v || !newEvs || !newEvs.length) return t1;
+  const keepBefore = v.events.filter(e => e.t < t0 - EPS);
+  const keepAfter = v.events.filter(e => e.t >= t1 - EPS);
+  let curT = t0;
+  const inserted = newEvs.map(e => {
+    const ev = {
+      d: e.d || 1, kd: e.kd || e.d || 1, step: e.step !== undefined ? e.step : 28,
+      alt: e.alt ?? null, rest: !!e.rest, ed: !!e.ed, look: e.look || '', syl: e.syl ? e.syl.slice() : [], t: rt(curT)
+    };
+    curT = rt(curT + ev.d);
+    return ev;
+  });
+  const newEndT = curT;
+  const delta = rt(newEndT - t1);
+  v.events = keepBefore.concat(inserted, keepAfter);
+  retime(v);
+  return newEndT;
+}
+function switchReading(targetVer){
+  if (!piece) return;
   const ext = ensureExt(piece);
-  const existing = ext.ann.find(a => a.vi === vi && eq(a.t, ev.t));
-  const val = prompt('Editorial annotation text (empty to remove):', existing ? existing.text : '');
-  if (val === null) return;
+  const prevVer = ext.activeVer || '';
+  if (prevVer === targetVer) return;
   commit(() => {
-    if (!val.trim()) { if (existing) ext.ann = ext.ann.filter(a => a !== existing); }
-    else if (existing) existing.text = val.trim();
-    else ext.ann.push({id: 'a' + (ext.ann.length + 1), vi, t: rt(ev.t), text: val.trim()});
+    for (const vr of ext.variants) {
+      const v = piece.voices[vr.vi]; if (!v) continue;
+      const curName = prevVer || 'Default';
+      let curRd = vr.readings.find(r => r.ver.toUpperCase() === curName.toUpperCase()) || vr.readings.find(r => r.ver.toUpperCase() === 'DEFAULT');
+      if (curRd) curRd.events = snapVoiceRange(v, vr.t, vr.endT);
+      const wantName = targetVer || 'Default';
+      const nextRd = vr.readings.find(r => r.ver.toUpperCase() === wantName.toUpperCase()) || vr.readings.find(r => r.ver.toUpperCase() === 'DEFAULT');
+      if (nextRd && nextRd.events && nextRd.events.length) {
+        vr.endT = applyEventsToVoice(v, vr.t, vr.endT, nextRd.events);
+      }
+    }
+    ext.activeVer = targetVer;
   });
   syncAdv();
-});
-if ($('#annList')) $('#annList').addEventListener('click', e => {
-  const del = e.target.closest('[data-del-ann]'); if (!del || !piece) return;
-  const idx = +del.dataset.delAnn;
-  commit(() => { ensureExt(piece).ann.splice(idx, 1); });
-  syncAdv();
-});
-if ($('#varVerSel')) $('#varVerSel').addEventListener('change', e => {
-  if (!piece) return;
-  commit(() => { ensureExt(piece).activeVer = e.target.value; });
-  syncAdv();
-  toast(e.target.value ? `Showing variant reading: ${e.target.value}` : 'Showing Default reading.');
-});
-if ($('#addVarBtn')) $('#addVarBtn').addEventListener('click', () => {
+  toast(targetVer ? `Active reading: ${targetVer} (notation & playback updated)` : 'Active reading: Default');
+}
+
+const OSSIA_VALS = [['L', 4, 'Longa'], ['B', 2, 'Brevis'], ['S', 1, 'Semibrevis'], ['M', 0.5, 'Minima'], ['Sm', 0.25, 'Semiminima']];
+function ossiaGlyphFor(ev){
+  const d = ev.d || 1;
+  const k = d >= 3.5 ? 'L' : d >= 1.5 ? 'B' : d >= 0.75 ? 'S' : d >= 0.375 ? 'M' : 'Sm';
+  return ev.rest ? 'r' + k : k;
+}
+function renderOssiaSvg(events, clefKey, selIdx){
+  const ck = CLEFS[clefKey] ? clefKey : 'c3';
+  const bot = CLEFS[ck].bottom;
+  const evs = events || [];
+  let x = 4.6;
+  const xs = evs.map(ev => { const cx = x; x += ev.rest ? 2.4 : (ev.alt !== null && ev.alt !== undefined ? 3.2 : 2.6); return cx; });
+  const W = Math.max(18, x + 2.2), top = 2.6, H = 9.4;
+  let s = '';
+  for (let i = 0; i < 5; i++) s += hl(0.4, W - 0.4, top + i, 'staff', 0.11);
+  s += clefSvg(ck, 0.8, top);
+  evs.forEach((ev, idx) => {
+    const X = xs[idx], isSel = idx === selIdx;
+    const gKey = ossiaGlyphFor(ev);
+    const pos = ev.rest ? 4 : Math.max(-4, Math.min(12, (ev.step ?? bot + 4) - bot));
+    const ny = top + 4 - pos * 0.5;
+    let no = '';
+    if (isSel) no += `<rect class="ossia-selbg" x="${f(X - 0.65)}" y="${f(top - 1.1)}" width="2.2" height="6.2" rx="0.3"/>`;
+    if (!ev.rest) {
+      for (let lp = -2; lp >= pos; lp -= 2) no += hl(X - 0.35, X + 1.15, top + 4 - lp * 0.5, 'ledger', 0.12);
+      for (let lp = 10; lp <= pos; lp += 2) no += hl(X - 0.35, X + 1.15, top + 4 - lp * 0.5, 'ledger', 0.12);
+      if (ev.alt === -1 || ev.alt === 1 || ev.alt === 0) {
+        const ak = ev.alt === -1 ? 'fl' : ev.alt === 1 ? 'sh' : 'na';
+        no += `<g transform="translate(${f(X - 0.9)} ${f(ny)}) scale(0.75)">${use(ak, 0, 0)}</g>`;
+      }
+      no += use(gKey, X, ny);
+    } else {
+      no += use(gKey, X, top + 2);
+    }
+    s += `<g class="ossia-n${isSel ? ' sel' : ''}" data-oi="${idx}" style="cursor:pointer"><rect x="${f(X - 0.7)}" y="${f(top - 1.2)}" width="2.3" height="6.4" fill="transparent"/>${no}</g>`;
+  });
+  return `<svg class="ossia-svg" viewBox="0 0 ${f(W)} ${f(H)}" aria-label="Variant ossia staff">${s}</svg>`;
+}
+let ossiaTimers = [];
+function stopOssiaPlay(){ ossiaTimers.forEach(clearTimeout); ossiaTimers = []; }
+function playOssiaEvents(events){
+  stopOssiaPlay();
+  if (!events || !events.length) return;
+  const beatMs = Math.max(220, Math.round(60000 / Math.max(20, st.tempo || 60)));
+  let acc = 0;
+  for (const ev of events) {
+    const delay = acc;
+    if (!ev.rest && ev.step !== undefined) {
+      ossiaTimers.push(setTimeout(() => hear(ev.step, ev.alt || 0), delay));
+    }
+    acc += Math.max(140, Math.round((ev.d || 1) * beatMs));
+  }
+}
+function openOssiaCard(vr, cx, cy, initialTab){
+  if (!piece || !vr) return;
+  closePops(); closeFloatingCards();
+  const ext = ensureExt(piece);
+  const v = piece.voices[vr.vi];
+  const clefKey = v ? clefAt(v, vr.t) : 'c3';
+  const vName = (v && v.name) || ('Voice ' + (vr.vi + 1));
+  const alts = () => vr.readings.filter(r => r.ver && r.ver.toUpperCase() !== 'DEFAULT');
+  let curRd = (initialTab && vr.readings.find(r => r.ver === initialTab)) || alts()[0] || vr.readings[0];
+  let selIdx = curRd && curRd.events && curRd.events.length ? 0 : -1;
+  const card = $('#ossiaCard');
+
+  const drawCard = () => {
+    const altList = alts();
+    if (!curRd || !vr.readings.includes(curRd)) curRd = altList[0] || vr.readings[0];
+    if (!curRd.events) curRd.events = snapVoiceRange(v, vr.t, vr.endT);
+    if (selIdx >= curRd.events.length) selIdx = curRd.events.length - 1;
+    const selEv = selIdx >= 0 ? curRd.events[selIdx] : null;
+    const curValKey = selEv ? ossiaGlyphFor(selEv).replace(/^r/, '') : 'S';
+    card.innerHTML =
+      `<div class="fc-head"><div><div class="fc-title">Variant Reading (Ossia)</div><div class="fc-sub">${esc(vName)} · Bar ${barNumAt(vr.t)}</div></div><button type="button" class="fc-x" aria-label="Close">×</button></div>` +
+      `<div class="ossia-tabs">` +
+        altList.map(r => `<button type="button" class="fc-chip" data-tab="${esc(r.ver)}" aria-pressed="${String(r === curRd)}">${esc(r.ver)}</button>`).join('') +
+        `<button type="button" class="fc-chip" id="ossiaAddSrc" title="Add another manuscript source reading">+ Source</button>` +
+      `</div>` +
+      `<div class="ossia-stage">${renderOssiaSvg(curRd.events, clefKey, selIdx)}</div>` +
+      `<div class="ossia-ctrls">` +
+        `<button type="button" class="chbtn" id="osPlay" title="Play this variant reading">▶ Play</button>` +
+        `<span class="chsep"></span>` +
+        `<button type="button" class="chbtn" id="osUp" title="Pitch up"${!selEv || selEv.rest ? ' disabled' : ''}>↑</button>` +
+        `<button type="button" class="chbtn" id="osDn" title="Pitch down"${!selEv || selEv.rest ? ' disabled' : ''}>↓</button>` +
+        OSSIA_VALS.map(([k, , nm]) => `<button type="button" class="chbtn" data-ov="${k}" aria-pressed="${String(curValKey === k)}" title="${nm}"${!selEv ? ' disabled' : ''}>${k}</button>`).join('') +
+        `<button type="button" class="chbtn" id="osFlat" aria-pressed="${String(!!selEv && !selEv.rest && selEv.alt === -1)}" title="Flat"${!selEv || selEv.rest ? ' disabled' : ''}>♭</button>` +
+        `<button type="button" class="chbtn" id="osSharp" aria-pressed="${String(!!selEv && !selEv.rest && selEv.alt === 1)}" title="Sharp"${!selEv || selEv.rest ? ' disabled' : ''}>♯</button>` +
+        `<button type="button" class="chbtn" id="osRest" aria-pressed="${String(!!selEv && selEv.rest)}" title="Toggle rest"${!selEv ? ' disabled' : ''}>Rest</button>` +
+        `<button type="button" class="chbtn" id="osAdd" title="Add note to ossia">+</button>` +
+        `<button type="button" class="chbtn chdanger" id="osDelN" title="Remove selected ossia note"${!selEv || curRd.events.length <= 1 ? ' disabled' : ''}>⌫</button>` +
+      `</div>` +
+      `<div class="fc-foot">` +
+        `<button type="button" class="chbtn" id="osMakeMain" title="Swap this variant into the main score">Make main</button>` +
+        `<button type="button" class="chbtn" id="osUseSel" title="Copy currently selected score notes into this variant">Use selection</button>` +
+        `<span style="flex:1"></span>` +
+        `<button type="button" class="chbtn chdanger" id="osDelVar">Delete</button>` +
+        `<button type="button" class="chbtn chprimary" id="osDone">Done</button>` +
+      `</div>`;
+
+    card.querySelector('.fc-x').addEventListener('click', closeFloatingCards);
+    $('#osDone').addEventListener('click', () => { commit(() => {}); closeFloatingCards(); syncAdv(); });
+    card.querySelectorAll('.ossia-n').forEach(g => g.addEventListener('click', () => {
+      selIdx = +g.dataset.oi;
+      const ev = curRd.events[selIdx];
+      if (ev && !ev.rest) hear(ev.step, ev.alt || 0);
+      drawCard();
+    }));
+    card.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
+      const f = vr.readings.find(r => r.ver === b.dataset.tab);
+      if (f) { curRd = f; selIdx = 0; drawCard(); }
+    }));
+    $('#ossiaAddSrc').addEventListener('click', () => {
+      const name = prompt('Source / manuscript siglum (e.g. Tr87, ModB, Ox213):', 'Source ' + (altList.length + 2));
+      if (!name || !name.trim()) return;
+      const nr = {ver: name.trim(), summary: '', events: curRd.events.map(e => Object.assign({}, e))};
+      commit(() => { vr.readings.push(nr); });
+      curRd = nr; selIdx = 0; syncAdv(); drawCard();
+    });
+    $('#osPlay').addEventListener('click', () => playOssiaEvents(curRd.events));
+    const mutateOs = fn => { fn(); curRd.summary = curRd.events.map(e => e.rest ? 'rest' : 'CDEFGAB'[((e.step % 7) + 7) % 7]).join(' '); drawCard(); };
+    $('#osUp').addEventListener('click', () => { if (!selEv || selEv.rest) return; mutateOs(() => { selEv.step = clampStep(selEv.step + 1); }); hear(selEv.step, selEv.alt || 0); });
+    $('#osDn').addEventListener('click', () => { if (!selEv || selEv.rest) return; mutateOs(() => { selEv.step = clampStep(selEv.step - 1); }); hear(selEv.step, selEv.alt || 0); });
+    card.querySelectorAll('[data-ov]').forEach(b => b.addEventListener('click', () => {
+      if (!selEv) return;
+      const entry = OSSIA_VALS.find(x => x[0] === b.dataset.ov);
+      if (entry) mutateOs(() => { selEv.d = entry[1]; selEv.kd = entry[1]; });
+    }));
+    $('#osFlat').addEventListener('click', () => { if (!selEv || selEv.rest) return; mutateOs(() => { selEv.alt = selEv.alt === -1 ? null : -1; }); hear(selEv.step, selEv.alt || 0); });
+    $('#osSharp').addEventListener('click', () => { if (!selEv || selEv.rest) return; mutateOs(() => { selEv.alt = selEv.alt === 1 ? null : 1; }); hear(selEv.step, selEv.alt || 0); });
+    $('#osRest').addEventListener('click', () => { if (!selEv) return; mutateOs(() => { selEv.rest = !selEv.rest; }); });
+    $('#osAdd').addEventListener('click', () => {
+      const ref = selEv || {step: CLEFS[clefKey].bottom + 4, d: 1, alt: null};
+      mutateOs(() => { curRd.events.splice(selIdx + 1, 0, {d: ref.d || 1, kd: ref.d || 1, step: ref.step ?? 28, alt: null, rest: false, ed: false, look: ''}); selIdx++; });
+      hear(curRd.events[selIdx].step, 0);
+    });
+    $('#osDelN').addEventListener('click', () => { if (curRd.events.length <= 1) return; mutateOs(() => { curRd.events.splice(selIdx, 1); selIdx = Math.max(0, selIdx - 1); }); });
+    $('#osUseSel').addEventListener('click', () => {
+      const it = selEvents();
+      if (!it.length) { toast('Select a passage on the main score first.'); return; }
+      mutateOs(() => { curRd.events = it.map(({e}) => ({d: e.d, kd: e.kd || e.d, step: e.step, alt: e.alt ?? null, rest: !!e.rest, ed: !!e.ed, look: e.look || ''})); selIdx = 0; });
+      toast('Copied selected notes into variant.');
+    });
+    $('#osMakeMain').addEventListener('click', () => {
+      if (!v || !curRd.events.length) return;
+      commit(() => {
+        const prevMain = snapVoiceRange(v, vr.t, vr.endT);
+        let defRd = vr.readings.find(r => r.ver.toUpperCase() === 'DEFAULT');
+        if (!defRd) { defRd = {ver: 'Default', summary: 'Main text', events: prevMain}; vr.readings.unshift(defRd); }
+        const swappedEvents = curRd.events.map(e => Object.assign({}, e));
+        curRd.events = prevMain;
+        defRd.events = swappedEvents;
+        vr.endT = applyEventsToVoice(v, vr.t, vr.endT, swappedEvents);
+      });
+      closeFloatingCards(); syncAdv();
+      toast(`Swapped ${curRd.ver} into the main score.`);
+    });
+    $('#osDelVar').addEventListener('click', () => {
+      commit(() => { ext.variants = ext.variants.filter(x => x !== vr); });
+      closeFloatingCards(); syncAdv(); toast('Variant reading removed.');
+    });
+  };
+
+  drawCard();
+  const wr = $('.viewwrap').getBoundingClientRect();
+  const pos = anchorPosFor(vr.vi, vr.t, cx, cy);
+  card.hidden = false;
+  card.style.left = Math.max(8, Math.min(wr.width - card.offsetWidth - 8, pos.x - 40)) + 'px';
+  card.style.top = Math.max(8, pos.y + 16) + 'px';
+}
+function openNewVariantEditor(cx, cy){
   if (!piece) return;
   const it = selEvents();
-  if (!it.length) { toast('Select a note or passage first.'); return; }
-  const {v, e: ev} = it[0], last = it[it.length - 1].e, vi = piece.voices.indexOf(v);
-  const ver = prompt('Source / variant version ID (e.g. Source B, ModB):', 'Source B');
-  if (!ver || !ver.trim()) return;
-  const summary = prompt('Describe or transcribe the variant reading for this passage:', '');
-  if (summary === null) return;
-  commit(() => {
-    const ext = ensureExt(piece);
-    ext.variants.push({
-      id: 'v' + (ext.variants.length + 1), vi, t: rt(ev.t), endT: rt(last.t + last.d),
-      readings: [{ver: 'Default', summary: 'Main text'}, {ver: ver.trim(), summary: summary.trim()}]
-    });
-  });
+  if (!it.length) { toast('Select a note or passage (Shift-click) first.'); return; }
+  const v = it[0].v, vi = piece.voices.indexOf(v);
+  const t0 = rt(it[0].e.t), last = it[it.length - 1].e, t1 = rt(last.t + last.d);
+  const ext = ensureExt(piece);
+  const existing = ext.variants.find(vr => vr.vi === vi && vr.endT > t0 + EPS && vr.t < t1 - EPS);
+  if (existing) { openOssiaCard(existing, cx, cy); return; }
+  const srcEvs = snapVoiceRange(v, t0, t1);
+  const vr = {
+    id: 'v' + (Date.now() % 100000), vi, t: t0, endT: t1,
+    readings: [
+      {ver: 'Default', summary: 'Main text', events: srcEvs.map(e => Object.assign({}, e))},
+      {ver: 'Source B', summary: '', events: srcEvs.map(e => Object.assign({}, e))}
+    ]
+  };
+  commit(() => { ext.variants.push(vr); st.ossia = 'on'; save(); });
   syncAdv();
-  toast('Variant reading added.');
-});
-if ($('#varList')) $('#varList').addEventListener('click', e => {
-  const del = e.target.closest('[data-del-var]'); if (!del || !piece) return;
-  const idx = +del.dataset.delVar;
-  commit(() => { ensureExt(piece).variants.splice(idx, 1); });
-  syncAdv();
-});
+  openOssiaCard(vr, cx, cy, 'Source B');
+}
+if ($('#addVarBtn')) $('#addVarBtn').addEventListener('click', () => { closePops(); openNewVariantEditor(); });
+
+/* Shift+L shortcut in mensural mode opens inline Original Text editor on selected note */
+document.addEventListener('keydown', e => {
+  if (!piece || chantEd.idx >= 0) return;
+  if (e.target && e.target.closest && e.target.closest('input, textarea, select')) return;
+  if ((e.key === 'L' || e.key === 'l') && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const it = selEvents().filter(x => !x.e.rest);
+    if (it.length) { e.preventDefault(); e.stopImmediatePropagation(); openOrigEditor(piece.voices.indexOf(it[0].v), it[0].v.events.indexOf(it[0].e)); }
+  }
+}, true);
 /* ---------------- Interactive Plainchant GUI Editor ---------------- */
 function chantCur(){
   if (!piece || chantEd.idx < 0) return null;
@@ -9536,19 +9956,448 @@ document.addEventListener('keydown', e => {
 
 document.addEventListener('click', e => {
   const ab = e.target.closest && e.target.closest('.ann-badge');
-  if (!ab || !piece) return;
-  const ext = ensureExt(piece), id = ab.dataset.ann;
-  const an = ext.ann.find((a, i) => (a.id || String(i)) === id);
-  if (!an) return;
-  const val = prompt('Editorial annotation (edit or clear to delete):', an.text);
-  if (val === null) return;
-  commit(() => {
-    if (val.trim()) an.text = val.trim();
-    else ext.ann = ext.ann.filter(a => a !== an);
-  });
-  syncAdv();
+  if (ab && piece) {
+    e.preventDefault(); e.stopPropagation();
+    const ext = ensureExt(piece), id = ab.dataset.ann;
+    const an = ext.ann.find((a, i) => (a.id || String(i)) === id);
+    if (an) openMarginaliaAt(an.vi, an.t, e.clientX, e.clientY);
+    return;
+  }
+  const vb = e.target.closest && e.target.closest('.var-br');
+  if (vb && piece) {
+    e.preventDefault(); e.stopPropagation();
+    const ext = ensureExt(piece), id = vb.dataset.varId;
+    const vr = ext.variants.find((v, i) => (v.id || String(i)) === id);
+    if (vr) openOssiaCard(vr, e.clientX, e.clientY);
+    return;
+  }
 });
-document.head.insertAdjacentHTML('beforeend', '<style>#pages svg{user-select:none;-webkit-user-select:none}.betapill{display:inline-block;margin-left:5px;padding:1px 5px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;background:var(--accent,#8B2E22);color:#FAF5EA;vertical-align:middle}.advset{min-width:290px;max-width:340px}.advset .subhead{grid-column:1/-1;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}.advset .subhead:first-child{margin-top:0;padding-top:0;border-top:none}.adv-list{grid-column:1/-1;display:flex;flex-direction:column;gap:3px;max-height:110px;overflow:auto;padding:4px 6px;border-radius:6px;background:rgba(42,34,24,.04);font-size:12px}.adv-item{display:flex;align-items:center;justify-content:space-between;gap:6px}.adv-del{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px}.adv-del:hover{color:var(--accent,#8B2E22)}#pages .sf-badge{fill:var(--accent,#8B2E22);font-family:Georgia,serif;font-weight:700}#pages .orig-lyr{fill:var(--muted,#6B5E4E);font-style:italic;font-family:"IM Fell English",Georgia,serif}#pages .lacuna rect{fill:rgba(139,46,34,.08);stroke:var(--accent,#8B2E22);stroke-width:.12;stroke-dasharray:.4 .25}#pages .lacuna text{fill:var(--accent,#8B2E22);font-style:italic;font-family:Georgia,serif}#pages .ann-badge{cursor:pointer}#pages .ann-badge rect{fill:var(--accent,#8B2E22)}#pages .ann-badge text{fill:#FAF5EA;font-family:sans-serif;font-weight:700}#pages .var-br path{stroke:var(--muted,#6B5E4E)}#pages .var-br text{fill:var(--muted,#6B5E4E);font-family:sans-serif}#pages .chant-sys .cs-hit{cursor:crosshair}#pages .chant-sys .clyr{cursor:text}#pages .chant-sys .clyr:hover{fill:var(--accent,#8B2E22)}#pages .ch-ghost rect{fill:var(--accent,#8B2E22);opacity:.48}#pages .cn-hit,#pages .cb-hit{cursor:pointer}#pages .cn-hit .cn-bg,#pages .cb-hit .cn-bg{fill:transparent;transition:fill .1s}#pages .cn-hit:hover .cn-bg,#pages .cb-hit:hover .cn-bg{fill:rgba(139,46,34,.14)}#pages .cn-sel .cn-bg{fill:rgba(180,82,36,.24) !important;stroke:var(--accent,#8B2E22);stroke-width:.1}#pages .chant-title{fill:var(--ink,#2A2218);font-family:"IM Fell English",Georgia,serif}.chbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tph,56px) + 10px);z-index:55;pointer-events:auto;display:flex;flex-direction:column;gap:6px;padding:8px 12px;border-radius:12px;border:1px solid var(--line,rgba(42,34,24,.18));background:color-mix(in srgb,var(--ground,#FAF5EA) 95%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 10px 28px -8px rgba(42,34,24,.36);max-width:calc(100vw - 24px);box-sizing:border-box}html.embedded .chbar{position:absolute;bottom:auto;top:var(--chTop,68px)}html.dark .chbar{background:rgba(34,28,21,.95);box-shadow:0 10px 28px -6px rgba(0,0,0,.65)}.chbar[hidden]{display:none !important}.chbar .chrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.chbar .chnote.chdim{opacity:.52}.chbar .chlab{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#6B5E4E);min-width:62px}.chbar input[type=text],.chbar select{height:30px;padding:0 8px;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;background:var(--surface,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:13.5px;box-sizing:border-box}.chbar #chTitle{width:118px}.chbar #chSyl{width:136px}.chbar .chsep{width:1px;height:20px;background:var(--line,rgba(42,34,24,.18));margin:0 2px}.chbar .chseg{display:inline-flex;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;overflow:hidden}.chbar .chseg .chbtn{border:none;border-radius:0}.chbar .chbtn{display:inline-flex;align-items:center;justify-content:center;height:30px;min-width:30px;padding:0 9px;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;background:var(--surface,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:13.5px;line-height:1;cursor:pointer;white-space:nowrap}.chbar .chbtn:hover:not(:disabled){background:color-mix(in srgb,var(--accent,#8B2E22) 10%,var(--surface,#FFFDF8))}.chbar .chbtn[aria-pressed="true"],.chbar .chbtn.chprimary{background:var(--accent,#8B2E22);color:#FAF5EA;border-color:var(--accent,#8B2E22)}.chbar .chbtn.chdanger:hover:not(:disabled){background:#A12C1C;color:#FAF5EA;border-color:#A12C1C}.chbar .chbtn:disabled{opacity:.38;cursor:default}@media print{#chantBar{display:none !important}}</style>');
+document.addEventListener('pointerdown', e => {
+  const mc = $('#margCard'), oc = $('#ossiaCard');
+  if (mc && !mc.hidden && !e.target.closest('#margCard, .ann-badge, #notePick')) mc.hidden = true;
+  if (oc && !oc.hidden && !e.target.closest('#ossiaCard, .var-br, #notePick')) { stopOssiaPlay(); oc.hidden = true; }
+});
+
+/* ---------------- Help & Glossary (?) + Interactive Feature Finder (🔍 Spotlight) ---------------- */
+const HELP_ENTRIES = [
+  /* Note Input & Selection */
+  {id:'note-input', cat:'Note Input', title:'Note input mode', keys:'N', tags:'pen edit write enter notes keyboard',
+   where:'Top bar → Pen icon', sel:'#editBtn',
+   desc:'Turns Note Input on or off. When on, a vertical caret shows where new notes go: press A–G to write pitches, 1–8 for note values, R for rests, or click directly on any staff. Press Escape to exit.'},
+  {id:'note-values', cat:'Note Input', title:'Note values (Maxima – Semifusa)', keys:'1–8', tags:'duration rhythm maxima longa brevis semibrevis minima semiminima fusa semifusa',
+   where:'Editing bar → Note value', sel:'#durSum', openEditBar:true,
+   desc:'Choose the rhythmic value (Maxima 1, Longa 2, Brevis 3, Semibrevis 4, Minima 5, Semiminima 6, Fusa 7, Semifusa 8). With a note selected, changes its duration; otherwise sets the value of the next note entered.'},
+  {id:'rests', cat:'Note Input', title:'Rests', keys:'R', tags:'rest silence pause pausa',
+   where:'Editing bar → Rest button', sel:'#restBtn', openEditBar:true,
+   desc:'Toggles Rest entry mode (press R in Note input to insert a rest, or press R on a selected note to turn it into a rest). Rest shapes are rendered automatically according to mensural rules.'},
+  {id:'overwrite-insert', cat:'Note Input', title:'Overwrite vs Insert mode', keys:'I', tags:'overwrite insert push shift timing voices',
+   where:'Editing bar → Overwrite / Insert', sel:'#ovrBtn', openEditBar:true,
+   desc:'In Overwrite mode, entering or resizing a note replaces what stands at that beat so all other voices stay aligned. In Insert mode, new notes push the following music forward. Works identically in both mensural and plainchant (GABC) editors.'},
+  {id:'selection', cat:'Note Input', title:'Selection & Range (Shift+Click / Shift+Arrows)', keys:'Shift+Click · Shift+←/→/↑/↓', tags:'select range multi multiple notes between passage highlight',
+   where:'Click any note on the score', sel:'#pages g[class^="n"]',
+   desc:'Click a note to select it. Hold Shift and click another note to select every note in between (across voices too in mensural scores), or press Shift+ArrowLeft/Right to extend or shrink the selection in either direction. Hold Cmd/Ctrl and click to pick non-contiguous notes. Works identically in both mensural and plainchant (GABC) modes.'},
+  {id:'accidentals', cat:'Note Input', title:'Accidentals (Flat, Natural, Sharp)', keys:'- · 0 · =', tags:'accidental flat sharp natural bmol diesis quadratum musica ficta',
+   where:'Editing bar → Accidentals', sel:'#accBtns', openEditBar:true,
+   desc:'Applies or toggles a flat (-), natural (0), or sharp (=) on the selected note(s), or arms it for the next note. Toggle Ed. to place the accidental editorially above the staff (musica ficta).'},
+  {id:'editorial-acc', cat:'Note Input', title:'Editorial accidentals (Musica ficta)', keys:'Ed.', tags:'ficta editorial accidental above staff',
+   where:'Editing bar → Ed.', sel:'#edBtn', openEditBar:true,
+   desc:'Marks an accidental as editorial so it prints in smaller type above the staff rather than inline. You can globally show or hide editorial accidentals under Engraving → Editorial accidentals.'},
+  {id:'grid-step', cat:'Note Input', title:'Grid step & Caret movement', keys:'Alt/⌘ + ←/→', tags:'grid step caret navigate move rhythm',
+   where:'Editing bar → Grid step', sel:'#navSum', openEditBar:true,
+   desc:'Sets how far the arrow keys move the insertion caret (independent of the note value being written). Alt/Cmd + Left/Right shifts a selected passage along the grid.'},
+  {id:'divisi', cat:'Note Input', title:'Divisi chords & Second voice (+v)', keys:'Divisi / +v', tags:'chord polyphony two voices layer 2 divisi',
+   where:'Editing bar → Divisi / +v', sel:'#divisiBtn', openEditBar:true,
+   desc:'Divisi lets you stack chord notes on a single stem. +v writes a second independent rhythmic layer (stems down) on the same staff.'},
+  {id:'transform', cat:'Note Input', title:'Transform & Transposition', keys:'', tags:'transpose octave tone double halve diminution augmentation scale',
+   where:'Editing bar → Transform', sel:'#xfSum', openEditBar:true,
+   desc:'Transpose a selection, a single voice, or the entire piece by octave, tone, or exact/diatonic interval, or double/halve all rhythmic values (augmentation / diminution).'},
+
+  /* Mensural Notation */
+  {id:'ligature', cat:'Mensural', title:'Ligatures & Ligature kind', keys:'L', tags:'ligature ligatura recta obliqua cop cum opposita proprietate sp sine proprietate join neume',
+   where:'Editing bar → Ligature (hover for kind)', sel:'#ligBtn', openEditBar:true, openPop:'#popLig',
+   desc:'Select 2 or more notes (Shift+Click or Shift+Arrows) and press L (or click Ligature) to join them into a mensural ligature (or split an existing one). Hover or open the dropdown under Ligature to choose Auto, Recta, Obliqua, c.o.p., or s.p. In plainchant (GABC) mode, L joins selected notes into a neume.'},
+  {id:'coloration', cat:'Mensural', title:'Coloration (Black / Red notes)', keys:'K', tags:'coloration coloratio hemiolia sesquialtera blackened third imperfect',
+   where:'Editing bar → Coloration', sel:'#colBtn', openEditBar:true,
+   desc:'Toggles true rhythmic coloration on the selected note(s): blackened in white mensural notation (or red in black mensural notation), reducing a perfect value to two-thirds (hemiola / sesquialtera).'},
+  {id:'appearance', cat:'Mensural', title:'Per-note display colour & Stem direction', keys:'Right-click note · Shift+K', tags:'colour color white black red stem direction up down stemless appearance visual',
+   where:'Right-click any note on the score', sel:'#pages g[class^="n"]',
+   desc:'Right-click any note (or long-press on touchscreens) to change its visual Appearance (As notated, Black, White, Red — display only, never altering rhythm or playback) or override its Stem direction (Auto, Up, Down, Stemless). Press Shift+K to cycle appearance quickly.'},
+  {id:'punctus', cat:'Mensural', title:'Punctus additionis (.A) & Punctus divisionis (.D)', keys:'.', tags:'dot punctus additionis divisionis augmentation perfection',
+   where:'Editing bar → Dot (.A / .D)', sel:'#dotBtn', openEditBar:true, openPop:'#popDot',
+   desc:'Click .A (or press .) for a Punctus additionis (adds half the note’s value, or makes a binary note ternary). Hover the dot button for .D, a Punctus divisionis (separates rhythmic groups in triple mensuration without lengthening the note).'},
+  {id:'mensuration', cat:'Mensural', title:'Mensuration signs & Voice speed', keys:'', tags:'mensuration tempus prolation modus o c cut time proportion speed ratio tempochange',
+   where:'Add → Mensuration sign (or click any sign)', sel:'#addMens', openPop:'#popAdd',
+   desc:'Insert a mensuration sign (O, C, Ø, ¢, 3, etc.) via Add → Mensuration sign. Click any sign in the score to edit Tempus, Prolation, Modus, or Voice speed (×1, ×½, ×2, ×3/2, or custom ratio for proportions and polyrhythms).'},
+  {id:'notation-style', cat:'Mensural', title:'White, Black & Modern notation', keys:'', tags:'white black modern mensural notation transcription',
+   where:'Engraving → Notation', sel:'#notaSeg', openPop:'#popLook',
+   desc:'Switch instantly between White mensural notation (Renaissance void), Black mensural notation (Ars Nova filled notes with red coloration), and Modern transcription (ties and triplets).'},
+  {id:'clefs', cat:'Mensural', title:'Old vs Modern clefs', keys:'', tags:'clef c1 c2 c3 c4 f3 f4 treble bass treble8 modern historical',
+   where:'Engraving → Clefs', sel:'#clefSeg', openPop:'#popLook',
+   desc:'Old keeps historical C/F/G clefs as written. Modern replaces every voice’s clef (including encoded historical C clefs) with the best-fitting modern G, G8vb, or F clef. Click any clef on the score to choose a specific clef.'},
+  {id:'acc-style', cat:'Mensural', title:'Old vs Modern accidentals', keys:'', tags:'diesis sharp natural quadratum old accidental style',
+   where:'Engraving → Accidentals', sel:'#accSeg', openPop:'#popLook',
+   desc:'Choose between modern vertical sharps/naturals and Renaissance diagonal double-cross sharps (diesis) and square b quadratum naturals.'},
+  {id:'stems-global', cat:'Mensural', title:'Strict vs Adaptive stems', keys:'', tags:'stem direction strict adaptive historical',
+   where:'Engraving → Stem direction', sel:'#stemSeg', openPop:'#popLook',
+   desc:'Adaptive flips stems automatically near the top or bottom of the staff. Strict follows historical mensural conventions (minima/semiminima/fusa stems up, longa/maxima tails down).'},
+  {id:'fermata-signum', cat:'Mensural', title:'Fermata (corona) & Signum congruentiae', keys:'', tags:'fermata corona signum congruentiae canon entry',
+   where:'Add → Fermata / Signum congruentiae', sel:'#addSignum', openPop:'#popAdd',
+   desc:'Fermata (corona) adds a pause/hold sign. Signum congruentiae adds a visual alignment or canon-entry mark without pausing audio playback.'},
+  {id:'custos', cat:'Mensural', title:'Custos (Direct)', keys:'', tags:'custos direct guide pitch end of line',
+   where:'Add → Custos', sel:'#addCustos', openPop:'#popAdd',
+   desc:'ChoirBook automatically draws a custos at the end of mensural lines showing the next pitch. Use Add → Custos to place an explicit editorial or manuscript custos anywhere in the score.'},
+  {id:'lacuna', cat:'Mensural', title:'Lacuna (Missing passage)', keys:'', tags:'lacuna missing damaged folio gap',
+   where:'Add → Lacuna', sel:'#addLacuna', openPop:'#popAdd',
+   desc:'Marks a damaged or missing passage on the selected note(s) or range with a shaded dashed bracket and [lacuna] label.'},
+  {id:'incipit', cat:'Mensural', title:'Incipit', keys:'', tags:'incipit original clef first note prefatory',
+   where:'Add → Incipit', sel:'#addInc', openPop:'#popAdd',
+   desc:'Toggles a prefatory incipit before each voice showing its original historical clef, mensuration sign, and opening note.'},
+  {id:'barlines', cat:'Mensural', title:'Barlines & Bar numbers', keys:'', tags:'barline mensurstrich ticks measure numbers',
+   where:'Engraving → Barlines', sel:'#barSeg', openPop:'#popLook',
+   desc:'Choose None, Ticks, Outside ticks, or Full barlines through the staff, and configure bar numbering by barline, breve, semibreve, or longa.'},
+
+  /* Plainchant / Gregorian (GABC) */
+  {id:'plainchant', cat:'Plainchant', title:'Plainchant / Gregorian sections (GABC)', keys:'', tags:'gregorian plainchant chant gabc 4-line square notation neume incipit',
+   where:'Add → Plainchant (GABC)', sel:'#addChantBtn', openPop:'#popAdd',
+   desc:'Adds a standalone 4-line Gregorian square-notation system (at the start, between sections, or at the end of a piece). Click any chant note or staff to open the Plainchant Editor bar, drag notes vertically, type A–G, use Shift+Click / Shift+Arrows + L to build neumes (podatus, clivis, etc.), leave Title blank for an untitled incipit, or align Left/Center.'},
+  {id:'chant-neumes', cat:'Plainchant', title:'Gregorian Neumes, Inclinatum & Episema', keys:'L · K · . · , ; :', tags:'neume podatus clivis inclinatum diamond episema punctum mora divisio barline',
+   where:'Plainchant bar (click a chant note)', sel:'#chLig', openChant:true,
+   desc:'Inside a plainchant section: select 2+ notes (Shift+Click or Shift+Arrows) and press L to join them into a neume (ascending pairs draw as a podatus; descending as a clivis). Press K for diamond inclinatum, . for punctum mora, - / 0 for flat/natural, and , ; : for division bars. The 4-line staff trims flush to the double barline (::).'},
+  {id:'chant-lyrics', cat:'Plainchant', title:'Plainchant Syllables & Hyphens', keys:'L · Tab', tags:'chant text syllable lyric gregorian',
+   where:'Plainchant bar → Syllable field', sel:'#chSyl', openChant:true,
+   desc:'Click any syllable under a 4-line chant staff (or select a single note and press L) to edit its text. End a syllable with - to join it to the next syllable (Glo-ri-a); press Tab or Enter to jump straight to the next syllable.'},
+
+  /* Text & Critical Apparatus */
+  {id:'lyrics', cat:'Apparatus', title:'Modern Lyrics & Verses', keys:'L', tags:'lyrics text words syllable underlay verse hyphen melisma',
+   where:'Add → Lyrics (or press L on a note)', sel:'#addLyr', openPop:'#popAdd',
+   desc:'Select a note and press L (or click any lyric syllable) to type underlay directly on the score. Space or Tab moves to the next note; hyphen (-) joins syllables; underscore (_) skips a note for a melisma.'},
+  {id:'original-text', cat:'Apparatus', title:'Original Text (Diplomatic Orthography)', keys:'Shift+L', tags:'original text orthography spelling diplomatic latin medieval underlay',
+   where:'Engraving → Text layer (Modern | Original | Both)', sel:'#origTxtSeg', openPop:'#popLook',
+   desc:'Switch Engraving → Text layer between Modern, Original, or Both (staves expand automatically so both rows never collide). Press Shift+L on a note, click any original-text syllable, or Right-click → Original text… to type syllable-by-syllable inline (Space/Tab/- advances).'},
+  {id:'commentary', cat:'Apparatus', title:'Editorial Commentary (Marginalia) & Critical Notes', keys:'Right-click → Add commentary', tags:'annotation commentary footnote marginalia critical notes apparatus remark',
+   where:'Add → Editorial commentary (or View → Notes…)', sel:'#addAnnBtn', openPop:'#popAdd',
+   desc:'Attach categorized notes (Editorial, Source, Performance, Text) to any note or rest via Right-click → Add commentary… or Add → Editorial commentary. Click any crimson badge on the score to open its floating Marginalia card, or open View → Commentary → Notes… for the full Critical Notes drawer.'},
+  {id:'variants', cat:'Apparatus', title:'Variant Readings, Source Switcher & Ossia Staff', keys:'Right-click → Add variant', tags:'variant reading ossia source witness manuscript concordances alternate',
+   where:'Add → Variant reading (Ossia)', sel:'#addVarBtn', openPop:'#popAdd',
+   desc:'Select a passage (Shift+Click) and choose Right-click → Add variant reading… (or Add → Variant reading). Click any source pill above the staff to open a miniature 5-line Ossia staff where you can visually edit the alternate notes, audition them with ▶ Play, or click Make main. When variants exist, a Reading: switcher in the top bar swaps both score notation and playback between sources.'},
+  {id:'info-credits', cat:'Apparatus', title:'Score Info, Editor, Source & Licence', keys:'', tags:'info metadata title composer editor source licence notes credits',
+   where:'Top bar → Info', sel:'#popInfo .popbtn', openPop:'#popInfo',
+   desc:'Edit the Title, Composer, Editor, Manuscript/Print Source, Licence, and Notes. All credits round-trip cleanly in .krn, CMME XML, MusicXML, and LilyPond exports.'},
+
+  /* View, Playback & Files */
+  {id:'layout-format', cat:'View & Files', title:'Score, Parts & Choirbook Layout', keys:'', tags:'layout format score parts choirbook page size a3 a4 a5 landscape portrait staff size',
+   where:'Top bar → Layout', sel:'#popPage .popbtn', openPop:'#popPage',
+   desc:'Switch between modern Score, separate Parts, and historical Choirbook page layout. Adjust paper size, orientation, staff/note sizes, line thickness, colours, and spacing.'},
+  {id:'view-mode', cat:'View & Files', title:'Page/Web display, Paper colour & Dark mode', keys:'', tags:'view display page web scroll dark mode paper parchment transparency',
+   where:'Top bar → View', sel:'#popView .popbtn', openPop:'#popView',
+   desc:'Toggle Page vs continuous Web view, vertical or horizontal scrolling, parchment paper textures, Dark mode, toolbar transparency, and Commentary/Ossia visibility.'},
+  {id:'voices', cat:'View & Files', title:'Voices (Show, Hide, Reorder, Combine)', keys:'', tags:'voices staves hide show reorder mute solo combine',
+   where:'Top bar → Voices', sel:'#popVoices .popbtn', openPop:'#popVoices',
+   desc:'Show or hide individual voices, toggle lyrics per voice, drag voices to reorder staves, or combine two voices onto one shared staff.'},
+  {id:'playback', cat:'View & Files', title:'Playback, Tempo, Loop & Tactus Hand', keys:'Space', tags:'play playback audio tempo bpm tap loop metronome tactus hand pendulum sound organ stops mixer',
+   where:'Bottom transport bar', sel:'#play',
+   desc:'Press Space to play or pause from the selected note. Use Loop, Metronome (Tactus Hand, Pendulum, or Audible Tick), Tap tempo, or click Sound to open organ stops and per-voice mixer.'},
+  {id:'piano-midi', cat:'View & Files', title:'On-screen Keyboard & MIDI Input', keys:'', tags:'piano keyboard midi controller play record notes',
+   where:'Transport / Sound controls', sel:'#toggleSet',
+   desc:'Play pitches on the on-screen keyboard or a connected USB/Bluetooth MIDI keyboard. In Note Input mode (or Plainchant GABC mode), played notes write directly onto the staff.'},
+  {id:'open-import', cat:'View & Files', title:'Open & Import (.krn, CMME, MXL, MuseScore, MEI, MIDI, GABC)', keys:'', tags:'open import file repertoire library cmme xml musicxml mscz mei midi lilypond gabc kern drag drop',
+   where:'Top bar → Open', sel:'#popOpen .popbtn', openPop:'#popOpen',
+   desc:'Browse the built-in Repertoire, create a New score, or open (or drag-and-drop) .krn, CMME XML (.cmme.xml), MusicXML (.mxl), MuseScore (.mscz), MEI, MIDI, LilyPond, or GABC files.'},
+  {id:'export', cat:'View & Files', title:'Export (CMME, .krn, MXL, MuseScore, LilyPond, MIDI, GABC, PDF, SVG, PNG)', keys:'', tags:'export download save print pdf svg png share link cmme kern musicxml mscz lilypond midi gabc',
+   where:'Top bar → Export', sel:'#popExport .popbtn', openPop:'#popExport',
+   desc:'Export your score to Superset .krn, full CMME 0.95 XML, MusicXML, MuseScore, LilyPond, MIDI, GABC, printable PDF, SVG, PNG, or a shareable link.'},
+
+  /* Shortcuts quick reference */
+  {id:'shortcuts', cat:'Shortcuts', title:'Essential Keyboard Shortcuts', keys:'⌘K · ? · N · L · K · I · R · Space', tags:'shortcuts hotkeys keys keyboard cheat sheet reference',
+   where:'Works anywhere on the score', sel:'#editBtn',
+   desc:'N: Note input · A–G: Enter pitch · 1–8: Value · R: Rest · I: Overwrite/Insert · ↑/↓: Pitch step (Shift/⌘ octave) · Shift+Click / Shift+←→: Range select · L: Ligature (2+ notes) or Lyrics (1 note) · Shift+L: Original text · K: Coloration (Inclinatum in chant) · Shift+K: Cycle display colour · - / 0 / =: Flat/Natural/Sharp · . : Dot · Space: Play · ⌘Z: Undo · ⌘K or /: Find feature · ?: Help.'}
+];
+
+let spotTimer = null;
+function clearSpotlight(){
+  if (spotTimer) { clearTimeout(spotTimer); spotTimer = null; }
+  document.querySelectorAll('.spot-ring').forEach(el => el.classList.remove('spot-ring'));
+  const tip = $('#spotTip'); if (tip) tip.hidden = true;
+}
+function spotlightFeature(item){
+  if (!item) return;
+  clearSpotlight();
+  closeFindPop();
+  closeHelpOv();
+  if (item.openEditBar && !barOpen()) {
+    ed.bar = true;
+    try { localStorage.setItem(APP.store + ':edbar', '1'); } catch (e) {}
+    syncEdit(); postHeight();
+  }
+  if (item.openChant) {
+    const chants = piece ? ensureExt(piece).chants : [];
+    if (chants.length) {
+      if (chantEd.idx < 0) openChantEd(0);
+    } else {
+      item = HELP_ENTRIES.find(x => x.id === 'plainchant') || item;
+    }
+  }
+  if (item.openPop) {
+    const p = $(item.openPop);
+    if (p) {
+      closePops(p);
+      p.classList.add('open');
+      const pb = p.querySelector('.popbtn'); if (pb) pb.setAttribute('aria-expanded', 'true');
+      if (window.__fitMenus) window.__fitMenus();
+    }
+  }
+  setTimeout(() => {
+    let el = item.sel ? document.querySelector(item.sel) : null;
+    if (!el && item.openPop) el = $(item.openPop);
+    if (!el) { toast(item.title + ' — ' + item.where); return; }
+    el.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'nearest'});
+    el.classList.add('spot-ring');
+    const tip = $('#spotTip');
+    if (tip) {
+      tip.innerHTML = `<strong>${esc(item.title)}</strong>${item.keys ? ` <kbd>${esc(item.keys)}</kbd>` : ''}<div class="spot-sub">${esc(item.where)}</div>`;
+      tip.hidden = false;
+      const r = el.getBoundingClientRect();
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      const vTop = EMBED && DOCK ? Math.max(0, -DOCK.top) : 0;
+      const vBot = EMBED && DOCK ? vTop + Math.max(320, DOCK.vh - Math.max(0, DOCK.top)) : window.innerHeight;
+      let left = r.left + r.width / 2 - tw / 2;
+      let top = r.bottom + (EMBED ? window.scrollY : 0) + 12;
+      if (top + th > vBot - 12) top = Math.max(vTop + 10, r.top + (EMBED ? window.scrollY : 0) - th - 12);
+      left = Math.max(10, Math.min(window.innerWidth - tw - 10, left));
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+    }
+    spotTimer = setTimeout(clearSpotlight, 6500);
+  }, 60);
+}
+document.addEventListener('pointerdown', e => {
+  if (!e.target.closest('#findPop, #findBtn, #spotTip')) clearSpotlight();
+});
+
+/* Feature Finder (🔍) */
+let findIdx = 0, findMatches = [];
+function scoreMatch(item, q){
+  if (!q) return 1;
+  const hay = (item.title + ' ' + item.tags + ' ' + item.where + ' ' + item.desc + ' ' + item.keys).toLowerCase();
+  const titleL = item.title.toLowerCase(), tagsL = item.tags.toLowerCase();
+  const words = q.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  let sc = 0;
+  for (const w of words) {
+    if (titleL.includes(w)) sc += 6;
+    else if (tagsL.includes(w)) sc += 4;
+    else if (hay.includes(w)) sc += 2;
+    else return 0;
+  }
+  return sc;
+}
+function renderFindList(){
+  const inp = $('#findInput'), list = $('#findList');
+  if (!inp || !list) return;
+  const q = inp.value.trim();
+  findMatches = HELP_ENTRIES
+    .map(it => ({it, sc: scoreMatch(it, q)}))
+    .filter(x => x.sc > 0)
+    .sort((a, b) => b.sc - a.sc)
+    .slice(0, 12)
+    .map(x => x.it);
+  if (findIdx >= findMatches.length) findIdx = 0;
+  list.innerHTML = findMatches.length ? findMatches.map((it, i) =>
+    `<button type="button" class="finditem${i === findIdx ? ' active' : ''}" data-fi="${i}" role="option" aria-selected="${String(i === findIdx)}">` +
+      `<div class="fi-top"><span class="fi-title">${esc(it.title)}</span>${it.keys ? `<kbd>${esc(it.keys)}</kbd>` : ''}</div>` +
+      `<div class="fi-where">${esc(it.where)}</div>` +
+    `</button>`
+  ).join('') : `<div class="findempty">No matching tool found for “${esc(q)}”. Try <b>rest</b>, <b>ligature</b>, <b>gregorian</b>, <b>clef</b>, or <b>ossia</b>.</div>`;
+}
+function openFindPop(){
+  const pop = $('#findPop'), inp = $('#findInput');
+  if (!pop || !inp) return;
+  closePops(); closeHelpOv(); closeFloatingCards();
+  pop.hidden = false;
+  inp.value = ''; findIdx = 0;
+  renderFindList();
+  inp.focus();
+}
+function closeFindPop(){
+  const pop = $('#findPop');
+  if (pop) pop.hidden = true;
+}
+if ($('#findBtn')) $('#findBtn').addEventListener('click', () => {
+  const pop = $('#findPop');
+  if (pop && !pop.hidden) closeFindPop(); else openFindPop();
+});
+if ($('#findX')) $('#findX').addEventListener('click', closeFindPop);
+if ($('#findInput')) {
+  $('#findInput').addEventListener('input', () => { findIdx = 0; renderFindList(); });
+  $('#findInput').addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); closeFindPop(); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (findMatches.length) { findIdx = (findIdx + 1) % findMatches.length; renderFindList(); } return; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); if (findMatches.length) { findIdx = (findIdx + findMatches.length - 1) % findMatches.length; renderFindList(); } return; }
+    if (e.key === 'Enter' && findMatches[findIdx]) { e.preventDefault(); spotlightFeature(findMatches[findIdx]); }
+  });
+}
+if ($('#findList')) $('#findList').addEventListener('click', e => {
+  const b = e.target.closest('[data-fi]');
+  if (b && findMatches[+b.dataset.fi]) spotlightFeature(findMatches[+b.dataset.fi]);
+});
+document.addEventListener('pointerdown', e => {
+  const fp = $('#findPop');
+  if (fp && !fp.hidden && !e.target.closest('#findPop, #findBtn')) closeFindPop();
+});
+
+/* Help & Glossary Modal (?) */
+let helpCat = 'All';
+const HELP_CATS = ['All', 'Note Input', 'Mensural', 'Plainchant', 'Apparatus', 'View & Files', 'Shortcuts'];
+function renderHelp(){
+  const catsEl = $('#helpCats'), listEl = $('#helpList'), qEl = $('#helpSearch');
+  if (!catsEl || !listEl) return;
+  const q = qEl ? qEl.value.trim() : '';
+  catsEl.innerHTML = HELP_CATS.map(c => `<button type="button" class="fc-chip" data-hcat="${c}" aria-pressed="${String(c === helpCat)}">${c}</button>`).join('');
+  const filtered = HELP_ENTRIES
+    .filter(it => helpCat === 'All' || it.cat === helpCat)
+    .map(it => ({it, sc: scoreMatch(it, q)}))
+    .filter(x => x.sc > 0)
+    .sort((a, b) => q ? b.sc - a.sc : 0)
+    .map(x => x.it);
+  listEl.innerHTML = filtered.length ? filtered.map(it =>
+    `<article class="helpcard">` +
+      `<div class="hc-head"><h3>${esc(it.title)}</h3><span class="hc-cat">${esc(it.cat)}</span>${it.keys ? `<kbd>${esc(it.keys)}</kbd>` : ''}</div>` +
+      `<p>${esc(it.desc)}</p>` +
+      `<div class="hc-foot"><span class="hc-where">${esc(it.where)}</span><button type="button" class="chbtn" data-spot="${esc(it.id)}">Show me where →</button></div>` +
+    `</article>`
+  ).join('') : `<div class="findempty">No glossary entry matches “${esc(q)}”.</div>`;
+}
+function openHelpOv(){
+  const ov = $('#helpOv'), inp = $('#helpSearch');
+  if (!ov) return;
+  closePops(); closeFindPop(); closeFloatingCards();
+  ov.hidden = false;
+  if (inp) inp.value = '';
+  helpCat = 'All';
+  renderHelp();
+  if (inp) inp.focus();
+}
+function closeHelpOv(){
+  const ov = $('#helpOv');
+  if (ov) ov.hidden = true;
+}
+if ($('#helpBtn')) $('#helpBtn').addEventListener('click', openHelpOv);
+if ($('#helpX')) $('#helpX').addEventListener('click', closeHelpOv);
+if ($('#helpOv')) $('#helpOv').addEventListener('click', e => { if (e.target === $('#helpOv')) closeHelpOv(); });
+if ($('#helpCats')) $('#helpCats').addEventListener('click', e => {
+  const b = e.target.closest('[data-hcat]'); if (!b) return;
+  helpCat = b.dataset.hcat; renderHelp();
+});
+if ($('#helpSearch')) {
+  $('#helpSearch').addEventListener('input', renderHelp);
+  $('#helpSearch').addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); closeHelpOv(); }
+  });
+}
+if ($('#helpList')) $('#helpList').addEventListener('click', e => {
+  const b = e.target.closest('[data-spot]');
+  if (!b) return;
+  const it = HELP_ENTRIES.find(x => x.id === b.dataset.spot);
+  if (it) spotlightFeature(it);
+});
+
+/* Global shortcuts for Finder (⌘K / Ctrl+K / /) and Help (? / F1) */
+document.addEventListener('keydown', e => {
+  const inField = e.target && e.target.closest && e.target.closest('input, textarea, select');
+  if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const fp = $('#findPop');
+    if (fp && !fp.hidden) closeFindPop(); else openFindPop();
+    return;
+  }
+  if (e.key === 'Escape') {
+    if ($('#spotTip') && !$('#spotTip').hidden) { clearSpotlight(); return; }
+    if ($('#helpOv') && !$('#helpOv').hidden) { e.preventDefault(); closeHelpOv(); return; }
+    if ($('#findPop') && !$('#findPop').hidden) { e.preventDefault(); closeFindPop(); return; }
+    if ($('#critDrawer') && !$('#critDrawer').hidden) { e.preventDefault(); $('#critDrawer').hidden = true; return; }
+    if (($('#margCard') && !$('#margCard').hidden) || ($('#ossiaCard') && !$('#ossiaCard').hidden)) { e.preventDefault(); closeFloatingCards(); return; }
+  }
+  if (inField) return;
+  if (e.key === '?' || e.key === 'F1') { e.preventDefault(); e.stopImmediatePropagation(); openHelpOv(); return; }
+  if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && chantEd.idx < 0) { e.preventDefault(); e.stopImmediatePropagation(); openFindPop(); return; }
+}, true);
+
+document.head.insertAdjacentHTML('beforeend', '<style>' +
+  '#pages svg{user-select:none;-webkit-user-select:none}' +
+  '#pages .sf-badge{fill:var(--accent,#8B2E22);font-family:Georgia,serif;font-weight:700}' +
+  '#pages .orig-lyr{fill:var(--muted,#6B5E4E);font-style:italic;font-family:"IM Fell English",Georgia,serif;cursor:text}' +
+  '#pages .orig-lyr:hover{fill:var(--accent,#8B2E22)}' +
+  '.orig-lyrin{position:absolute;z-index:70;padding:1px 6px;border:1.5px solid var(--accent,#8B2E22);border-radius:6px;background:var(--surface,#FFFDF8);color:var(--ink,#2A2218);font-family:"IM Fell English",Georgia,serif;font-style:italic;text-align:center;box-shadow:0 6px 18px -6px rgba(42,34,24,.35);outline:none;box-sizing:border-box}' +
+  '#pages .lacuna rect{fill:rgba(139,46,34,.08);stroke:var(--accent,#8B2E22);stroke-width:.12;stroke-dasharray:.4 .25}' +
+  '#pages .lacuna text{fill:var(--accent,#8B2E22);font-style:italic;font-family:Georgia,serif}' +
+  '#pages .ann-badge{cursor:pointer}#pages .ann-badge rect{fill:var(--accent,#8B2E22)}#pages .ann-badge:hover rect{filter:brightness(1.15)}#pages .ann-badge text{fill:#FAF5EA;font-family:sans-serif;font-weight:700}' +
+  '#pages .var-br{cursor:pointer}#pages .var-br path{stroke:var(--accent,#8B2E22);opacity:.65}#pages .var-br .var-pill{fill:var(--surface,#FAF5EA);stroke:var(--accent,#8B2E22);stroke-width:.12}#pages .var-br:hover .var-pill{fill:var(--accent,#8B2E22)}#pages .var-br text{fill:var(--accent,#8B2E22);font-family:sans-serif;font-weight:600}#pages .var-br:hover text{fill:#FAF5EA}' +
+  '.floatcard{position:absolute;z-index:78;width:320px;max-width:calc(100vw - 24px);padding:12px;border-radius:12px;border:1px solid var(--line,rgba(42,34,24,.22));background:var(--surface,#FAF5EA);color:var(--ink,#2A2218);box-shadow:0 16px 38px -10px rgba(42,34,24,.45);display:flex;flex-direction:column;gap:8px;box-sizing:border-box}' +
+  '.floatcard.ossiacard{width:420px;max-width:calc(100vw - 24px)}' +
+  'html.dark .floatcard,html.dark .critdrawer,html.dark .findpop,html.dark .helpbox{background:#231D16;color:#EFE7D8;border-color:rgba(255,245,230,.16)}' +
+  '.floatcard[hidden],.critdrawer[hidden],.findpop[hidden],.helpov[hidden],.spottip[hidden]{display:none !important}' +
+  '.fc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}' +
+  '.fc-title{font-family:"IM Fell English",Georgia,serif;font-size:17px;line-height:1.15}' +
+  '.fc-sub{font-size:12px;color:var(--muted,#6B5E4E);margin-top:2px}' +
+  '.fc-x,.findx,.helpx{border:none;background:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:6px}' +
+  '.fc-x:hover,.findx:hover,.helpx:hover{background:rgba(139,46,34,.12);color:var(--accent,#8B2E22)}' +
+  '.fc-cats,.ossia-tabs,.helpcats{display:flex;flex-wrap:wrap;gap:5px}' +
+  '.fc-chip{padding:3px 9px;border-radius:999px;border:1px solid var(--line,rgba(42,34,24,.2));background:transparent;color:var(--ink,#2A2218);font:inherit;font-size:12.5px;cursor:pointer}' +
+  '.fc-chip[aria-pressed="true"]{background:var(--accent,#8B2E22);color:#FAF5EA;border-color:var(--accent,#8B2E22)}' +
+  '.fc-ta{width:100%;min-height:74px;padding:7px 9px;border:1px solid var(--line,rgba(42,34,24,.22));border-radius:8px;background:var(--ground,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:14px;resize:vertical;box-sizing:border-box}' +
+  'html.dark .fc-ta{background:#1A1510;color:#EFE7D8}' +
+  '.fc-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap}' +
+  '.ossia-stage{border:1px solid var(--line,rgba(42,34,24,.16));border-radius:8px;background:var(--ground,#FAF5EA);padding:6px;overflow-x:auto}' +
+  'html.dark .ossia-stage{background:#1B1611}' +
+  '.ossia-svg{display:block;height:86px;width:auto;min-width:100%}.ossia-svg .staff{stroke:var(--staff,#8B2E22)}.ossia-svg .ink,.ossia-svg .ledger{fill:var(--ink,#2A2218);stroke:var(--ink,#2A2218)}.ossia-svg .ossia-selbg{fill:rgba(180,82,36,.22);stroke:var(--accent,#8B2E22);stroke-width:.1}' +
+  '.ossia-ctrls{display:flex;flex-wrap:wrap;align-items:center;gap:4px}' +
+  '.critdrawer{position:fixed;top:64px;right:14px;bottom:76px;width:330px;max-width:calc(100vw - 28px);z-index:82;padding:14px;border-radius:12px;border:1px solid var(--line,rgba(42,34,24,.22));background:var(--surface,#FAF5EA);color:var(--ink,#2A2218);box-shadow:0 16px 40px -10px rgba(42,34,24,.45);display:flex;flex-direction:column;gap:10px;box-sizing:border-box}' +
+  '.crit-body{flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px}' +
+  '.crit-item{padding:8px 10px;border-radius:8px;border:1px solid var(--line,rgba(42,34,24,.15));background:var(--ground,#FFFDF8);cursor:pointer;transition:border-color .12s}' +
+  'html.dark .crit-item{background:#1A1510}.crit-item:hover{border-color:var(--accent,#8B2E22)}' +
+  '.crit-meta{display:flex;align-items:center;gap:6px;font-size:12.5px;margin-bottom:4px}' +
+  '.crit-num{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:var(--accent,#8B2E22);color:#FAF5EA;font-size:11px;font-weight:700}' +
+  '.crit-cat{margin-left:auto;font-size:11px;padding:1px 6px;border-radius:999px;background:rgba(139,46,34,.12);color:var(--accent,#8B2E22)}' +
+  '.crit-txt{font-size:13.5px;line-height:1.4}.crit-empty{font-size:13.5px;color:var(--muted);text-align:center;padding:24px 8px;line-height:1.5}' +
+  /* Feature Finder Popover & Spotlight */
+  '.findpop{position:fixed;top:58px;left:50%;transform:translateX(-50%);width:480px;max-width:calc(100vw - 24px);z-index:95;border-radius:12px;border:1px solid var(--line,rgba(42,34,24,.24));background:var(--surface,#FAF5EA);color:var(--ink,#2A2218);box-shadow:0 18px 44px -10px rgba(42,34,24,.45);overflow:hidden}' +
+  '.findhead{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line,rgba(42,34,24,.15))}' +
+  '.findhead svg{width:18px;height:18px;color:var(--muted);flex:none}' +
+  '.findhead input{flex:1;border:none;background:transparent;color:inherit;font:inherit;font-size:15px;outline:none}' +
+  '.findlist{max-height:340px;overflow:auto;padding:6px}' +
+  '.finditem{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;padding:8px 10px;border:none;border-radius:8px;background:transparent;color:inherit;font:inherit;cursor:pointer}' +
+  '.finditem:hover,.finditem.active{background:color-mix(in srgb,var(--accent,#8B2E22) 12%,transparent)}' +
+  '.fi-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.fi-title{font-weight:600;font-size:14px}.fi-where{font-size:12px;color:var(--muted,#6B5E4E)}' +
+  '.findempty{padding:18px 12px;text-align:center;color:var(--muted);font-size:13.5px}' +
+  '.finditem kbd,.helpcard kbd,.spottip kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;padding:1px 6px;border-radius:5px;border:1px solid var(--line,rgba(42,34,24,.22));background:rgba(42,34,24,.06);color:inherit}' +
+  '@keyframes spotPulse{0%,100%{box-shadow:0 0 0 3px var(--accent,#8B2E22),0 0 0 7px rgba(139,46,34,.28)}50%{box-shadow:0 0 0 4px var(--accent,#8B2E22),0 0 0 13px rgba(139,46,34,.08)}}' +
+  '.spot-ring{position:relative;z-index:90 !important;border-radius:7px;animation:spotPulse 1.15s ease-in-out infinite !important;outline:2px solid var(--accent,#8B2E22) !important;outline-offset:2px}' +
+  '.spottip{position:fixed;z-index:96;max-width:300px;padding:8px 12px;border-radius:9px;background:var(--accent,#8B2E22);color:#FAF5EA;font-size:13px;line-height:1.35;box-shadow:0 12px 28px -6px rgba(42,34,24,.5);pointer-events:none}' +
+  '.spottip .spot-sub{font-size:11.5px;opacity:.88;margin-top:2px}.spottip kbd{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.15);color:#FAF5EA}' +
+  /* Help & Glossary Modal */
+  '.helpov{position:fixed;inset:0;z-index:94;background:rgba(24,18,12,.48);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}' +
+  '.helpbox{width:720px;max-width:100%;max-height:84vh;border-radius:14px;border:1px solid var(--line,rgba(42,34,24,.22));background:var(--surface,#FAF5EA);color:var(--ink,#2A2218);box-shadow:0 24px 60px -12px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:10px;padding:16px 18px;box-sizing:border-box}' +
+  '.helphead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.helphead h2{margin:0;font-family:"IM Fell English",Georgia,serif;font-size:22px;font-weight:400}' +
+  '.helphead input{flex:1;min-width:200px;height:34px;padding:0 11px;border:1px solid var(--line,rgba(42,34,24,.22));border-radius:8px;background:var(--ground,#FFFDF8);color:inherit;font:inherit;font-size:14px;outline:none}' +
+  'html.dark .helphead input{background:#1A1510}' +
+  '.helplist{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;padding-right:4px}' +
+  '.helpcard{padding:11px 13px;border-radius:10px;border:1px solid var(--line,rgba(42,34,24,.15));background:var(--ground,#FFFDF8);display:flex;flex-direction:column;gap:6px}' +
+  'html.dark .helpcard{background:#1A1510}' +
+  '.hc-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.hc-head h3{margin:0;font-size:15px;font-weight:600;flex:1}' +
+  '.hc-cat{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:1px 6px;border-radius:999px;background:rgba(42,34,24,.06)}' +
+  '.helpcard p{margin:0;font-size:13.2px;line-height:1.45;color:var(--ink,#2A2218);opacity:.9}' +
+  '.hc-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:4px;border-top:1px solid var(--line,rgba(42,34,24,.1))}' +
+  '.hc-where{font-size:11.5px;color:var(--muted,#6B5E4E)}' +
+  /* Plainchant bar & SVG */
+  '#pages .chant-sys .cs-hit{cursor:crosshair}#pages .chant-sys .clyr{cursor:text}#pages .chant-sys .clyr:hover{fill:var(--accent,#8B2E22)}#pages .ch-ghost rect{fill:var(--accent,#8B2E22);opacity:.48}#pages .cn-hit,#pages .cb-hit{cursor:pointer}#pages .cn-hit .cn-bg,#pages .cb-hit .cn-bg{fill:transparent;transition:fill .1s}#pages .cn-hit:hover .cn-bg,#pages .cb-hit:hover .cn-bg{fill:rgba(139,46,34,.14)}#pages .cn-sel .cn-bg{fill:rgba(180,82,36,.24) !important;stroke:var(--accent,#8B2E22);stroke-width:.1}#pages .chant-title{fill:var(--ink,#2A2218);font-family:"IM Fell English",Georgia,serif}' +
+  '.chbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tph,56px) + 10px);z-index:55;pointer-events:auto;display:flex;flex-direction:column;gap:6px;padding:8px 12px;border-radius:12px;border:1px solid var(--line,rgba(42,34,24,.18));background:color-mix(in srgb,var(--ground,#FAF5EA) 95%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 10px 28px -8px rgba(42,34,24,.36);max-width:calc(100vw - 24px);box-sizing:border-box}html.embedded .chbar{position:absolute;bottom:auto;top:var(--chTop,68px)}html.dark .chbar{background:rgba(34,28,21,.95);box-shadow:0 10px 28px -6px rgba(0,0,0,.65)}.chbar[hidden]{display:none !important}.chbar .chrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.chbar .chnote.chdim{opacity:.52}.chbar .chlab{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#6B5E4E);min-width:62px}.chbar input[type=text],.chbar select{height:30px;padding:0 8px;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;background:var(--surface,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:13.5px;box-sizing:border-box}.chbar #chTitle{width:118px}.chbar #chSyl{width:136px}.chbar .chsep{width:1px;height:20px;background:var(--line,rgba(42,34,24,.18));margin:0 2px}.chbar .chseg{display:inline-flex;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;overflow:hidden}.chbar .chseg .chbtn{border:none;border-radius:0}.chbtn{display:inline-flex;align-items:center;justify-content:center;height:30px;min-width:30px;padding:0 9px;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;background:var(--surface,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:13.5px;line-height:1;cursor:pointer;white-space:nowrap}html.dark .chbtn{background:#2D251C;color:#EFE7D8;border-color:rgba(255,245,230,.18)}.chbtn:hover:not(:disabled){background:color-mix(in srgb,var(--accent,#8B2E22) 10%,var(--surface,#FFFDF8))}.chbtn[aria-pressed="true"],.chbtn.chprimary{background:var(--accent,#8B2E22);color:#FAF5EA;border-color:var(--accent,#8B2E22)}.chbtn.chdanger:hover:not(:disabled){background:#A12C1C;color:#FAF5EA;border-color:#A12C1C}.chbtn:disabled{opacity:.38;cursor:default}' +
+  'html.embedded .findpop{position:absolute;top:calc(var(--visTop,0px) + 56px)}' +
+  'html.embedded .helpov{position:absolute;top:var(--visTop,0px);height:var(--visH,100vh);bottom:auto}' +
+  'html.embedded .critdrawer{position:absolute;top:calc(var(--visTop,0px) + 60px);height:calc(var(--visH,640px) - 130px);bottom:auto}' +
+  'html.embedded .spottip{position:absolute}' +
+  '@media print{#chantBar,#margCard,#ossiaCard,#critDrawer,#findPop,#helpOv,#spotTip{display:none !important}}' +
+  '</style>');
 $('#keepBtn').addEventListener('click', () => {
   if (!piece) return;
   closePops();
@@ -9960,6 +10809,10 @@ $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
     root.style.setProperty('--spTop', Math.max(0, Math.round(top - sh - 8)) + 'px');
     const cb = $('#chantBar'), cbh = cb && !cb.hidden ? cb.offsetHeight : 0;
     root.style.setProperty('--chTop', Math.max(62, Math.round(top - cbh - 10)) + 'px');
+    const visTop = Math.max(0, Math.round(-DOCK.top));
+    const visH = Math.max(320, Math.round(DOCK.vh - Math.max(0, DOCK.top)));
+    root.style.setProperty('--visTop', visTop + 'px');
+    root.style.setProperty('--visH', visH + 'px');
   };
   window.addEventListener('message', e => {
     const d = e.data && e.data.scriptoriumDock; if (!d || typeof d.top !== 'number') return;
