@@ -160,6 +160,42 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
       <input type="file" id="fileIn" accept=".krn,.kern,.txt,.musicxml,.xml,.mxl,.mscz,.mscx,.mei,.mid,.midi,.ly,.gabc,.cmme" hidden>
     </div>
     <div class="bar editbar" id="editBar" hidden></div>
+    <div class="bar chantbar" id="chantBar" hidden>
+      <div class="chrow">
+        <span class="chlab">Plainchant</span>
+        <input id="chTitle" type="text" placeholder="Title" title="Plainchant section title" autocomplete="off">
+        <select id="chClef" title="Gregorian clef"><option value="c4">c4</option><option value="c3">c3</option><option value="c2">c2</option><option value="c1">c1</option><option value="cb4">cb4 (B♭)</option><option value="cb3">cb3 (B♭)</option><option value="f4">f4</option><option value="f3">f3</option></select>
+        <div class="btns" id="chAlign" role="group" aria-label="Plainchant alignment"><button type="button" class="tb" data-v="left">Left</button><button type="button" class="tb" data-v="center">Center</button></div>
+        <span class="chsep"></span>
+        <button type="button" class="tb" id="chAddNote" title="Add a note after the selected note (or click anywhere on the 4-line staff)">+ Note</button>
+        <button type="button" class="tb" data-chbar="," title="Insert divisio minima (,)">,</button>
+        <button type="button" class="tb" data-chbar=";" title="Insert divisio minor (;)">;</button>
+        <button type="button" class="tb" data-chbar=":" title="Insert divisio maior (:)">:</button>
+        <button type="button" class="tb" data-chbar="::" title="Insert divisio finalis (::)">::</button>
+        <span class="chsep"></span>
+        <button type="button" class="tb" id="chRawTog" title="Show/hide raw GABC text">GABC</button>
+        <button type="button" class="tb" id="chDelSec" title="Delete this plainchant section">Delete section</button>
+        <button type="button" class="tb" id="chDone" title="Close plainchant editor">Done</button>
+      </div>
+      <div class="chrow chnote" id="chNoteRow">
+        <span class="chlab">Note</span>
+        <input id="chSyl" type="text" placeholder="Syllable" title="Syllable text under this neume" autocomplete="off">
+        <button type="button" class="tb" id="chUp" title="Pitch up (↑)">↑</button>
+        <button type="button" class="tb" id="chDn" title="Pitch down (↓)">↓</button>
+        <button type="button" class="tb" id="chDot" title="Punctum mora dot (.)">·</button>
+        <button type="button" class="tb" id="chEpiH" title="Horizontal episema (_)">—</button>
+        <button type="button" class="tb" id="chEpiV" title="Vertical episema (')">|</button>
+        <button type="button" class="tb" id="chFlat" title="Flat (x)">♭</button>
+        <button type="button" class="tb" id="chNat" title="Natural (y)">♮</button>
+        <button type="button" class="tb" id="chIncl" title="Inclinatum diamond">◆</button>
+        <button type="button" class="tb" id="chJoin" title="Join with / split from previous neume">Join/Split</button>
+        <button type="button" class="tb" id="chDelNote" title="Delete selected note (Delete / Backspace)">⌫</button>
+      </div>
+      <div class="chrow" id="chRawRow" hidden>
+        <span class="chlab">GABC</span>
+        <input id="chRaw" type="text" style="flex:1;min-width:260px" placeholder="(c4) Glo(g)ri(h)a(g)..." autocomplete="off">
+      </div>
+    </div>
   </section>
 
   <div class="markbar" id="markBar" hidden><span id="markTxt"></span><button id="markClear">Clear marking</button></div>
@@ -2805,16 +2841,51 @@ function chantClefSvg(cl, x, top){
   return s;
 }
 
+/* Interactive plainchant editor state: {idx: chant index, sel: {ii, gi, ni} | {ii, bar:true} | null} */
+const chantEd = {idx: -1, sel: null};
+
+function noteToGabc(n){
+  const ch = String.fromCharCode('a'.charCodeAt(0) + Math.max(0, Math.min(12, n.pos + 3)));
+  let s = (n.acc === 'fl' ? 'x' : n.acc === 'na' ? 'y' : '') + (n.incl ? ch.toUpperCase() : ch);
+  if (n.virga) s += 'v';
+  if (n.epiH) s += '_';
+  if (n.epiV) s += "'";
+  if (n.dot) s += '.';
+  return s;
+}
+function serializeGabcChant(parsed){
+  const parts = [];
+  const cl = parsed.clef || {type: 'c', line: 4, flat: false};
+  parts.push(`(${cl.type}${cl.flat ? 'b' : ''}${cl.line})`);
+  for (const it of parsed.items) {
+    if (it.kind === 'clef') {
+      const c = it.clef;
+      parts.push(`(${c.type}${c.flat ? 'b' : ''}${c.line})`);
+    } else if (it.kind === 'bar') {
+      parts.push(`(${it.bar})`);
+    } else if (it.kind === 'syl') {
+      const inner = (it.groups || []).map(g => g.bar ? g.bar : (g.notes || []).map(noteToGabc).join('')).filter(Boolean).join('/');
+      if (it.text || inner) parts.push(`${it.text || ''}(${inner})`);
+    }
+  }
+  return parts.join(' ');
+}
+function chantStepOf(cl, pos){
+  const clefStep = cl.type === 'f' ? 24 : 28;
+  return clefStep - 2 * (cl.line - 1) + pos;
+}
+
 function drawChantSystem(chant, chantIdx, W, y){
   const parsed = parseGabcChant(chant.gabc || '');
   const title = chant.title || parsed.headerTitle || 'Plainchant';
+  const centered = chant.align === 'center';
   const ls = lyrSize(), lf = lyrFontCss();
   const PW = 0.62, PH = 0.52; /* square punctum width & height in staff spaces */
   const clefWCh = cl => (cl.type === 'f' ? 1.55 : 1.0) + (cl.flat ? 0.9 : 0) + 0.7;
 
-  /* Measure each item's width */
+  /* Measure each item's width (preserving original item index ii for interactive editing) */
   const measureGroup = g => {
-    if (g.bar) return g.bar === '::' ? 1.4 : 0.95;
+    if (g.bar) return g.bar === '::' ? 1.1 : 0.85;
     const ns = g.notes || [];
     if (!ns.length) return 0;
     let w = 0;
@@ -2829,14 +2900,14 @@ function drawChantSystem(chant, chantIdx, W, y){
     }
     return w;
   };
-  const measured = parsed.items.map(it => {
-    if (it.kind === 'clef') return {...it, w: clefWCh(it.clef) + 0.5};
-    if (it.kind === 'bar') return {...it, w: it.bar === '::' ? 1.5 : 1.0};
+  const measured = parsed.items.map((it, ii) => {
+    if (it.kind === 'clef') return {...it, ii, w: clefWCh(it.clef) + 0.5};
+    if (it.kind === 'bar') return {...it, ii, w: it.bar === '::' ? 0.9 : 0.85};
     let nw = 0;
     it.groups.forEach((g, gi) => { nw += measureGroup(g) + (gi > 0 ? 0.48 : 0); });
     const tw = it.text ? textW(it.text.replace(/-$/, ''), ls, false, lf) : 0;
     const w = Math.max(nw, tw, 0.9) + 0.85;
-    return {...it, w, nw, tw};
+    return {...it, ii, w, nw, tw};
   });
 
   /* Wrap items across 4-line staves of width W */
@@ -2854,59 +2925,67 @@ function drawChantSystem(chant, chantIdx, W, y){
   }
   lines.push(curLine);
 
+  const isActiveChant = chantEd.idx === chantIdx;
+  const lineGap = Math.max(3.6, ls * 2.1 + 1.8);
+  const firstLineW = Math.min(W, Math.max(8, lines[0].x + 0.25));
+  const titleX = centered ? W / 2 : 0;
   let s = '';
   let cy = y;
   /* Chant title header */
-  s += `<text class="chant-title" x="0" y="${f(cy + 1.5)}" font-size="1.65" font-style="italic">${esc(title)}</text>`;
+  s += `<text class="chant-title" x="${f(titleX)}" y="${f(cy + 1.5)}" font-size="1.65" font-style="italic"${centered ? ' text-anchor="middle"' : ''}>${esc(title)}</text>`;
   cy += 2.3;
 
-  const lineGap = Math.max(3.6, ls * 2.1 + 1.8);
-  const drawNeumeGroup = (g, gx, top) => {
+  const drawNeumeGroup = (g, gx, top, ii, gi, lineClef) => {
     let o = '', x = gx;
     if (g.bar) {
-      const bx = x + 0.35;
-      if (g.bar === ',') o += vl(bx, top - 0.35, top + 0.35, 'barl', 0.14);
-      else if (g.bar === ';') o += vl(bx, top + 0.8, top + 2.2, 'barl', 0.14);
-      else if (g.bar === ':') o += vl(bx, top, top + 3, 'barl', 0.15);
-      else { o += vl(bx, top, top + 3, 'barl', 0.15) + vl(bx + 0.42, top, top + 3, 'barl', 0.15); }
-      return o;
+      const bx = x + 0.3;
+      const isSel = isActiveChant && chantEd.sel && chantEd.sel.ii === ii && chantEd.sel.gi === gi && chantEd.sel.bar;
+      let bsvg = '';
+      if (g.bar === ',') bsvg = vl(bx, top - 0.35, top + 0.35, 'barl', 0.14);
+      else if (g.bar === ';') bsvg = vl(bx, top + 0.8, top + 2.2, 'barl', 0.14);
+      else if (g.bar === ':') bsvg = vl(bx, top, top + 3, 'barl', 0.15);
+      else { bsvg = vl(bx, top, top + 3, 'barl', 0.15) + vl(bx + 0.42, top, top + 3, 'barl', 0.15); }
+      return `<g class="cb-hit${isSel ? ' cn-sel' : ''}" data-cb="${chantIdx}:${ii}:${gi}"><rect class="cn-bg" x="${f(bx - 0.25)}" y="${f(top - 0.5)}" width="${g.bar === '::' ? 0.95 : 0.55}" height="4" rx="0.2"/>${bsvg}</g>`;
     }
     const ns = g.notes || [];
     let prevX = null, prevY = null;
     for (let i = 0; i < ns.length; i++) {
       const nt = ns[i], ny = top + 3 - nt.pos * 0.5;
+      const isSel = isActiveChant && chantEd.sel && !chantEd.sel.bar && chantEd.sel.ii === ii && chantEd.sel.gi === gi && chantEd.sel.ni === i;
+      let no = '';
       if (nt.acc) {
-        o += `<g transform="translate(${f(x)} ${f(ny)}) scale(0.76)">${use(nt.acc, 0, 0)}</g>`;
+        no += `<g transform="translate(${f(x)} ${f(ny)}) scale(0.76)">${use(nt.acc, 0, 0)}</g>`;
         x += 0.72;
       }
       /* Podatus (2-note ascending neume): stack upper note right above lower note */
       const isPodTop = (ns.length === 2 && i === 1 && nt.pos > ns[0].pos);
       const nx = isPodTop ? prevX : x;
       /* Ledger lines outside 4-line staff (pos <= -2 or pos >= 8) */
-      for (let lp = -2; lp >= nt.pos; lp -= 2) o += hl(nx - 0.25, nx + PW + 0.25, top + 3 - lp * 0.5, 'ledger', 0.13);
-      for (let lp = 8; lp <= nt.pos; lp += 2) o += hl(nx - 0.25, nx + PW + 0.25, top + 3 - lp * 0.5, 'ledger', 0.13);
+      for (let lp = -2; lp >= nt.pos; lp -= 2) no += hl(nx - 0.25, nx + PW + 0.25, top + 3 - lp * 0.5, 'ledger', 0.13);
+      for (let lp = 8; lp <= nt.pos; lp += 2) no += hl(nx - 0.25, nx + PW + 0.25, top + 3 - lp * 0.5, 'ledger', 0.13);
       /* Clivis left stem on first note of descending pair */
       if (i === 0 && ns.length >= 2 && ns[1].pos < nt.pos) {
-        o += `<rect class="ink" x="${f(nx)}" y="${f(ny)}" width="0.1" height="${f(Math.max(1.2, (top + 3 - ns[1].pos * 0.5) - ny + 0.7))}"/>`;
+        no += `<rect class="ink" x="${f(nx)}" y="${f(ny)}" width="0.1" height="${f(Math.max(1.2, (top + 3 - ns[1].pos * 0.5) - ny + 0.7))}"/>`;
       }
       /* Connecting hairline from previous note in neume */
       if (prevX !== null) {
         const vx = isPodTop ? nx + PW - 0.1 : nx;
-        o += `<rect class="ink" x="${f(vx)}" y="${f(Math.min(prevY, ny))}" width="0.1" height="${f(Math.max(0.1, Math.abs(ny - prevY)))}"/>`;
+        no += `<rect class="ink" x="${f(vx)}" y="${f(Math.min(prevY, ny))}" width="0.1" height="${f(Math.max(0.1, Math.abs(ny - prevY)))}"/>`;
       }
       if (nt.incl) {
         const cx = nx + PW / 2;
-        o += `<path class="ink" d="M${f(cx)} ${f(ny - 0.34)}L${f(cx + 0.34)} ${f(ny)}L${f(cx)} ${f(ny + 0.34)}L${f(cx - 0.34)} ${f(ny)}Z"/>`;
+        no += `<path class="ink" d="M${f(cx)} ${f(ny - 0.34)}L${f(cx + 0.34)} ${f(ny)}L${f(cx)} ${f(ny + 0.34)}L${f(cx - 0.34)} ${f(ny)}Z"/>`;
       } else {
-        o += `<rect class="ink" x="${f(nx)}" y="${f(ny - PH / 2)}" width="${f(PW)}" height="${f(PH)}" rx="0.06"/>`;
+        no += `<rect class="ink" x="${f(nx)}" y="${f(ny - PH / 2)}" width="${f(PW)}" height="${f(PH)}" rx="0.06"/>`;
       }
-      if (nt.virga) o += `<rect class="ink" x="${f(nx + PW - 0.1)}" y="${f(ny)}" width="0.1" height="1.5"/>`;
-      if (nt.epiH) o += `<rect class="ink" x="${f(nx - 0.04)}" y="${f(ny - 0.52)}" width="${f(PW + 0.08)}" height="0.1"/>`;
-      if (nt.epiV) o += `<rect class="ink" x="${f(nx + PW / 2 - 0.05)}" y="${f(ny + 0.42)}" width="0.1" height="0.45"/>`;
+      if (nt.virga) no += `<rect class="ink" x="${f(nx + PW - 0.1)}" y="${f(ny)}" width="0.1" height="1.5"/>`;
+      if (nt.epiH) no += `<rect class="ink" x="${f(nx - 0.04)}" y="${f(ny - 0.52)}" width="${f(PW + 0.08)}" height="0.1"/>`;
+      if (nt.epiV) no += `<rect class="ink" x="${f(nx + PW / 2 - 0.05)}" y="${f(ny + 0.42)}" width="0.1" height="0.45"/>`;
       if (nt.dot) {
         const dy = nt.pos % 2 === 0 ? ny - 0.35 : ny;
-        o += `<circle class="ink" cx="${f(nx + PW + 0.28)}" cy="${f(dy)}" r="0.15"/>`;
+        no += `<circle class="ink" cx="${f(nx + PW + 0.28)}" cy="${f(dy)}" r="0.15"/>`;
       }
+      o += `<g class="cn-hit${isSel ? ' cn-sel' : ''}" data-cn="${chantIdx}:${ii}:${gi}:${i}" data-top="${f(top)}"><rect class="cn-bg" x="${f(nx - 0.25)}" y="${f(ny - 0.75)}" width="${f(PW + 0.5)}" height="1.5" rx="0.22"/>${no}</g>`;
       prevX = nx; prevY = ny;
       if (!isPodTop) x += PW * 0.92;
       if (nt.dot) x += 0.42;
@@ -2923,49 +3002,71 @@ function drawChantSystem(chant, chantIdx, W, y){
 
   lines.forEach((ln, li) => {
     const top = cy + 0.9;
-    /* 4-line Gregorian staff */
-    for (let k = 0; k < 4; k++) s += hl(0, W, top + k, 'staff', 0.12);
-    s += chantClefSvg(ln.clef, 0.4, top);
+    const isLastLine = li === lines.length - 1;
+    const lastIt = ln.items[ln.items.length - 1];
+    const endsWithDouble = lastIt && ((lastIt.kind === 'bar' && lastIt.bar === '::') || (lastIt.groups && lastIt.groups.length && lastIt.groups[lastIt.groups.length - 1].bar === '::'));
+    /* Compute exact visual end of the 4-line staff: never extend past the double barline (or end of last line)! */
+    let xCursor = clefWCh(ln.clef) + 0.8;
+    let barEndX = null;
+    for (const it of ln.items) {
+      if (it.kind === 'bar' && it.bar === '::') barEndX = xCursor + 0.72;
+      else if (it.groups && it.groups.length) {
+        let gx = xCursor + Math.max(0, (it.tw - it.nw) / 2);
+        it.groups.forEach((g, gi) => {
+          if (g.bar === '::') barEndX = gx + 0.72;
+          gx += measureGroup(g) + (gi + 1 < it.groups.length ? 0.48 : 0);
+        });
+      }
+      xCursor += it.w;
+    }
+    const lineEnd = endsWithDouble && barEndX !== null ? Math.min(W, barEndX) : isLastLine ? Math.min(W, Math.max(clefWCh(ln.clef) + 3, xCursor + 0.2)) : W;
+    const dx = centered && lineEnd < W ? (W - lineEnd) / 2 : 0;
+
+    let lsSvg = '';
+    /* Clickable 4-line staff surface for adding/editing notes */
+    lsSvg += `<rect class="cs-hit" data-cs="${chantIdx}" data-top="${f(top)}" x="0" y="${f(top - 1.5)}" width="${f(lineEnd)}" height="6.2" fill="transparent"/>`;
+    /* 4-line Gregorian staff ending cleanly at lineEnd (double barline on final line) */
+    for (let k = 0; k < 4; k++) lsSvg += hl(0, lineEnd, top + k, 'staff', 0.12);
+    lsSvg += chantClefSvg(ln.clef, 0.4, top);
     let x = clefWCh(ln.clef) + 0.8;
     const lyrY = top + 3 + ls * 1.15 + 0.45;
     for (const it of ln.items) {
       if (it.kind === 'clef') {
-        s += chantClefSvg(it.clef, x, top);
+        lsSvg += chantClefSvg(it.clef, x, top);
         x += it.w;
         continue;
       }
       if (it.kind === 'bar') {
-        s += drawNeumeGroup({bar: it.bar}, x, top);
+        lsSvg += drawNeumeGroup({bar: it.bar}, x, top, it.ii, -1, ln.clef);
         x += it.w;
         continue;
       }
-      /* Center neume over syllable if syllable is wider */
       let gx = x + Math.max(0, (it.tw - it.nw) / 2);
       it.groups.forEach((g, gi) => {
-        s += drawNeumeGroup(g, gx, top);
+        lsSvg += drawNeumeGroup(g, gx, top, it.ii, gi, ln.clef);
         gx += measureGroup(g) + (gi + 1 < it.groups.length ? 0.48 : 0);
       });
       if (it.text) {
         const cx = x + Math.max(it.nw, it.tw) / 2;
-        s += `<text class="lyr" x="${f(cx)}" y="${f(lyrY)}" font-size="${f(ls)}" text-anchor="middle">${esc(it.text)}</text>`;
+        lsSvg += `<text class="lyr" x="${f(cx)}" y="${f(lyrY)}" font-size="${f(ls)}" text-anchor="middle">${esc(it.text)}</text>`;
       }
       x += it.w;
     }
     /* End-of-line custos if another chant line follows */
-    if (li + 1 < lines.length) {
+    if (!isLastLine) {
       const np = firstNotePos(lines[li + 1]);
       if (np !== null) {
         const ny = top + 3 - np * 0.5;
-        s += `<rect class="ink" x="${f(W - 1.15)}" y="${f(ny - 0.24)}" width="0.46" height="0.48" rx="0.05"/>`;
-        s += `<rect class="ink" x="${f(W - 0.74)}" y="${f(ny - 1.05)}" width="0.09" height="1.15"/>`;
+        lsSvg += `<rect class="ink" x="${f(lineEnd - 1.15)}" y="${f(ny - 0.24)}" width="0.46" height="0.48" rx="0.05"/>`;
+        lsSvg += `<rect class="ink" x="${f(lineEnd - 0.74)}" y="${f(ny - 1.05)}" width="0.09" height="1.15"/>`;
       }
     }
+    s += dx > 0.01 ? `<g transform="translate(${f(dx)} 0)">${lsSvg}</g>` : lsSvg;
     cy = top + 3 + lineGap;
   });
 
   const totalH = Math.max(5.5, cy - y);
-  const hit = `<rect class="chant-hit" x="-0.5" y="${f(y)}" width="${f(W + 1)}" height="${f(totalH)}" fill="transparent"/>`;
-  return {svg: `<g class="chant-sys" data-chant="${chantIdx}"><title>Click to edit or remove this plainchant section</title>${hit}${s}</g>`, h: totalH};
+  return {svg: `<g class="chant-sys${isActiveChant ? ' chant-active' : ''}" data-chant="${chantIdx}">${s}</g>`, h: totalH};
 }
 
 function buildScoreItems(vlist, W, opts){
@@ -8614,42 +8715,358 @@ if ($('#varList')) $('#varList').addEventListener('click', e => {
   commit(() => { ensureExt(piece).variants.splice(idx, 1); });
   syncAdv();
 });
-function editChantAt(idx){
-  if (!piece) return;
-  const ext = ensureExt(piece), ch = ext.chants[idx];
-  if (!ch) return;
-  const title = prompt('Plainchant section title (leave empty to delete this section):', ch.title || 'Plainchant');
-  if (title === null) return;
-  if (!title.trim()) {
-    commit(() => { ext.chants.splice(idx, 1); });
-    syncAdv(); toast('Plainchant section removed.'); return;
-  }
-  const gabc = prompt('GABC notation (e.g. (c4) Glo(g)ri(h)a(g) in(f) ex(g)cel(h)sis(g) De(f)o.(e) (::)):', ch.gabc || '');
-  if (gabc === null) return;
-  commit(() => { ch.title = title.trim(); ch.gabc = gabc.trim(); });
-  syncAdv(); toast('Plainchant section updated.');
+/* ---------------- Interactive Plainchant GUI Editor ---------------- */
+function chantCur(){
+  if (!piece || chantEd.idx < 0) return null;
+  const arr = ensureExt(piece).chants;
+  if (chantEd.idx >= arr.length) { chantEd.idx = -1; chantEd.sel = null; return null; }
+  return arr[chantEd.idx];
 }
+function chantFlatNotes(parsed){
+  const list = [];
+  parsed.items.forEach((it, ii) => {
+    if (it.kind === 'syl') (it.groups || []).forEach((g, gi) => {
+      if (g.notes) g.notes.forEach((n, ni) => list.push({ii, gi, ni, it, g, n}));
+    });
+  });
+  return list;
+}
+function openChantEd(idx, sel){
+  if (!piece) return;
+  const arr = ensureExt(piece).chants;
+  if (!arr[idx]) return;
+  chantEd.idx = idx;
+  if (sel !== undefined) chantEd.sel = sel;
+  else {
+    const p = parseGabcChant(arr[idx].gabc || '');
+    const flat = chantFlatNotes(p);
+    chantEd.sel = flat.length ? {ii: flat[0].ii, gi: flat[0].gi, ni: flat[0].ni} : null;
+  }
+  syncChantBar();
+  render();
+  postHeight();
+}
+function closeChantEd(){
+  if (chantEd.idx < 0) return;
+  chantEd.idx = -1; chantEd.sel = null;
+  syncChantBar();
+  render();
+  postHeight();
+}
+function syncChantBar(){
+  const bar = $('#chantBar'); if (!bar) return;
+  const ch = chantCur();
+  bar.hidden = !ch;
+  if (!ch) return;
+  const p = parseGabcChant(ch.gabc || '');
+  if ($('#chTitle') && document.activeElement !== $('#chTitle')) $('#chTitle').value = ch.title || '';
+  if ($('#chClef')) $('#chClef').value = `${p.clef.type}${p.clef.flat ? 'b' : ''}${p.clef.line}`;
+  const al = ch.align === 'center' ? 'center' : 'left';
+  if ($('#chAlign')) $('#chAlign').querySelectorAll('button[data-v]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === al)));
+  if ($('#chRaw') && document.activeElement !== $('#chRaw')) $('#chRaw').value = ch.gabc || '';
+  const sel = chantEd.sel;
+  let note = null, it = null;
+  if (sel && !sel.bar && p.items[sel.ii] && p.items[sel.ii].groups && p.items[sel.ii].groups[sel.gi]) {
+    it = p.items[sel.ii];
+    note = (it.groups[sel.gi].notes || [])[sel.ni] || null;
+  }
+  const nr = $('#chNoteRow');
+  if (nr) nr.style.opacity = note ? '1' : '.45';
+  if ($('#chSyl') && document.activeElement !== $('#chSyl')) $('#chSyl').value = it ? (it.text || '') : '';
+  const setP = (id, on) => { const el = $(id); if (el) el.setAttribute('aria-pressed', String(!!on)); };
+  setP('#chDot', note && note.dot);
+  setP('#chEpiH', note && note.epiH);
+  setP('#chEpiV', note && note.epiV);
+  setP('#chFlat', note && note.acc === 'fl');
+  setP('#chNat', note && note.acc === 'na');
+  setP('#chIncl', note && note.incl);
+}
+function mutateChant(fn, audition){
+  const ch = chantCur(); if (!ch) return;
+  const p = parseGabcChant(ch.gabc || '');
+  const res = fn(p, ch);
+  if (res === false) return;
+  const nextGabc = serializeGabcChant(p);
+  commit(() => { ch.gabc = nextGabc; });
+  if (audition && chantEd.sel && !chantEd.sel.bar) {
+    const p2 = parseGabcChant(ch.gabc || '');
+    const it = p2.items[chantEd.sel.ii], g = it && it.groups && it.groups[chantEd.sel.gi], n = g && g.notes && g.notes[chantEd.sel.ni];
+    if (n) {
+      const stp = chantStepOf(p2.clef, n.pos);
+      const alt = n.acc === 'fl' ? -1 : n.acc === 'na' ? 0 : (p2.clef.flat && ((stp % 7) + 7) % 7 === 6 ? -1 : 0);
+      hear(stp, alt);
+    }
+  }
+  syncChantBar();
+  syncAdv();
+}
+function editChantAt(idx){ openChantEd(idx); }
 if ($('#addChantBtn')) $('#addChantBtn').addEventListener('click', () => {
   if (!piece) return;
+  closePops();
   const it = selEvents();
   const t = it.length ? rt(it[0].e.t) : 0;
-  const title = prompt('Plainchant section title (e.g. Intonation, Gloria):', 'Intonation');
-  if (title === null) return;
-  const gabc = prompt('GABC notation (renders as its own 4-line square-notation system):', '(c4) Glo(g)ri(h)a(g) in(f) ex(g)cel(h)sis(g) De(f)o.(e) (::)');
-  if (gabc === null) return;
-  commit(() => { ensureExt(piece).chants.push({t, title: title.trim() || 'Plainchant', gabc: gabc.trim()}); });
+  let newIdx = 0;
+  commit(() => {
+    const arr = ensureExt(piece).chants;
+    newIdx = arr.length;
+    arr.push({t, title: 'Intonation', align: 'center', gabc: '(c4) Glo(g)ri(h)a(g) in(f) ex(g)cel(gh)sis(hg) De(f)o.(e.) (::)'});
+  });
   syncAdv();
-  toast('Plainchant section added as its own system.');
+  openChantEd(newIdx);
+  toast('Plainchant section added. Click or drag notes on the 4-line staff to edit.');
 });
 if ($('#chantList')) $('#chantList').addEventListener('click', e => {
   const del = e.target.closest('[data-del-chant]');
-  if (del && piece) { commit(() => { ensureExt(piece).chants.splice(+del.dataset.delChant, 1); }); syncAdv(); return; }
+  if (del && piece) {
+    const di = +del.dataset.delChant;
+    if (chantEd.idx === di) { chantEd.idx = -1; chantEd.sel = null; }
+    commit(() => { ensureExt(piece).chants.splice(di, 1); });
+    syncChantBar(); syncAdv(); return;
+  }
   const edc = e.target.closest('[data-ed-chant]');
-  if (edc && piece) editChantAt(+edc.dataset.edChant);
+  if (edc && piece) { closePops(); openChantEd(+edc.dataset.edChant); }
 });
+/* Chant bar controls */
+if ($('#chTitle')) $('#chTitle').addEventListener('change', e => {
+  const ch = chantCur(); if (!ch) return;
+  commit(() => { ch.title = e.target.value.trim() || 'Plainchant'; });
+  syncChantBar(); syncAdv();
+});
+if ($('#chClef')) $('#chClef').addEventListener('change', e => {
+  const m = String(e.target.value).match(/^([cf])(b)?([1-4])$/);
+  if (!m) return;
+  mutateChant(p => { p.clef = {type: m[1], flat: !!m[2], line: +m[3]}; });
+});
+if ($('#chAlign')) $('#chAlign').addEventListener('click', e => {
+  const b = e.target.closest('button[data-v]'); const ch = chantCur(); if (!b || !ch) return;
+  commit(() => { ch.align = b.dataset.v; });
+  syncChantBar();
+});
+if ($('#chRawTog')) $('#chRawTog').addEventListener('click', () => {
+  const r = $('#chRawRow'); if (!r) return;
+  r.hidden = !r.hidden;
+  $('#chRawTog').setAttribute('aria-pressed', String(!r.hidden));
+  postHeight();
+});
+if ($('#chRaw')) $('#chRaw').addEventListener('change', e => {
+  const ch = chantCur(); if (!ch) return;
+  commit(() => { ch.gabc = e.target.value.trim(); });
+  syncChantBar();
+});
+if ($('#chDelSec')) $('#chDelSec').addEventListener('click', () => {
+  if (!piece || chantEd.idx < 0) return;
+  const di = chantEd.idx;
+  chantEd.idx = -1; chantEd.sel = null;
+  commit(() => { ensureExt(piece).chants.splice(di, 1); });
+  syncChantBar(); syncAdv(); toast('Plainchant section deleted.');
+});
+if ($('#chDone')) $('#chDone').addEventListener('click', closeChantEd);
+if ($('#chSyl')) $('#chSyl').addEventListener('change', e => {
+  if (!chantEd.sel || chantEd.sel.bar) return;
+  const txt = e.target.value.trim();
+  mutateChant(p => { const it = p.items[chantEd.sel.ii]; if (it && it.kind === 'syl') it.text = txt; });
+});
+const chantMovePitch = delta => mutateChant(p => {
+  if (!chantEd.sel || chantEd.sel.bar) return false;
+  const it = p.items[chantEd.sel.ii], g = it && it.groups && it.groups[chantEd.sel.gi], n = g && g.notes && g.notes[chantEd.sel.ni];
+  if (!n) return false;
+  n.pos = Math.max(-3, Math.min(9, n.pos + delta));
+}, true);
+const chantModToggle = fn => mutateChant(p => {
+  if (!chantEd.sel || chantEd.sel.bar) return false;
+  const it = p.items[chantEd.sel.ii], g = it && it.groups && it.groups[chantEd.sel.gi], n = g && g.notes && g.notes[chantEd.sel.ni];
+  if (!n) return false;
+  fn(n, g, it, p);
+}, true);
+if ($('#chUp')) $('#chUp').addEventListener('click', () => chantMovePitch(1));
+if ($('#chDn')) $('#chDn').addEventListener('click', () => chantMovePitch(-1));
+if ($('#chDot')) $('#chDot').addEventListener('click', () => chantModToggle(n => { n.dot = !n.dot; }));
+if ($('#chEpiH')) $('#chEpiH').addEventListener('click', () => chantModToggle(n => { n.epiH = !n.epiH; }));
+if ($('#chEpiV')) $('#chEpiV').addEventListener('click', () => chantModToggle(n => { n.epiV = !n.epiV; }));
+if ($('#chFlat')) $('#chFlat').addEventListener('click', () => chantModToggle(n => { n.acc = n.acc === 'fl' ? '' : 'fl'; }));
+if ($('#chNat')) $('#chNat').addEventListener('click', () => chantModToggle(n => { n.acc = n.acc === 'na' ? '' : 'na'; }));
+if ($('#chIncl')) $('#chIncl').addEventListener('click', () => chantModToggle(n => { n.incl = !n.incl; }));
+if ($('#chJoin')) $('#chJoin').addEventListener('click', () => mutateChant(p => {
+  if (!chantEd.sel || chantEd.sel.bar) return false;
+  const {ii, gi, ni} = chantEd.sel, it = p.items[ii];
+  if (!it || it.kind !== 'syl') return false;
+  const g = it.groups[gi];
+  if (ni > 0) {
+    /* Split this note out into a new group/syllable after current */
+    const tail = g.notes.splice(ni);
+    it.groups.splice(gi + 1, 0, {notes: tail});
+    chantEd.sel = {ii, gi: gi + 1, ni: 0};
+  } else if (gi > 0 && it.groups[gi - 1].notes) {
+    /* Join with previous group in same syllable */
+    const prev = it.groups[gi - 1];
+    const newNi = prev.notes.length;
+    prev.notes.push(...g.notes);
+    it.groups.splice(gi, 1);
+    chantEd.sel = {ii, gi: gi - 1, ni: newNi};
+  } else if (ii > 0 && p.items[ii - 1].kind === 'syl' && p.items[ii - 1].groups.length) {
+    /* Join this syllable's notes into previous syllable's last group */
+    const prevIt = p.items[ii - 1], pg = prevIt.groups[prevIt.groups.length - 1];
+    if (!pg.notes) return false;
+    const newNi = pg.notes.length;
+    pg.notes.push(...g.notes);
+    it.groups.splice(gi, 1);
+    if (!it.groups.length) p.items.splice(ii, 1);
+    chantEd.sel = {ii: ii - 1, gi: prevIt.groups.length - 1, ni: newNi};
+  }
+}));
+const chantDelSel = () => mutateChant(p => {
+  if (!chantEd.sel) return false;
+  const {ii, gi, ni, bar} = chantEd.sel;
+  if (bar) {
+    if (gi < 0) p.items.splice(ii, 1);
+    else if (p.items[ii] && p.items[ii].groups) { p.items[ii].groups.splice(gi, 1); if (!p.items[ii].groups.length && !p.items[ii].text) p.items.splice(ii, 1); }
+    chantEd.sel = null;
+    return;
+  }
+  const it = p.items[ii], g = it && it.groups && it.groups[gi];
+  if (!g || !g.notes) return false;
+  g.notes.splice(ni, 1);
+  if (!g.notes.length) it.groups.splice(gi, 1);
+  if (!it.groups.length) p.items.splice(ii, 1);
+  const flat = chantFlatNotes(p);
+  chantEd.sel = flat.length ? {ii: flat[Math.max(0, flat.length - 1)].ii, gi: flat[Math.max(0, flat.length - 1)].gi, ni: flat[Math.max(0, flat.length - 1)].ni} : null;
+});
+if ($('#chDelNote')) $('#chDelNote').addEventListener('click', chantDelSel);
+if ($('#chAddNote')) $('#chAddNote').addEventListener('click', () => mutateChant(p => {
+  const newNote = {pos: 3, incl: false, dot: false, epiH: false, epiV: false, virga: false, acc: ''};
+  if (chantEd.sel && !chantEd.sel.bar && p.items[chantEd.sel.ii]) {
+    const it = p.items[chantEd.sel.ii], g = it.groups && it.groups[chantEd.sel.gi];
+    if (g && g.notes) {
+      const ref = g.notes[chantEd.sel.ni];
+      if (ref) newNote.pos = ref.pos;
+      p.items.splice(chantEd.sel.ii + 1, 0, {kind: 'syl', text: '', groups: [{notes: [newNote]}]});
+      chantEd.sel = {ii: chantEd.sel.ii + 1, gi: 0, ni: 0};
+      return;
+    }
+  }
+  const insAt = p.items.length && p.items[p.items.length - 1].kind === 'bar' && p.items[p.items.length - 1].bar === '::' ? p.items.length - 1 : p.items.length;
+  p.items.splice(insAt, 0, {kind: 'syl', text: '', groups: [{notes: [newNote]}]});
+  chantEd.sel = {ii: insAt, gi: 0, ni: 0};
+}, true));
+document.querySelectorAll('#chantBar [data-chbar]').forEach(b => b.addEventListener('click', () => mutateChant(p => {
+  const bar = b.dataset.chbar;
+  const insAt = chantEd.sel ? Math.min(p.items.length, chantEd.sel.ii + 1) : p.items.length;
+  p.items.splice(insAt, 0, {kind: 'bar', bar});
+  chantEd.sel = {ii: insAt, gi: -1, bar: true};
+})));
+['#chTitle', '#chSyl', '#chRaw'].forEach(id => { const el = $(id); if (el) el.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') el.blur(); }); });
+
+/* Click & vertical-drag on plainchant notes, bars, and 4-line staff */
+let chantDrag = null;
+pagesEl.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || !piece) return;
+  const cn = e.target.closest && e.target.closest('.cn-hit');
+  if (cn) {
+    e.preventDefault(); e.stopPropagation();
+    const [ci, ii, gi, ni] = cn.dataset.cn.split(':').map(Number);
+    const top = +cn.dataset.top;
+    const ch = ensureExt(piece).chants[ci]; if (!ch) return;
+    const p = parseGabcChant(ch.gabc || '');
+    const n = p.items[ii] && p.items[ii].groups && p.items[ii].groups[gi] && p.items[ii].groups[gi].notes[ni];
+    chantEd.idx = ci; chantEd.sel = {ii, gi, ni};
+    ed.sel = null; ed.range = null; ed.picks = null; showSel();
+    syncChantBar(); render();
+    if (n) {
+      const stp = chantStepOf(p.clef, n.pos);
+      const alt = n.acc === 'fl' ? -1 : n.acc === 'na' ? 0 : (p.clef.flat && ((stp % 7) + 7) % 7 === 6 ? -1 : 0);
+      hear(stp, alt);
+      const svg = cn.ownerSVGElement;
+      chantDrag = {ci, ii, gi, ni, top, svg, startY: e.clientY, origPos: n.pos, lastPos: n.pos, moved: false};
+    }
+    return;
+  }
+  const cb = e.target.closest && e.target.closest('.cb-hit');
+  if (cb) {
+    e.preventDefault(); e.stopPropagation();
+    const [ci, ii, gi] = cb.dataset.cb.split(':').map(Number);
+    chantEd.idx = ci; chantEd.sel = {ii, gi, bar: true};
+    syncChantBar(); render();
+    return;
+  }
+  const cs = e.target.closest && e.target.closest('.cs-hit');
+  if (cs) {
+    e.preventDefault(); e.stopPropagation();
+    const ci = +cs.dataset.cs, top = +cs.dataset.top;
+    if (chantEd.idx !== ci) { openChantEd(ci); return; }
+    /* Already editing this chant: clicking on the 4-line staff adds a note at that exact pitch! */
+    const m = cs.getScreenCTM();
+    if (!m) return;
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+    const pos = Math.max(-3, Math.min(9, Math.round((top + 3 - pt.y) * 2)));
+    mutateChant(p => {
+      const newNote = {pos, incl: false, dot: false, epiH: false, epiV: false, virga: false, acc: ''};
+      const insAt = chantEd.sel ? Math.min(p.items.length, chantEd.sel.ii + 1)
+        : (p.items.length && p.items[p.items.length - 1].kind === 'bar' && p.items[p.items.length - 1].bar === '::' ? p.items.length - 1 : p.items.length);
+      p.items.splice(insAt, 0, {kind: 'syl', text: '', groups: [{notes: [newNote]}]});
+      chantEd.sel = {ii: insAt, gi: 0, ni: 0};
+    }, true);
+  }
+});
+document.addEventListener('pointermove', e => {
+  if (!chantDrag || !piece) return;
+  if (!chantDrag.moved && Math.abs(e.clientY - chantDrag.startY) < 4) return;
+  chantDrag.moved = true;
+  const ch = ensureExt(piece).chants[chantDrag.ci]; if (!ch) return;
+  const el = pagesEl.querySelector(`.cn-hit[data-cn="${chantDrag.ci}:${chantDrag.ii}:${chantDrag.gi}:${chantDrag.ni}"]`);
+  const m = (el || chantDrag.svg) && (el || chantDrag.svg).getScreenCTM();
+  if (!m) return;
+  const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+  const pos = Math.max(-3, Math.min(9, Math.round((chantDrag.top + 3 - pt.y) * 2)));
+  if (pos === chantDrag.lastPos) return;
+  chantDrag.lastPos = pos;
+  const p = parseGabcChant(ch.gabc || '');
+  const n = p.items[chantDrag.ii] && p.items[chantDrag.ii].groups && p.items[chantDrag.ii].groups[chantDrag.gi] && p.items[chantDrag.ii].groups[chantDrag.gi].notes[chantDrag.ni];
+  if (!n) return;
+  n.pos = pos;
+  ch.gabc = serializeGabcChant(p);
+  const stp = chantStepOf(p.clef, pos);
+  hear(stp, n.acc === 'fl' ? -1 : 0);
+  render();
+  syncChantBar();
+});
+document.addEventListener('pointerup', () => {
+  if (!chantDrag) return;
+  const d = chantDrag; chantDrag = null;
+  if (d.moved && d.lastPos !== d.origPos && piece) {
+    /* Persist dragged pitch into undo stack & kern snapshot */
+    commit(() => {});
+    syncChantBar();
+  }
+});
+/* Keyboard editing when a plainchant note/bar is selected */
+document.addEventListener('keydown', e => {
+  if (chantEd.idx < 0 || !piece) return;
+  if (e.target && e.target.closest && e.target.closest('input, textarea, select')) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeChantEd(); return; }
+  if (e.key === 'ArrowUp') { e.preventDefault(); e.stopImmediatePropagation(); chantMovePitch(1); return; }
+  if (e.key === 'ArrowDown') { e.preventDefault(); e.stopImmediatePropagation(); chantMovePitch(-1); return; }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    const ch = chantCur(); if (!ch) return;
+    const flat = chantFlatNotes(parseGabcChant(ch.gabc || ''));
+    if (!flat.length) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    let idx = chantEd.sel ? flat.findIndex(x => x.ii === chantEd.sel.ii && x.gi === chantEd.sel.gi && x.ni === chantEd.sel.ni) : 0;
+    idx = Math.max(0, Math.min(flat.length - 1, idx + (e.key === 'ArrowRight' ? 1 : -1)));
+    const cur = flat[idx];
+    chantEd.sel = {ii: cur.ii, gi: cur.gi, ni: cur.ni};
+    const p = parseGabcChant(ch.gabc || '');
+    hear(chantStepOf(p.clef, cur.n.pos), cur.n.acc === 'fl' ? -1 : 0);
+    syncChantBar(); render();
+    return;
+  }
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (!chantEd.sel) return;
+    e.preventDefault(); e.stopImmediatePropagation(); chantDelSel();
+  }
+}, true);
+
 document.addEventListener('click', e => {
-  const cs = e.target.closest && e.target.closest('.chant-sys');
-  if (cs && piece) { editChantAt(+cs.dataset.chant); return; }
   const ab = e.target.closest && e.target.closest('.ann-badge');
   if (!ab || !piece) return;
   const ext = ensureExt(piece), id = ab.dataset.ann;
@@ -8663,7 +9080,7 @@ document.addEventListener('click', e => {
   });
   syncAdv();
 });
-document.head.insertAdjacentHTML('beforeend', '<style>.betapill{display:inline-block;margin-left:5px;padding:1px 5px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;background:var(--accent,#8B2E22);color:#FAF5EA;vertical-align:middle}.advset{min-width:290px;max-width:340px}.advset .subhead{grid-column:1/-1;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}.advset .subhead:first-child{margin-top:0;padding-top:0;border-top:none}.adv-list{grid-column:1/-1;display:flex;flex-direction:column;gap:3px;max-height:110px;overflow:auto;padding:4px 6px;border-radius:6px;background:rgba(42,34,24,.04);font-size:12px}.adv-item{display:flex;align-items:center;justify-content:space-between;gap:6px}.adv-del{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px}.adv-del:hover{color:var(--accent,#8B2E22)}#pages .sf-badge{fill:var(--accent,#8B2E22);font-family:Georgia,serif;font-weight:700}#pages .orig-lyr{fill:var(--muted,#6B5E4E);font-style:italic;font-family:"IM Fell English",Georgia,serif}#pages .lacuna rect{fill:rgba(139,46,34,.08);stroke:var(--accent,#8B2E22);stroke-width:.12;stroke-dasharray:.4 .25}#pages .lacuna text{fill:var(--accent,#8B2E22);font-style:italic;font-family:Georgia,serif}#pages .ann-badge{cursor:pointer}#pages .ann-badge rect{fill:var(--accent,#8B2E22)}#pages .ann-badge text{fill:#FAF5EA;font-family:sans-serif;font-weight:700}#pages .var-br path{stroke:var(--muted,#6B5E4E)}#pages .var-br text{fill:var(--muted,#6B5E4E);font-family:sans-serif}#pages .chant-sys{cursor:pointer}#pages .chant-sys:hover .chant-hit{fill:rgba(139,46,34,.045)}#pages .chant-title{fill:var(--ink,#2A2218);font-family:"IM Fell English",Georgia,serif}</style>');
+document.head.insertAdjacentHTML('beforeend', '<style>.betapill{display:inline-block;margin-left:5px;padding:1px 5px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;background:var(--accent,#8B2E22);color:#FAF5EA;vertical-align:middle}.advset{min-width:290px;max-width:340px}.advset .subhead{grid-column:1/-1;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}.advset .subhead:first-child{margin-top:0;padding-top:0;border-top:none}.adv-list{grid-column:1/-1;display:flex;flex-direction:column;gap:3px;max-height:110px;overflow:auto;padding:4px 6px;border-radius:6px;background:rgba(42,34,24,.04);font-size:12px}.adv-item{display:flex;align-items:center;justify-content:space-between;gap:6px}.adv-del{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px}.adv-del:hover{color:var(--accent,#8B2E22)}#pages .sf-badge{fill:var(--accent,#8B2E22);font-family:Georgia,serif;font-weight:700}#pages .orig-lyr{fill:var(--muted,#6B5E4E);font-style:italic;font-family:"IM Fell English",Georgia,serif}#pages .lacuna rect{fill:rgba(139,46,34,.08);stroke:var(--accent,#8B2E22);stroke-width:.12;stroke-dasharray:.4 .25}#pages .lacuna text{fill:var(--accent,#8B2E22);font-style:italic;font-family:Georgia,serif}#pages .ann-badge{cursor:pointer}#pages .ann-badge rect{fill:var(--accent,#8B2E22)}#pages .ann-badge text{fill:#FAF5EA;font-family:sans-serif;font-weight:700}#pages .var-br path{stroke:var(--muted,#6B5E4E)}#pages .var-br text{fill:var(--muted,#6B5E4E);font-family:sans-serif}#pages .chant-sys .cs-hit{cursor:crosshair}#pages .cn-hit,#pages .cb-hit{cursor:pointer}#pages .cn-hit .cn-bg,#pages .cb-hit .cn-bg{fill:transparent;transition:fill .1s}#pages .cn-hit:hover .cn-bg,#pages .cb-hit:hover .cn-bg{fill:rgba(139,46,34,.12)}#pages .cn-sel .cn-bg{fill:rgba(180,82,36,.24) !important;stroke:var(--accent,#8B2E22);stroke-width:.1}#pages .chant-title{fill:var(--ink,#2A2218);font-family:"IM Fell English",Georgia,serif}.chantbar{display:flex;flex-direction:column;gap:5px;padding:6px 10px;border-top:1px solid var(--line);background:var(--surface,#FAF5EA)}.chantbar[hidden]{display:none !important}.chantbar .chrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.chantbar .chlab{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-right:2px}.chantbar input[type=text],.chantbar select{height:28px;padding:0 7px;border:1px solid var(--line);border-radius:6px;background:var(--bg,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:13px}.chantbar #chTitle{width:118px}.chantbar #chSyl{width:96px}.chantbar .chsep{width:1px;height:18px;background:var(--line);margin:0 2px}.chantbar .tb{min-height:28px;height:28px;padding:0 8px;font-size:13px}</style>');
 $('#keepBtn').addEventListener('click', () => {
   if (!piece) return;
   closePops();
@@ -9048,7 +9465,7 @@ $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
   ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(t => document.addEventListener(t, wake, {passive: true}));
   window.addEventListener('resize', () => wake());
   /* a tap on a blank place of the score: the controls go (and come back with the next tap) */
-  const NOT_BLANK = 'button, a, input, select, textarea, label, .pop, .library, .menu, #tpSide, .tools, .transport, .pagenav, .clefhit, .keyhit, .menshit, .mensadd, .markbar, .chant-sys, .ann-badge, #handBox, .handpop, #clefMenu, #keyMenu, #mensMenu, #notePick, g[class^="n"]';
+  const NOT_BLANK = 'button, a, input, select, textarea, label, .pop, .library, .menu, #tpSide, .tools, .transport, .pagenav, .clefhit, .keyhit, .menshit, .mensadd, .markbar, .chant-sys, #chantBar, .ann-badge, #handBox, .handpop, #clefMenu, #keyMenu, #mensMenu, #notePick, g[class^="n"]';
   const blank = t => !!(t && t.closest && t.closest('.viewwrap') && !t.closest(NOT_BLANK) && !(ed.on && t.closest('rect.stafhit')));
   document.addEventListener('pointerdown', () => { wasOn = topOn || botOn; }, true);
   document.addEventListener('click', e => {
