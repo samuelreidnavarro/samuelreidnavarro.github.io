@@ -10233,7 +10233,7 @@ function fzScore(q, words){
 /* groups of words that mean the same to a musician: any of them finds the others */
 const FZ_SYN = {};
 [
-  'brevis breve double whole alla', 'longa long', 'maxima large duplex', 'semibrevis semibreve whole', 'minima minim half', 'semiminima semiminim crotchet quarter',
+  'brevis breve alla', 'longa long', 'maxima large duplex', 'semibrevis semibreve whole', 'minima minim half', 'semiminima semiminim crotchet quarter',
   'fusa quaver eighth', 'semifusa semiquaver sixteenth', 'value duration length rhythm', 'rest pause pausa silence tacet',
   'dot punctus point additionis augmentation', 'division divisionis perfection', 'flat bemol bemolle molle rotundum bmol', 'sharp diesis cross durum hash #',
   'natural quadratum becarre bequadro bquadro', 'ficta editorial musica', 'coloration coloratio colour color hemiola sesquialtera', 'ligature ligatura join bind neume',
@@ -10251,7 +10251,7 @@ const FZ_SYN = {};
   const ws = g.split(' ').filter(w => w.length > 1);
   for (const w of ws) { const s = FZ_SYN[w] || (FZ_SYN[w] = new Set()); for (const o of ws) if (o !== w) s.add(o); }
 });
-const fzExpand = (words, k) => { const out = [], seen = new Set(words.map(x => x.w)); for (const x of words) { const syn = FZ_SYN[x.w]; if (syn) for (const s of syn) if (!seen.has(s)) { seen.add(s); out.push({w: s, k: k}); } } return out; };
+const fzExpand = (words, k) => { k = Math.max(k, .9); const out = [], seen = new Set(words.map(x => x.w)); for (const x of words) { const syn = FZ_SYN[x.w]; if (syn) for (const s of syn) if (!seen.has(s)) { seen.add(s); out.push({w: s, k: k}); } } return out; };
 
 /* the Help glossary searches the same way */
 function scoreMatch(item, q){
@@ -10280,7 +10280,7 @@ const FIND_ALIAS = {dotBtn:'dot punctus additionis augmentation point', pdivBtn:
   restBtn:'rest pause pausa silence', ligBtn:'ligature ligatura join bind neume', del:'delete remove erase', tonup:'transpose up a tone higher raise step whole tone second', tondn:'transpose down a tone lower step',
   octup:'transpose up an octave higher', octdn:'transpose down an octave lower', dbl:'augmentation double values twice longer', hlv:'diminution halve values half shorter', addMens:'tempus prolatio prolation modus time signature proportion cut circle',
   addClef:'clef change c clef g clef f clef treble bass', addKey:'key signature flats sharps', addFerm:'fermata corona hold', printBtn:'pdf print', lyBtn:'ly lilypond', mxlBtn:'xml sibelius dorico musescore', play:'playback listen start stop pause',
-  undo:'take back revert', redo:'again', del2:'', tap:'tempo bpm speed', unitBtn:'tempo beat value', ovrBtn:'insert overwrite replace push', toggleSet:'sound organ stops temperament mixer tone brightness room', fsBtn:'fullscreen full screen',
+  undo:'take back revert', redo:'again', del2:'', tap:'tap beat pulse', unitBtn:'tempo beat value', ovrBtn:'insert overwrite replace push', toggleSet:'sound organ stops temperament mixer tone brightness room', fsBtn:'fullscreen full screen',
   loop:'repeat again', tempo:'bpm speed metronome pulse', countIn:'lead in click bars before', ref:'tuning pitch a440 diapason frequency', vol:'loud quiet sound level', libQ:'find piece composer josquin search', mic:'sing singing voice input pitch', recGo:'recording record', kbdBtn:'piano midi keys', openBtn:'import load file', libBtn:'repertoire library pieces corpus', newBtn:'empty blank create'};
 const FIND_KEY = {editBtn:'N', restBtn:'R', ovrBtn:'I', colBtn:'K', ligBtn:'L', dotBtn:'.', play:'Space', undo:'⌘Z', redo:'⇧⌘Z', del:'⌫', findBtn:'⌘K', helpBtn:'?', stepUp:'↑', stepDown:'↓', selPrev:'←', selNext:'→'};
 const FIND_VALS = ['maxima', 'longa', 'brevis', 'semibrevis', 'minima', 'semiminima', 'fusa', 'semifusa'];
@@ -10336,7 +10336,7 @@ function findBuild(){
       else if (pieces[0] && /[a-zA-Z]{2}/.test(pieces[0]) && pieces[0].length <= 40) { name = pieces[0]; desc = pieces.slice(1).join(' '); }
       else name = findShortTitle(al) || findShortTitle(title) || pieces[0] || '';
     }
-    if (!name || FIND_DONT.test(name)) return;
+    if (!name || (!FIND_NAME[id] && FIND_DONT.test(name))) return;
     if (!desc) desc = title && title !== name ? title : '';
     const popEl = el.closest('.pop');
     const isMenu = /^(durSum|navSum|xfSum|xfWho)$/.test(id) || (!!popEl && popEl.querySelector(':scope > .popbody') && popEl.firstElementChild === el && !/^(dotBtn|ligBtn|recGo|mic)$/.test(id));
@@ -10354,12 +10354,12 @@ function findBuild(){
     const valIdx = path === 'Note value' || path === 'Grid step' ? FIND_VALS.indexOf(name.toLowerCase()) : -1;
     const accWord = /^(flat|natural|sharp)$/i.test(name);
     const c = {name, path, hint: desc, kind, el: () => el, id, keys: FIND_KEY[id] || (valIdx >= 0 && path === 'Note value' ? String(valIdx + 1) : accWord ? ({flat:'-', natural:'0', sharp:'='})[name.toLowerCase()] : ''),
-      prio: path === 'Grid step' ? -8 : path === 'Note value' ? 8 : /^(Note input|Dot|Ligature|Transform)$/.test(path) ? 4 : /^dark mode/i.test(name) ? 7 : 0,
+      prio: path === 'Grid step' ? -8 : path === 'Note value' ? 14 : /^(Note input|Dot|Ligature|Transform)$/.test(path) ? 4 : /^dark mode/i.test(name) ? 7 : path === 'Plainchant' ? -10 : 0,
       acts: /^(dotBtn|pdivBtn|colBtn|ligBtn|restBtn|edBtn|del|stepUp|stepDown)$/.test(id) || path === 'Note value' || accWord ? 1 : 0};
     const aliasStr = (FIND_ALIAS[id] || '') + ' ' + (valIdx >= 0 ? 'note value duration ' + (path === 'Grid step' ? 'grid step snap' : '') : '');
     c.words = [];
     const add = (s, k) => { for (const w of fzWordsOf(s)) c.words.push({w, k}); };
-    add(name, 1); add(aliasStr, .9); add(path, .55);
+    add(name, 1); add(aliasStr, 1); add(path, .55);
     if (el.tagName === 'SELECT' || (el.tagName === 'INPUT' && el.type === 'checkbox')) add(desc, .3);
     c.words = c.words.concat(fzExpand(c.words.filter(x => x.k >= .9), .8));
     claimed.add(el);
@@ -10368,7 +10368,7 @@ function findBuild(){
     if (el.tagName === 'SELECT' && el.options.length <= 24 && !el.closest('.mxr')) {
       [...el.options].forEach(o => {
         const on = findClean(o.textContent); if (!on) return;
-        const oc = {name: name + ': ' + on, path, hint: '', kind: 'option', el: () => el, opt: o, id: '', keys: '', prio: 0, acts: 0, words: []};
+        const oc = {name: name + ': ' + on, path, hint: '', kind: 'option', el: () => el, opt: o, id: '', keys: '', prio: -8, acts: 0, words: []};
         for (const w of fzWordsOf(name)) oc.words.push({w, k: .8}); for (const w of fzWordsOf(on)) oc.words.push({w, k: 1}); for (const w of fzWordsOf(path)) oc.words.push({w, k: .5});
         push(oc);
       });
@@ -10380,7 +10380,7 @@ function findBuild(){
     const hit = hel && cmds.find(c => c.el() === hel);
     if (hit) { const add = []; for (const w of fzWordsOf(h.tags + ' ' + h.title)) add.push({w, k: .85}); hit.words = hit.words.concat(add); if (!hit.hint) hit.hint = h.desc.split(/(?<=[.!?]) /)[0]; if (!hit.keys && h.keys && h.keys.length < 10) hit.keys = h.keys; }
     else {
-      const c = {name: h.title, path: h.cat, hint: h.where, kind: 'help', el: () => null, help: h, id: '', keys: h.keys && h.keys.length < 14 ? h.keys : '', prio: -6, acts: 0, words: []};
+      const c = {name: h.title, path: h.cat, hint: h.where, kind: 'help', el: () => null, help: h, id: '', keys: h.keys && h.keys.length < 14 ? h.keys : '', prio: -14, acts: 0, words: []};
       for (const w of fzWordsOf(h.title)) c.words.push({w, k: 1}); for (const w of fzWordsOf(h.tags)) c.words.push({w, k: .9}); for (const w of fzWordsOf(h.cat + ' ' + h.where)) c.words.push({w, k: .5});
       c.words = c.words.concat(fzExpand(c.words.filter(x => x.k >= .9), .8));
       push(c);
@@ -10475,12 +10475,16 @@ function findPlace(rects){
   const vH = emb ? Math.max(320, DOCK.vh - Math.max(0, DOCK.top)) : window.innerHeight;
   const tph = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tph')) || 56;
   pop.style.position = emb ? 'absolute' : 'fixed';
+  /* on a phone the page can be wider than the screen: go by what is really in view */
+  const vv = !emb && window.visualViewport ? window.visualViewport : null;
+  const vL = vv ? vv.offsetLeft : 0, vW = vv ? vv.width : window.innerWidth, vT2 = vv ? vv.offsetTop : 0;
+  const vH2 = vv ? vv.height : vH;
+  pop.style.maxWidth = Math.min(480, vW - 24) + 'px';
   const spot = (h, bottom) => {
-    pop.style.bottom = 'auto';
-    if (h === 'c') { pop.style.left = '50%'; pop.style.right = 'auto'; pop.style.transform = 'translateX(-50%)'; }
-    else if (h === 'r') { pop.style.left = 'auto'; pop.style.right = '14px'; pop.style.transform = 'none'; }
-    else { pop.style.left = '14px'; pop.style.right = 'auto'; pop.style.transform = 'none'; }
-    pop.style.top = (bottom ? Math.max(vTop + 8, vTop + vH - pop.offsetHeight - tph - 22) : vTop + 58) + 'px';
+    pop.style.bottom = 'auto'; pop.style.right = 'auto'; pop.style.transform = 'none';
+    const w = pop.offsetWidth;
+    pop.style.left = (h === 'c' ? vL + (vW - w) / 2 : h === 'r' ? vL + vW - w - 14 : vL + 14) + 'px';
+    pop.style.top = (bottom ? Math.max(vTop + vT2 + 8, vTop + vT2 + vH2 - pop.offsetHeight - tph - 22) : vTop + vT2 + 58) + 'px';
     return pop.getBoundingClientRect();
   };
   const hit = (a, b) => !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom);
