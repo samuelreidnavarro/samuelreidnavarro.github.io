@@ -5816,6 +5816,7 @@ function openChoirbook(name, txt){
   syncUI(); render(); incipitSnap(); incSync();
   toast(r.newer ? 'This file was saved by a newer version of ' + APP.name + '. It is opened as far as this version understands it.' : 'Opened with the layout saved in the file.');
 }
+window.__cmme = {toKern: (t, n) => cmmeToKernRich(t, n), write: P => exportCMME(P)};   /* for checking the CMME reading and writing from outside */
 window.__choirbook = {write: exportChoirbook, read: readChoirbook, open: openChoirbook, version: CB_VERSION};
 function openFile(file){
   const fail = err => { stopPlay(); pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; };

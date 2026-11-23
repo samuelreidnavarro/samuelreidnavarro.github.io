@@ -1324,6 +1324,11 @@ html.dark .rdel{opacity:.7}
 /* Dark mode: the menus and panels are almost solid, so nothing behind them (white paper, black notes) greys them or shows through the text */
 html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{
   background:color-mix(in srgb,var(--surface) 95%,transparent) !important;-webkit-backdrop-filter:blur(10px) !important;backdrop-filter:blur(10px) !important}
+/* Dark mode, small windows: a bar that scrolls sideways must not blur what is behind it (a blur makes the bar the frame its menus are placed in, and then the bar cuts them off). Almost solid instead, so the text stays readable. */
+@media (max-width:1100px), (max-height:520px) and (orientation:landscape){
+  html.dark .tools .bar .podg,html.dark .tools .bar .pop,html.dark .editbar .podg,html.dark .transport .podg,html.dark .transport .pop{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+  html.dark .tools .bar .podg,html.dark .transport .podg{background:color-mix(in srgb,var(--surface) 92%,transparent)}
+}
 html.dark #openRecent .rdel{opacity:.8}
 html.dark .rng-val,html.dark .crit-cat{color:#E8A090}
 /* Dark mode: red text on a dark ground is too faint, so links and the outline buttons use a lighter red */

@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<Piece xmlns="http://www.cmme.org" CMMEversion="0.95">
+<GeneralData>
+<Incipit/>
+<Title>Feature test</Title><Section>Kyrie</Section><Composer>Tester</Composer><Editor>Ed Itor</Editor>
+<PublicNotes>public note</PublicNotes><Notes>private note</Notes>
+<VariantVersion><Default/><ID>V1</ID><Source><Name>Source A</Name><ID>1</ID></Source><Editor>Source editor</Editor><Description>version description</Description><MissingVoices><VoiceNum>2</VoiceNum></MissingVoices></VariantVersion>
+<BaseColoration><PrimaryColor><Color>Black</Color><Fill>Full</Fill></PrimaryColor><SecondaryColor><Color>Red</Color><Fill>Void</Fill></SecondaryColor></BaseColoration>
+</GeneralData>
+<VoiceData><NumVoices>2</NumVoices>
+<Voice><Name>Cantus</Name><Editorial/><CanonResolutio/><SuggestedModernClef>MODERNG</SuggestedModernClef></Voice>
+<Voice><Name>Tenor</Name><SuggestedModernClef>MODERNG8</SuggestedModernClef></Voice>
+</VoiceData>
+<MusicSection><Editorial/><PrincipalSource><Name>Source A</Name><ID>1</ID></PrincipalSource>
+<MensuralMusic><NumVoices>2</NumVoices>
+<BaseColoration><PrimaryColor><Color>Black</Color><Fill>Full</Fill></PrimaryColor><SecondaryColor><Color>Red</Color><Fill>Full</Fill></SecondaryColor></BaseColoration>
+<TacetInstruction><VoiceNum>2</VoiceNum><TacetText>Tacet in this section</TacetText></TacetInstruction>
+<Voice><VoiceNum>1</VoiceNum><CanonResolutio/>
+<EventList>
+<Clef><Appearance>C</Appearance><StaffLoc>3</StaffLoc><Pitch><LetterName>C</LetterName><OctaveNum>4</OctaveNum></Pitch></Clef>
+<Mensuration><Sign><MainSymbol>O</MainSymbol><Orientation>Reversed</Orientation><Strokes>1</Strokes><Dot/></Sign><StaffLoc>3</StaffLoc><Small/><MensInfo><Prolatio>2</Prolatio><Tempus>3</Tempus><ModusMinor>2</ModusMinor><ModusMaior>2</ModusMaior><TempoChange><Num>1</Num><Den>1</Den></TempoChange></MensInfo><NoScoreEffect/></Mensuration>
+<ModernKeySignature><SigElement><Pitch>B</Pitch><Octave>4</Octave><Accidental><AType>Flat</AType></Accidental></SigElement></ModernKeySignature>
+<Note><Type>Semibrevis</Type><Length><Num>1</Num><Den>1</Den></Length><LetterName>E</LetterName><OctaveNum>4</OctaveNum><ModernAccidental><AType>Sharp</AType><Optional/></ModernAccidental><Flagged><NumFlags>2</NumFlags></Flagged><Lig>Recta</Lig><Tie>Over</Tie><Stem><Dir>Up</Dir><Side>Left</Side></Stem><HalfColoration>PrimarySecondary</HalfColoration><Corona><Offset>1</Offset><Orientation>Up</Orientation><Side>Left</Side></Corona><Signum><Offset>2</Offset></Signum><ModernText><Syllable>Ky</Syllable><WordEnd/><Editorial/></ModernText><Colored/><Ambiguous/><Editorial/><EditorialCommentary>a commentary on this note</EditorialCommentary></Note>
+<Dot><StaffLoc>4</StaffLoc><RelativeStaffLoc>1</RelativeStaffLoc><NoteEventID>1</NoteEventID></Dot>
+<Note><Type>Brevis</Type><LetterName>F</LetterName><OctaveNum>4</OctaveNum><ModernText><Syllable>ri</Syllable></ModernText><Error/></Note>
+<Rest><Type>Semibrevis</Type><BottomStaffLine>2</BottomStaffLine><NumSpaces>2</NumSpaces><Corona><Offset>1</Offset></Corona></Rest>
+<OriginalText><Phrase>Kyrie original</Phrase></OriginalText>
+<Proportion><Num>3</Num><Den>2</Den></Proportion>
+<ColorChange><PrimaryColor><Color>Red</Color><Fill>Full</Fill></PrimaryColor><SecondaryColor><Color>Black</Color><Fill>Void</Fill></SecondaryColor></ColorChange>
+<Custos><LetterName>G</LetterName><OctaveNum>4</OctaveNum></Custos>
+<MiscItem><Barline><NumLines>2</NumLines><RepeatSign/><BottomStaffLine>1</BottomStaffLine><NumSpaces>3</NumSpaces></Barline></MiscItem>
+<MiscItem><TextAnnotation><Text>an annotation</Text><StaffLoc>6</StaffLoc></TextAnnotation></MiscItem>
+<MiscItem><Lacuna><Length><Num>2</Num><Den>1</Den></Length></Lacuna></MiscItem>
+<MiscItem><Ellipsis/></MiscItem>
+<LineEnd><PageEnd/></LineEnd>
+<VariantReadings><Reading><VariantVersionID>V1</VariantVersionID><PreferredReading/><Error/><Music><Note><Type>Brevis</Type><LetterName>G</LetterName><OctaveNum>4</OctaveNum></Note></Music></Reading></VariantReadings>
+<EditorialData><NewReading><Note><Type>Minima</Type><LetterName>A</LetterName><OctaveNum>4</OctaveNum></Note></NewReading><OriginalReading><Error><Note><Type>Minima</Type><LetterName>B</LetterName><OctaveNum>4</OctaveNum></Note></Error></OriginalReading></EditorialData>
+<MultiEvent><Note><Type>Brevis</Type><LetterName>C</LetterName><OctaveNum>4</OctaveNum></Note><Note><Type>Brevis</Type><LetterName>D</LetterName><OctaveNum>4</OctaveNum></Note></MultiEvent>
+<Note><Type>Longa</Type><LetterName>C</LetterName><OctaveNum>4</OctaveNum><Colored/></Note>
+</EventList></Voice>
+<Voice><VoiceNum>2</VoiceNum><MissingVersionID>V1</MissingVersionID><EventList>
+<Clef><Appearance>F</Appearance><StaffLoc>4</StaffLoc><Pitch><LetterName>F</LetterName><OctaveNum>3</OctaveNum></Pitch></Clef>
+<Note><Type>Longa</Type><LetterName>F</LetterName><OctaveNum>3</OctaveNum></Note>
+</EventList></Voice>
+</MensuralMusic></MusicSection></Piece>
