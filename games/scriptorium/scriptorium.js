@@ -179,11 +179,12 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
   <div class="chbar" id="chantBar" role="toolbar" aria-label="Plainchant editor" hidden>
     <div class="chrow">
       <span class="chlab">Plainchant</span>
-      <input id="chTitle" type="text" placeholder="Title" title="Plainchant section title" autocomplete="off">
+      <input id="chTitle" type="text" placeholder="Title (optional)" title="Plainchant section title (leave empty for no title)" autocomplete="off">
       <select id="chClef" title="Gregorian clef"><option value="c4">c4</option><option value="c3">c3</option><option value="c2">c2</option><option value="c1">c1</option><option value="cb4">cb4 (B♭)</option><option value="cb3">cb3 (B♭)</option><option value="f4">f4</option><option value="f3">f3</option></select>
       <div class="chseg" id="chAlign" role="group" aria-label="Plainchant alignment"><button type="button" class="chbtn" data-v="left">Left</button><button type="button" class="chbtn" data-v="center">Center</button></div>
       <span class="chsep"></span>
-      <button type="button" class="chbtn" id="chAddNote" title="Add a note after the selected note (or click anywhere on the 4-line staff)">+ Note</button>
+      <button type="button" class="chbtn" id="chOvr" title="Overwrite: typing A–G replaces the selected note and advances. Insert: typing A–G inserts a new note (I)">Overwrite</button>
+      <button type="button" class="chbtn" id="chAddNote" title="Add a note after the selected note (or type A–G / click anywhere on the 4-line staff)">+ Note</button>
       <button type="button" class="chbtn" data-chbar="," title="Insert divisio minima (,)">,</button>
       <button type="button" class="chbtn" data-chbar=";" title="Insert divisio minor (;)">;</button>
       <button type="button" class="chbtn" data-chbar=":" title="Insert divisio maior (:)">:</button>
@@ -195,17 +196,17 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
     </div>
     <div class="chrow chnote" id="chNoteRow">
       <span class="chlab">Note</span>
-      <input id="chSyl" type="text" placeholder="Syllable (Tab → next)" title="Syllable text under this neume (press Tab or Enter for next)" autocomplete="off">
-      <button type="button" class="chbtn" id="chUp" title="Pitch up (↑)">↑</button>
-      <button type="button" class="chbtn" id="chDn" title="Pitch down (↓)">↓</button>
-      <button type="button" class="chbtn" id="chDot" title="Punctum mora dot (.)">·</button>
+      <input id="chSyl" type="text" placeholder="Syllable (L / Tab → next)" title="Syllable text under this neume (press L on a single note, or Tab/Enter for next)" autocomplete="off">
+      <button type="button" class="chbtn" id="chUp" title="Pitch up (↑, Shift+↑ octave)">↑</button>
+      <button type="button" class="chbtn" id="chDn" title="Pitch down (↓, Shift+↓ octave)">↓</button>
+      <button type="button" class="chbtn" id="chFlat" title="Flat (-)">♭</button>
+      <button type="button" class="chbtn" id="chNat" title="Natural (0)">♮</button>
+      <button type="button" class="chbtn" id="chDot" title="Dot / punctum mora (.)">·</button>
       <button type="button" class="chbtn" id="chEpiH" title="Horizontal episema (_)">—</button>
       <button type="button" class="chbtn" id="chEpiV" title="Vertical episema (')">|</button>
-      <button type="button" class="chbtn" id="chFlat" title="Flat (x)">♭</button>
-      <button type="button" class="chbtn" id="chNat" title="Natural (y)">♮</button>
-      <button type="button" class="chbtn" id="chIncl" title="Inclinatum diamond">◆</button>
-      <button type="button" class="chbtn" id="chJoin" title="Join with previous neume / split out of neume">Join ←</button>
-      <button type="button" class="chbtn chdanger" id="chDelNote" title="Delete selected note or bar (Delete / Backspace)">⌫</button>
+      <button type="button" class="chbtn" id="chIncl" title="Inclinatum diamond (K)">◆</button>
+      <button type="button" class="chbtn" id="chLig" title="Ligature / neume: select 2+ notes (Shift-click or Shift+arrows) and press L to join them; on a neume, splits it (L)">Ligature</button>
+      <button type="button" class="chbtn chdanger" id="chDelNote" title="Delete selected note(s) or bar (Delete / Backspace)">⌫</button>
     </div>
     <div class="chrow" id="chRawRow" hidden>
       <span class="chlab">GABC</span>
@@ -2844,8 +2845,24 @@ function chantClefSvg(cl, x, top){
   return s;
 }
 
-/* Interactive plainchant editor state: {idx: chant index, sel: {ii, gi, ni} | {ii, bar:true} | null} */
-const chantEd = {idx: -1, sel: null};
+/* Interactive plainchant editor state — mirrors mensural ed: single sel, Shift range, Ctrl/Cmd picks, Overwrite/Insert */
+const chantEd = {idx: -1, sel: null, range: null, picks: null, ovr: true};
+
+function chantSelectedKeySet(parsed){
+  const set = new Set();
+  if (!parsed) return set;
+  const flat = chantFlatNotes(parsed);
+  if (chantEd.range) {
+    const lo = Math.max(0, Math.min(chantEd.range.a, chantEd.range.b));
+    const hi = Math.min(flat.length - 1, Math.max(chantEd.range.a, chantEd.range.b));
+    for (let k = lo; k <= hi; k++) set.add(`${flat[k].ii}:${flat[k].gi}:${flat[k].ni}`);
+  } else if (chantEd.picks && chantEd.picks.size) {
+    for (const k of chantEd.picks) if (flat[k]) set.add(`${flat[k].ii}:${flat[k].gi}:${flat[k].ni}`);
+  } else if (chantEd.sel && !chantEd.sel.bar) {
+    set.add(`${chantEd.sel.ii}:${chantEd.sel.gi}:${chantEd.sel.ni}`);
+  }
+  return set;
+}
 
 function noteToGabc(n){
   const ch = String.fromCharCode('a'.charCodeAt(0) + Math.max(0, Math.min(12, n.pos + 3)));
@@ -2881,7 +2898,7 @@ function chantStepOf(cl, pos){
 
 function drawChantSystem(chant, chantIdx, W, y){
   const parsed = parseGabcChant(chant.gabc || '');
-  const title = chant.title || parsed.headerTitle || 'Plainchant';
+  const title = chant.title !== undefined && chant.title !== null ? String(chant.title).trim() : (parsed.headerTitle || '');
   const centered = chant.align === 'center';
   const ls = lyrSize(), lf = lyrFontCss();
   const PW = 0.62, PH = 0.52; /* square punctum width & height in staff spaces */
@@ -2930,14 +2947,16 @@ function drawChantSystem(chant, chantIdx, W, y){
   lines.push(curLine);
 
   const isActiveChant = chantEd.idx === chantIdx;
+  const selSet = isActiveChant ? chantSelectedKeySet(parsed) : null;
   const lineGap = Math.max(3.6, ls * 2.1 + 1.8);
-  const firstLineW = Math.min(W, Math.max(8, lines[0].x + 0.25));
   const titleX = centered ? W / 2 : 0;
   let s = '';
   let cy = y;
-  /* Chant title header */
-  s += `<text class="chant-title" x="${f(titleX)}" y="${f(cy + 1.5)}" font-size="1.65" font-style="italic"${centered ? ' text-anchor="middle"' : ''}>${esc(title)}</text>`;
-  cy += 2.3;
+  /* Chant title header (optional — omitted completely when empty) */
+  if (title) {
+    s += `<text class="chant-title" x="${f(titleX)}" y="${f(cy + 1.5)}" font-size="1.65" font-style="italic"${centered ? ' text-anchor="middle"' : ''}>${esc(title)}</text>`;
+    cy += 2.3;
+  }
 
   const drawNeumeGroup = (g, gx, top, ii, gi, lineClef) => {
     let o = '', x = gx;
@@ -2955,7 +2974,7 @@ function drawChantSystem(chant, chantIdx, W, y){
     let prevX = null, prevY = null;
     for (let i = 0; i < ns.length; i++) {
       const nt = ns[i], ny = top + 3 - nt.pos * 0.5;
-      const isSel = isActiveChant && chantEd.sel && !chantEd.sel.bar && chantEd.sel.ii === ii && chantEd.sel.gi === gi && chantEd.sel.ni === i;
+      const isSel = !!(selSet && selSet.has(`${ii}:${gi}:${i}`));
       let no = '';
       if (nt.acc) {
         no += `<g transform="translate(${f(x)} ${f(ny)}) scale(0.76)">${use(nt.acc, 0, 0)}</g>`;
@@ -8572,7 +8591,7 @@ function syncAdv(){
   if (cl) {
     if (ext.chants.length) {
       cl.hidden = false;
-      cl.innerHTML = ext.chants.map((ch, idx) => `<div class="adv-item"><span class="chant-ed-item" data-ed-chant="${idx}" style="cursor:pointer" title="Click to edit">${esc(ch.title || 'Plainchant')}</span><button type="button" class="adv-del" data-del-chant="${idx}" title="Delete chant section">×</button></div>`).join('');
+      cl.innerHTML = ext.chants.map((ch, idx) => `<div class="adv-item"><span class="chant-ed-item" data-ed-chant="${idx}" style="cursor:pointer" title="Click to edit">${esc(ch.title || '(Untitled chant)')}</span><button type="button" class="adv-del" data-del-chant="${idx}" title="Delete chant section">×</button></div>`).join('');
     } else { cl.hidden = true; cl.innerHTML = ''; }
   }
 }
@@ -8740,6 +8759,31 @@ function chantFlatNotes(parsed){
   });
   return list;
 }
+function chantFlatIdxOf(flat, sel){
+  if (!sel || sel.bar) return -1;
+  return flat.findIndex(x => x.ii === sel.ii && x.gi === sel.gi && x.ni === sel.ni);
+}
+function chantSelectedItems(parsed){
+  const flat = chantFlatNotes(parsed);
+  if (chantEd.range) {
+    const lo = Math.max(0, Math.min(chantEd.range.a, chantEd.range.b));
+    const hi = Math.min(flat.length - 1, Math.max(chantEd.range.a, chantEd.range.b));
+    const out = [];
+    for (let k = lo; k <= hi; k++) out.push(flat[k]);
+    return out;
+  }
+  if (chantEd.picks && chantEd.picks.size) {
+    return [...chantEd.picks].sort((a, b) => a - b).map(k => flat[k]).filter(Boolean);
+  }
+  const k = chantFlatIdxOf(flat, chantEd.sel);
+  return k >= 0 ? [flat[k]] : [];
+}
+function chantAuditionNote(parsed, n){
+  if (!n) return;
+  const stp = chantStepOf(parsed.clef, n.pos);
+  const alt = n.acc === 'fl' ? -1 : n.acc === 'na' ? 0 : (parsed.clef.flat && ((stp % 7) + 7) % 7 === 6 ? -1 : 0);
+  hear(stp, alt);
+}
 function openChantEd(idx, sel){
   if (!piece) return;
   const arr = ensureExt(piece).chants;
@@ -8747,6 +8791,7 @@ function openChantEd(idx, sel){
   if (ed.on) { ed.on = false; clearGhost(); syncEdit(); }
   ed.sel = null; ed.range = null; ed.picks = null; showSel();
   chantEd.idx = idx;
+  chantEd.range = null; chantEd.picks = null;
   if (sel !== undefined) chantEd.sel = sel;
   else {
     const p = parseGabcChant(arr[idx].gabc || '');
@@ -8759,7 +8804,7 @@ function openChantEd(idx, sel){
 }
 function closeChantEd(){
   if (chantEd.idx < 0) return;
-  chantEd.idx = -1; chantEd.sel = null;
+  chantEd.idx = -1; chantEd.sel = null; chantEd.range = null; chantEd.picks = null;
   clearChantGhost();
   syncChantBar();
   render();
@@ -8771,42 +8816,38 @@ function syncChantBar(){
   bar.hidden = !ch;
   if (!ch) return;
   const p = parseGabcChant(ch.gabc || '');
-  if ($('#chTitle') && document.activeElement !== $('#chTitle')) $('#chTitle').value = ch.title || '';
+  if ($('#chTitle') && document.activeElement !== $('#chTitle')) $('#chTitle').value = ch.title !== undefined && ch.title !== null ? ch.title : '';
   if ($('#chClef')) $('#chClef').value = `${p.clef.type}${p.clef.flat ? 'b' : ''}${p.clef.line}`;
   const al = ch.align === 'center' ? 'center' : 'left';
   if ($('#chAlign')) $('#chAlign').querySelectorAll('button[data-v]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === al)));
+  const ob = $('#chOvr');
+  if (ob) { ob.textContent = chantEd.ovr ? 'Overwrite' : 'Insert'; ob.setAttribute('aria-pressed', String(!chantEd.ovr)); }
   if ($('#chRaw') && document.activeElement !== $('#chRaw')) $('#chRaw').value = ch.gabc || '';
-  const sel = chantEd.sel;
-  let note = null, it = null;
-  if (sel && !sel.bar && p.items[sel.ii] && p.items[sel.ii].groups && p.items[sel.ii].groups[sel.gi]) {
-    it = p.items[sel.ii];
-    note = (it.groups[sel.gi].notes || [])[sel.ni] || null;
-  }
+  const items = chantSelectedItems(p);
+  const first = items[0] || null, note = first ? first.n : null, it = first ? first.it : null;
+  const isBar = !!(chantEd.sel && chantEd.sel.bar);
   const nr = $('#chNoteRow');
   if (nr) {
-    nr.classList.toggle('chdim', !note && !(sel && sel.bar));
+    nr.classList.toggle('chdim', !items.length && !isBar);
     nr.querySelectorAll('button, input').forEach(el => {
-      if (el.id === 'chDelNote') el.disabled = !sel;
-      else el.disabled = !note;
+      if (el.id === 'chDelNote') el.disabled = !items.length && !isBar;
+      else el.disabled = !items.length;
     });
   }
   if ($('#chSyl') && document.activeElement !== $('#chSyl')) $('#chSyl').value = it ? (it.text || '') : '';
   const setP = (id, on) => { const el = $(id); if (el) el.setAttribute('aria-pressed', String(!!on)); };
-  setP('#chDot', note && note.dot);
-  setP('#chEpiH', note && note.epiH);
-  setP('#chEpiV', note && note.epiV);
-  setP('#chFlat', note && note.acc === 'fl');
-  setP('#chNat', note && note.acc === 'na');
-  setP('#chIncl', note && note.incl);
-  const jb = $('#chJoin');
-  if (jb && sel && !sel.bar && note) {
-    const canSplit = sel.ni > 0;
-    const canJoin = !canSplit && (sel.gi > 0 || (sel.ii > 0 && p.items[sel.ii - 1] && p.items[sel.ii - 1].kind === 'syl'));
-    jb.textContent = canSplit ? 'Split' : 'Join ←';
-    jb.disabled = !canSplit && !canJoin;
-  } else if (jb) {
-    jb.textContent = 'Join ←';
-    jb.disabled = true;
+  setP('#chDot', items.length && items.every(x => x.n.dot));
+  setP('#chEpiH', items.length && items.every(x => x.n.epiH));
+  setP('#chEpiV', items.length && items.every(x => x.n.epiV));
+  setP('#chFlat', items.length && items.every(x => x.n.acc === 'fl'));
+  setP('#chNat', items.length && items.every(x => x.n.acc === 'na'));
+  setP('#chIncl', items.length && items.every(x => x.n.incl));
+  const lb = $('#chLig');
+  if (lb) {
+    const inNeume = items.length >= 1 && items.every(x => x.g && x.g.notes && x.g.notes.length > 1) && new Set(items.map(x => `${x.ii}:${x.gi}`)).size === 1;
+    const canJoin = items.length >= 2 && !inNeume;
+    setP('#chLig', inNeume);
+    lb.disabled = !canJoin && !inNeume;
   }
   if (window.__dockPlace) requestAnimationFrame(window.__dockPlace);
 }
@@ -8817,14 +8858,10 @@ function mutateChant(fn, audition){
   if (res === false) return;
   const nextGabc = serializeGabcChant(p);
   commit(() => { ch.gabc = nextGabc; });
-  if (audition && chantEd.sel && !chantEd.sel.bar) {
+  if (audition) {
     const p2 = parseGabcChant(ch.gabc || '');
-    const it = p2.items[chantEd.sel.ii], g = it && it.groups && it.groups[chantEd.sel.gi], n = g && g.notes && g.notes[chantEd.sel.ni];
-    if (n) {
-      const stp = chantStepOf(p2.clef, n.pos);
-      const alt = n.acc === 'fl' ? -1 : n.acc === 'na' ? 0 : (p2.clef.flat && ((stp % 7) + 7) % 7 === 6 ? -1 : 0);
-      hear(stp, alt);
-    }
+    const selItems = chantSelectedItems(p2);
+    if (selItems.length) chantAuditionNote(p2, selItems[selItems.length - 1].n);
   }
   syncChantBar();
   syncAdv();
@@ -8839,17 +8876,17 @@ if ($('#addChantBtn')) $('#addChantBtn').addEventListener('click', () => {
   commit(() => {
     const arr = ensureExt(piece).chants;
     newIdx = arr.length;
-    arr.push({t, title: 'Intonation', align: 'center', gabc: '(c4) Glo(g)ri(h)a(g) in(f) ex(g)cel(gh)sis(hg) De(f)o.(e.) (::)'});
+    arr.push({t, title: '', align: 'center', gabc: '(c4) Glo(g)ri(h)a(g) in(f) ex(g)cel(gh)sis(hg) De(f)o.(e.) (::)'});
   });
   syncAdv();
   openChantEd(newIdx);
-  toast('Plainchant section added. Click or drag notes on the 4-line staff to edit.');
+  toast('Plainchant section added. Type A–G, use arrows, Shift-click + L for neumes, or drag notes on the staff.');
 });
 if ($('#chantList')) $('#chantList').addEventListener('click', e => {
   const del = e.target.closest('[data-del-chant]');
   if (del && piece) {
     const di = +del.dataset.delChant;
-    if (chantEd.idx === di) { chantEd.idx = -1; chantEd.sel = null; }
+    if (chantEd.idx === di) { chantEd.idx = -1; chantEd.sel = null; chantEd.range = null; chantEd.picks = null; }
     commit(() => { ensureExt(piece).chants.splice(di, 1); });
     syncChantBar(); syncAdv(); return;
   }
@@ -8859,7 +8896,7 @@ if ($('#chantList')) $('#chantList').addEventListener('click', e => {
 /* Chant bar controls */
 if ($('#chTitle')) $('#chTitle').addEventListener('change', e => {
   const ch = chantCur(); if (!ch) return;
-  commit(() => { ch.title = e.target.value.trim() || 'Plainchant'; });
+  commit(() => { ch.title = e.target.value.trim(); });
   syncChantBar(); syncAdv();
 });
 if ($('#chClef')) $('#chClef').addEventListener('change', e => {
@@ -8872,10 +8909,16 @@ if ($('#chAlign')) $('#chAlign').addEventListener('click', e => {
   commit(() => { ch.align = b.dataset.v; });
   syncChantBar();
 });
+if ($('#chOvr')) $('#chOvr').addEventListener('click', () => {
+  chantEd.ovr = !chantEd.ovr;
+  syncChantBar();
+  toast(chantEd.ovr ? 'Overwrite: typing A–G replaces the selected note and advances.' : 'Insert: typing A–G inserts a new note.');
+});
 if ($('#chRawTog')) $('#chRawTog').addEventListener('click', () => {
   const r = $('#chRawRow'); if (!r) return;
   r.hidden = !r.hidden;
   $('#chRawTog').setAttribute('aria-pressed', String(!r.hidden));
+  if (window.__dockPlace) requestAnimationFrame(window.__dockPlace);
   postHeight();
 });
 if ($('#chRaw')) $('#chRaw').addEventListener('change', e => {
@@ -8886,125 +8929,212 @@ if ($('#chRaw')) $('#chRaw').addEventListener('change', e => {
 if ($('#chDelSec')) $('#chDelSec').addEventListener('click', () => {
   if (!piece || chantEd.idx < 0) return;
   const di = chantEd.idx;
-  chantEd.idx = -1; chantEd.sel = null;
+  chantEd.idx = -1; chantEd.sel = null; chantEd.range = null; chantEd.picks = null;
   commit(() => { ensureExt(piece).chants.splice(di, 1); });
   syncChantBar(); syncAdv(); toast('Plainchant section deleted.');
 });
 if ($('#chDone')) $('#chDone').addEventListener('click', closeChantEd);
 if ($('#chSyl')) $('#chSyl').addEventListener('change', e => {
-  if (!chantEd.sel || chantEd.sel.bar) return;
+  const ch = chantCur(); if (!ch) return;
   const txt = e.target.value.trim();
-  mutateChant(p => { const it = p.items[chantEd.sel.ii]; if (it && it.kind === 'syl') it.text = txt; });
+  mutateChant(p => {
+    const sel = chantSelectedItems(p);
+    if (!sel.length) return false;
+    sel[0].it.text = txt;
+  });
 });
 const chantMovePitch = delta => mutateChant(p => {
-  if (!chantEd.sel || chantEd.sel.bar) return false;
-  const it = p.items[chantEd.sel.ii], g = it && it.groups && it.groups[chantEd.sel.gi], n = g && g.notes && g.notes[chantEd.sel.ni];
-  if (!n) return false;
-  n.pos = Math.max(-3, Math.min(9, n.pos + delta));
+  const sel = chantSelectedItems(p);
+  if (!sel.length) return false;
+  for (const x of sel) x.n.pos = Math.max(-3, Math.min(9, x.n.pos + delta));
 }, true);
-const chantModToggle = fn => mutateChant(p => {
-  if (!chantEd.sel || chantEd.sel.bar) return false;
-  const it = p.items[chantEd.sel.ii], g = it && it.groups && it.groups[chantEd.sel.gi], n = g && g.notes && g.notes[chantEd.sel.ni];
-  if (!n) return false;
-  fn(n, g, it, p);
+const chantModToggle = (pred, apply) => mutateChant(p => {
+  const sel = chantSelectedItems(p);
+  if (!sel.length) return false;
+  const allOn = sel.every(x => pred(x.n));
+  for (const x of sel) apply(x.n, !allOn);
 }, true);
-if ($('#chUp')) $('#chUp').addEventListener('click', () => chantMovePitch(1));
-if ($('#chDn')) $('#chDn').addEventListener('click', () => chantMovePitch(-1));
-if ($('#chDot')) $('#chDot').addEventListener('click', () => chantModToggle(n => { n.dot = !n.dot; }));
-if ($('#chEpiH')) $('#chEpiH').addEventListener('click', () => chantModToggle(n => { n.epiH = !n.epiH; }));
-if ($('#chEpiV')) $('#chEpiV').addEventListener('click', () => chantModToggle(n => { n.epiV = !n.epiV; }));
-if ($('#chFlat')) $('#chFlat').addEventListener('click', () => chantModToggle(n => { n.acc = n.acc === 'fl' ? '' : 'fl'; }));
-if ($('#chNat')) $('#chNat').addEventListener('click', () => chantModToggle(n => { n.acc = n.acc === 'na' ? '' : 'na'; }));
-if ($('#chIncl')) $('#chIncl').addEventListener('click', () => chantModToggle(n => { n.incl = !n.incl; }));
-if ($('#chJoin')) $('#chJoin').addEventListener('click', () => mutateChant(p => {
-  if (!chantEd.sel || chantEd.sel.bar) return false;
-  const {ii, gi, ni} = chantEd.sel, it = p.items[ii];
-  if (!it || it.kind !== 'syl') return false;
-  const g = it.groups[gi];
-  if (ni > 0) {
-    /* Split this note out into a new group/syllable after current */
-    const tail = g.notes.splice(ni);
-    it.groups.splice(gi + 1, 0, {notes: tail});
-    chantEd.sel = {ii, gi: gi + 1, ni: 0};
-  } else if (gi > 0 && it.groups[gi - 1].notes) {
-    /* Join with previous group in same syllable */
-    const prev = it.groups[gi - 1];
-    const newNi = prev.notes.length;
-    prev.notes.push(...g.notes);
-    it.groups.splice(gi, 1);
-    chantEd.sel = {ii, gi: gi - 1, ni: newNi};
-  } else if (ii > 0 && p.items[ii - 1].kind === 'syl' && p.items[ii - 1].groups.length) {
-    /* Join this syllable's notes into previous syllable's last group */
-    const prevIt = p.items[ii - 1], pg = prevIt.groups[prevIt.groups.length - 1];
-    if (!pg.notes) return false;
-    const newNi = pg.notes.length;
-    pg.notes.push(...g.notes);
-    it.groups.splice(gi, 1);
-    if (!it.groups.length) p.items.splice(ii, 1);
-    chantEd.sel = {ii: ii - 1, gi: prevIt.groups.length - 1, ni: newNi};
-  }
-}));
-const chantDelSel = () => mutateChant(p => {
-  if (!chantEd.sel) return false;
-  const {ii, gi, ni, bar} = chantEd.sel;
-  if (bar) {
-    if (gi < 0) p.items.splice(ii, 1);
-    else if (p.items[ii] && p.items[ii].groups) { p.items[ii].groups.splice(gi, 1); if (!p.items[ii].groups.length && !p.items[ii].text) p.items.splice(ii, 1); }
-    chantEd.sel = null;
-    return;
-  }
-  const it = p.items[ii], g = it && it.groups && it.groups[gi];
-  if (!g || !g.notes) return false;
-  g.notes.splice(ni, 1);
-  if (!g.notes.length) it.groups.splice(gi, 1);
-  if (!it.groups.length) p.items.splice(ii, 1);
-  const flat = chantFlatNotes(p);
-  chantEd.sel = flat.length ? {ii: flat[Math.max(0, flat.length - 1)].ii, gi: flat[Math.max(0, flat.length - 1)].gi, ni: flat[Math.max(0, flat.length - 1)].ni} : null;
-});
-if ($('#chDelNote')) $('#chDelNote').addEventListener('click', chantDelSel);
-if ($('#chAddNote')) $('#chAddNote').addEventListener('click', () => mutateChant(p => {
-  const newNote = {pos: 3, incl: false, dot: false, epiH: false, epiV: false, virga: false, acc: ''};
-  if (chantEd.sel && !chantEd.sel.bar && p.items[chantEd.sel.ii]) {
-    const it = p.items[chantEd.sel.ii], g = it.groups && it.groups[chantEd.sel.gi];
-    if (g && g.notes) {
-      const ref = g.notes[chantEd.sel.ni];
-      if (ref) newNote.pos = ref.pos;
-      p.items.splice(chantEd.sel.ii + 1, 0, {kind: 'syl', text: '', groups: [{notes: [newNote]}]});
-      chantEd.sel = {ii: chantEd.sel.ii + 1, gi: 0, ni: 0};
+/* Toggle ligature / neume — identical to mensural toggleLig:
+   - 2+ selected notes across separate groups/syllables -> join into ONE neume (keeping first syllable text)
+   - selected note(s) inside a multi-note neume -> split back into separate single puncta */
+function chantToggleLig(){
+  mutateChant(p => {
+    const sel = chantSelectedItems(p);
+    if (!sel.length) return false;
+    const grpKeys = [...new Set(sel.map(x => `${x.ii}:${x.gi}`))];
+    const inOneMulti = grpKeys.length === 1 && sel[0].g.notes.length > 1;
+    if (inOneMulti) {
+      /* Split this neume into separate single-note syllables */
+      const {ii, gi} = sel[0], it = p.items[ii], g = it.groups[gi];
+      const notes = g.notes.slice(), origText = it.text || '', joinNext = !!it.joinNext;
+      const newItems = notes.map((n, k) => ({kind: 'syl', text: k === 0 ? origText : '', groups: [{notes: [n]}], joinNext: k === notes.length - 1 ? joinNext : false}));
+      if (it.groups.length === 1) {
+        p.items.splice(ii, 1, ...newItems);
+      } else {
+        g.notes = [notes[0]];
+        p.items.splice(ii + 1, 0, ...newItems.slice(1));
+      }
+      const flat = chantFlatNotes(p);
+      const a = flat.findIndex(x => x.ii === ii && x.gi === gi && x.ni === 0);
+      chantEd.sel = a >= 0 ? {ii: flat[a].ii, gi: flat[a].gi, ni: flat[a].ni} : null;
+      chantEd.range = a >= 0 && notes.length > 1 ? {a, b: Math.min(flat.length - 1, a + notes.length - 1)} : null;
+      chantEd.picks = null;
       return;
     }
+    if (sel.length < 2) { toast('Select at least two notes (Shift-click or Shift+arrows) to join into a neume/ligature.'); return false; }
+    /* Join all selected notes into one neume on the first selected syllable */
+    const first = sel[0];
+    const combinedNotes = sel.map(x => Object.assign({}, x.n));
+    const firstText = sel.find(x => x.it.text)?.it.text || '';
+    const lastJoinNext = !!sel[sel.length - 1].it.joinNext;
+    /* Remove selected notes in reverse order (except anchor slot) */
+    const toRemove = sel.slice().reverse();
+    const anchorIi = first.ii;
+    for (const x of toRemove) {
+      const it = p.items[x.ii], g = it && it.groups && it.groups[x.gi];
+      if (!g || !g.notes) continue;
+      g.notes.splice(x.ni, 1);
+      if (!g.notes.length) it.groups.splice(x.gi, 1);
+    }
+    /* Insert combined neume into anchor item, and clean empty items */
+    const anchorIt = p.items[anchorIi];
+    const insertGi = Math.min(first.gi, anchorIt.groups.length);
+    anchorIt.groups.splice(insertGi, 0, {notes: combinedNotes});
+    anchorIt.text = firstText;
+    anchorIt.joinNext = lastJoinNext;
+    p.items = p.items.filter(it => it.kind !== 'syl' || (it.groups && it.groups.length));
+    const newIi = p.items.indexOf(anchorIt);
+    const flat = chantFlatNotes(p);
+    const a = flat.findIndex(x => x.ii === newIi && x.gi === insertGi && x.ni === 0);
+    chantEd.sel = {ii: newIi, gi: insertGi, ni: 0};
+    chantEd.range = a >= 0 ? {a, b: Math.min(flat.length - 1, a + combinedNotes.length - 1)} : null;
+    chantEd.picks = null;
+  }, true);
+}
+if ($('#chUp')) $('#chUp').addEventListener('click', () => chantMovePitch(1));
+if ($('#chDn')) $('#chDn').addEventListener('click', () => chantMovePitch(-1));
+if ($('#chDot')) $('#chDot').addEventListener('click', () => chantModToggle(n => n.dot, (n, v) => { n.dot = v; }));
+if ($('#chEpiH')) $('#chEpiH').addEventListener('click', () => chantModToggle(n => n.epiH, (n, v) => { n.epiH = v; }));
+if ($('#chEpiV')) $('#chEpiV').addEventListener('click', () => chantModToggle(n => n.epiV, (n, v) => { n.epiV = v; }));
+if ($('#chFlat')) $('#chFlat').addEventListener('click', () => chantModToggle(n => n.acc === 'fl', (n, v) => { n.acc = v ? 'fl' : ''; }));
+if ($('#chNat')) $('#chNat').addEventListener('click', () => chantModToggle(n => n.acc === 'na', (n, v) => { n.acc = v ? 'na' : ''; }));
+if ($('#chIncl')) $('#chIncl').addEventListener('click', () => chantModToggle(n => n.incl, (n, v) => { n.incl = v; }));
+if ($('#chLig')) $('#chLig').addEventListener('click', chantToggleLig);
+
+const chantDelSel = () => mutateChant(p => {
+  if (chantEd.sel && chantEd.sel.bar) {
+    const {ii, gi} = chantEd.sel;
+    if (gi < 0) p.items.splice(ii, 1);
+    else if (p.items[ii] && p.items[ii].groups) { p.items[ii].groups.splice(gi, 1); if (!p.items[ii].groups.length && !p.items[ii].text) p.items.splice(ii, 1); }
+    chantEd.sel = null; chantEd.range = null; chantEd.picks = null;
+    return;
   }
-  const insAt = p.items.length && p.items[p.items.length - 1].kind === 'bar' && p.items[p.items.length - 1].bar === '::' ? p.items.length - 1 : p.items.length;
-  p.items.splice(insAt, 0, {kind: 'syl', text: '', groups: [{notes: [newNote]}]});
-  chantEd.sel = {ii: insAt, gi: 0, ni: 0};
-}, true));
-document.querySelectorAll('#chantBar [data-chbar]').forEach(b => b.addEventListener('click', () => mutateChant(p => {
-  const bar = b.dataset.chbar;
-  const insAt = chantEd.sel ? Math.min(p.items.length, chantEd.sel.ii + 1) : p.items.length;
-  p.items.splice(insAt, 0, {kind: 'bar', bar});
-  chantEd.sel = {ii: insAt, gi: -1, bar: true};
-})));
+  const sel = chantSelectedItems(p);
+  if (!sel.length) return false;
+  const flat0 = chantFlatNotes(p);
+  const firstIdx = chantFlatIdxOf(flat0, sel[0]);
+  for (const x of sel.slice().reverse()) {
+    const it = p.items[x.ii], g = it && it.groups && it.groups[x.gi];
+    if (!g || !g.notes) continue;
+    g.notes.splice(x.ni, 1);
+    if (!g.notes.length) it.groups.splice(x.gi, 1);
+  }
+  p.items = p.items.filter(it => it.kind !== 'syl' || (it.groups && it.groups.length));
+  const flat = chantFlatNotes(p);
+  const nextIdx = Math.min(Math.max(0, firstIdx - 1), flat.length - 1);
+  chantEd.sel = flat[nextIdx] ? {ii: flat[nextIdx].ii, gi: flat[nextIdx].gi, ni: flat[nextIdx].ni} : null;
+  chantEd.range = null; chantEd.picks = null;
+});
+if ($('#chDelNote')) $('#chDelNote').addEventListener('click', chantDelSel);
+
+function chantEnterPitch(pos, acc){
+  mutateChant(p => {
+    const flat = chantFlatNotes(p);
+    const curIdx = chantFlatIdxOf(flat, chantEd.sel);
+    if (chantEd.ovr && !chantEd.range && !chantEd.picks && curIdx >= 0) {
+      /* Overwrite selected note's pitch and advance selection to the next note */
+      flat[curIdx].n.pos = pos;
+      if (acc !== undefined) flat[curIdx].n.acc = acc;
+      const next = flat[curIdx + 1];
+      if (next) chantEd.sel = {ii: next.ii, gi: next.gi, ni: next.ni};
+      return;
+    }
+    const newNote = {pos, incl: false, dot: false, epiH: false, epiV: false, virga: false, acc: acc || ''};
+    const selItems = chantSelectedItems(p);
+    const anchor = selItems.length ? selItems[selItems.length - 1] : null;
+    const insAt = anchor ? Math.min(p.items.length, anchor.ii + 1)
+      : (p.items.length && p.items[p.items.length - 1].kind === 'bar' && p.items[p.items.length - 1].bar === '::' ? p.items.length - 1 : p.items.length);
+    p.items.splice(insAt, 0, {kind: 'syl', text: '', groups: [{notes: [newNote]}]});
+    chantEd.sel = {ii: insAt, gi: 0, ni: 0};
+    chantEd.range = null; chantEd.picks = null;
+  }, true);
+}
+/* Hook for on-screen piano / MIDI keyboard (keys.js) when a plainchant section is active */
+window.chantWriteMidi = function(m){
+  const ch = chantCur(); if (!ch) return false;
+  const p = parseGabcChant(ch.gabc || '');
+  const cl = p.clef || {type: 'c', line: 4, flat: false};
+  const WHITE = [0, 2, 4, 5, 7, 9, 11];
+  const pc = ((m % 12) + 12) % 12, oct = Math.floor(m / 12) - 1;
+  let step, acc = '';
+  const wi = WHITE.indexOf(pc);
+  if (wi >= 0) { step = 7 * oct + wi; }
+  else { step = 7 * oct + WHITE.indexOf(pc + 1); acc = 'fl'; }
+  const botStep = chantStepOf(cl, 0);
+  const pos = Math.max(-3, Math.min(9, step - botStep));
+  chantEnterPitch(pos, acc);
+  return true;
+};
+
+if ($('#chAddNote')) $('#chAddNote').addEventListener('click', () => {
+  const ch = chantCur(); if (!ch) return;
+  const p = parseGabcChant(ch.gabc || '');
+  const sel = chantSelectedItems(p);
+  const refPos = sel.length ? sel[sel.length - 1].n.pos : 3;
+  const prevOvr = chantEd.ovr;
+  chantEd.ovr = false;
+  chantEnterPitch(refPos);
+  chantEd.ovr = prevOvr;
+  syncChantBar();
+});
+function chantInsertBar(bar){
+  mutateChant(p => {
+    /* Typing ':' twice upgrades ':' -> '::' */
+    if (bar === ':' && chantEd.sel && chantEd.sel.bar && p.items[chantEd.sel.ii] && p.items[chantEd.sel.ii].bar === ':') {
+      p.items[chantEd.sel.ii].bar = '::';
+      return;
+    }
+    const sel = chantSelectedItems(p);
+    const insAt = sel.length ? Math.min(p.items.length, sel[sel.length - 1].ii + 1)
+      : (chantEd.sel ? Math.min(p.items.length, chantEd.sel.ii + 1) : p.items.length);
+    p.items.splice(insAt, 0, {kind: 'bar', bar});
+    chantEd.sel = {ii: insAt, gi: -1, bar: true};
+    chantEd.range = null; chantEd.picks = null;
+  });
+}
+document.querySelectorAll('#chantBar [data-chbar]').forEach(b => b.addEventListener('click', () => chantInsertBar(b.dataset.chbar)));
 ['#chTitle', '#chRaw'].forEach(id => { const el = $(id); if (el) el.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') el.blur(); }); });
 if ($('#chSyl')) $('#chSyl').addEventListener('keydown', e => {
   e.stopPropagation();
   if (e.key === 'Enter' || e.key === 'Tab') {
     e.preventDefault();
     const txt = e.target.value.trim();
-    const ch = chantCur(); if (!ch || !chantEd.sel || chantEd.sel.bar) return;
+    const ch = chantCur(); if (!ch) return;
     const p = parseGabcChant(ch.gabc || '');
-    const curIi = chantEd.sel.ii;
+    const sel = chantSelectedItems(p);
+    if (!sel.length) return;
+    const curIi = sel[0].ii;
     if (p.items[curIi] && p.items[curIi].kind === 'syl') p.items[curIi].text = txt;
-    /* Advance to next/prev syllable item */
     const dir = e.shiftKey ? -1 : 1;
     let nextIi = curIi + dir;
     while (nextIi >= 0 && nextIi < p.items.length && p.items[nextIi].kind !== 'syl') nextIi += dir;
-    if (nextIi >= 0 && nextIi < p.items.length) chantEd.sel = {ii: nextIi, gi: 0, ni: 0};
+    if (nextIi >= 0 && nextIi < p.items.length) { chantEd.sel = {ii: nextIi, gi: 0, ni: 0}; chantEd.range = null; chantEd.picks = null; }
     const nextGabc = serializeGabcChant(p);
     commit(() => { ch.gabc = nextGabc; });
     syncChantBar();
     const sylEl = $('#chSyl');
     if (sylEl && nextIi >= 0 && nextIi < p.items.length) { sylEl.focus(); sylEl.select(); }
-  }
+  } else if (e.key === 'Escape') { e.preventDefault(); e.target.blur(); }
 });
 
 /* Live hover ghost punctum on 4-line chant staff when actively editing */
@@ -9023,7 +9153,7 @@ function chantInsertIdxFromX(cs, svgX, p){
   return p.items.length;
 }
 
-/* Click & vertical-drag on plainchant notes, bars, syllables, and 4-line staff (capture phase so mensural handlers never conflict) */
+/* Click (single / Shift-range / Ctrl-Cmd-pick) & vertical-drag on plainchant notes, bars, syllables, and 4-line staff */
 let chantDrag = null;
 pagesEl.addEventListener('pointerdown', e => {
   if (e.button !== 0 || !piece) return;
@@ -9035,17 +9165,44 @@ pagesEl.addEventListener('pointerdown', e => {
     const top = +cn.dataset.top;
     const ch = ensureExt(piece).chants[ci]; if (!ch) return;
     const p = parseGabcChant(ch.gabc || '');
-    const n = p.items[ii] && p.items[ii].groups && p.items[ii].groups[gi] && p.items[ii].groups[gi].notes[ni];
+    const flat = chantFlatNotes(p);
+    const hitIdx = flat.findIndex(x => x.ii === ii && x.gi === gi && x.ni === ni);
+    const n = hitIdx >= 0 ? flat[hitIdx].n : null;
     if (ed.on) { ed.on = false; clearGhost(); syncEdit(); }
-    chantEd.idx = ci; chantEd.sel = {ii, gi, ni};
     ed.sel = null; ed.range = null; ed.picks = null; showSel();
+    if (chantEd.idx === ci && e.shiftKey && hitIdx >= 0 && (chantEd.sel || chantEd.range)) {
+      /* Shift-click: extend contiguous range selection just like mensural notes */
+      const anchor = chantEd.range ? chantEd.range.a : chantFlatIdxOf(flat, chantEd.sel);
+      chantEd.range = {a: anchor >= 0 ? anchor : hitIdx, b: hitIdx};
+      chantEd.picks = null;
+      chantEd.sel = {ii, gi, ni};
+    } else if (chantEd.idx === ci && (e.ctrlKey || e.metaKey) && hitIdx >= 0) {
+      /* Ctrl/Cmd-click: toggle note in multi-pick set just like mensural notes */
+      const picks = new Set(chantEd.picks || []);
+      if (!picks.size && chantEd.range) {
+        const lo = Math.min(chantEd.range.a, chantEd.range.b), hi = Math.max(chantEd.range.a, chantEd.range.b);
+        for (let k = lo; k <= hi; k++) picks.add(k);
+      } else if (!picks.size && chantEd.sel) {
+        const a = chantFlatIdxOf(flat, chantEd.sel);
+        if (a >= 0) picks.add(a);
+      }
+      if (picks.has(hitIdx)) picks.delete(hitIdx); else picks.add(hitIdx);
+      chantEd.picks = picks.size ? picks : null;
+      chantEd.range = null;
+      chantEd.sel = {ii, gi, ni};
+    } else {
+      chantEd.idx = ci;
+      chantEd.sel = {ii, gi, ni};
+      chantEd.range = null;
+      chantEd.picks = null;
+    }
     syncChantBar(); render();
     if (n) {
-      const stp = chantStepOf(p.clef, n.pos);
-      const alt = n.acc === 'fl' ? -1 : n.acc === 'na' ? 0 : (p.clef.flat && ((stp % 7) + 7) % 7 === 6 ? -1 : 0);
-      hear(stp, alt);
-      const svg = cn.ownerSVGElement;
-      chantDrag = {ci, ii, gi, ni, top, svg, startY: e.clientY, origPos: n.pos, lastPos: n.pos, moved: false};
+      chantAuditionNote(p, n);
+      if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        const svg = cn.ownerSVGElement;
+        chantDrag = {ci, ii, gi, ni, top, svg, startY: e.clientY, origPos: n.pos, lastPos: n.pos, moved: false};
+      }
     }
     return;
   }
@@ -9071,7 +9228,7 @@ pagesEl.addEventListener('pointerdown', e => {
     clearChantGhost();
     const ci = +cs.dataset.cs, top = +cs.dataset.top;
     if (chantEd.idx !== ci) { openChantEd(ci); return; }
-    /* Already editing this chant: clicking on the 4-line staff inserts a note at that exact horizontal spot & pitch! */
+    /* Clicking on the 4-line staff inserts a note at that exact horizontal spot & pitch */
     const m = cs.getScreenCTM();
     if (!m) return;
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
@@ -9081,6 +9238,7 @@ pagesEl.addEventListener('pointerdown', e => {
       const insAt = chantInsertIdxFromX(cs, pt.x, p);
       p.items.splice(insAt, 0, {kind: 'syl', text: '', groups: [{notes: [newNote]}]});
       chantEd.sel = {ii: insAt, gi: 0, ni: 0};
+      chantEd.range = null; chantEd.picks = null;
     }, true);
     return;
   }
@@ -9129,8 +9287,7 @@ document.addEventListener('pointermove', e => {
   if (!n) return;
   n.pos = pos;
   ch.gabc = serializeGabcChant(p);
-  const stp = chantStepOf(p.clef, pos);
-  hear(stp, n.acc === 'fl' ? -1 : 0);
+  chantAuditionNote(p, n);
   render();
   syncChantBar();
 });
@@ -9138,66 +9295,101 @@ document.addEventListener('pointerup', () => {
   if (!chantDrag) return;
   const d = chantDrag; chantDrag = null;
   if (d.moved && d.lastPos !== d.origPos && piece) {
-    /* Persist dragged pitch into undo stack & kern snapshot */
     commit(() => {});
     syncChantBar();
   }
 });
-/* Keyboard editing when a plainchant note/bar is selected */
+/* Unified keyboard editing — mirrors mensural NoteInput + lyrics.js shortcuts identically */
 document.addEventListener('keydown', e => {
   if (chantEd.idx < 0 || !piece) return;
   if (e.target && e.target.closest && e.target.closest('input, textarea, select')) return;
-  if (e.key === 'Escape') { e.preventDefault(); closeChantEd(); return; }
-  if (e.key === 'ArrowUp') { e.preventDefault(); e.stopImmediatePropagation(); chantMovePitch(1); return; }
-  if (e.key === 'ArrowDown') { e.preventDefault(); e.stopImmediatePropagation(); chantMovePitch(-1); return; }
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+  const mod = e.ctrlKey || e.metaKey, k = e.key;
+  /* Undo / Redo */
+  if (mod && (k === 'z' || k === 'Z')) { e.preventDefault(); e.stopImmediatePropagation(); e.shiftKey ? redo() : undo(); syncChantBar(); return; }
+  if (mod && (k === 'y' || k === 'Y')) { e.preventDefault(); e.stopImmediatePropagation(); redo(); syncChantBar(); return; }
+  /* Escape: clear multi-selection first, then close plainchant bar */
+  if (k === 'Escape') {
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (chantEd.range || chantEd.picks) { chantEd.range = null; chantEd.picks = null; syncChantBar(); render(); }
+    else closeChantEd();
+    return;
+  }
+  /* Pitch up/down: 1 step, or octave (7 steps) with Shift/Cmd/Ctrl/Alt */
+  if (k === 'ArrowUp' || k === 'ArrowDown') {
+    e.preventDefault(); e.stopImmediatePropagation();
+    chantMovePitch((k === 'ArrowUp' ? 1 : -1) * (e.shiftKey || mod || e.altKey ? 7 : 1));
+    return;
+  }
+  /* Left/Right arrows: move selection, or Shift+Left/Right to extend range selection */
+  if (k === 'ArrowLeft' || k === 'ArrowRight') {
     const ch = chantCur(); if (!ch) return;
-    const flat = chantFlatNotes(parseGabcChant(ch.gabc || ''));
+    const p = parseGabcChant(ch.gabc || ''), flat = chantFlatNotes(p);
     if (!flat.length) return;
     e.preventDefault(); e.stopImmediatePropagation();
-    let idx = chantEd.sel ? flat.findIndex(x => x.ii === chantEd.sel.ii && x.gi === chantEd.sel.gi && x.ni === chantEd.sel.ni) : 0;
-    idx = Math.max(0, Math.min(flat.length - 1, idx + (e.key === 'ArrowRight' ? 1 : -1)));
-    const cur = flat[idx];
-    chantEd.sel = {ii: cur.ii, gi: cur.gi, ni: cur.ni};
-    const p = parseGabcChant(ch.gabc || '');
-    hear(chantStepOf(p.clef, cur.n.pos), cur.n.acc === 'fl' ? -1 : 0);
+    const dir = k === 'ArrowRight' ? 1 : -1;
+    if (e.shiftKey) {
+      const anchor = chantEd.range ? chantEd.range.a : Math.max(0, chantFlatIdxOf(flat, chantEd.sel));
+      const head = chantEd.range ? chantEd.range.b : anchor;
+      const next = Math.max(0, Math.min(flat.length - 1, head + dir));
+      chantEd.range = {a: anchor, b: next};
+      chantEd.picks = null;
+      chantEd.sel = {ii: flat[next].ii, gi: flat[next].gi, ni: flat[next].ni};
+      chantAuditionNote(p, flat[next].n);
+    } else {
+      let idx = chantFlatIdxOf(flat, chantEd.sel);
+      if (idx < 0) idx = 0;
+      else idx = Math.max(0, Math.min(flat.length - 1, idx + dir));
+      chantEd.range = null; chantEd.picks = null;
+      chantEd.sel = {ii: flat[idx].ii, gi: flat[idx].gi, ni: flat[idx].ni};
+      chantAuditionNote(p, flat[idx].n);
+    }
     syncChantBar(); render();
     return;
   }
-  if (e.key === 'Delete' || e.key === 'Backspace') {
-    if (!chantEd.sel) return;
+  if (mod || e.altKey) return;
+  if (k === 'Delete' || k === 'Backspace') {
+    if (!chantEd.sel && !chantEd.range && !chantEd.picks) return;
     e.preventDefault(); e.stopImmediatePropagation(); chantDelSel();
     return;
   }
-  if (e.key === '.' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    if (!chantEd.sel || chantEd.sel.bar) return;
-    e.preventDefault(); e.stopImmediatePropagation(); chantModToggle(n => { n.dot = !n.dot; });
+  /* Accidentals & dot — exact same keys as mensural note-input.js */
+  if (k === '-' || k === '_') { e.preventDefault(); e.stopImmediatePropagation(); chantModToggle(n => n.acc === 'fl', (n, v) => { n.acc = v ? 'fl' : ''; }); return; }
+  if (k === '0') { e.preventDefault(); e.stopImmediatePropagation(); chantModToggle(n => n.acc === 'na', (n, v) => { n.acc = v ? 'na' : ''; }); return; }
+  if (k === '.') { e.preventDefault(); e.stopImmediatePropagation(); chantModToggle(n => n.dot, (n, v) => { n.dot = v; }); return; }
+  /* K: inclinatum diamond (chant analog of coloration/shape toggle) */
+  if (k === 'k' || k === 'K') { e.preventDefault(); e.stopImmediatePropagation(); chantModToggle(n => n.incl, (n, v) => { n.incl = v; }); return; }
+  /* I: toggle Overwrite / Insert mode (same as mensural) */
+  if (k === 'i' || k === 'I') { e.preventDefault(); e.stopImmediatePropagation(); chantEd.ovr = !chantEd.ovr; syncChantBar(); toast(chantEd.ovr ? 'Overwrite mode.' : 'Insert mode.'); return; }
+  /* L: exact same dual rule as ChoirBook (2+ notes selected -> Ligature/neume; 1 note selected -> open syllable lyric editor) */
+  if (k === 'l' || k === 'L') {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const ch = chantCur(); if (!ch) return;
+    const p = parseGabcChant(ch.gabc || '');
+    const sel = chantSelectedItems(p);
+    if (!e.shiftKey && sel.length >= 2) { chantToggleLig(); }
+    else if (sel.length === 1) { const sylEl = $('#chSyl'); if (sylEl) { sylEl.focus(); sylEl.select(); } }
     return;
   }
-  if (/^[a-gA-G]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+  /* Division bars: , ; : */
+  if (k === ',' || k === ';' || k === ':') { e.preventDefault(); e.stopImmediatePropagation(); chantInsertBar(k); return; }
+  /* A–G pitch entry (respecting Overwrite vs Insert mode, nearest octave to current note) */
+  if (/^[a-gA-G]$/.test(k)) {
     e.preventDefault(); e.stopImmediatePropagation();
-    const targetL = 'cdefgab'.indexOf(e.key.toLowerCase());
-    mutateChant(p => {
-      const cl = p.clef || {type: 'c', line: 4};
-      const botStep = chantStepOf(cl, 0);
-      let refPos = 3;
-      if (chantEd.sel && !chantEd.sel.bar && p.items[chantEd.sel.ii]) {
-        const g = p.items[chantEd.sel.ii].groups && p.items[chantEd.sel.ii].groups[chantEd.sel.gi];
-        if (g && g.notes && g.notes[chantEd.sel.ni]) refPos = g.notes[chantEd.sel.ni].pos;
+    const ch = chantCur(); if (!ch) return;
+    const p = parseGabcChant(ch.gabc || '');
+    const targetL = 'cdefgab'.indexOf(k.toLowerCase());
+    const cl = p.clef || {type: 'c', line: 4};
+    const botStep = chantStepOf(cl, 0);
+    const sel = chantSelectedItems(p);
+    const refPos = sel.length ? sel[sel.length - 1].n.pos : 3;
+    let bestPos = refPos, bestDist = 99;
+    for (let pos = -3; pos <= 9; pos++) {
+      if ((((botStep + pos) % 7) + 7) % 7 === targetL) {
+        const dist = Math.abs(pos - refPos);
+        if (dist < bestDist) { bestDist = dist; bestPos = pos; }
       }
-      let bestPos = refPos, bestDist = 99;
-      for (let pos = -3; pos <= 9; pos++) {
-        if ((((botStep + pos) % 7) + 7) % 7 === targetL) {
-          const dist = Math.abs(pos - refPos);
-          if (dist < bestDist) { bestDist = dist; bestPos = pos; }
-        }
-      }
-      const newNote = {pos: bestPos, incl: false, dot: false, epiH: false, epiV: false, virga: false, acc: ''};
-      const insAt = chantEd.sel ? Math.min(p.items.length, chantEd.sel.ii + 1)
-        : (p.items.length && p.items[p.items.length - 1].kind === 'bar' && p.items[p.items.length - 1].bar === '::' ? p.items.length - 1 : p.items.length);
-      p.items.splice(insAt, 0, {kind: 'syl', text: '', groups: [{notes: [newNote]}]});
-      chantEd.sel = {ii: insAt, gi: 0, ni: 0};
-    }, true);
+    }
+    chantEnterPitch(bestPos);
   }
 }, true);
 
