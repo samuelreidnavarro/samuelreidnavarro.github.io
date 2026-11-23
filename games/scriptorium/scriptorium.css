@@ -1347,3 +1347,10 @@ html.dark .rdx-btn.light:hover:not(:disabled){color:#F2B5A6}
   .tools .bar.editbar{z-index:1}
   .tools .bar:not(.editbar):has(.pop:hover,.pop.open,.pop.find-open,.pop:focus-within){z-index:6}
 }
+
+/* room above the page, to pull it down in the frame (see overRoom in scriptorium.js) */
+@media (min-width:701px){ .viewer.frame:not(.horiz)::before{content:'';display:block;height:var(--over,0px);flex:none} }
+
+/* Layout in Web view: the paper rows give way to a short note */
+.staffset .webnote{grid-column:1/-1;font-size:14px;line-height:1.45;color:var(--muted);padding:2px 0}
+.staffset .webnote .tb{display:inline-flex;vertical-align:baseline;height:auto;min-height:0;padding:1px 8px;margin:0 2px}

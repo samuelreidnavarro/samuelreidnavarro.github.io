@@ -39,8 +39,9 @@ ${APP.popsBeforeVoices || ''}
         <div class="popbody"><div class="staffset">
           <div class="subhead">Page</div>
           <span class="lab">Format</span><div class="btns" id="viewList" role="group" aria-label="Format"><button class="tb" data-v="score">Score</button><button class="tb" data-v="parts">Parts</button><button class="tb" data-v="choir">Choirbook</button></div>
-          <span class="lab">Size</span><div class="btns" id="paperSeg" role="group" aria-label="Paper size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button></div>
-          <span class="lab">Orientation</span><div class="btns" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
+          <span class="lab pageonly">Size</span><div class="btns pageonly" id="paperSeg" role="group" aria-label="Paper size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button></div>
+          <span class="lab pageonly">Orientation</span><div class="btns pageonly" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
+          <div class="webnote" id="webNote" hidden>Web view fills the window, so it has no paper size or orientation. <button type="button" class="tb" id="toPage">Show Page view</button> to set them (they are also used for the PDF).</div>
           <div class="subhead">Staves &amp; Notes</div>
           <label class="ctl" for="size">Staff size</label><div class="rng-wrap" data-for="size"><input type="range" id="size" min="1" max="7" step="0.05"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
           <span class="lab-lock"><label class="ctl" for="noteSize">Note size</label><button type="button" class="lockbtn" id="sizeLock" aria-pressed="true" aria-label="Lock note size to staff size" title="Locked to staff size — click to adjust independently"></button></span><div class="rng-wrap" data-for="noteSize"><input type="range" id="noteSize" min="1" max="7" step="0.05"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
@@ -3986,6 +3987,8 @@ function syncUI(){
   const activePaper = st.paper === 'web' ? (st.printPaper || 'A4') : st.paper;
   $('#paperSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === activePaper)));
   $('#dispSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === (st.paper === 'web' ? 'web' : 'page'))));
+  /* paper size and orientation belong to Page view (and the PDF); Web view has none, so they are not offered there */
+  { const web = st.paper === 'web'; document.querySelectorAll('#popPage .pageonly').forEach(e => { e.hidden = web; }); const wn = $('#webNote'); if (wn) wn.hidden = !web; }
   const sLocked = st.sizeLock !== 'off', cLocked = st.colLock !== 'off';
   if (sLocked) st.noteSize = st.size;
   const slBtn = $('#sizeLock'), clBtn = $('#colLock');
@@ -4153,6 +4156,7 @@ segInit('#eqSeg', 'eq'); segInit('#viewList', 'view'); $('#notaSeg').addEventLis
 }); segInit('#headSeg', 'heads'); segInit('#stemSeg', 'stems'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars'); segInit('#bposSeg', 'bpos');
 [['#bnumSel', 'bnum'], ['#bunitSel', 'bunit'], ['#lyrFontSel', 'lyrFont']].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; save(); syncUI(); render(); }));
 $('#paperSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.printPaper = b.dataset.v; if (st.paper !== 'web') st.paper = b.dataset.v; save(); syncUI(); render(); });
+$('#toPage').addEventListener('click', () => { const b = $('#dispSeg').querySelector('button[data-v="page"]'); if (b) b.click(); });
 $('#dispSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.v === 'web') { if (st.paper !== 'web') st.printPaper = st.paper; st.paper = 'web'; } else { st.paper = st.printPaper || 'A4'; } save(); syncUI(); render(); });
 segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); });
 $('#staffSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.staff = b.dataset.v; if (st.colLock !== 'off') st.noteCol = st.staff; save(); syncUI(); render(); });
@@ -10503,7 +10507,8 @@ function findAvail(c){ /* null when it can be used now, else why not */
   if (c.kind === 'key' || c.kind === 'help' || c.kind === 'fn') return null;
   if (!el) return 'not available now';
   if (el.disabled) return c.acts ? 'select a note first' : 'not available right now';
-  if (el.closest('[hidden]') && !el.closest('.pop, #tpSide, #editBar, .transport')) return 'open it first (' + (c.path || 'its panel') + ')';
+  const hh = el.closest('[hidden]');
+  if (hh && !el.closest('#tpSide, #editBar') && !hh.classList.contains('sendvoices')) return el.closest('.pop, .transport') ? 'not available in this view' : 'open it first (' + (c.path || 'its panel') + ')';
   return null;
 }
 const grpOf = el => { const g = el.closest('.btns'); return g && g.querySelectorAll('button').length > 1; };
@@ -10920,6 +10925,23 @@ function sizeViewer(){
   const top = wrapEl.getBoundingClientRect().top + window.scrollY;
   document.documentElement.style.setProperty('--vh', Math.max(380, Math.round(win - top - 2)) + 'px');
 }
+/* Room above the page: the music can be scrolled down past its own top, until the page fills only the lower third of the frame
+   (an empty space of two thirds of the frame goes above it; a new piece, or another layout, starts with the page at the top, as before) */
+let overKey = '';
+function overRoom(){
+  if (!viewerEl || !piece) return;
+  const vertical = !isHoriz() && viewerEl.classList.contains('frame') && window.matchMedia('(min-width:701px)').matches;
+  const h = viewerEl.clientHeight;
+  const over = vertical && h > 200 ? Math.max(0, Math.round(h * 2 / 3 - 58)) : 0;
+  const prev = +(viewerEl.dataset.over || 0);
+  document.documentElement.style.setProperty('--over', over + 'px');
+  viewerEl.dataset.over = String(over);
+  const key = (typeof pieceKey === 'string' ? pieceKey : '') + '|' + (piece.title || '') + '|' + st.paper + '|' + st.view + '|' + (vertical ? 1 : 0);
+  if (key !== overKey) { if (pagesEl.getBoundingClientRect().height > 40) { overKey = key; viewerEl.scrollTop = over; } }
+  else if (over !== prev) viewerEl.scrollTop += over - prev;
+}
+if (window.ResizeObserver) { const ro = new ResizeObserver(() => overRoom()); ro.observe(pagesEl); ro.observe(viewerEl); }
+
 /* Pinching on a trackpad (Ctrl with the wheel; gesture events in Safari) makes the music bigger, not the website:
    pages are magnified; on Web, where the music fills the width, the staves grow instead */
 {
