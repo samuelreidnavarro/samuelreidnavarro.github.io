@@ -1184,8 +1184,33 @@ function pushSplit(out, base, w, T, P, tieLast, p = 1){
 }
 
 /* clef for a voice: as encoded, or a mensural C/F clef that keeps the range on the staff */
+const MODERN_CLEFS = ['treble', 'treble8', 'bass'];
+function modernClefOf(cKey, v){
+  if (MODERN_CLEFS.includes(cKey)) return cKey;
+  if (v) {
+    const steps = v.events.filter(e => !e.rest && !e.tieEnd && !e.tieMid).map(e => e.step);
+    if (steps.length) {
+      let best = 'treble', bestCost = Infinity;
+      MODERN_CLEFS.forEach((k, i) => {
+        const b = CLEFS[k].bottom;
+        let cost = 0;
+        for (const s of steps) {
+          const p = s - b;
+          if (p < -1) cost += Math.ceil((-1 - p) / 2);
+          else if (p > 9) cost += Math.ceil((p - 9) / 2);
+          cost += Math.abs(p - 4) * 0.08;
+        }
+        if (cost < bestCost - 1e-9) { bestCost = cost; best = k; }
+      });
+      return best;
+    }
+  }
+  if (cKey === 'f3' || cKey === 'c5') return 'bass';
+  if (cKey === 'c3' || cKey === 'c4') return 'treble8';
+  return 'treble';
+}
 function chooseClef(v, mode){
-  if (mode === 'modern') return KERN_CLEF[v.kclef] || 'treble';
+  if (mode === 'modern') return modernClefOf(KERN_CLEF[v.kclef], v);
   /* the original clef, when the file gives one (*oclef, from CMME) */
   if (v.oclef && CLEFS[KERN_CLEF[v.oclef]]) return KERN_CLEF[v.oclef];
   /* tied continuations don't count, so a clef doesn't change because an edit split notes at the barlines */
@@ -1515,6 +1540,7 @@ function prepare(){
       s.vi = i;
       s.keyc = s.t > EPS && !s.cont ? v.keys.find(q => Math.abs(q.t - s.t) < EPS) || null : null;
       s.clefc = s.t > EPS && !s.cont ? v.clefs.find(q => q.t > EPS && Math.abs(q.t - s.t) < EPS && KERN_CLEF[q.c]) || null : null;
+      if (s.clefc && st.clefs === 'modern' && clefAt(v, s.t - 0.01) === s.clef) s.clefc = null;
       if (s.clefc) s.left += clefW(s.clef) + 0.9;
       if (s.keyc) { s.keyN = keyChangeGlyphs(v, s.keyc).length; s.left += s.keyN * 1.0 + 0.9; }
       if (s.mens) s.left += mensW(s.mens) + 1.3;
@@ -1551,7 +1577,10 @@ function prepare(){
 function clefAt(v, t){
   if (v.sharedStaff) return v.clef;
   let c = v.clef;
-  for (const m of v.clefs) if (m.t > EPS && m.t <= t + EPS && KERN_CLEF[m.c]) c = KERN_CLEF[m.c];
+  for (const m of v.clefs) if (m.t > EPS && m.t <= t + EPS && KERN_CLEF[m.c]) {
+    const ck = KERN_CLEF[m.c];
+    c = st.clefs === 'modern' ? modernClefOf(ck, null) : ck;
+  }
   return c;
 }
 /* the clef a line starts with: where a clef change stands at the very start of a line, the line starts with the old clef and the change is drawn as such */
