@@ -6552,6 +6552,32 @@ function stafFor(el){
     if (r2.dataset.k0 !== '' && +r2.dataset.k0 <= k && k <= +r2.dataset.k1) return r2;
   return null;
 }
+/* Which staff the pointer writes on. The staves of a system lie close together, so a pointer between two of them could belong to either
+   (to the notes below the upper staff, or above the lower one). It stays with the staff it came from, out into that staff's ledger
+   lines, until it is really on the next staff: coming down from the alto it writes low alto notes, coming up from the tenor it writes
+   high tenor notes. With no earlier place (a touch, a first click) it takes the nearer staff. */
+let ptrStaff = null;   /* the voice and the system the pointer was last on */
+const sysKey = r => (r.dataset.tx || '') + '|' + r.getAttribute('x') + '|' + r.getAttribute('width');
+function staffUnder(e, remember){
+  const base = stafFor(e.target);
+  if (!base || !base.matches || !base.matches('rect.stafhit')) return base;
+  const peers = systemOf(base);
+  if (peers.length < 2) return base;
+  const ctm = base.getScreenCTM(); if (!ctm) return base;
+  const y = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse()).y;
+  const near = list => list.reduce((b, r) => { const d = Math.abs(y - (+r.dataset.top + 2)); return !b || d < b.d ? {r, d} : b; }, null).r;
+  const own = peers.filter(r => y >= +r.dataset.top - 0.6 && y <= +r.dataset.top + 4.6);   /* on the staff itself, with the space just above and below it */
+  let pick;
+  if (own.length) pick = own.length === 1 ? own[0] : near(own);
+  else {
+    const reach = peers.filter(r => y >= +r.dataset.top - 4.25 && y <= +r.dataset.top + 8.25);   /* as far as the ledger lines go */
+    const key = sysKey(base), last = ptrStaff && ptrStaff.key === key ? reach.find(r => r.dataset.v === ptrStaff.v) : null;
+    pick = reach.length === 0 ? base : reach.length === 1 ? reach[0] : last || near(reach);
+  }
+  if (remember) ptrStaff = {v: pick.dataset.v, key: sysKey(base)};
+  return pick;
+}
+window.__staffUnder = staffUnder;   /* for checking from outside */
 function eventIndexFor(tg){
   const s = tg.k !== null ? tg.v.syms[tg.k] : null;
   if (tg.mode === 'on') return {at: s.src[0], onRest: true};
@@ -6731,7 +6757,7 @@ pagesEl.addEventListener('pointermove', e => {
   const on = noteAt(e);
   const off = on && !on.s.rest ? offPitch(on, e) : null;
   if (on && !on.s.rest && !off) { clearGhost(); return; }   /* over a note, at its own pitch: it is clicked, dragged or right-clicked */
-  const rect = off ? off.rect : stafFor(e.target);
+  const rect = off ? off.rect : staffUnder(e, true);
   if (!rect) { clearGhost(); return; }
   const tg = off ? off.tg : staffTarget(rect, e); if (!tg) { clearGhost(); return; }
   if (ed.divisi) {
@@ -6765,7 +6791,7 @@ pagesEl.addEventListener('pointermove', e => {
   if (!ghostEl || ghostEl.parentNode !== tg.g) { clearGhost(); ghostEl = document.createElementNS('http://www.w3.org/2000/svg', 'g'); ghostEl.setAttribute('class', 'ghost'); tg.g.appendChild(ghostEl); }
   ghostEl.innerHTML = html;
 });
-pagesEl.addEventListener('pointerleave', clearGhost);
+pagesEl.addEventListener('pointerleave', () => { ptrStaff = null; clearGhost(); });
 
 /* a voice's name in the score: click it to rename the voice (the same name as in Voices) */
 /* Text in the score is edited where it stands: click a voice name, the title or the composer, type, Enter */
@@ -7528,7 +7554,7 @@ pagesEl.addEventListener('click', e => {
     }
   }
   const offN = ed.on && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey ? offPitch(noteAt(e), e) : null;
-  const rect = offN ? offN.rect : ed.on && !e.shiftKey ? stafFor(e.target) : null;
+  const rect = offN ? offN.rect : ed.on && !e.shiftKey ? staffUnder(e, false) : null;
   if (rect) {
     e.stopImmediatePropagation();
     if (ed.layer2) {
