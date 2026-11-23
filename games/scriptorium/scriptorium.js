@@ -1710,8 +1710,35 @@ function columns(vlist, a, b, withLyrics){
   return cols;
 }
 
+/* With Allow measures across systems off: every line ends at a barline, and the barlines to end on are chosen for the whole piece at
+   once, so that the lines are filled about evenly (no line of two measures between lines of eleven). A line breaks where the sum of the
+   squares of the room left over on each line is smallest. Null when one measure is wider than a line (the lines are then broken as usual). */
+function breakLinesBars(cols, avail, firstAvail){
+  const CUST = 2.2, n = cols.length;
+  const stops = [0]; for (let i = 1; i < n; i++) if (cols[i].bar) stops.push(i); stops.push(n);
+  const last = stops.length - 1;
+  const wid = (i, k) => cols[k - 1].x - cols[i].x + cols[i].left + cols[k - 1].right + CUST;
+  const best = new Array(stops.length).fill(Infinity), from = new Array(stops.length).fill(-1);
+  best[0] = 0;
+  for (let a = 0; a < last; a++) {
+    if (best[a] === Infinity) continue;
+    const W = a === 0 && firstAvail !== undefined ? firstAvail : avail;
+    for (let b = a + 1; b <= last; b++) {
+      const w = wid(stops[a], stops[b]);
+      if (w > W) break;
+      const slack = b === last ? 0 : (W - w) / W;   /* the last line may be as short as it is */
+      const c = best[a] + slack * slack + 0.02;
+      if (c < best[b] - 1e-12) { best[b] = c; from[b] = a; }
+    }
+  }
+  if (best[last] === Infinity) return null;
+  const out = [];
+  for (let b = last; b > 0; b = from[b]) out.unshift({from: stops[from[b]], to: stops[b]});
+  return out;
+}
 /* break columns into lines of the given width; returns [{from, to}] */
 function breakLines(cols, avail, firstAvail){
+  if (st.measAcross === 'off') { const r = breakLinesBars(cols, avail, firstAvail); if (r) return r; }
   const lines = [];
   let i = 0;
   const CUST = 2.2;
@@ -1727,7 +1754,7 @@ function breakLines(cols, avail, firstAvail){
     let end = j;
     /* with Allow measures across systems off, a line ends at a barline (a column where a bar stands), the last one that fits */
     let barEnd = -1;
-    if (st.measAcross === 'off' && j < cols.length) for (let k = j; k > i; k--) if (cols[k].bar && cols[k].clean) { barEnd = k; break; }
+    if (st.measAcross === 'off' && j < cols.length) for (let k = j; k > i; k--) if (cols[k].bar) { barEnd = k; break; }
     if (barEnd > 0) { lines.push({from: i, to: barEnd}); i = barEnd; continue; }
     /* a line ends where no voice holds a note across, unless that would leave it well short of the margin (a long note in one voice must not make the whole line stretch to fill the space) */
     if (j < cols.length && lastClean > i && cols[lastClean].x - cols[i].x + cols[i].left + cols[lastClean].right + CUST >= 0.72 * W) end = lastClean;
