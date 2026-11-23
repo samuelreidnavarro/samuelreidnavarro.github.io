@@ -160,42 +160,6 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
       <input type="file" id="fileIn" accept=".krn,.kern,.txt,.musicxml,.xml,.mxl,.mscz,.mscx,.mei,.mid,.midi,.ly,.gabc,.cmme" hidden>
     </div>
     <div class="bar editbar" id="editBar" hidden></div>
-    <div class="bar chantbar" id="chantBar" hidden>
-      <div class="chrow">
-        <span class="chlab">Plainchant</span>
-        <input id="chTitle" type="text" placeholder="Title" title="Plainchant section title" autocomplete="off">
-        <select id="chClef" title="Gregorian clef"><option value="c4">c4</option><option value="c3">c3</option><option value="c2">c2</option><option value="c1">c1</option><option value="cb4">cb4 (B♭)</option><option value="cb3">cb3 (B♭)</option><option value="f4">f4</option><option value="f3">f3</option></select>
-        <div class="btns" id="chAlign" role="group" aria-label="Plainchant alignment"><button type="button" class="tb" data-v="left">Left</button><button type="button" class="tb" data-v="center">Center</button></div>
-        <span class="chsep"></span>
-        <button type="button" class="tb" id="chAddNote" title="Add a note after the selected note (or click anywhere on the 4-line staff)">+ Note</button>
-        <button type="button" class="tb" data-chbar="," title="Insert divisio minima (,)">,</button>
-        <button type="button" class="tb" data-chbar=";" title="Insert divisio minor (;)">;</button>
-        <button type="button" class="tb" data-chbar=":" title="Insert divisio maior (:)">:</button>
-        <button type="button" class="tb" data-chbar="::" title="Insert divisio finalis (::)">::</button>
-        <span class="chsep"></span>
-        <button type="button" class="tb" id="chRawTog" title="Show/hide raw GABC text">GABC</button>
-        <button type="button" class="tb" id="chDelSec" title="Delete this plainchant section">Delete section</button>
-        <button type="button" class="tb" id="chDone" title="Close plainchant editor">Done</button>
-      </div>
-      <div class="chrow chnote" id="chNoteRow">
-        <span class="chlab">Note</span>
-        <input id="chSyl" type="text" placeholder="Syllable" title="Syllable text under this neume" autocomplete="off">
-        <button type="button" class="tb" id="chUp" title="Pitch up (↑)">↑</button>
-        <button type="button" class="tb" id="chDn" title="Pitch down (↓)">↓</button>
-        <button type="button" class="tb" id="chDot" title="Punctum mora dot (.)">·</button>
-        <button type="button" class="tb" id="chEpiH" title="Horizontal episema (_)">—</button>
-        <button type="button" class="tb" id="chEpiV" title="Vertical episema (')">|</button>
-        <button type="button" class="tb" id="chFlat" title="Flat (x)">♭</button>
-        <button type="button" class="tb" id="chNat" title="Natural (y)">♮</button>
-        <button type="button" class="tb" id="chIncl" title="Inclinatum diamond">◆</button>
-        <button type="button" class="tb" id="chJoin" title="Join with / split from previous neume">Join/Split</button>
-        <button type="button" class="tb" id="chDelNote" title="Delete selected note (Delete / Backspace)">⌫</button>
-      </div>
-      <div class="chrow" id="chRawRow" hidden>
-        <span class="chlab">GABC</span>
-        <input id="chRaw" type="text" style="flex:1;min-width:260px" placeholder="(c4) Glo(g)ri(h)a(g)..." autocomplete="off">
-      </div>
-    </div>
   </section>
 
   <div class="markbar" id="markBar" hidden><span id="markTxt"></span><button id="markClear">Clear marking</button></div>
@@ -210,6 +174,43 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
     <ul id="notePick" class="menu" role="menu" aria-label="Note" hidden></ul>
     <button class="pagenav next" id="pgNext" aria-label="Next page" title="Next page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 4.6 16 12l-7.4 7.4L7 17.8 12.8 12 7 6.2Z"/></svg></button>
     <div class="handbox" id="handBox" title="The tactus: the hand drops on one beat and lifts on the next" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="handRot"></g></svg></div><div class="handbox pendbox" id="pendBox" aria-hidden="true"><svg viewBox="-20 -36 236 190"><g id="pendG"><path d="M66 158 H130 L120 142 H76Z" fill="currentColor"/><g id="pendRot"><line x1="98" y1="150" x2="98" y2="-16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="84" y="14" width="28" height="34" rx="4" fill="currentColor"/></g></g></svg></div><div class="handpop" id="handPop" role="group" aria-label="Hand settings" hidden><label for="handSizeP">Size</label><input type="range" id="handSizeP" min="0.4" max="2.5" step="0.05"><label for="handOpP">Opacity</label><input type="range" id="handOpP" min="0.05" max="1" step="0.05"></div>
+  </div>
+
+  <div class="chbar" id="chantBar" role="toolbar" aria-label="Plainchant editor" hidden>
+    <div class="chrow">
+      <span class="chlab">Plainchant</span>
+      <input id="chTitle" type="text" placeholder="Title" title="Plainchant section title" autocomplete="off">
+      <select id="chClef" title="Gregorian clef"><option value="c4">c4</option><option value="c3">c3</option><option value="c2">c2</option><option value="c1">c1</option><option value="cb4">cb4 (B♭)</option><option value="cb3">cb3 (B♭)</option><option value="f4">f4</option><option value="f3">f3</option></select>
+      <div class="chseg" id="chAlign" role="group" aria-label="Plainchant alignment"><button type="button" class="chbtn" data-v="left">Left</button><button type="button" class="chbtn" data-v="center">Center</button></div>
+      <span class="chsep"></span>
+      <button type="button" class="chbtn" id="chAddNote" title="Add a note after the selected note (or click anywhere on the 4-line staff)">+ Note</button>
+      <button type="button" class="chbtn" data-chbar="," title="Insert divisio minima (,)">,</button>
+      <button type="button" class="chbtn" data-chbar=";" title="Insert divisio minor (;)">;</button>
+      <button type="button" class="chbtn" data-chbar=":" title="Insert divisio maior (:)">:</button>
+      <button type="button" class="chbtn" data-chbar="::" title="Insert divisio finalis (::)">::</button>
+      <span class="chsep"></span>
+      <button type="button" class="chbtn" id="chRawTog" title="Show/hide raw GABC text">GABC</button>
+      <button type="button" class="chbtn chdanger" id="chDelSec" title="Delete this plainchant section">Delete</button>
+      <button type="button" class="chbtn chprimary" id="chDone" title="Close plainchant editor (Esc)">Done</button>
+    </div>
+    <div class="chrow chnote" id="chNoteRow">
+      <span class="chlab">Note</span>
+      <input id="chSyl" type="text" placeholder="Syllable (Tab → next)" title="Syllable text under this neume (press Tab or Enter for next)" autocomplete="off">
+      <button type="button" class="chbtn" id="chUp" title="Pitch up (↑)">↑</button>
+      <button type="button" class="chbtn" id="chDn" title="Pitch down (↓)">↓</button>
+      <button type="button" class="chbtn" id="chDot" title="Punctum mora dot (.)">·</button>
+      <button type="button" class="chbtn" id="chEpiH" title="Horizontal episema (_)">—</button>
+      <button type="button" class="chbtn" id="chEpiV" title="Vertical episema (')">|</button>
+      <button type="button" class="chbtn" id="chFlat" title="Flat (x)">♭</button>
+      <button type="button" class="chbtn" id="chNat" title="Natural (y)">♮</button>
+      <button type="button" class="chbtn" id="chIncl" title="Inclinatum diamond">◆</button>
+      <button type="button" class="chbtn" id="chJoin" title="Join with previous neume / split out of neume">Join ←</button>
+      <button type="button" class="chbtn chdanger" id="chDelNote" title="Delete selected note or bar (Delete / Backspace)">⌫</button>
+    </div>
+    <div class="chrow" id="chRawRow" hidden>
+      <span class="chlab">GABC</span>
+      <input id="chRaw" type="text" style="flex:1;min-width:260px" placeholder="(c4) Glo(g)ri(h)a(g)..." autocomplete="off">
+    </div>
   </div>
 
   <section class="transport" aria-label="Playback and sound">
@@ -2813,7 +2814,9 @@ function parseGabcChant(raw){
       }
       if (notes.length) groups.push({notes});
     }
-    items.push({kind: 'syl', text, groups});
+    const afterCh = src[re.lastIndex] || '';
+    const joinNext = !!(afterCh && !/\s/.test(afterCh) && afterCh !== '(');
+    items.push({kind: 'syl', text, groups, joinNext});
   }
   return {clef, items, headerTitle};
 }
@@ -2854,21 +2857,22 @@ function noteToGabc(n){
   return s;
 }
 function serializeGabcChant(parsed){
-  const parts = [];
   const cl = parsed.clef || {type: 'c', line: 4, flat: false};
-  parts.push(`(${cl.type}${cl.flat ? 'b' : ''}${cl.line})`);
-  for (const it of parsed.items) {
+  let out = `(${cl.type}${cl.flat ? 'b' : ''}${cl.line})`;
+  for (let i = 0; i < parsed.items.length; i++) {
+    const it = parsed.items[i], prev = i > 0 ? parsed.items[i - 1] : null;
+    const sep = (prev && prev.kind === 'syl' && prev.joinNext && it.kind === 'syl') ? '' : ' ';
     if (it.kind === 'clef') {
       const c = it.clef;
-      parts.push(`(${c.type}${c.flat ? 'b' : ''}${c.line})`);
+      out += ` (${c.type}${c.flat ? 'b' : ''}${c.line})`;
     } else if (it.kind === 'bar') {
-      parts.push(`(${it.bar})`);
+      out += ` (${it.bar})`;
     } else if (it.kind === 'syl') {
       const inner = (it.groups || []).map(g => g.bar ? g.bar : (g.notes || []).map(noteToGabc).join('')).filter(Boolean).join('/');
-      if (it.text || inner) parts.push(`${it.text || ''}(${inner})`);
+      if (it.text || inner) out += sep + `${it.text || ''}(${inner})`;
     }
   }
-  return parts.join(' ');
+  return out;
 }
 function chantStepOf(cl, pos){
   const clefStep = cl.type === 'f' ? 24 : 28;
@@ -3008,7 +3012,9 @@ function drawChantSystem(chant, chantIdx, W, y){
     /* Compute exact visual end of the 4-line staff: never extend past the double barline (or end of last line)! */
     let xCursor = clefWCh(ln.clef) + 0.8;
     let barEndX = null;
+    const itemSlots = [];
     for (const it of ln.items) {
+      itemSlots.push(`${it.ii}:${f(xCursor + it.w * 0.5)}`);
       if (it.kind === 'bar' && it.bar === '::') barEndX = xCursor + 0.72;
       else if (it.groups && it.groups.length) {
         let gx = xCursor + Math.max(0, (it.tw - it.nw) / 2);
@@ -3019,12 +3025,12 @@ function drawChantSystem(chant, chantIdx, W, y){
       }
       xCursor += it.w;
     }
-    const lineEnd = endsWithDouble && barEndX !== null ? Math.min(W, barEndX) : isLastLine ? Math.min(W, Math.max(clefWCh(ln.clef) + 3, xCursor + 0.2)) : W;
+    const lineEnd = endsWithDouble && barEndX !== null ? Math.min(W, barEndX) : isLastLine ? Math.min(W, Math.max(clefWCh(ln.clef) + 4, xCursor + 1.2)) : W;
     const dx = centered && lineEnd < W ? (W - lineEnd) / 2 : 0;
 
     let lsSvg = '';
-    /* Clickable 4-line staff surface for adding/editing notes */
-    lsSvg += `<rect class="cs-hit" data-cs="${chantIdx}" data-top="${f(top)}" x="0" y="${f(top - 1.5)}" width="${f(lineEnd)}" height="6.2" fill="transparent"/>`;
+    /* Clickable 4-line staff surface for adding/editing notes at exact horizontal position & pitch */
+    lsSvg += `<rect class="cs-hit" data-cs="${chantIdx}" data-top="${f(top)}" data-end="${f(lineEnd)}" data-ix="${itemSlots.join(',')}" x="0" y="${f(top - 1.5)}" width="${f(lineEnd)}" height="6.2" fill="transparent"/>`;
     /* 4-line Gregorian staff ending cleanly at lineEnd (double barline on final line) */
     for (let k = 0; k < 4; k++) lsSvg += hl(0, lineEnd, top + k, 'staff', 0.12);
     lsSvg += chantClefSvg(ln.clef, 0.4, top);
@@ -3048,7 +3054,8 @@ function drawChantSystem(chant, chantIdx, W, y){
       });
       if (it.text) {
         const cx = x + Math.max(it.nw, it.tw) / 2;
-        lsSvg += `<text class="lyr" x="${f(cx)}" y="${f(lyrY)}" font-size="${f(ls)}" text-anchor="middle">${esc(it.text)}</text>`;
+        const disp = it.joinNext && !it.text.endsWith('-') ? it.text + '-' : it.text;
+        lsSvg += `<text class="lyr clyr" data-clyr="${chantIdx}:${it.ii}" x="${f(cx)}" y="${f(lyrY)}" font-size="${f(ls)}" text-anchor="middle">${esc(disp)}</text>`;
       }
       x += it.w;
     }
@@ -3567,6 +3574,7 @@ function minePrune(keep){
 }
 const whenEdited = at => { try { return new Date(at).toLocaleString([], {day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit'}); } catch (e) { return new Date(at).toLocaleDateString(); } };
 async function loadPiece(file){
+  if (typeof chantEd !== 'undefined') { chantEd.idx = -1; chantEd.sel = null; if (typeof syncChantBar === 'function') syncChantBar(); }
   file = MOVED[file] || file;
   if (pieceKey && pieceKey !== file && pieceKey.startsWith('mine:') && mineEmpty(pieceKey)) { mineDrop(pieceKey); if (typeof refreshMine === 'function') setTimeout(refreshMine); }
   let text = cache[file];
@@ -8479,6 +8487,7 @@ function swapDivisiSelection(){
 }
 /* edit mode is always caret mode: the caret stands at the start until a note is clicked */
 function setEdit(on){
+  if (on && typeof closeChantEd === 'function' && chantEd.idx >= 0) closeChantEd();
   ed.on = on; clearGhost();
   if (!on) { ed.accArm = null; ed.accEd = false; ed.dotArm = false; ed.edArm = false; ed.layer2 = false; ed.divisi = false; }
   /* entering note input takes the selection away: the caret stands just before what was selected (Samuel 2026-11-14) */
@@ -8735,6 +8744,8 @@ function openChantEd(idx, sel){
   if (!piece) return;
   const arr = ensureExt(piece).chants;
   if (!arr[idx]) return;
+  if (ed.on) { ed.on = false; clearGhost(); syncEdit(); }
+  ed.sel = null; ed.range = null; ed.picks = null; showSel();
   chantEd.idx = idx;
   if (sel !== undefined) chantEd.sel = sel;
   else {
@@ -8749,6 +8760,7 @@ function openChantEd(idx, sel){
 function closeChantEd(){
   if (chantEd.idx < 0) return;
   chantEd.idx = -1; chantEd.sel = null;
+  clearChantGhost();
   syncChantBar();
   render();
   postHeight();
@@ -8771,7 +8783,13 @@ function syncChantBar(){
     note = (it.groups[sel.gi].notes || [])[sel.ni] || null;
   }
   const nr = $('#chNoteRow');
-  if (nr) nr.style.opacity = note ? '1' : '.45';
+  if (nr) {
+    nr.classList.toggle('chdim', !note && !(sel && sel.bar));
+    nr.querySelectorAll('button, input').forEach(el => {
+      if (el.id === 'chDelNote') el.disabled = !sel;
+      else el.disabled = !note;
+    });
+  }
   if ($('#chSyl') && document.activeElement !== $('#chSyl')) $('#chSyl').value = it ? (it.text || '') : '';
   const setP = (id, on) => { const el = $(id); if (el) el.setAttribute('aria-pressed', String(!!on)); };
   setP('#chDot', note && note.dot);
@@ -8780,6 +8798,17 @@ function syncChantBar(){
   setP('#chFlat', note && note.acc === 'fl');
   setP('#chNat', note && note.acc === 'na');
   setP('#chIncl', note && note.incl);
+  const jb = $('#chJoin');
+  if (jb && sel && !sel.bar && note) {
+    const canSplit = sel.ni > 0;
+    const canJoin = !canSplit && (sel.gi > 0 || (sel.ii > 0 && p.items[sel.ii - 1] && p.items[sel.ii - 1].kind === 'syl'));
+    jb.textContent = canSplit ? 'Split' : 'Join ←';
+    jb.disabled = !canSplit && !canJoin;
+  } else if (jb) {
+    jb.textContent = 'Join ←';
+    jb.disabled = true;
+  }
+  if (window.__dockPlace) requestAnimationFrame(window.__dockPlace);
 }
 function mutateChant(fn, audition){
   const ch = chantCur(); if (!ch) return;
@@ -8955,20 +8984,59 @@ document.querySelectorAll('#chantBar [data-chbar]').forEach(b => b.addEventListe
   p.items.splice(insAt, 0, {kind: 'bar', bar});
   chantEd.sel = {ii: insAt, gi: -1, bar: true};
 })));
-['#chTitle', '#chSyl', '#chRaw'].forEach(id => { const el = $(id); if (el) el.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') el.blur(); }); });
+['#chTitle', '#chRaw'].forEach(id => { const el = $(id); if (el) el.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') el.blur(); }); });
+if ($('#chSyl')) $('#chSyl').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter' || e.key === 'Tab') {
+    e.preventDefault();
+    const txt = e.target.value.trim();
+    const ch = chantCur(); if (!ch || !chantEd.sel || chantEd.sel.bar) return;
+    const p = parseGabcChant(ch.gabc || '');
+    const curIi = chantEd.sel.ii;
+    if (p.items[curIi] && p.items[curIi].kind === 'syl') p.items[curIi].text = txt;
+    /* Advance to next/prev syllable item */
+    const dir = e.shiftKey ? -1 : 1;
+    let nextIi = curIi + dir;
+    while (nextIi >= 0 && nextIi < p.items.length && p.items[nextIi].kind !== 'syl') nextIi += dir;
+    if (nextIi >= 0 && nextIi < p.items.length) chantEd.sel = {ii: nextIi, gi: 0, ni: 0};
+    const nextGabc = serializeGabcChant(p);
+    commit(() => { ch.gabc = nextGabc; });
+    syncChantBar();
+    const sylEl = $('#chSyl');
+    if (sylEl && nextIi >= 0 && nextIi < p.items.length) { sylEl.focus(); sylEl.select(); }
+  }
+});
 
-/* Click & vertical-drag on plainchant notes, bars, and 4-line staff */
+/* Live hover ghost punctum on 4-line chant staff when actively editing */
+function clearChantGhost(){ document.querySelectorAll('#pages .ch-ghost').forEach(g => g.remove()); }
+function chantInsertIdxFromX(cs, svgX, p){
+  const slots = (cs.dataset.ix || '').split(',').filter(Boolean).map(tok => { const [ii, x] = tok.split(':'); return {ii: +ii, x: +x}; });
+  for (const sl of slots) {
+    if (svgX < sl.x) return sl.ii;
+  }
+  const lastSlot = slots[slots.length - 1];
+  if (lastSlot) {
+    const lastIt = p.items[lastSlot.ii];
+    if (lastIt && lastIt.kind === 'bar' && lastIt.bar === '::') return lastSlot.ii;
+    return Math.min(p.items.length, lastSlot.ii + 1);
+  }
+  return p.items.length;
+}
+
+/* Click & vertical-drag on plainchant notes, bars, syllables, and 4-line staff (capture phase so mensural handlers never conflict) */
 let chantDrag = null;
 pagesEl.addEventListener('pointerdown', e => {
   if (e.button !== 0 || !piece) return;
   const cn = e.target.closest && e.target.closest('.cn-hit');
   if (cn) {
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    clearChantGhost();
     const [ci, ii, gi, ni] = cn.dataset.cn.split(':').map(Number);
     const top = +cn.dataset.top;
     const ch = ensureExt(piece).chants[ci]; if (!ch) return;
     const p = parseGabcChant(ch.gabc || '');
     const n = p.items[ii] && p.items[ii].groups && p.items[ii].groups[gi] && p.items[ii].groups[gi].notes[ni];
+    if (ed.on) { ed.on = false; clearGhost(); syncEdit(); }
     chantEd.idx = ci; chantEd.sel = {ii, gi, ni};
     ed.sel = null; ed.range = null; ed.picks = null; showSel();
     syncChantBar(); render();
@@ -8981,33 +9049,69 @@ pagesEl.addEventListener('pointerdown', e => {
     }
     return;
   }
+  const cl = e.target.closest && e.target.closest('.clyr');
+  if (cl) {
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    const [ci, ii] = cl.dataset.clyr.split(':').map(Number);
+    openChantEd(ci, {ii, gi: 0, ni: 0});
+    const sylEl = $('#chSyl');
+    if (sylEl) { sylEl.focus(); sylEl.select(); }
+    return;
+  }
   const cb = e.target.closest && e.target.closest('.cb-hit');
   if (cb) {
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
     const [ci, ii, gi] = cb.dataset.cb.split(':').map(Number);
-    chantEd.idx = ci; chantEd.sel = {ii, gi, bar: true};
-    syncChantBar(); render();
+    openChantEd(ci, {ii, gi, bar: true});
     return;
   }
   const cs = e.target.closest && e.target.closest('.cs-hit');
   if (cs) {
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    clearChantGhost();
     const ci = +cs.dataset.cs, top = +cs.dataset.top;
     if (chantEd.idx !== ci) { openChantEd(ci); return; }
-    /* Already editing this chant: clicking on the 4-line staff adds a note at that exact pitch! */
+    /* Already editing this chant: clicking on the 4-line staff inserts a note at that exact horizontal spot & pitch! */
     const m = cs.getScreenCTM();
     if (!m) return;
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
     const pos = Math.max(-3, Math.min(9, Math.round((top + 3 - pt.y) * 2)));
     mutateChant(p => {
       const newNote = {pos, incl: false, dot: false, epiH: false, epiV: false, virga: false, acc: ''};
-      const insAt = chantEd.sel ? Math.min(p.items.length, chantEd.sel.ii + 1)
-        : (p.items.length && p.items[p.items.length - 1].kind === 'bar' && p.items[p.items.length - 1].bar === '::' ? p.items.length - 1 : p.items.length);
+      const insAt = chantInsertIdxFromX(cs, pt.x, p);
       p.items.splice(insAt, 0, {kind: 'syl', text: '', groups: [{notes: [newNote]}]});
       chantEd.sel = {ii: insAt, gi: 0, ni: 0};
     }, true);
+    return;
   }
+  /* Clicking a mensural note or staff closes chant edit mode cleanly */
+  if (chantEd.idx >= 0 && !e.target.closest('#chantBar') && !e.target.closest('.chant-sys')) {
+    closeChantEd();
+  }
+}, true);
+pagesEl.addEventListener('pointermove', e => {
+  if (chantDrag || chantEd.idx < 0 || !piece) { clearChantGhost(); return; }
+  const cs = e.target.closest && e.target.closest('.cs-hit');
+  if (!cs || +cs.dataset.cs !== chantEd.idx || e.target.closest('.cn-hit, .cb-hit')) { clearChantGhost(); return; }
+  const m = cs.getScreenCTM(); if (!m) return;
+  const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+  const top = +cs.dataset.top, pos = Math.max(-3, Math.min(9, Math.round((top + 3 - pt.y) * 2)));
+  const ny = top + 3 - pos * 0.5;
+  clearChantGhost();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('class', 'ch-ghost');
+  g.setAttribute('pointer-events', 'none');
+  const r = document.createElementNS(ns, 'rect');
+  r.setAttribute('x', f(pt.x - 0.31)); r.setAttribute('y', f(ny - 0.26));
+  r.setAttribute('width', '0.62'); r.setAttribute('height', '0.52'); r.setAttribute('rx', '0.06');
+  g.appendChild(r);
+  cs.parentNode.appendChild(g);
 });
+pagesEl.addEventListener('pointerleave', clearChantGhost);
+pagesEl.addEventListener('contextmenu', e => {
+  if (e.target.closest && e.target.closest('.chant-sys')) { e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
 document.addEventListener('pointermove', e => {
   if (!chantDrag || !piece) return;
   if (!chantDrag.moved && Math.abs(e.clientY - chantDrag.startY) < 4) return;
@@ -9063,6 +9167,37 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Delete' || e.key === 'Backspace') {
     if (!chantEd.sel) return;
     e.preventDefault(); e.stopImmediatePropagation(); chantDelSel();
+    return;
+  }
+  if (e.key === '.' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (!chantEd.sel || chantEd.sel.bar) return;
+    e.preventDefault(); e.stopImmediatePropagation(); chantModToggle(n => { n.dot = !n.dot; });
+    return;
+  }
+  if (/^[a-gA-G]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const targetL = 'cdefgab'.indexOf(e.key.toLowerCase());
+    mutateChant(p => {
+      const cl = p.clef || {type: 'c', line: 4};
+      const botStep = chantStepOf(cl, 0);
+      let refPos = 3;
+      if (chantEd.sel && !chantEd.sel.bar && p.items[chantEd.sel.ii]) {
+        const g = p.items[chantEd.sel.ii].groups && p.items[chantEd.sel.ii].groups[chantEd.sel.gi];
+        if (g && g.notes && g.notes[chantEd.sel.ni]) refPos = g.notes[chantEd.sel.ni].pos;
+      }
+      let bestPos = refPos, bestDist = 99;
+      for (let pos = -3; pos <= 9; pos++) {
+        if ((((botStep + pos) % 7) + 7) % 7 === targetL) {
+          const dist = Math.abs(pos - refPos);
+          if (dist < bestDist) { bestDist = dist; bestPos = pos; }
+        }
+      }
+      const newNote = {pos: bestPos, incl: false, dot: false, epiH: false, epiV: false, virga: false, acc: ''};
+      const insAt = chantEd.sel ? Math.min(p.items.length, chantEd.sel.ii + 1)
+        : (p.items.length && p.items[p.items.length - 1].kind === 'bar' && p.items[p.items.length - 1].bar === '::' ? p.items.length - 1 : p.items.length);
+      p.items.splice(insAt, 0, {kind: 'syl', text: '', groups: [{notes: [newNote]}]});
+      chantEd.sel = {ii: insAt, gi: 0, ni: 0};
+    }, true);
   }
 }, true);
 
@@ -9080,7 +9215,7 @@ document.addEventListener('click', e => {
   });
   syncAdv();
 });
-document.head.insertAdjacentHTML('beforeend', '<style>.betapill{display:inline-block;margin-left:5px;padding:1px 5px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;background:var(--accent,#8B2E22);color:#FAF5EA;vertical-align:middle}.advset{min-width:290px;max-width:340px}.advset .subhead{grid-column:1/-1;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}.advset .subhead:first-child{margin-top:0;padding-top:0;border-top:none}.adv-list{grid-column:1/-1;display:flex;flex-direction:column;gap:3px;max-height:110px;overflow:auto;padding:4px 6px;border-radius:6px;background:rgba(42,34,24,.04);font-size:12px}.adv-item{display:flex;align-items:center;justify-content:space-between;gap:6px}.adv-del{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px}.adv-del:hover{color:var(--accent,#8B2E22)}#pages .sf-badge{fill:var(--accent,#8B2E22);font-family:Georgia,serif;font-weight:700}#pages .orig-lyr{fill:var(--muted,#6B5E4E);font-style:italic;font-family:"IM Fell English",Georgia,serif}#pages .lacuna rect{fill:rgba(139,46,34,.08);stroke:var(--accent,#8B2E22);stroke-width:.12;stroke-dasharray:.4 .25}#pages .lacuna text{fill:var(--accent,#8B2E22);font-style:italic;font-family:Georgia,serif}#pages .ann-badge{cursor:pointer}#pages .ann-badge rect{fill:var(--accent,#8B2E22)}#pages .ann-badge text{fill:#FAF5EA;font-family:sans-serif;font-weight:700}#pages .var-br path{stroke:var(--muted,#6B5E4E)}#pages .var-br text{fill:var(--muted,#6B5E4E);font-family:sans-serif}#pages .chant-sys .cs-hit{cursor:crosshair}#pages .cn-hit,#pages .cb-hit{cursor:pointer}#pages .cn-hit .cn-bg,#pages .cb-hit .cn-bg{fill:transparent;transition:fill .1s}#pages .cn-hit:hover .cn-bg,#pages .cb-hit:hover .cn-bg{fill:rgba(139,46,34,.12)}#pages .cn-sel .cn-bg{fill:rgba(180,82,36,.24) !important;stroke:var(--accent,#8B2E22);stroke-width:.1}#pages .chant-title{fill:var(--ink,#2A2218);font-family:"IM Fell English",Georgia,serif}.chantbar{display:flex;flex-direction:column;gap:5px;padding:6px 10px;border-top:1px solid var(--line);background:var(--surface,#FAF5EA)}.chantbar[hidden]{display:none !important}.chantbar .chrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.chantbar .chlab{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-right:2px}.chantbar input[type=text],.chantbar select{height:28px;padding:0 7px;border:1px solid var(--line);border-radius:6px;background:var(--bg,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:13px}.chantbar #chTitle{width:118px}.chantbar #chSyl{width:96px}.chantbar .chsep{width:1px;height:18px;background:var(--line);margin:0 2px}.chantbar .tb{min-height:28px;height:28px;padding:0 8px;font-size:13px}</style>');
+document.head.insertAdjacentHTML('beforeend', '<style>.betapill{display:inline-block;margin-left:5px;padding:1px 5px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;background:var(--accent,#8B2E22);color:#FAF5EA;vertical-align:middle}.advset{min-width:290px;max-width:340px}.advset .subhead{grid-column:1/-1;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}.advset .subhead:first-child{margin-top:0;padding-top:0;border-top:none}.adv-list{grid-column:1/-1;display:flex;flex-direction:column;gap:3px;max-height:110px;overflow:auto;padding:4px 6px;border-radius:6px;background:rgba(42,34,24,.04);font-size:12px}.adv-item{display:flex;align-items:center;justify-content:space-between;gap:6px}.adv-del{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px}.adv-del:hover{color:var(--accent,#8B2E22)}#pages .sf-badge{fill:var(--accent,#8B2E22);font-family:Georgia,serif;font-weight:700}#pages .orig-lyr{fill:var(--muted,#6B5E4E);font-style:italic;font-family:"IM Fell English",Georgia,serif}#pages .lacuna rect{fill:rgba(139,46,34,.08);stroke:var(--accent,#8B2E22);stroke-width:.12;stroke-dasharray:.4 .25}#pages .lacuna text{fill:var(--accent,#8B2E22);font-style:italic;font-family:Georgia,serif}#pages .ann-badge{cursor:pointer}#pages .ann-badge rect{fill:var(--accent,#8B2E22)}#pages .ann-badge text{fill:#FAF5EA;font-family:sans-serif;font-weight:700}#pages .var-br path{stroke:var(--muted,#6B5E4E)}#pages .var-br text{fill:var(--muted,#6B5E4E);font-family:sans-serif}#pages .chant-sys .cs-hit{cursor:crosshair}#pages .chant-sys .clyr{cursor:text}#pages .chant-sys .clyr:hover{fill:var(--accent,#8B2E22)}#pages .ch-ghost rect{fill:var(--accent,#8B2E22);opacity:.48}#pages .cn-hit,#pages .cb-hit{cursor:pointer}#pages .cn-hit .cn-bg,#pages .cb-hit .cn-bg{fill:transparent;transition:fill .1s}#pages .cn-hit:hover .cn-bg,#pages .cb-hit:hover .cn-bg{fill:rgba(139,46,34,.14)}#pages .cn-sel .cn-bg{fill:rgba(180,82,36,.24) !important;stroke:var(--accent,#8B2E22);stroke-width:.1}#pages .chant-title{fill:var(--ink,#2A2218);font-family:"IM Fell English",Georgia,serif}.chbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tph,56px) + 10px);z-index:55;pointer-events:auto;display:flex;flex-direction:column;gap:6px;padding:8px 12px;border-radius:12px;border:1px solid var(--line,rgba(42,34,24,.18));background:color-mix(in srgb,var(--ground,#FAF5EA) 95%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 10px 28px -8px rgba(42,34,24,.36);max-width:calc(100vw - 24px);box-sizing:border-box}html.embedded .chbar{position:absolute;bottom:auto;top:var(--chTop,68px)}html.dark .chbar{background:rgba(34,28,21,.95);box-shadow:0 10px 28px -6px rgba(0,0,0,.65)}.chbar[hidden]{display:none !important}.chbar .chrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.chbar .chnote.chdim{opacity:.52}.chbar .chlab{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#6B5E4E);min-width:62px}.chbar input[type=text],.chbar select{height:30px;padding:0 8px;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;background:var(--surface,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:13.5px;box-sizing:border-box}.chbar #chTitle{width:118px}.chbar #chSyl{width:136px}.chbar .chsep{width:1px;height:20px;background:var(--line,rgba(42,34,24,.18));margin:0 2px}.chbar .chseg{display:inline-flex;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;overflow:hidden}.chbar .chseg .chbtn{border:none;border-radius:0}.chbar .chbtn{display:inline-flex;align-items:center;justify-content:center;height:30px;min-width:30px;padding:0 9px;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;background:var(--surface,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:13.5px;line-height:1;cursor:pointer;white-space:nowrap}.chbar .chbtn:hover:not(:disabled){background:color-mix(in srgb,var(--accent,#8B2E22) 10%,var(--surface,#FFFDF8))}.chbar .chbtn[aria-pressed="true"],.chbar .chbtn.chprimary{background:var(--accent,#8B2E22);color:#FAF5EA;border-color:var(--accent,#8B2E22)}.chbar .chbtn.chdanger:hover:not(:disabled){background:#A12C1C;color:#FAF5EA;border-color:#A12C1C}.chbar .chbtn:disabled{opacity:.38;cursor:default}@media print{#chantBar{display:none !important}}</style>');
 $('#keepBtn').addEventListener('click', () => {
   if (!piece) return;
   closePops();
@@ -9440,9 +9575,9 @@ $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
   let touchMode = !!(window.matchMedia && matchMedia('(hover:none)').matches);
   const wide = () => window.innerWidth > 700;
   const hold = () => {
-    if (!$('#handPop').hidden || document.querySelector('.pop.open, .pop:hover') || document.querySelector('.pop:has(:focus-visible)') || !libEl.hidden || !$('#tpSide').hidden) return true;
+    if (!$('#handPop').hidden || document.querySelector('.pop.open, .pop:hover') || document.querySelector('.pop:has(:focus-visible)') || !libEl.hidden || !$('#tpSide').hidden || ($('#chantBar') && !$('#chantBar').hidden)) return true;
     const a = document.activeElement;
-    return !!(a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && a.closest('.tools,.transport'));
+    return !!(a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && a.closest('.tools,.transport,#chantBar'));
   };
   const apply = (t, b) => {
     if (t === topOn && b === botOn) return;
@@ -9490,12 +9625,14 @@ $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
     root.style.setProperty('--tpTop', Math.round(top) + 'px');
     const sp = $('#tpSide'), sh = sp && !sp.hidden ? sp.offsetHeight : 0;
     root.style.setProperty('--spTop', Math.max(0, Math.round(top - sh - 8)) + 'px');
+    const cb = $('#chantBar'), cbh = cb && !cb.hidden ? cb.offsetHeight : 0;
+    root.style.setProperty('--chTop', Math.max(62, Math.round(top - cbh - 10)) + 'px');
   };
   window.addEventListener('message', e => {
     const d = e.data && e.data.scriptoriumDock; if (!d || typeof d.top !== 'number') return;
     DOCK = {top: d.top, vh: d.vh, pageTop: typeof d.pageTop === 'number' ? d.pageTop : d.top}; place(); sizeViewer();
   });
-  if (window.ResizeObserver) { new ResizeObserver(place).observe(tp); new ResizeObserver(place).observe($('#tpSide')); }
+  if (window.ResizeObserver) { new ResizeObserver(place).observe(tp); new ResizeObserver(place).observe($('#tpSide')); if ($('#chantBar')) new ResizeObserver(place).observe($('#chantBar')); }
   $('#toggleSet').addEventListener('click', () => setTimeout(place, 0));
   window.addEventListener('resize', place);
   place();
