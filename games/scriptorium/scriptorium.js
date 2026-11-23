@@ -6092,7 +6092,7 @@ function insertEvent(vi, at, step, isRest, pad = 0, alt){
   const d = mensRulesOn() ? rt(nomD(v, t, ed.val) * (ed.colArm ? 2 / 3 : 1) * (dotted ? 1.5 : 1)) : rt(val / propAt(v, t) * (ed.colArm ? 2 / 3 : 1) * (dotted ? 1.5 : 1));
   commit(() => {
     const e = {d, rest: !!isRest, step, alt: alt0, ed: edAcc, syl: [], t};
-    if (!isRest && ed.colArm) e.colH = true;
+    if (!isRest && ed.colArm) { e.colH = true; if (dotted) e.cdot = true; }   /* black and dotted: the dot stays, and it sounds two thirds of the dotted value */
     if (divDot || perfAdd) { if (divDot) e.dd = true; else e.pa = true; if (!mensRulesOn()) { const mi = mensInfo(metAt(v, t)); e.d = rt(nomW(ed.val, mi.T, mi.P, mi.M, mi.X) / mi.p); } }
     /* past the end: a rest up to the place clicked */
     if (pad > EPS && at >= v.events.length) { v.events.push({d: rt(pad), rest: true, alt: null, ed: false, syl: [], t: v.end}); at = v.events.length; }
