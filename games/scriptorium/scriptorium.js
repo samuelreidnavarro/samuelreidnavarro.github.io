@@ -7955,7 +7955,7 @@ const CBA = {
       const total = s.src.reduce((a, i) => a + v.events[i].d, 0);
       if (on) {
         /* a dotted note made black keeps its dot: black and dotted, sounding two thirds of the dotted value */
-        e.cdot = !!((s.dot || e.dots > 0) && !e.dd && !e.pa && s.src.length === 1);
+        e.cdot = !!(s.dot && !e.dd && !e.pa && s.src.length === 1);
         e.d = rt(total * 2 / 3); e.colH = true;
       } else if (e.cdot) {
         e.colH = false; e.cdot = false; e.d = rt(total * 1.5);
@@ -7971,7 +7971,8 @@ const CBA = {
     });
     if (st.nota === 'real') {
       const q = symAt(v.idx, first);
-      if (!q || !!q.col !== on || q.tieNext || (q.dot && !(on ? v.events[first].cdot : hadCdot))) { undo(); ed.redo.pop(); syncEdit(); toast(on ? 'This note cannot be coloured here.' : 'This note cannot be made white here.'); }
+      const fresh = piece.voices[v.idx] && piece.voices[v.idx].events[first];   /* the voices are made again by the change: look at the new ones */
+      if (!q || !!q.col !== on || q.tieNext || (q.dot && !(on ? fresh && fresh.cdot : hadCdot))) { undo(); ed.redo.pop(); syncEdit(); toast(on ? 'This note cannot be coloured here.' : 'This note cannot be made white here.'); }
     }
   },
   /* ligature: a note joins the ligature just before it, or starts one with the next note; on a note already in a

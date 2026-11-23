@@ -49,7 +49,7 @@
       (function () {
         var f = document.getElementById("rc");
         var q = location.search ? location.search.slice(1) + "&" : "";
-        f.src = "games/redix-contrapunctus.html?" + q + "v=51" + location.hash;
+        f.src = "games/redix-contrapunctus.html?" + q + "v=53" + location.hash;
         var full = false, lastH = 0;
         function setH() { if (full) return; var r = f.getBoundingClientRect(); f.style.height = Math.max(lastH, Math.ceil(window.innerHeight - (r.top + window.scrollY))) + "px"; dock(); }
         window.addEventListener("resize", function () { setH(); });
