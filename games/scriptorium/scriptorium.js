@@ -6623,23 +6623,35 @@ function drawEditGrid(){
     const rx1 = +ref.getAttribute('x') + +ref.getAttribute('width');
     const {tMin, tb, xb, g, sw, xOf} = M;
     let out = '';
-    const one = (x, major, tail) => {
-      out += `<line class="eg-tick${tail ? ' tail' : ''}${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(yTop - (major ? 1.05 : 0.72))}" y2="${f(yTop - 0.18)}"/>`;
-      out += `<line class="eg-line${tail ? ' tail' : ''}${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(yTop)}" y2="${f(yBot)}"/>`;
+    const one = (x, major, tail, T) => {
+      out += `<line data-t="${T}" class="eg-tick${tail ? ' tail' : ''}${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(yTop - (major ? 1.05 : 0.72))}" y2="${f(yTop - 0.18)}"/>`;
+      out += `<line data-t="${T}" class="eg-line${tail ? ' tail' : ''}${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(yTop)}" y2="${f(yBot)}"/>`;
     };
-    /* 1. Grid across the existing music of the system (exact caret positions), through every staff */
+    /* 1. Grid across the existing music of the system (exact caret positions), through every staff.
+       A long note takes little room on the page, so a fine grid would be packed into it: lines that would stand closer than
+       a notehead are left out. Always kept: the lines where a note of any voice begins, then the whole beats, then the rest. */
     const stepCount = Math.min(180, Math.floor((tb - tMin) / g) + 1);
     const stepInc = stepCount >= 180 ? g * Math.ceil(((tb - tMin) / g) / 140) : g;
     let t0 = Math.ceil((tMin - EPS) / stepInc) * stepInc;
     if (t0 < tMin - EPS) t0 += stepInc;
-    for (let T = t0; T <= tb + EPS; T = rt(T + stepInc)) one(xOf(T), Math.abs(T - Math.round(T)) < 1e-3, false);
+    const onsets = M.pts.slice(0, -1).map(q => q[0]);   /* where a note begins (the last point is only the end of the last note) */
+    const cand = [];
+    for (let T = t0; T <= tb + EPS; T = rt(T + stepInc)) cand.push({T, x: xOf(T), major: Math.abs(T - Math.round(T)) < 1e-3, onset: onsets.some(o => Math.abs(o - T) < EPS)});
+    const MINGAP = 1.3;
+    const kept = cand.filter(c => c.onset);
+    for (const pass of [true, false]) for (const c of cand) if (!c.onset && c.major === pass && kept.every(k => Math.abs(k.x - c.x) >= MINGAP)) kept.push(c);
+    kept.sort((a, b) => a.T - b.T);
+    /* two lines on the very same spot (two notes the page puts in one column) are drawn once */
+    const drawn = [];
+    for (const c of kept) { const last = drawn[drawn.length - 1]; if (last && Math.abs(last.x - c.x) < 0.15) { if (c.major && !last.major) drawn[drawn.length - 1] = c; } else drawn.push(c); }
+    drawn.forEach(c => one(c.x, c.major, false, c.T));
     /* 2. Tail grid past the end of the music */
     if (rx1 > xb + 0.6) {
       for (let s = 1; s <= 40; s++) {
         const x = xb + s * sw;
         if (x > rx1 - 0.5) break;
         const T = rt(tb + s * g);
-        one(x, Math.abs(T - Math.round(T)) < 1e-3, true);
+        one(x, Math.abs(T - Math.round(T)) < 1e-3, true, T);
       }
     }
     if (!out) return;
