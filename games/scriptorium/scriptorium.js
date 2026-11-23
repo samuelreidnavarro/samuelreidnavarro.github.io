@@ -52,6 +52,7 @@ ${APP.popsBeforeVoices || ''}
           <div class="subhead">Spacing</div>
           <label class="ctl" for="hs">Horizontal spacing</label><div class="rng-wrap" data-for="hs"><input type="range" id="hs" min="-0.4" max="1.2" step="0.01"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
           <label class="ctl" for="vs">Vertical spacing</label><div class="rng-wrap" data-for="vs"><input type="range" id="vs" min="0" max="2" step="0.02"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
+          <span class="lab">Even spacing while writing</span><div class="btns" id="evenSeg" role="group" aria-label="Even spacing while writing"><button class="tb" data-v="on" title="In Note input every note takes room in proportion to its length, so the grid is evenly spaced and every click has a place">On</button><button class="tb" data-v="off" title="The music keeps its printed spacing in Note input; the grid follows it, unevenly">Off</button></div>
           <span class="lab">Equal staff distances</span><div class="btns" id="eqSeg" role="group" aria-label="Equal staff distances"><button class="tb" data-v="on" title="All staves of a system the same distance apart">On</button><button class="tb" data-v="off" title="Each staff as close to the one above as its notes, stems and words allow">Off</button></div>
           <label class="ctl" for="ss">Space between systems</label><div class="rng-wrap" data-for="ss"><input type="range" id="ss" min="0" max="3" step="0.05"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
         </div></div>
@@ -1268,7 +1269,7 @@ const KEY = APP.store + ':v1';
 const st = {
   inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', noteCol: 'black', colLock: 'off', dashes: 'on', ed: 'on', heads: 'modern', stems: 'adaptive', accStyle: 'modern', origText: 'modern', ann: 'on', ossia: 'on',
   size: 1.75, noteSize: 1.75, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, printPaper: 'A4', bounds: {}, staves: {},
-  hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
+  evenWrite: 'on', hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
   ...(APP.defaults || {})
 };
 const HAD_SAVED = !!localStorage.getItem(KEY);
@@ -1641,7 +1642,12 @@ function mensW(sign){
 /* Horizontal layout                                                   */
 /* ------------------------------------------------------------------ */
 /* horizontal spacing: at 0 the notes stand as close as they can without touching; the slider adds room by duration */
-const spring = d => Math.max(0.02, 0.05 + 0.25 * Math.min(1, st.hs) + (0.8 + 2.3 * Math.pow(Math.max(d, 0.05), 0.6)) * st.hs);
+const evenOn = () => ed.on && st.evenWrite !== 'off';
+/* the room a note takes after it. As printed it grows slowly with the note's length; while writing (Even spacing on) it grows in
+   proportion to it, so that the grid, whatever its size, stands in evenly spaced lines. */
+const spring = d => evenOn()
+  ? Math.max(0.02, 0.05 + 0.25 * Math.min(1, st.hs) + (0.15 + 3.4 * Math.max(d, 0.05)) * st.hs)
+  : Math.max(0.02, 0.05 + 0.25 * Math.min(1, st.hs) + (0.8 + 2.3 * Math.pow(Math.max(d, 0.05), 0.6)) * st.hs);
 
 /* columns for a set of voices over [a, b) */
 function columns(vlist, a, b, withLyrics){
@@ -3983,7 +3989,7 @@ function segInit(id, key, after){
 function syncUI(){
   try { sendList(); } catch (e) {}
   if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
-  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#stemSeg': 'stems', '#accSeg': 'accStyle', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#bposSeg': 'bpos'};
+  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#stemSeg': 'stems', '#accSeg': 'accStyle', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#evenSeg': 'evenWrite', '#bposSeg': 'bpos'};
   $('#bnumSel').value = st.bnum || 'off'; $('#bunitSel').value = st.bunit || 'bar';
   $('#lyrFontSel').value = st.lyrFont || 'fell';
   if ($('#lyrPt') && document.activeElement !== $('#lyrPt')) $('#lyrPt').value = String(+(+st.lyrPt || 8.5).toFixed(2));
@@ -4164,7 +4170,7 @@ segInit('#eqSeg', 'eq'); segInit('#viewList', 'view'); $('#notaSeg').addEventLis
 $('#paperSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.printPaper = b.dataset.v; if (st.paper !== 'web') st.paper = b.dataset.v; save(); syncUI(); render(); });
 $('#toPage').addEventListener('click', () => { const b = $('#dispSeg').querySelector('button[data-v="page"]'); if (b) b.click(); });
 $('#dispSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.v === 'web') { if (st.paper !== 'web') st.printPaper = st.paper; st.paper = 'web'; } else { st.paper = st.printPaper || 'A4'; } save(); syncUI(); render(); });
-segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); });
+segInit('#evenSeg', 'evenWrite'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); });
 $('#staffSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.staff = b.dataset.v; if (st.colLock !== 'off') st.noteCol = st.staff; save(); syncUI(); render(); });
 $('#staffPick').addEventListener('input', e => { st.staff = e.target.value; if (st.colLock !== 'off') st.noteCol = st.staff; save(); syncUI(); });
 $('#noteColSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.noteCol = b.dataset.v; if (st.colLock !== 'off') st.staff = st.noteCol; save(); syncUI(); render(); });
@@ -6567,7 +6573,7 @@ function staffGridMap(rect, v){
   }
   const [tb, xb] = pts[pts.length - 1];
   const g = navGrid(v, Math.min(tb, v.end));
-  const sw = slotW();
+  const sw = evenOn() ? Math.max(spring(g), gw(navVal()) + 0.9) : slotW();   /* one grid step past the last note: as much room as a note of that length takes */
   const xOf = T => {
     if (T <= pts[0][0] + EPS) return pts[0][1];
     for (let i = 0; i + 1 < pts.length; i++) {
@@ -6589,17 +6595,64 @@ function staffGridMap(rect, v){
 }
 window.__staffGridMap = staffGridMap;
 window.__notate = (pc, v, mode) => notate(pc, v, mode || 'real');   /* for checking the notation from outside */   /* for checking the grid from outside */
+/* The grid of one system, as one list of lines: where a note of the Grid selector's size can be written, in every voice of the system.
+   The same list is drawn, and is what a click or the pointer snaps to, so every click has a place and the place is a line you can see. */
+function systemOf(rect){
+  return [rect, ...[...rect.parentNode.querySelectorAll('rect.stafhit')].filter(r => r !== rect && r.dataset.tx === rect.dataset.tx && r.getAttribute('x') === rect.getAttribute('x') && r.getAttribute('width') === rect.getAttribute('width'))];
+}
+function gridOfSystem(rect){
+  if (!piece) return null;
+  const all = [...rect.parentNode.querySelectorAll('rect.stafhit')];
+  const group = systemOf(rect).sort((p, q) => all.indexOf(p) - all.indexOf(q));
+  const curVi = ed.sel ? ed.sel.vi : ed.ins ? ed.ins.vi : -1;
+  const ref = group.find(r => +r.dataset.v === curVi) || group[0];
+  const v = piece.voices[+ref.dataset.v];
+  if (!v) return null;
+  const M = staffGridMap(ref, v.subOf >= 0 ? piece.voices[v.subOf] : v);
+  if (!M || !(M.g > 0)) return null;
+  const {tMin, tb, xb, g, sw, xOf} = M;
+  const rx1 = +ref.getAttribute('x') + +ref.getAttribute('width');
+  const lines = [];
+  const major = T => Math.abs(T - Math.round(T)) < 1e-3;
+  /* across the music of the system: every step of the grid */
+  const stepCount = Math.min(400, Math.floor((tb - tMin) / g) + 1);
+  const stepInc = stepCount >= 400 ? g * Math.ceil(((tb - tMin) / g) / 380) : g;
+  let t0 = Math.ceil((tMin - EPS) / stepInc) * stepInc;
+  if (t0 < tMin - EPS) t0 += stepInc;
+  for (let T = t0; T <= tb + EPS; T = rt(T + stepInc)) lines.push({T, x: xOf(T), major: major(T), tail: false});
+  /* past the end of the music: one line a step, to the end of the staff */
+  if (rx1 > xb + 0.6) for (let k = 1; k <= 60; k++) {
+    const x = xb + k * sw;
+    if (x > rx1 - 0.5) break;
+    const T = rt(tb + k * g);
+    lines.push({T, x, major: major(T), tail: true});
+  }
+  /* the last notes of the line, held on to the next one, have almost no room on this line: only the lines that still stand a notehead
+     apart are drawn inside them (the rest of the grid is whole) */
+  const lastOn = Math.max(...M.pts.slice(0, -1).map(q => q[0]));
+  const spans = lines.filter(L => !L.tail && L.T > lastOn + EPS);
+  let lastX = lines.filter(L => !L.tail && L.T <= lastOn + EPS).reduce((m, L) => Math.max(m, L.x), -Infinity);
+  for (const L of spans) { if (L.x - lastX >= 0.9) lastX = L.x; else L.hide = true; }
+  for (let i = lines.length - 1; i >= 0; i--) if (lines[i].hide) lines.splice(i, 1);
+  /* two lines on the very same spot (two notes the page puts in one column) are one */
+  const one = [];
+  for (const L of lines) { const last = one[one.length - 1]; if (last && Math.abs(last.x - L.x) < 0.15) { if (L.major && !last.major) one[one.length - 1] = L; } else one.push(L); }
+  one.forEach((L, i) => { const gap = Math.min(i ? L.x - one[i - 1].x : 99, i + 1 < one.length ? one[i + 1].x - L.x : 99); L.crowd = gap < 0.9; });
+  const tops = group.map(r => +r.dataset.top);
+  return {lines: one, M, group, ref, yTop: Math.min(...tops), yBot: Math.max(...tops) + 4};
+}
 function timePlace(rect, tg){
-  const v = tg.v, M = staffGridMap(rect, v.subOf >= 0 ? piece.voices[v.subOf] : v);
-  if (!M) return null;
-  let T = M.tOf(tg.x);
-  const g = navGrid(v, Math.min(T, v.end));
-  T = rt(Math.max(0, Math.round(T / g) * g));
+  const v = tg.v, G = gridOfSystem(rect);
+  if (!G) return null;
+  /* the nearest line you can see */
+  let best = G.lines[0], bd = Infinity;
+  for (const L of G.lines) { const d = Math.abs(L.x - tg.x); if (d < bd) { bd = d; best = L; } }
+  const T = rt(Math.max(0, best.T));
   /* over rests or past the end; in Overwrite also over a note, on the grid, inside it too (the note is cut, see insertEvent) */
   const ei = v.events.findIndex(e => T >= e.t - EPS && T < e.t + e.d - EPS);
   if (ei >= 0 && !v.events[ei].rest && !ed.ovr) return null;
   if (ei < 0 && T < v.end - EPS) return null;
-  return {T, ei, x: M.xOf(T)};
+  return {T, ei, x: best.x};
 }
 let ghostEl = null;
 function clearGhost(){ if (ghostEl) { ghostEl.remove(); ghostEl = null; } }
@@ -6610,51 +6663,15 @@ function drawEditGrid(){
   const done = new Set();
   pagesEl.querySelectorAll('rect.stafhit').forEach(rect => {
     if (done.has(rect)) return;
-    /* the staves of one system: the same line of the page, the same columns of time */
-    const group = [rect, ...[...rect.parentNode.querySelectorAll('rect.stafhit')].filter(r => r !== rect && r.dataset.tx === rect.dataset.tx && r.getAttribute('x') === rect.getAttribute('x') && r.getAttribute('width') === rect.getAttribute('width'))];
-    group.forEach(r => done.add(r));
-    /* its grid is that of the voice being written in, or else the first one */
-    const curVi = ed.sel ? ed.sel.vi : ed.ins ? ed.ins.vi : -1;
-    const ref = group.find(r => +r.dataset.v === curVi) || rect;
-    const v = piece.voices[+ref.dataset.v];
-    if (!v) return;
-    const M = staffGridMap(ref, v);
-    if (!M || !(M.g > 0)) return;
-    const tops = group.map(r => +r.dataset.top);
-    const yTop = Math.min(...tops), yBot = Math.max(...tops) + 4;
-    const rx1 = +ref.getAttribute('x') + +ref.getAttribute('width');
-    const {tMin, tb, xb, g, sw, xOf} = M;
+    const G = gridOfSystem(rect);
+    systemOf(rect).forEach(r => done.add(r));
+    if (!G) return;
+    const {lines, yTop, yBot, group} = G;
     let out = '';
-    const one = (x, major, tail, T) => {
-      out += `<line data-t="${T}" class="eg-tick${tail ? ' tail' : ''}${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(yTop - (major ? 1.05 : 0.72))}" y2="${f(yTop - 0.18)}"/>`;
-      out += `<line data-t="${T}" class="eg-line${tail ? ' tail' : ''}${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(yTop)}" y2="${f(yBot)}"/>`;
-    };
-    /* 1. Grid across the existing music of the system (exact caret positions), through every staff.
-       A long note takes little room on the page, so a fine grid would be packed into it: lines that would stand closer than
-       a notehead are left out. Always kept: the lines where a note of any voice begins, then the whole beats, then the rest. */
-    const stepCount = Math.min(180, Math.floor((tb - tMin) / g) + 1);
-    const stepInc = stepCount >= 180 ? g * Math.ceil(((tb - tMin) / g) / 140) : g;
-    let t0 = Math.ceil((tMin - EPS) / stepInc) * stepInc;
-    if (t0 < tMin - EPS) t0 += stepInc;
-    const onsets = M.pts.slice(0, -1).map(q => q[0]);   /* where a note begins (the last point is only the end of the last note) */
-    const cand = [];
-    for (let T = t0; T <= tb + EPS; T = rt(T + stepInc)) cand.push({T, x: xOf(T), major: Math.abs(T - Math.round(T)) < 1e-3, onset: onsets.some(o => Math.abs(o - T) < EPS)});
-    const MINGAP = 0.9;
-    const kept = cand.filter(c => c.onset);
-    for (const pass of [true, false]) for (const c of cand) if (!c.onset && c.major === pass && kept.every(k => Math.abs(k.x - c.x) >= MINGAP)) kept.push(c);
-    kept.sort((a, b) => a.T - b.T);
-    /* two lines on the very same spot (two notes the page puts in one column) are drawn once */
-    const drawn = [];
-    for (const c of kept) { const last = drawn[drawn.length - 1]; if (last && Math.abs(last.x - c.x) < 0.15) { if (c.major && !last.major) drawn[drawn.length - 1] = c; } else drawn.push(c); }
-    drawn.forEach(c => one(c.x, c.major, false, c.T));
-    /* 2. Tail grid past the end of the music */
-    if (rx1 > xb + 0.6) {
-      for (let s = 1; s <= 40; s++) {
-        const x = xb + s * sw;
-        if (x > rx1 - 0.5) break;
-        const T = rt(tb + s * g);
-        one(x, Math.abs(T - Math.round(T)) < 1e-3, true, T);
-      }
+    for (const L of lines) {
+      const cls = (L.tail ? ' tail' : '') + (L.major ? ' maj' : '') + (L.crowd ? ' crowd' : '');
+      out += `<line data-t="${L.T}" class="eg-tick${cls}" x1="${f(L.x)}" x2="${f(L.x)}" y1="${f(yTop - (L.major ? 1.05 : 0.72))}" y2="${f(yTop - 0.18)}"/>`;
+      out += `<line data-t="${L.T}" class="eg-line${cls}" x1="${f(L.x)}" x2="${f(L.x)}" y1="${f(yTop)}" y2="${f(yBot)}"/>`;
     }
     if (!out) return;
     const grp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -8294,7 +8311,9 @@ function drawCaret(scroll){
     else if (at <= last) x = mid(at);
     else x = after(last);
     if (x === null || isNaN(x)) return;
-    if (pad) { const M = staffGridMap(r, v); x = M ? M.xOf(rt(T + pad)) : x + pad * 2.4; }
+    /* the caret takes its place from the same map as the grid lines and the pointer, so it stands exactly on a line wherever it is on the grid */
+    const M = staffGridMap(r, v);
+    if (M) x = M.xOf(rt(T + pad)); else if (pad) x = x + pad * 2.4;
     const c = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     c.setAttribute('class', 'caret');
     c.innerHTML = `<rect x="${f(x - 0.075)}" y="${f(top - 0.9)}" width="0.15" height="5.5"/>` +
