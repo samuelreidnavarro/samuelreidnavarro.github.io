@@ -574,6 +574,15 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 #clefPick{position:absolute;z-index:25;min-width:220px}
 #clefPick[hidden]{display:none}
 #clefPick li{padding:6px 12px}
+/* right-click on a note: Rest, and the note's appearance (for the eye only) */
+#notePick{position:absolute;z-index:25;min-width:170px}
+#notePick[hidden]{display:none}
+#notePick li{padding:2px 12px 2px 4px}
+#notePick li.sep{height:1px;padding:0;margin:4px 6px;background:var(--line);cursor:default}
+#notePick li.hd{cursor:default;font-size:13px;opacity:.7;padding:2px 8px;background:none}
+#notePick .lookico{width:26px;height:26px;display:inline-flex;flex:none}
+#notePick .lookico svg{width:26px;height:26px}
+#notePick .lookico.red svg{fill:#A12C1C}
 /* writing with the mouse: the note that a click would write */
 #pages .ghost{opacity:.55;pointer-events:none}
 #pages .ghost use{fill:var(--accent);color:var(--accent)}
@@ -621,7 +630,7 @@ body.editing #pages .stafhit{cursor:crosshair}
 @media print{
   html,body{background:#fff !important;overflow:visible !important;height:auto !important}
   .wrap{padding:0 !important}
-  header.top,.tools,.transport,.pnum,.msg,.handbox,.handpop,.pendbox,.fsbtn,.fsctl,#countBox,.pagenav,#toast,#clefPick,.markbar,.srcnote{display:none !important}
+  header.top,.tools,.transport,.pnum,.msg,.handbox,.handpop,.pendbox,.fsbtn,.fsctl,#countBox,.pagenav,#toast,#clefPick,#notePick,.markbar,.srcnote{display:none !important}
   .viewer{height:auto !important;width:auto !important;overflow:visible !important;padding:0 !important;background:none !important;box-shadow:none !important}
   #pages{display:block !important;gap:0;width:auto !important}
   .opening{display:block}

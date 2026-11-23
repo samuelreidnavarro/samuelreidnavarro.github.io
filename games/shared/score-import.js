@@ -678,7 +678,17 @@
         const evs = [];
         const walk = list => { for (const e of list) {
           const tag = e.localName;
-          if (tag === 'MultiEvent') { walk([...e.children]); continue; }
+          /* notes together in one voice: the main one only (the longest uncoloured), so the voice keeps its time;
+             the engine's own CMME reader keeps the others as a chord */
+          if (tag === 'MultiEvent') {
+            const kids = [...e.children], notes = kids.filter(c => c.localName === 'Note');
+            if (notes.length > 1) {
+              const plain = notes.filter(q => !c1(q, 'Colored')), pool = plain.length ? plain : notes;
+              const main = pool.reduce((a, q) => len(q) > len(a) ? q : a, pool[0]);
+              walk(kids.filter(c => c.localName !== 'Note' || c === main));
+            } else walk(kids);
+            continue;
+          }
           /* passages that differ between sources: read the edition's own (default) reading */
           if (tag === 'VariantReadings') {
             const rd = ch(e, 'Reading').find(r => ch(r, 'VariantVersionID').some(x => x.textContent.trim() === 'DEFAULT'));
