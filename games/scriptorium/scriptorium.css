@@ -1325,3 +1325,25 @@ html.dark .rng-val,html.dark .crit-cat{color:#E8A090}
 html.dark a{color:#E8A090}
 html.dark .rdx-btn.light{color:#E8A090;border-color:#E8A090}
 html.dark .rdx-btn.light:hover:not(:disabled){color:#F2B5A6}
+
+/* Export: the quick things on top, Open in, then the files by their extension */
+#exportList.expbody{display:flex;flex-direction:column;gap:8px;min-width:21em;max-width:min(26em,calc(100vw - 24px));align-items:stretch}
+#exportList .expmain{display:flex;gap:6px}
+#exportList .expmain .tb{flex:1 1 auto;white-space:nowrap}
+#exportList .exph{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:4px 2px 0}
+#exportList #sendList{display:flex;flex-direction:column;gap:4px}
+#exportList #sendList .tb{justify-content:flex-start;text-align:left}
+#exportList .sendapp{display:flex;justify-content:space-between !important;align-items:center;gap:10px}
+#exportList .sendsub{font-size:12.5px;color:var(--muted)}
+#exportList .sendvoices{display:flex;flex-wrap:wrap;gap:4px;padding:2px 0 4px 10px}
+#exportList .sendvoices[hidden]{display:none}
+#exportList .expfiles{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#exportList .expfiles .tb.xf{height:auto;min-height:46px;flex-direction:column;gap:1px;padding:5px 6px;line-height:1.15}
+#exportList .expfiles .tb.xf b{font-weight:600;font-size:16px}
+#exportList .expfiles .tb.xf i{font-style:normal;font-size:12px;color:var(--muted)}
+.helpfoot{display:flex;justify-content:flex-end;padding-top:6px;border-top:1px solid var(--line)}
+/* a menu of the top bar opens over the editing bar under it, not behind it */
+@media (min-width:701px){
+  .tools .bar.editbar{z-index:1}
+  .tools .bar:not(.editbar):has(.pop:hover,.pop.open,.pop.find-open,.pop:focus-within){z-index:6}
+}

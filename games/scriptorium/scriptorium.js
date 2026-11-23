@@ -120,7 +120,6 @@ ${APP.popsBeforeVoices || ''}
         <div class="popbody"><div class="btns col" id="readingList"></div></div>
       </div></div>
       <div class="grow">
-        <div class="podg"><button class="tb" id="ackBtn" aria-haspopup="dialog">Acknowledgments</button></div>
         <div class="podg"><div class="pop" id="popInfo">
           <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Info<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
           <div class="popbody"><div class="pagemeta infobox"><label class="lab" for="metaTitle">Title</label><input id="metaTitle" type="text" autocomplete="off"><label class="lab" for="metaComp">Composer</label><input id="metaComp" type="text" autocomplete="off"><label class="lab" for="metaEditor">Editor</label><input id="metaEditor" type="text" autocomplete="off" placeholder="Editor name"><label class="lab" for="metaSource">Source</label><input id="metaSource" type="text" autocomplete="off" placeholder="Manuscript / print"><label class="lab" for="metaLicence">Licence</label><input id="metaLicence" type="text" autocomplete="off" placeholder="e.g. CC BY 4.0"><label class="lab" for="metaNotes">Notes</label><textarea id="metaNotes" rows="2" placeholder="Editorial or public notes"></textarea><span class="lab">Origin</span><div id="infoSrc"></div></div></div>
@@ -136,20 +135,27 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
         <div class="podg">
           <div class="pop" id="popExport">
             <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Export<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
-            <div class="popbody"><div class="btns col" id="exportList">
-              <div class="btns duo"><button class="tb" id="saveBtn" title="Save this piece, with your changes, as a .krn file">Download .krn</button><button class="tb" id="cmmeBtn" title="Save this piece as CMME XML (.cmme.xml) with full mensural metadata and pass-through">Download CMME</button></div>
-              <div class="btns duo"><button class="tb" id="mxlBtn" title="MusicXML (.mxl), for MuseScore, Dorico, Sibelius, Finale: in modern notation">Download MXL</button><button class="tb" id="mscBtn" title="MuseScore (.mscz), in modern notation, one staff per voice, with the lyrics">Download MuseScore</button></div>
-              <div class="btns duo"><button class="tb" id="lyBtn" title="LilyPond (.ly), in modern notation: one staff per voice, with the lyrics">Download LilyPond</button><button class="tb" id="midBtn" title="MIDI (.mid), one track per voice, with the lyrics">Download MIDI</button></div>
-              <div class="btns duo"><button class="tb" id="gabcBtn" title="GABC (.gabc), chant for Gregorio: one voice, the one you are editing (else the top one), with its syllables">Download GABC</button><button class="tb" id="keepBtn" title="Keep a copy of this piece, with your changes, in ${esc(L.mine)}"${APP.keep === false ? ' hidden' : ''}>Save to ${esc(L.mine)}</button></div>
-              <div class="btns duo"><button class="tb" id="printBtn" title="A PDF of the whole score, at the paper size chosen in View (A3, A4, A5)">Download PDF</button><button class="tb" id="svgBtn" title="The page you see, as an SVG picture">Download SVG</button></div>
-              <div class="btns duo"><button class="tb" id="pngBtn" title="The page you see, as a PNG picture">Download PNG</button><button class="tb" id="linkBtn" title="A link that opens this score, with your changes, for anyone">Copy link</button></div>
+            <div class="popbody"><div class="btns col expbody" id="exportList">
+              <div class="expmain">
+                <button class="tb" id="linkBtn" title="A link that opens this score, with your changes, for anyone">Copy link</button>
+                <button class="tb" id="printBtn" title="A PDF of the whole score, at the paper size chosen in Layout (A3, A4, A5)">Download PDF</button>
+                <button class="tb" id="keepBtn" title="Keep a copy of this piece, with your changes, in ${esc(L.mine)}"${APP.keep === false ? ' hidden' : ''}>Save to ${esc(L.mine)}</button>
+              </div>
+              <div class="exph">Open in</div>
+              <div class="btns col" id="sendList"></div>
+              <div class="exph">Save as a file</div>
+              <div class="expfiles">
+                <button class="tb xf" id="saveBtn" title="Save this piece, with your changes, as a .krn file (Humdrum **kern)"><b>.krn</b><i>Humdrum</i></button>
+                <button class="tb xf" id="cmmeBtn" title="Save this piece as CMME XML (.cmme.xml) with full mensural metadata and pass-through"><b>.cmme.xml</b><i>CMME</i></button>
+                <button class="tb xf" id="mxlBtn" title="MusicXML (.mxl), for MuseScore, Dorico, Sibelius, Finale: in modern notation"><b>.mxl</b><i>MusicXML</i></button>
+                <button class="tb xf" id="mscBtn" title="MuseScore (.mscz), in modern notation, one staff per voice, with the lyrics"><b>.mscz</b><i>MuseScore</i></button>
+                <button class="tb xf" id="lyBtn" title="LilyPond (.ly), in modern notation: one staff per voice, with the lyrics"><b>.ly</b><i>LilyPond</i></button>
+                <button class="tb xf" id="midBtn" title="MIDI (.mid), one track per voice, with the lyrics"><b>.mid</b><i>MIDI</i></button>
+                <button class="tb xf" id="gabcBtn" title="GABC (.gabc), chant for Gregorio: one voice, the one you are editing (else the top one), with its syllables"><b>.gabc</b><i>Gregorio</i></button>
+                <button class="tb xf" id="svgBtn" title="The page you see, as an SVG picture"><b>.svg</b><i>Picture</i></button>
+                <button class="tb xf" id="pngBtn" title="The page you see, as a PNG picture"><b>.png</b><i>Picture</i></button>
+              </div>
             </div></div>
-          </div>
-        </div>
-        <div class="podg sendpod">
-          <div class="pop" id="popSend">
-            <button class="tb popbtn ib sendbtn" aria-haspopup="true" aria-expanded="false" aria-label="Open in another app" title="Open this score in another app"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3.5h6.5V10h-2V6.9l-6.8 6.8-1.4-1.4 6.8-6.8H14ZM4.5 6.5h7v2h-5v9h9v-5h2v7h-13Z"/></svg></button>
-            <div class="popbody"><div class="btns col" id="sendList"></div></div>
           </div>
         </div>
         <div class="podg" id="findHelpPod">
@@ -192,6 +198,7 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
       </div>
       <div class="helpcats" id="helpCats" role="tablist"></div>
       <div class="helplist" id="helpList"></div>
+      <div class="helpfoot"><button type="button" class="chbtn" id="ackBtn" aria-haspopup="dialog" title="Who made the apps, and what they are built on">Acknowledgments</button></div>
     </div>
   </div>
 
@@ -3967,6 +3974,7 @@ function segInit(id, key, after){
   });
 }
 function syncUI(){
+  try { sendList(); } catch (e) {}
   if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
   const segs = {'#viewList': 'view', '#headSeg': 'heads', '#stemSeg': 'stems', '#accSeg': 'accStyle', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#bposSeg': 'bpos'};
   $('#bnumSel').value = st.bnum || 'off'; $('#bunitSel').value = st.bunit || 'bar';
@@ -4014,7 +4022,6 @@ function syncUI(){
       const cb = (k, label) => `<td><input type="checkbox" data-i="${v.idx}" data-k="${k}" aria-label="${esc(v.name)}: ${label}"${s[k] ? ' checked' : ''}${(k === 'notes' || k === 'lyr') && !s.on ? ' disabled' : ''}></td>`;
       return `<tr data-i="${v.idx}"><td><span class="drag" data-i="${v.idx}" title="Drag to change the order" aria-hidden="true">⠿</span></td>` +
         `<td><input class="vname" data-i="${v.idx}" value="${esc(v.name)}" aria-label="Name of the voice" title="Click to rename"></td>${cb('on', 'shown')}${cb('notes', 'notes')}${cb('lyr', 'lyrics')}${playCell(v.idx, v.name)}` +
-        `<td><button class="vbtn vexp" data-op="cf" data-i="${v.idx}" title="Open in CantusFirmus" aria-label="Open ${esc(v.name)} in CantusFirmus"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3.5h6.5V10h-2V6.9l-6.8 6.8-1.4-1.4 6.8-6.8H14ZM4.5 6.5h7v2h-5v9h9v-5h2v7h-13Z"/></svg></button></td>` +
         `<td><button class="vbtn vdel" data-op="del" data-i="${v.idx}" aria-label="Remove ${esc(v.name)}" title="Remove this voice">×</button></td></tr>`;
     };
     const mainVoices = piece.voices.filter((v, i) => { v.idx = i; return !(v.subOf >= 0); });
@@ -4022,8 +4029,8 @@ function syncUI(){
     const grpN = mainVoices.length >= 2 ? staffGroups(visMain).length : 0;
     const isComb = mainVoices.length >= 2 && !!staffCfg() && grpN < visMain.length;
     const combBtn = mainVoices.length >= 2 ? ` <button data-op="combine" class="vcomb" title="Combine multiple voices onto shared staves (short score)">${isComb ? `Staves (${grpN})` : 'Combine on staves…'}</button>` : '';
-    $('#voiceTable').innerHTML = `<thead><tr><th></th><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th><th>Playback</th><th></th><th></th></tr></thead><tbody>` + mainVoices.map(v => row(v)).join('') +
-      `</tbody><tfoot><tr><td colspan="8"><div class="vfoot"><button data-op="add">+ New voice</button>${combBtn}</div></td></tr></tfoot>`;
+    $('#voiceTable').innerHTML = `<thead><tr><th></th><th></th><th>Shown</th><th>Notes</th><th>Lyrics</th><th>Playback</th><th></th></tr></thead><tbody>` + mainVoices.map(v => row(v)).join('') +
+      `</tbody><tfoot><tr><td colspan="7"><div class="vfoot"><button data-op="add">+ New voice</button>${combBtn}</div></td></tr></tfoot>`;
     if (!$('#staffCombine').hidden && typeof renderStaffCombine === 'function') { if (piece.voices.length < 2) openStaffCombine(false); else renderStaffCombine(); }
     }
     if (document.activeElement !== $('#metaTitle')) $('#metaTitle').value = (piece.meta.OTL || piece.title || '').replace(/\s*\.\.\.\s*/g, ' … ');
@@ -4477,7 +4484,10 @@ $('#newBtn').addEventListener('click', () => { (H.newScore || newScore)().catch(
 /* ---------------- between the apps: the square with the arrow opens the score (or one voice) in another one ---------------- */
 const APPS = [{id: 'choirbook', name: 'ChoirBook', page: 'choirbook.html', whole: true},
   {id: 'cantus-firmus', name: 'CantusFirmus', page: 'cantus-firmus.html', whole: false},
+  {id: 'redix-melodia', name: 'ReDiX Melodia', page: 'redix-melodia.html', whole: false},
+  {id: 'redix-contrapunctus', name: 'ReDiX Contrapunctus', page: 'redix-contrapunctus.html', whole: true},
   {id: 'canon', name: 'Canon Maker', page: 'canon-maker.html', whole: false}];
+/* Export > Open in: a score opens whole in an app that takes a whole score; an app that takes a melody asks which voice */
 function sendList(){
   const box = $('#sendList'); if (!box || !piece) return;
   let h = '';
@@ -4485,9 +4495,9 @@ function sendList(){
     if (a.id === APP.id) continue;
     /* Canon Maker is its own thing: nothing opens in it; what it makes can be opened in ChoirBook */
     if (a.id === 'canon' || (APP.id === 'canon' && a.id !== 'choirbook')) continue;
-    if (a.whole) { h += `<button class="tb" data-to="${a.id}">Open in ${esc(a.name)}</button>`; continue; }
-    h += `<div class="sendh">${a.id === 'canon' ? 'As the dux of a canon' : 'One voice in ' + esc(a.name)}</div>`;
-    h += piece.voices.map((v, i) => `<button class="tb" data-to="${a.id}" data-i="${i}" title="Open ${esc(v.name)} in ${esc(a.name)}">${esc(v.name)}</button>`).join('');
+    if (a.whole || piece.voices.length < 2) { h += `<button class="tb" data-to="${a.id}"${a.whole ? '' : ' data-i="0"'}>${esc(a.name)}</button>`; continue; }
+    h += `<button class="tb sendapp" data-app="${a.id}" data-keep aria-expanded="false" title="Open one voice in ${esc(a.name)}">${esc(a.name)}<span class="sendsub">one voice ▸</span></button>`;
+    h += `<div class="sendvoices" data-for="${a.id}" hidden>` + piece.voices.map((v, i) => `<button class="tb" data-to="${a.id}" data-i="${i}" title="Open ${esc(v.name)} in ${esc(a.name)}">${esc(v.name)}</button>`).join('') + '</div>';
   }
   box.innerHTML = h;
 }
@@ -4506,9 +4516,11 @@ function sendTo(to, i){
   stopPlay();
   goTo(a.page);
 }
-$('#popSend > button').addEventListener('click', sendList);
-$('#popSend').addEventListener('pointerenter', sendList);
+$('#popExport').addEventListener('pointerenter', sendList);
+$('#popExport > button').addEventListener('click', sendList);
 $('#sendList').addEventListener('click', e => {
+  const ap = e.target.closest('button[data-app]');
+  if (ap) { const row = $('#sendList').querySelector(`.sendvoices[data-for="${ap.dataset.app}"]`); if (row) { const on = row.hidden; $('#sendList').querySelectorAll('.sendvoices').forEach(r => { r.hidden = true; }); $('#sendList').querySelectorAll('.sendapp').forEach(r => r.setAttribute('aria-expanded', 'false')); row.hidden = !on; ap.setAttribute('aria-expanded', String(on)); } return; }
   const b = e.target.closest('button[data-to]'); if (!b) return;
   closePops();
   sendTo(b.dataset.to, b.dataset.i === undefined ? undefined : +b.dataset.i);
@@ -4706,7 +4718,7 @@ function shutPop(p){
   p.addEventListener('mouseleave', () => p.classList.remove('shut'), {once: true});
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 }
-document.querySelectorAll('#openList, #exportList, #sendList').forEach(l => l.addEventListener('click', e => { if (e.target.closest('button') && !e.target.closest('[data-keep]')) shutPop(l.closest('.pop')); }));
+document.querySelectorAll('#openList, #exportList').forEach(l => l.addEventListener('click', e => { if (e.target.closest('button') && !e.target.closest('[data-keep]')) shutPop(l.closest('.pop')); }));
 document.querySelectorAll('.pop > button:not(#mic):not(#recGo)').forEach(b => b.addEventListener('click', () => {
   if (canHover()) return;
   const p = b.parentNode, open = !p.classList.contains('open');
@@ -10011,16 +10023,26 @@ document.addEventListener('pointerdown', e => {
 
 /* ---------------- Help & Glossary (?) + Interactive Feature Finder (🔍 Spotlight) ---------------- */
 const HELP_ENTRIES = [
+  /* Getting started */
+  {id:'find', cat:'Getting started', title:'Find anything: the search bar', keys:'/ · ⌘K', tags:'find search command jump spotlight where is bar finder',
+   where:'Search icon (🔍) in the top bar', sel:'#findBtn',
+   desc:'Press / or ⌘K (Ctrl+K) and type what you want to do, in any words: brevis, flat, punctus ad, barlines, transpose up a tone, export pdf. The matching control lights up as you type. Use ↑ and ↓ to move between results and press Enter to do it: on a selected note, Enter changes the note; for a setting, it switches it; for a menu, it opens it. A small typing mistake, or letters in the wrong order, still finds it (bfevis finds Brevis).'},
+  {id:'first-score', cat:'Getting started', title:'Write your first score', keys:'N · A–G · 1–8 · 0 · R', tags:'start begin new score write notes first tutorial how',
+   where:'Open → New score, then the pen icon', sel:'#editBtn',
+   desc:'Open → New score. Press N (or the pen) for Note input, click a staff where the first note should go, then type pitch letters A–G. Keys 1–8 choose the note value (maxima to semifusa), zero (0) writes a rest, and R writes the last note again. - = and Q add a flat, sharp or natural, and . adds a dot. Escape leaves Note input; Space plays; ⌘Z takes a step back.'},
+  {id:'touch', cat:'Getting started', title:'On a touch screen or iPad', keys:'', tags:'touch tap ipad iphone pencil phone mobile long press hover',
+   where:'Everywhere', sel:'#editBtn',
+   desc:'Menus that open when the mouse hovers open with a tap instead, and close when you tap elsewhere. Long-press a note for what the right-click menu offers. The bars scroll sideways when the screen is too narrow, and the on-screen keyboard plays with several fingers at once.'},
   /* Note Input & Selection */
   {id:'note-input', cat:'Note Input', title:'Note input mode', keys:'N', tags:'pen edit write enter notes keyboard',
    where:'Top bar → Pen icon', sel:'#editBtn',
-   desc:'Turns Note Input on or off. When on, a vertical caret shows where new notes go: press A–G to write pitches, 1–8 for note values, 0 for rests, R to repeat the last note, or click directly on any staff. Press Escape to exit.'},
+   desc:'Turns Note Input on or off. When on, a vertical caret shows where new notes go: press A–G to write pitches, 1–8 for note values, zero (0) for rests, R to repeat the last note, or click directly on any staff. Press Escape to exit.'},
   {id:'note-values', cat:'Note Input', title:'Note values (Maxima – Semifusa)', keys:'1–8', tags:'duration rhythm maxima longa brevis semibrevis minima semiminima fusa semifusa',
    where:'Editing bar → Note value', sel:'#durSum', openEditBar:true,
    desc:'Choose the rhythmic value (Maxima 1, Longa 2, Brevis 3, Semibrevis 4, Minima 5, Semiminima 6, Fusa 7, Semifusa 8). With a note selected, changes its duration; otherwise sets the value of the next note entered.'},
   {id:'rests', cat:'Note Input', title:'Rests', keys:'0', tags:'rest silence pause pausa',
    where:'Editing bar → Rest button', sel:'#restBtn', openEditBar:true,
-   desc:'Toggles Rest entry mode (press 0 in Note input to insert a rest, or press 0 on a selected note to turn it into a rest). Rest shapes are rendered automatically according to mensural rules.'},
+   desc:'Toggles Rest entry mode (press zero (0) in Note input to insert a rest, or on a selected note to turn it into a rest). Rest shapes are rendered automatically according to mensural rules.'},
   {id:'overwrite-insert', cat:'Note Input', title:'Overwrite vs Insert mode', keys:'I', tags:'overwrite insert push shift timing voices',
    where:'Editing bar → Overwrite / Insert', sel:'#ovrBtn', openEditBar:true,
    desc:'In Overwrite mode, entering or resizing a note replaces what stands at that beat so all other voices stay aligned. In Insert mode, new notes push the following music forward. Works identically in both mensural and plainchant (GABC) editors.'},
@@ -10134,14 +10156,51 @@ const HELP_ENTRIES = [
   {id:'open-import', cat:'View & Files', title:'Open & Import (.krn, CMME, MXL, MuseScore, MEI, MIDI, GABC)', keys:'', tags:'open import file repertoire library cmme xml musicxml mscz mei midi lilypond gabc kern drag drop',
    where:'Top bar → Open', sel:'#popOpen .popbtn', openPop:'#popOpen',
    desc:'Browse the built-in Repertoire, create a New score, or open (or drag-and-drop) .krn, CMME XML (.cmme.xml), MusicXML (.mxl), MuseScore (.mscz), MEI, MIDI, LilyPond, or GABC files.'},
-  {id:'export', cat:'View & Files', title:'Export (CMME, .krn, MXL, MuseScore, LilyPond, MIDI, GABC, PDF, SVG, PNG)', keys:'', tags:'export download save print pdf svg png share link cmme kern musicxml mscz lilypond midi gabc',
+  {id:'export', cat:'Export & Share', title:'Export: link, PDF and files (.krn, .cmme.xml, .mxl, .mscz, .ly, .mid, .gabc, .svg, .png)', keys:'', tags:'export download save print pdf svg png share link copy cmme kern musicxml mscz lilypond midi gabc file',
    where:'Top bar → Export', sel:'#popExport .popbtn', openPop:'#popExport',
-   desc:'Export your score to Superset .krn, full CMME 0.95 XML, MusicXML, MuseScore, LilyPond, MIDI, GABC, printable PDF, SVG, PNG, or a shareable link.'},
+   desc:'At the top: Copy link (a link that opens this score with your changes), Download PDF (the whole score at the paper size chosen in Layout) and Save to My scores. Under Open in: the other apps. Under Save as a file: .krn (Humdrum), .cmme.xml (CMME, with the full mensural detail), .mxl (MusicXML, for Dorico, MuseScore, Sibelius), .mscz (MuseScore), .ly (LilyPond), .mid (MIDI), .gabc (Gregorio chant), and the page as a picture (.svg or .png).'},
+
+  /* Note input, more */
+  {id:'repeat', cat:'Note Input', title:'Repeat the note or selection', keys:'R', tags:'repeat again duplicate copy twice write again',
+   where:'Works anywhere on the score', sel:'#editBtn',
+   desc:'With a note or a passage selected, R writes it again right after itself, and the copy is selected so R repeats it once more. In Note input with nothing selected, R writes the note you just wrote again at the caret. What the copy lands on is overwritten, as with a paste.'},
+  {id:'clipboard', cat:'Note Input', title:'Copy, cut, paste and select all', keys:'⌘C · ⌘X · ⌘V · ⌘A', tags:'copy cut paste select all clipboard duplicate move passage',
+   where:'Works anywhere on the score', sel:'#editBtn',
+   desc:'Select a passage (Shift+click, or Shift+←/→), copy it with ⌘C, then select a note (or put the caret) where it should go and press ⌘V. ⌘X cuts, and ⌘A selects every note of every voice. A passage you copy in one app can be pasted in another.'},
+  {id:'undo', cat:'Note Input', title:'Undo and redo', keys:'⌘Z · ⇧⌘Z', tags:'undo redo step back mistake revert',
+   where:'Editing bar, left', sel:'#undo', openEditBar:true,
+   desc:'⌘Z takes back the last change, as many times as you like; ⇧⌘Z (or ⌘Y) does it again. Everything counts: notes, rests, dots, signs, clefs, transpositions, lyrics.'},
+  {id:'keyboard-moves', cat:'Note Input', title:'Move, lengthen and shorten notes', keys:'⌘←/→ · ⇧⌘←/→ · ⌘↑/↓', tags:'move shift later earlier longer shorter octave arrows lengthen',
+   where:'Works on a selected note', sel:'#editBtn',
+   desc:'With a note selected, ↑ and ↓ move it a step (⌘↑/↓ or Shift+↑/↓ an octave), ⌘←/→ moves it along the grid, and ⇧⌘→ / ⇧⌘← give it the next longer or shorter value (a minima becomes a dotted minima, then a semibrevis, and so on). Option works like ⌘ for all of these.'},
+  /* Sound & playback */
+  {id:'temperament', cat:'Sound & Playback', title:'Temperament and tuning', keys:'', tags:'temperament tuning pythagorean meantone just equal quarter comma key root a440 pitch',
+   where:'Sound → Temperament', sel:'#temperList', openSound:true,
+   desc:'Under Sound, choose Equal, Pythagorean, Meantone (¼ or ⅙ comma) or Just intonation, and the key it is centred on. The change is heard at once, even on notes that are sounding: hold a chord on a keyboard and click through the temperaments to hear it change. The pitch of a′ (440 Hz by default) is set next to Sound.'},
+  {id:'organ-sound', cat:'Sound & Playback', title:'Organ sounds and the Mixer', keys:'', tags:'sound organ registration stops mixer volume voice brightness room attack release drawbars',
+   where:'Sound (bottom bar, right)', sel:'#toggleSet',
+   desc:'Sound opens a panel above the bottom bar: the organ sound for all voices, a Mixer with a sound and a volume for each voice, the temperament, and the tone of the pipes (brightness, room, attack, release, drawbars for the synthesised organ). The panel closes when you click elsewhere or move the pointer away.'},
+  {id:'play-keys', cat:'Sound & Playback', title:'Playing on the computer keyboard, the screen and MIDI', keys:'A S D F G H J K L ;', tags:'piano keyboard midi play keys computer on-screen organ white black octave',
+   where:'Keyboard button (bottom bar)', sel:'#kbdBtn',
+   desc:'The keyboard button opens a piano above the bottom bar. On the computer keyboard A S D F G H J K L ; are the white keys and W E T Y U O P the black ones; Z and X change the octave, C and V move it by one key; Escape closes it. A MIDI keyboard that is plugged in plays too. In Note input the notes you play are written on the staff. The keys keep playing after you change a setting, but not while you type in a text box.'},
+  {id:'sing', cat:'Sound & Playback', title:'Singing into the microphone, and Record', keys:'', tags:'microphone mic sing record voice audio pitch notate latency',
+   where:'Bottom bar, left (microphone and record buttons)', sel:'#mic',
+   desc:'The microphone follows the pitch you sing and shows it on the staff. Record plays the music and writes down what you sing or play as staves of their own (Notate), or keeps your voice as an audio recording. The Latency setting lines the notes up with what you heard.'},
+  /* Export */
+  {id:'open-in', cat:'Export & Share', title:'Open in another app', keys:'', tags:'open in send cantus firmus redix melodia contrapunctus canon choirbook transfer app',
+   where:'Export → Open in', sel:'#popExport .popbtn', openPop:'#popExport',
+   desc:'The Export menu lists the other apps. Whole scores open in ChoirBook and ReDiX Contrapunctus; CantusFirmus and ReDiX Melodia take one voice, which you choose from the list. The score is passed on directly from this browser and is kept in the other app under My scores.'},
+  {id:'my-scores', cat:'Export & Share', title:'My scores: keeping your work', keys:'', tags:'save keep my scores browser storage recent local autosave',
+   where:'Export → Save to My scores; Open → My scores', sel:'#popExport .popbtn', openPop:'#popExport',
+   desc:'Your scores are kept in this browser, not on a server: Save to My scores keeps a copy, and Open → My scores brings it back. Clearing the browser’s data removes them, so download a file (.krn or .cmme.xml) of anything you want to keep for good.'},
+  {id:'acknowledgments', cat:'Getting started', title:'Acknowledgments', keys:'', tags:'acknowledgments acknowledgements credits thanks sources licence who made',
+   where:'Help (?) → Acknowledgments (bottom right of this window)', sel:'#helpBtn',
+   desc:'Who made the apps and the repertoire, which sources and tools they are built on, and the licences. It is at the bottom of this Help window.'},
 
   /* Shortcuts quick reference */
   {id:'shortcuts', cat:'Shortcuts', title:'Essential Keyboard Shortcuts', keys:'⌘K · ? · N · L · K · I · R · 0 · Space', tags:'shortcuts hotkeys keys keyboard cheat sheet reference',
    where:'Works anywhere on the score', sel:'#editBtn',
-   desc:'N: Note input · A–G: Enter pitch · 1–8: Value · R: Repeat the note or selection · 0: Rest · I: Overwrite/Insert · ↑/↓: Pitch step (Shift/⌘ octave) · Shift+Click / Shift+←→: Range select · L: Ligature (2+ notes) or Lyrics (1 note) · Shift+L: Original text · K: Coloration (Inclinatum in chant) · Shift+K: Cycle display colour · - / 0 / =: Flat/Natural/Sharp · . : Dot · Space: Play · ⌘Z: Undo · ⌘K or /: Find feature · ?: Help.'}
+   desc:'N: Note input · A–G: Enter pitch · 1–8: Value · R: Repeat the note or selection · zero (0): Rest · I: Overwrite/Insert · ↑/↓: Pitch step (Shift/⌘ octave) · Shift+Click / Shift+←→: Range select · L: Ligature (2+ notes) or Lyrics (1 note) · Shift+L: Original text · K: Coloration (Inclinatum in chant) · Shift+K: Cycle display colour · - / 0 / =: Flat/Natural/Sharp · . : Dot · Space: Play · ⌘Z: Undo · ⌘K or /: Find feature · ?: Help.'}
 ];
 
 let spotTimer = null;
@@ -10160,6 +10219,7 @@ function spotlightFeature(item){
     try { localStorage.setItem(APP.store + ':edbar', '1'); } catch (e) {}
     syncEdit(); postHeight();
   }
+  if (item.openSound) findSoundOpen();
   if (item.openChant) {
     const chants = piece ? ensureExt(piece).chants : [];
     if (chants.length) {
@@ -10351,6 +10411,7 @@ function findLabelOf(el){
   return el.getAttribute('aria-label') || (s ? findClean(s.textContent) : '') || findShortTitle(el.title);
 }
 function findBuild(){
+  try { sendList(); } catch (e) {}
   const cmds = [], seen = new Set(), claimed = new Set();
   const roots = '#findPop, #helpOv, .library, #recList, #critDrawer, #ackOv, #notePick, .floatcard, #spotTip';
   const push = c => { const key = c.path + '|' + c.name; if (seen.has(key)) return; seen.add(key); cmds.push(c); };
@@ -10363,6 +10424,10 @@ function findBuild(){
     const id = el.id || '';
     let pieces = el.tagName === 'INPUT' || el.tagName === 'SELECT' ? [] : findPieces(el);
     let name = FIND_NAME[id] || '', desc = '';
+    if (el.closest('#sendList')) {
+      const ap = APPS.find(x => x.id === (el.dataset.app || el.dataset.to)), vn = el.dataset.i !== undefined && piece && piece.voices[+el.dataset.i] ? piece.voices[+el.dataset.i].name : '';
+      if (ap) name = el.dataset.app ? 'Open one voice in ' + ap.name : vn && ap.whole === false && piece.voices.length > 1 ? 'Open ' + vn + ' in ' + ap.name : 'Open in ' + ap.name;
+    }
     if (!name) {
       if (el.tagName === 'INPUT' || el.tagName === 'SELECT') name = findLabelOf(el);
       else if (pieces[0] && /[a-zA-Z]{2}/.test(pieces[0]) && pieces[0].length <= 40) { name = pieces[0]; desc = pieces.slice(1).join(' '); }
@@ -10418,6 +10483,12 @@ function findBuild(){
       push(c);
     }
   });
+  /* a few things that are not buttons of the bars */
+  [{name: 'Acknowledgments', path: 'Help', alias: 'credits thanks sources licence acknowledgements', hint: 'Who made the apps, and what they are built on', run: () => { const b = $('#ackBtn'); if (b) b.click(); }}].forEach(f => {
+    const c = {name: f.name, path: f.path, hint: f.hint, kind: 'fn', run: f.run, el: () => null, id: '', keys: '', prio: 0, acts: 0, words: []};
+    for (const w of fzWordsOf(f.name)) c.words.push({w, k: 1}); for (const w of fzWordsOf(f.alias)) c.words.push({w, k: 1});
+    push(c);
+  });
   FIND_KEYCMDS.forEach(k => {
     const c = {name: k.name, path: 'Keyboard', hint: k.hint, kind: 'key', key: k.key, el: () => null, id: '', keys: k.keys, prio: 0, acts: k.acts || 0, words: []};
     for (const w of fzWordsOf(k.name)) c.words.push({w, k: 1}); for (const w of fzWordsOf(k.alias)) c.words.push({w, k: .9});
@@ -10429,7 +10500,7 @@ function findBuild(){
 const findHasSel = () => !!(ed && (ed.sel || ed.range || ed.picks));
 function findAvail(c){ /* null when it can be used now, else why not */
   const el = c.el();
-  if (c.kind === 'key' || c.kind === 'help') return null;
+  if (c.kind === 'key' || c.kind === 'help' || c.kind === 'fn') return null;
   if (!el) return 'not available now';
   if (el.disabled) return c.acts ? 'select a note first' : 'not available right now';
   if (el.closest('[hidden]') && !el.closest('.pop, #tpSide, #editBar, .transport')) return 'open it first (' + (c.path || 'its panel') + ')';
@@ -10451,6 +10522,7 @@ function findDoes(c){
   if (c.kind === 'focus') return 'Go to it, then change it with the keyboard';
   if (c.kind === 'option') return 'Set it to “' + c.name.split(': ').slice(1).join(': ') + '”';
   if (c.kind === 'help') return 'Show where it is';
+  if (c.kind === 'fn') return c.hint || 'Open it';
   const el = c.el();
   if (el && el.tagName === 'INPUT' && el.type === 'checkbox') return (el.checked ? 'Turn off' : 'Turn on') + ' “' + c.name + '”';
   return lead + (c.hint ? c.hint.replace(/\s*\(.*$/, '').slice(0, 110) : 'Use it');
@@ -10546,6 +10618,7 @@ function findRun(c){
   const el = c.el();
   const keepOpen = c.kind === 'menu' || c.kind === 'focus';
   if (c.kind === 'help') { closeFindPop(); spotlightFeature(c.help); return; }
+  if (c.kind === 'fn') { closeFindPop(); c.run(); return; }
   if (keepOpen && el) { findReveal(el); }
   const undo = findUndo; findUndo = [];
   closeFindPop(true);
@@ -10643,7 +10716,7 @@ document.head.insertAdjacentHTML('beforeend', '<style>' +
 
 /* Help & Glossary Modal (?) */
 let helpCat = 'All';
-const HELP_CATS = ['All', 'Note Input', 'Mensural', 'Plainchant', 'Apparatus', 'View & Files', 'Shortcuts'];
+const HELP_CATS = ['All', 'Getting started', 'Note Input', 'Mensural', 'Plainchant', 'Apparatus', 'Sound & Playback', 'View & Files', 'Export & Share', 'Shortcuts'];
 function renderHelp(){
   const catsEl = $('#helpCats'), listEl = $('#helpList'), qEl = $('#helpSearch');
   if (!catsEl || !listEl) return;
@@ -11425,7 +11498,7 @@ window.__cb = Object.assign({st, get ed(){ return ed; }, noteAt, mensTest, mensC
     } catch (e) { loaded = false; body.innerHTML = '<p>The acknowledgments could not be loaded just now. <a href="../choirbook-acknowledgements.html" target="_top">Open the page</a>.</p>'; }
   };
   const remember = () => { try { localStorage.setItem(AKEY, '1'); } catch (e) {} };
-  const open = () => { fill(); ov.hidden = false; body.scrollTop = 0; document.querySelector('#ackX').focus({preventScroll: true}); };
+  const open = () => { fill(); const hv = document.querySelector('#helpOv'); if (hv) hv.hidden = true; ov.hidden = false; body.scrollTop = 0; document.querySelector('#ackX').focus({preventScroll: true}); };
   const shut = () => { if (ov.hidden) return; ov.hidden = true; remember(); document.querySelector('#ackBtn').focus({preventScroll: true}); };
   document.querySelector('#ackBtn').addEventListener('click', e => { e.stopPropagation(); ov.hidden ? open() : shut(); });
   document.querySelector('#ackX').addEventListener('click', shut);
