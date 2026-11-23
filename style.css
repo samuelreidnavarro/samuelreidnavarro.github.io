@@ -233,6 +233,11 @@ html:not(.js-menu) .nav .has-menu:hover .menu, html:not(.js-menu) .nav .has-menu
 .nav .has-menu.open > .menu {
   display: block; position: fixed; transform: none; z-index: 100; overflow-y: auto; overscroll-behavior: contain;
 }
+/* on a phone the open menu stands in a box of its own on the page (menu.js), where nothing can clip it */
+.nav.menu-portal { position: static; border: 0; background: transparent; padding: 0; margin: 0; }
+.nav.menu-portal .menu {
+  display: block; position: fixed; transform: none; z-index: 100; overflow-y: auto; overscroll-behavior: contain;
+}
 @media (pointer: coarse) { .nav .menu a { padding: .75rem 1.4rem; } }
 .nav .menu a { padding: .45rem 1.2rem; border-bottom: 0; white-space: nowrap; }
 .nav .menu a:hover { background: var(--band); }

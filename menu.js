@@ -2,7 +2,9 @@
    Touch: one tap on More opens the menu, a tap on an item goes there, a tap anywhere else closes it.
    Mouse: resting on More opens it, and it closes shortly after the mouse leaves; a click on More also opens or closes it.
    Keyboard: Enter on More opens it, Escape closes it.
-   The menu is placed on the screen itself (not inside the bar), so a bar that scrolls sideways on a phone cannot cut it off. */
+   The menu is placed on the screen itself (not inside the bar), so a bar that scrolls sideways on a phone cannot cut it off.
+   On a phone the open menu is also moved out of the bar into the page itself: Safari on the iPhone and iPad cuts a menu that is
+   "fixed" but still inside a scrolling strip, so it would open without being seen. */
 (function () {
   var items = [].slice.call(document.querySelectorAll(".nav .has-menu"));
   if (!items.length) return;
@@ -14,8 +16,22 @@
     link.setAttribute("aria-haspopup", "true");
     link.setAttribute("aria-expanded", "false");
     var closeTimer = 0;
-
+    /* on a small screen the open menu lives in a box of its own at the end of the page (the same look: it is inside a .nav) */
+    var portal = null;
+    function small() { return window.matchMedia("(max-width: 760px)").matches; }
+    function mount() {
+      if (small()) {
+        if (!portal) {
+          portal = document.createElement("div");
+          portal.className = "nav menu-portal";
+          var inner = document.createElement("div"); inner.className = "menu-box"; portal.appendChild(inner);
+          document.body.appendChild(portal);
+        }
+        if (menu.parentNode !== portal.firstChild) portal.firstChild.appendChild(menu);
+      } else if (menu.parentNode !== li) li.appendChild(menu);
+    }
     function place() {
+      mount();
       var r = link.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
       menu.style.maxWidth = (vw - 16) + "px";
       var w = menu.offsetWidth;
@@ -38,8 +54,9 @@
       if (!isOpen()) return;
       li.classList.remove("open");
       link.setAttribute("aria-expanded", "false");
+      if (menu.parentNode !== li) li.appendChild(menu);
     }
-    li.__menu = { open: open, close: close, place: place, isOpen: isOpen };
+    li.__menu = { open: open, close: close, place: place, isOpen: isOpen, menu: menu };
 
     /* a tap or click on More opens or closes the menu instead of leaving the page */
     link.addEventListener("click", function (e) {
@@ -63,7 +80,7 @@
 
     /* keyboard: leaving the menu with Tab closes it */
     li.addEventListener("focusout", function () {
-      setTimeout(function () { if (!li.contains(document.activeElement)) close(); }, 0);
+      setTimeout(function () { if (!li.contains(document.activeElement) && !menu.contains(document.activeElement)) close(); }, 0);
     });
     /* a chosen item closes the menu (matters when the page does not change, e.g. the current page) */
     menu.addEventListener("click", function () { close(); });
@@ -76,7 +93,7 @@
   function outside(e) {
     if (!anyOpen()) return;
     var t = e.target;
-    items.forEach(function (li) { if (li.__menu && !li.contains(t)) li.__menu.close(); });
+    items.forEach(function (li) { if (li.__menu && !li.contains(t) && !li.__menu.menu.contains(t)) li.__menu.close(); });
   }
   document.addEventListener("pointerdown", outside, true);
   document.addEventListener("keydown", function (e) {
