@@ -1357,4 +1357,6 @@ html.dark .rdx-btn.light:hover:not(:disabled){color:#F2B5A6}
 
 /* grid lines packed closer than a notehead (a fine grid on a long stretch) are drawn lighter; they are still places */
 #pages .eg-line.crowd{opacity:.4}
+#pages .eg-line.onset{opacity:.32;stroke-dasharray:.1 .2}
+#pages .eg-tick.onset{opacity:.55}
 #pages .eg-tick.crowd{opacity:.5}
