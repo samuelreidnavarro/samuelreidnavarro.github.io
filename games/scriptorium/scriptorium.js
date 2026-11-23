@@ -10205,7 +10205,7 @@ function fzSubset(q, t){ /* every letter of q is in t (each as often as q has it
 }
 /* how well does the typed word q fit the word t of a command: 0 (not at all) to 100 */
 function fzTok(q, t){
-  if (q === t) return 100;
+  if (q === t) return q.length === 1 ? 50 : 100;
   if (t.startsWith(q)) return q.length === 1 ? 50 : 92 - Math.min(18, t.length - q.length);
   if (q.length < 3) return 0;
   if (t.includes(q)) return 64;
@@ -10430,6 +10430,10 @@ function findTmpDone(keep){ /* put back the menus that were opened only to show 
   todo.forEach(f => { try { f(keep); } catch (e) {} });
 }
 function findRing(el){ document.querySelectorAll('.spot-ring').forEach(x => { if (x !== el) x.classList.remove('spot-ring'); }); if (el) el.classList.add('spot-ring'); }
+/* the Sound panel opens and shuts by the pointer on a mouse computer (shared/organ.js); only a tap toggles it on a touch screen */
+const findHov = () => window.matchMedia && matchMedia('(hover:hover)').matches;
+function findSoundOpen(){ const tg = $('#toggleSet'); if (window.__soundPanel) window.__soundPanel.open(); else if (tg && $('#tpSide').hidden) tg.click(); }
+function findSoundShut(){ const tg = $('#toggleSet'); if (window.__soundPanel) window.__soundPanel.shut(); else if (tg && !$('#tpSide').hidden) tg.click(); }
 function findReveal(el){ /* make the control visible: open its menu, the editing bar, the Sound panel */
   if (!el) return;
   const eb = el.closest('#editBar');
@@ -10440,12 +10444,12 @@ function findReveal(el){ /* make the control visible: open its menu, the editing
   const p = el.closest('.pop');
   if (p && !p.classList.contains('open')) {
     closePops(p); p.classList.add('open', 'find-open'); const b = p.querySelector('button'); if (b) b.setAttribute('aria-expanded', 'true');
-    findUndo.push(() => { p.classList.remove('open', 'find-open'); if (b) b.setAttribute('aria-expanded', 'false'); });
+    findUndo.push(keep => { if (keep) return; p.classList.remove('open', 'find-open'); if (b) b.setAttribute('aria-expanded', 'false'); });
   }
   const sp = $('#tpSide');
   if (sp && sp.hidden && el.closest('#tpSide')) {
-    $('#toggleSet').click();
-    findUndo.push(keep => { if (!keep && !sp.hidden) $('#toggleSet').click(); });
+    findSoundOpen();
+    findUndo.push(keep => { if (!keep) findSoundShut(); });
   }
   if (window.__fitMenus) window.__fitMenus();
 }
@@ -10513,7 +10517,7 @@ function findRun(c){
   if (keepOpen && el) { findReveal(el); }
   const undo = findUndo; findUndo = [];
   closeFindPop(true);
-  if (keepOpen) { findUndo = []; } else { undo.forEach(f => { try { f(c.el() && c.el().closest('#tpSide') ? true : false); } catch (e) {} }); closePops(); }
+  if (keepOpen) { findUndo = []; } else { undo.forEach(f => { try { f(false); } catch (e) {} }); closePops(); }
   if (c.kind === 'key') { findFire(c.key); }
   else if (c.kind === 'option') { el.value = c.opt.value; el.dispatchEvent(new Event('input', {bubbles: true})); el.dispatchEvent(new Event('change', {bubbles: true})); }
   else if (c.kind === 'focus') { try { el.focus({preventScroll: false}); if (el.select && el.type !== 'range') el.select(); if (el.tagName === 'SELECT' && el.showPicker) el.showPicker(); } catch (e) {} }
@@ -10551,7 +10555,7 @@ function renderFindList(){
       `</button>`;
     }).join('') : `<div class="findempty">Nothing matches “${esc(q)}”. Try a word like <b>rest</b>, <b>dot</b>, <b>clef</b>, <b>export</b> or <b>tempo</b>.</div>`);
   const act = list.querySelector('.finditem.active'); if (act) act.scrollIntoView({block: 'nearest'});
-  findShow(findMatches[findIdx]);
+  findShow(!q || q.length >= 2 ? findMatches[findIdx] : null);
 }
 function openFindPop(){
   const pop = $('#findPop'), inp = $('#findInput');
@@ -10594,7 +10598,7 @@ if ($('#findList')) {
 }
 document.addEventListener('pointerdown', e => {
   const fp = $('#findPop');
-  if (fp && !fp.hidden && !e.target.closest('#findPop, #findBtn')) closeFindPop(true), findTmpDone(true);
+  if (fp && !fp.hidden && !e.target.closest('#findPop, #findBtn')) { closeFindPop(true); findTmpDone(!!e.target.closest('#tpSide, .pop')); }
 });
 document.head.insertAdjacentHTML('beforeend', '<style>' +
   '.findpop{top:58px}.pop.find-open>.popbody{display:block !important}' +
@@ -11166,7 +11170,8 @@ $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
     const top = Math.max(Math.min(lo, docH - h), Math.min(docH - h, DOCK.vh - DOCK.top - h));
     root.style.setProperty('--tpTop', Math.round(top) + 'px');
     const sp = $('#tpSide'), sh = sp && !sp.hidden ? sp.offsetHeight : 0;
-    root.style.setProperty('--spTop', Math.max(0, Math.round(top - sh - 8)) + 'px');
+    const kb = root.classList.contains('kbd-on') ? (parseFloat(getComputedStyle(root).getPropertyValue('--kbh')) || 0) + 8 : 0;
+    root.style.setProperty('--spTop', Math.max(0, Math.round(top - kb - sh - 8)) + 'px');
     const cb = $('#chantBar'), cbh = cb && !cb.hidden ? cb.offsetHeight : 0;
     root.style.setProperty('--chTop', Math.max(62, Math.round(top - cbh - 10)) + 'px');
     const visTop = Math.max(0, Math.round(-DOCK.top));

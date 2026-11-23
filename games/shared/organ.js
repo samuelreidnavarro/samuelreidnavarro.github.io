@@ -1023,12 +1023,16 @@ function wire(){
     let tm = 0;
     const show = () => { clearTimeout(tm); if (!S.setOpen) { S.setOpen = true; applySettingsOpen(); } };
     const hide = () => { clearTimeout(tm); tm = setTimeout(() => {
-      if (!S.setOpen || tg.matches(':hover') || (side && (side.matches(':hover') || side.contains(document.activeElement) && document.activeElement.matches('select,input:not([type=range]):not([type=checkbox])')))) return;
+      if (!S.setOpen || tg.matches(':hover') || (side && (side.matches(':hover') || side.contains(document.activeElement) && document.activeElement.matches('select,input:not([type=range]):not([type=checkbox]),input[type=range]:focus-visible')))) return;
       S.setOpen = false; applySettingsOpen(); }, 350); };
+    /* the Feature Finder opens and shuts it directly, whatever the pointer is doing */
+    window.__soundPanel = {open(){ clearTimeout(tm); if (!S.setOpen) { S.setOpen = true; applySettingsOpen(); } }, shut(){ clearTimeout(tm); if (S.setOpen) { S.setOpen = false; applySettingsOpen(); } }};
     [tg, side].forEach(el => { if (!el) return;
       el.addEventListener('mouseenter', () => { if (hov()) show(); });
       el.addEventListener('mouseleave', () => { if (hov()) hide(); }); });
     if (side) side.addEventListener('focusout', () => { if (hov()) hide(); });
+    /* a click or tap anywhere else shuts it at once */
+    document.addEventListener('pointerdown', e => { if (hov() && S.setOpen && !e.target.closest('#tpSide, #toggleSet, #findPop')) { clearTimeout(tm); S.setOpen = false; applySettingsOpen(); } }, true);
     tg.addEventListener('click', e => {
       if (hov()) { e.preventDefault(); show(); return; }
       S.setOpen = !S.setOpen; applySettingsOpen(); H.save(); });

@@ -1306,3 +1306,7 @@ html.dark .kk.blk{background:#0E0B08}
 .kbd .kbd-scroll,.kbd .kk{touch-action:pan-x}
 .kbd.gliss .kbd-scroll,.kbd.gliss .kk{touch-action:none}
 .kbd.gliss .kbd-scroll{overflow-x:hidden}
+
+/* the Sound panel stands above the piano keyboard when that is open, not over it */
+html.kbd-on .tp-side{bottom:calc(var(--tph,56px) + var(--kbh,104px) + 16px);max-height:calc(var(--win,100vh) - var(--tph,56px) - var(--kbh,104px) - 32px)}
+html.embedded.kbd-on .tp-side{bottom:auto}
