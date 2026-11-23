@@ -6507,9 +6507,8 @@ const slotW = () => (ed.inRest ? 0.42 : gw(navVal())) + 1.6;
 const slotT = (v, t) => VALS.find(q => q[0] === navVal())[1] / propAt(v, t);
 /* Single shared coordinate map between musical time T and staff x on a line (used by the rhythmic grid, the caret,
    and click-snapping so all three align pixel-for-pixel). */
-function staffGridMap(rect, v){
-  const pairs = (rect.dataset.tx || '').split(',').filter(Boolean).map(p => p.split(':').map(Number));
-  if (!pairs.length) return null;
+/* the (time, x) points of one voice on one staff line: the middle of each of its symbols, and the place after the last one */
+function staffPtsOf(rect, v){
   const par = rect.parentNode, vi = +rect.dataset.v;
   const w = ed.inRest ? 0.6 : gw(ed.val);
   const bg = q => { const e = q >= 0 && par.querySelector('g.n' + vi + '-' + q + '>rect.selbg'); return e ? {x: +e.getAttribute('x'), w: +e.getAttribute('width')} : null; };
@@ -6530,9 +6529,34 @@ function staffGridMap(rect, v){
       if (ax !== null && ls) pts.push([rt(ls.t + ls.d), ax]);
     }
   }
+  return pts;
+}
+/* One grid for the whole system: the voices of a system stand in the same columns of time, so the points of every voice
+   (that moves at the same speed) are put together. A voice with no notes on the line takes the grid of the others, and the
+   grid, the caret and the click snapping of every voice stand in the same places. */
+function staffGridMap(rect, v){
+  const pairs = (rect.dataset.tx || '').split(',').filter(Boolean).map(p => p.split(':').map(Number));
+  if (!pairs.length) return null;
+  const par = rect.parentNode;
+  let pts = staffPtsOf(rect, v);
+  const T0 = pairs[0][0];
+  const peers = [...par.querySelectorAll('rect.stafhit')].filter(r => r !== rect && r.dataset.tx === rect.dataset.tx && r.dataset.v !== rect.dataset.v && r.getAttribute('x') === rect.getAttribute('x'));
+  if (peers.length) {
+    const acc = new Map();
+    const add = (T, x) => { const k = rt(T).toFixed(4); const a = acc.get(k) || {T: rt(T), xs: []}; a.xs.push(x); acc.set(k, a); };
+    pts.forEach(([T, x]) => add(T, x));
+    for (const pr of peers) {
+      const pv = piece.voices[+pr.dataset.v];
+      if (!pv || Math.abs(propAt(pv, T0) - propAt(v, T0)) > 1e-9) continue;
+      staffPtsOf(pr, pv).forEach(([T, x]) => add(T, x));
+    }
+    const merged = [...acc.values()].sort((a, b) => a.T - b.T).map(a => [a.T, a.xs.reduce((p, q) => p + q, 0) / a.xs.length]);
+    /* the columns of time must run left to right; if they do not, the voice keeps its own */
+    if (merged.length >= 2 && merged.every((m, i) => i === 0 || m[1] >= merged[i - 1][1] - 0.02)) pts = merged;
+  }
   if (pts.length < 2) {
     /* fallback for empty staff or lines without symbols */
-    pairs.forEach(([t, x]) => pts.push([t, x + 0.6]));
+    pts = pairs.map(([t, x]) => [t, x + 0.6]);
   }
   const [tb, xb] = pts[pts.length - 1];
   const g = navGrid(v, Math.min(tb, v.end));
@@ -6574,40 +6598,48 @@ function clearGhost(){ if (ghostEl) { ghostEl.remove(); ghostEl = null; } }
 function drawEditGrid(){
   document.querySelectorAll('#pages .ed-grid').forEach(el => el.remove());
   if (!ed.on || !piece) return;
+  const done = new Set();
   pagesEl.querySelectorAll('rect.stafhit').forEach(rect => {
-    const vi = +rect.dataset.v, top = +rect.dataset.top, v = piece.voices[vi];
+    if (done.has(rect)) return;
+    /* the staves of one system: the same line of the page, the same columns of time */
+    const group = [rect, ...[...rect.parentNode.querySelectorAll('rect.stafhit')].filter(r => r !== rect && r.dataset.tx === rect.dataset.tx && r.getAttribute('x') === rect.getAttribute('x') && r.getAttribute('width') === rect.getAttribute('width'))];
+    group.forEach(r => done.add(r));
+    /* its grid is that of the voice being written in, or else the first one */
+    const curVi = ed.sel ? ed.sel.vi : ed.ins ? ed.ins.vi : -1;
+    const ref = group.find(r => +r.dataset.v === curVi) || rect;
+    const v = piece.voices[+ref.dataset.v];
     if (!v) return;
-    const M = staffGridMap(rect, v);
+    const M = staffGridMap(ref, v);
     if (!M || !(M.g > 0)) return;
-    const rx1 = +rect.getAttribute('x') + +rect.getAttribute('width');
+    const tops = group.map(r => +r.dataset.top);
+    const yTop = Math.min(...tops), yBot = Math.max(...tops) + 4;
+    const rx1 = +ref.getAttribute('x') + +ref.getAttribute('width');
     const {tMin, tb, xb, g, sw, xOf} = M;
     let out = '';
-    /* 1. Grid ticks across existing music on this staff line (exact caret positions) */
+    const one = (x, major, tail) => {
+      out += `<line class="eg-tick${tail ? ' tail' : ''}${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(yTop - (major ? 1.05 : 0.72))}" y2="${f(yTop - 0.18)}"/>`;
+      out += `<line class="eg-line${tail ? ' tail' : ''}${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(yTop)}" y2="${f(yBot)}"/>`;
+    };
+    /* 1. Grid across the existing music of the system (exact caret positions), through every staff */
     const stepCount = Math.min(180, Math.floor((tb - tMin) / g) + 1);
     const stepInc = stepCount >= 180 ? g * Math.ceil(((tb - tMin) / g) / 140) : g;
     let t0 = Math.ceil((tMin - EPS) / stepInc) * stepInc;
     if (t0 < tMin - EPS) t0 += stepInc;
-    for (let T = t0; T <= tb + EPS; T = rt(T + stepInc)) {
-      const x = xOf(T);
-      const major = Math.abs(T - Math.round(T)) < 1e-3;
-      out += `<line class="eg-tick${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(top - (major ? 1.05 : 0.72))}" y2="${f(top - 0.18)}"/>`;
-      out += `<line class="eg-line${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(top)}" y2="${f(top + 4)}"/>`;
-    }
-    /* 2. Tail grid ticks past the end of the voice */
+    for (let T = t0; T <= tb + EPS; T = rt(T + stepInc)) one(xOf(T), Math.abs(T - Math.round(T)) < 1e-3, false);
+    /* 2. Tail grid past the end of the music */
     if (rx1 > xb + 0.6) {
       for (let s = 1; s <= 40; s++) {
         const x = xb + s * sw;
         if (x > rx1 - 0.5) break;
-        const T = rt(tb + s * g), major = Math.abs(T - Math.round(T)) < 1e-3;
-        out += `<line class="eg-tick tail${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(top - (major ? 1.05 : 0.72))}" y2="${f(top - 0.18)}"/>`;
-        out += `<line class="eg-line tail${major ? ' maj' : ''}" x1="${f(x)}" x2="${f(x)}" y1="${f(top)}" y2="${f(top + 4)}"/>`;
+        const T = rt(tb + s * g);
+        one(x, Math.abs(T - Math.round(T)) < 1e-3, true);
       }
     }
     if (!out) return;
     const grp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     grp.setAttribute('class', 'ed-grid');
     grp.innerHTML = out;
-    rect.parentNode.insertBefore(grp, rect);
+    group[0].parentNode.insertBefore(grp, group[0]);
   });
 }
 pagesEl.addEventListener('pointermove', e => {
