@@ -3037,7 +3037,17 @@ function drawChantSystem(chant, chantIdx, W, y){
         const dy = nt.pos % 2 === 0 ? ny - 0.35 : ny;
         no += `<circle class="ink" cx="${f(nx + PW + 0.28)}" cy="${f(dy)}" r="0.15"/>`;
       }
-      o += `<g class="cn-hit${isSel ? ' cn-sel' : ''}" data-cn="${chantIdx}:${ii}:${gi}:${i}" data-top="${f(top)}"><rect class="cn-bg" x="${f(nx - 0.25)}" y="${f(ny - 0.75)}" width="${f(PW + 0.5)}" height="1.5" rx="0.22"/>${no}</g>`;
+      /* Podatus (2-note ascending neume): split vertical hit-box cleanly at midpoint so both notes are clickable */
+      const isPodBot = (ns.length === 2 && i === 0 && ns[1].pos > nt.pos);
+      const isPod = isPodBot || isPodTop;
+      let bgY = Math.min(top - 0.5, ny - 1.0);
+      let bgBot = Math.max(top + 3.5, ny + 1.0);
+      if (isPod) {
+        const midY = (top + 3 - ns[0].pos * 0.5 + top + 3 - ns[1].pos * 0.5) / 2;
+        if (isPodTop) bgBot = midY;
+        else bgY = midY;
+      }
+      o += `<g class="cn-hit${isSel ? ' cn-sel' : ''}" data-cn="${chantIdx}:${ii}:${gi}:${i}" data-top="${f(top)}"><rect class="cn-bg" x="${f(nx - 0.25)}" y="${f(bgY)}" width="${f(PW + 0.5)}" height="${f(Math.max(0.7, bgBot - bgY))}" rx="0.22"/>${no}</g>`;
       prevX = nx; prevY = ny;
       if (!isPodTop) x += PW * 0.92;
       if (nt.dot) x += 0.42;
@@ -7300,13 +7310,27 @@ pagesEl.addEventListener('click', e => {
   /* a click on a note selects it, in any mode (the staff's writing area lies over the notes: look underneath it too) */
   if (typeof noteAt === 'function') {
     const n = noteAt(e);
-    if (n && e.shiftKey && (ed.sel || ed.range || ed.picks)) { e.stopImmediatePropagation(); extendRange(n.vi, n.s); return; }
-    if (n && (e.ctrlKey || e.metaKey) && (ed.sel || ed.range || ed.picks)) { e.stopImmediatePropagation(); togglePick(n.vi, n.s); return; }
+    if (n && e.shiftKey && (ed.sel || ed.range || ed.picks)) { e.stopImmediatePropagation(); e.preventDefault(); focusScoreSurface(); extendRange(n.vi, n.s); return; }
+    if (!n && e.shiftKey && (ed.sel || ed.range || ed.picks) && piece) {
+      const rSh = e.target.closest && e.target.closest('rect.stafhit');
+      if (rSh) {
+        const tg = staffTarget(rSh, e);
+        if (tg && tg.v && tg.v.syms && tg.v.syms.length) {
+          const syms = tg.v.syms.filter(q => q.src);
+          const {at} = eventIndexFor(tg);
+          const targetEi = Math.max(0, Math.min(tg.v.events.length - 1, at));
+          const sHit = syms.find(q => q.src.includes(targetEi)) || syms[syms.length - 1];
+          if (sHit) { e.stopImmediatePropagation(); e.preventDefault(); focusScoreSurface(); extendRange(tg.vi, sHit); return; }
+        }
+      }
+    }
+    if (n && (e.ctrlKey || e.metaKey) && (ed.sel || ed.range || ed.picks)) { e.stopImmediatePropagation(); focusScoreSurface(); togglePick(n.vi, n.s); return; }
     /* Alt-click: what was copied is pasted there */
     if (n && e.altKey && ed.on) { e.stopImmediatePropagation(); ed.range = null; ed.picks = null; ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1}; rangePaste(); return; }
     const off = ed.on && n && !e.shiftKey ? offPitch(n, e) : null;
     if (n && (!ed.on || !n.s.rest || e.shiftKey) && !off && !(ed.on && ed.divisi && !e.shiftKey && !n.s.rest && n.s.chord && n.s.chord.length)) {
       e.stopImmediatePropagation();
+      focusScoreSurface();
       ed.range = null; ed.picks = null;
       if (n.s.rest) n.s = pickRest(n.vi, n.s);
       ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1};
@@ -7476,9 +7500,16 @@ function extendRange(vi, s){
   if (ed.picks) pickToRange();
   let a = ed.range ? ed.range.a : null;
   if (!a) { const q = selSym(); if (!q) return; a = {vi: ed.sel.vi, t: q.t, te: rt(q.t + q.d)}; }
-  ed.range = {a, v0: Math.min(a.vi, vi), v1: Math.max(a.vi, vi), t0: Math.min(a.t, s.t), t1: Math.max(a.te, rt(s.t + s.d)), f: {vi, t: s.t, te: rt(s.t + s.d)}};
+  const te = rt(s.t + s.d);
+  if (vi === a.vi && Math.abs(s.t - a.t) < EPS && Math.abs(te - a.te) < EPS && s.src && s.src.length) {
+    ed.range = null; ed.picks = null;
+    ed.sel = {vi, ei: s.src[0]}; ed.ins = {vi, ei: s.src[s.src.length - 1] + 1};
+    showSel(true);
+    return;
+  }
+  ed.range = {a, v0: Math.min(a.vi, vi), v1: Math.max(a.vi, vi), t0: Math.min(a.t, s.t), t1: Math.max(a.te, te), f: {vi, t: s.t, te}};
   ed.sel = null; ed.ins = null; ed.picks = null;
-  showSel();
+  showSel(true);
 }
 function inSel(vi, q){
   if (ed.range) return vi >= ed.range.v0 && vi <= ed.range.v1 && inRange(q.t);
@@ -7504,8 +7535,14 @@ function pickToRange(){
   if (!ed.picks || !piece) return;
   const it = selItems(); ed.picks = null;
   if (!it.length) return;
+  const sorted = it.slice().sort((x, y) => x.e.t - y.e.t || x.v.idx - y.v.idx);
+  const first = sorted[0], last = sorted[sorted.length - 1];
   const vis = it.map(x => x.v.idx), t0 = Math.min(...it.map(x => x.e.t)), t1 = Math.max(...it.map(x => rt(x.e.t + x.e.d)));
-  ed.range = {a: {vi: Math.min(...vis), t: t0, te: t1}, v0: Math.min(...vis), v1: Math.max(...vis), t0, t1};
+  ed.range = {
+    a: {vi: first.v.idx, t: first.e.t, te: rt(first.e.t + first.e.d)},
+    f: {vi: last.v.idx, t: last.e.t, te: rt(last.e.t + last.e.d)},
+    v0: Math.min(...vis), v1: Math.max(...vis), t0, t1
+  };
 }
 function togglePick(vi, s){
   const cur = ed.picks ? ed.picks.slice() : ed.range ? selItems().map(x => ({vi: x.v.idx, t: x.e.t})) : [];
@@ -9184,11 +9221,16 @@ function chantInsertIdxFromX(cs, svgX, p){
 
 /* Click (single / Shift-range / Ctrl-Cmd-pick) & vertical-drag on plainchant notes, bars, syllables, and 4-line staff */
 let chantDrag = null;
+function focusScoreSurface(){
+  if (document.activeElement && document.activeElement !== document.body && document.activeElement.blur) document.activeElement.blur();
+  try { window.focus(); } catch (err) {}
+}
 pagesEl.addEventListener('pointerdown', e => {
   if (e.button !== 0 || !piece) return;
   const cn = e.target.closest && e.target.closest('.cn-hit');
   if (cn) {
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    focusScoreSurface();
     clearChantGhost();
     const [ci, ii, gi, ni] = cn.dataset.cn.split(':').map(Number);
     const top = +cn.dataset.top;
@@ -9199,10 +9241,12 @@ pagesEl.addEventListener('pointerdown', e => {
     const n = hitIdx >= 0 ? flat[hitIdx].n : null;
     if (ed.on) { ed.on = false; clearGhost(); syncEdit(); }
     ed.sel = null; ed.range = null; ed.picks = null; showSel();
-    if (chantEd.idx === ci && e.shiftKey && hitIdx >= 0 && (chantEd.sel || chantEd.range)) {
-      /* Shift-click: extend contiguous range selection just like mensural notes */
+    const inMulti = chantEd.idx === ci && hitIdx >= 0 && chantSelectedKeySet(p).has(`${ii}:${gi}:${ni}`);
+    if (chantEd.idx === ci && e.shiftKey && hitIdx >= 0 && (chantEd.sel || chantEd.range || chantEd.picks)) {
+      /* Shift-click: select all notes between anchor and clicked note (both directions) */
       const anchor = chantEd.range ? chantEd.range.a : chantFlatIdxOf(flat, chantEd.sel);
-      chantEd.range = {a: anchor >= 0 ? anchor : hitIdx, b: hitIdx};
+      const a = anchor >= 0 ? anchor : hitIdx;
+      chantEd.range = a === hitIdx ? null : {a, b: hitIdx};
       chantEd.picks = null;
       chantEd.sel = {ii, gi, ni};
     } else if (chantEd.idx === ci && (e.ctrlKey || e.metaKey) && hitIdx >= 0) {
@@ -9219,7 +9263,7 @@ pagesEl.addEventListener('pointerdown', e => {
       chantEd.picks = picks.size ? picks : null;
       chantEd.range = null;
       chantEd.sel = {ii, gi, ni};
-    } else {
+    } else if (!inMulti || (!chantEd.range && !chantEd.picks)) {
       chantEd.idx = ci;
       chantEd.sel = {ii, gi, ni};
       chantEd.range = null;
@@ -9230,7 +9274,11 @@ pagesEl.addEventListener('pointerdown', e => {
       chantAuditionNote(p, n);
       if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
         const svg = cn.ownerSVGElement;
-        chantDrag = {ci, ii, gi, ni, top, svg, startY: e.clientY, origPos: n.pos, lastPos: n.pos, moved: false};
+        const selNow = chantSelectedItems(p);
+        chantDrag = {
+          ci, ii, gi, ni, top, svg, startY: e.clientY, origPos: n.pos, lastPos: n.pos, moved: false,
+          multi: selNow.length > 1 ? selNow.map(x => ({ii: x.ii, gi: x.gi, ni: x.ni, origPos: x.n.pos})) : null
+        };
       }
     }
     return;
@@ -9247,6 +9295,7 @@ pagesEl.addEventListener('pointerdown', e => {
   const cb = e.target.closest && e.target.closest('.cb-hit');
   if (cb) {
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    focusScoreSurface();
     const [ci, ii, gi] = cb.dataset.cb.split(':').map(Number);
     openChantEd(ci, {ii, gi, bar: true});
     return;
@@ -9254,13 +9303,43 @@ pagesEl.addEventListener('pointerdown', e => {
   const cs = e.target.closest && e.target.closest('.cs-hit');
   if (cs) {
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    focusScoreSurface();
     clearChantGhost();
     const ci = +cs.dataset.cs, top = +cs.dataset.top;
     if (chantEd.idx !== ci) { openChantEd(ci); return; }
-    /* Clicking on the 4-line staff inserts a note at that exact horizontal spot & pitch */
     const m = cs.getScreenCTM();
     if (!m) return;
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+    if (e.shiftKey) {
+      /* Shift-click anywhere on the 4-line staff extends range to nearest note horizontally (never inserts a note!) */
+      const ch = ensureExt(piece).chants[ci]; if (!ch) return;
+      const p = parseGabcChant(ch.gabc || ''), flat = chantFlatNotes(p);
+      if (!flat.length) return;
+      const slots = (cs.dataset.ix || '').split(',').filter(Boolean).map(tok => { const [ii, x] = tok.split(':'); return {ii: +ii, x: +x}; });
+      let bestIi = slots.length ? slots[0].ii : 0, bestD = Infinity;
+      for (const sl of slots) {
+        if (p.items[sl.ii] && p.items[sl.ii].kind === 'syl') {
+          const d = Math.abs(pt.x - sl.x);
+          if (d < bestD) { bestD = d; bestIi = sl.ii; }
+        }
+      }
+      const anchor = chantEd.range ? chantEd.range.a : chantFlatIdxOf(flat, chantEd.sel);
+      const firstInSyl = flat.findIndex(x => x.ii === bestIi);
+      let lastInSyl = firstInSyl;
+      for (let k = firstInSyl + 1; k < flat.length && flat[k].ii === bestIi; k++) lastInSyl = k;
+      const hitIdx = firstInSyl >= 0 ? (anchor >= 0 && firstInSyl > anchor ? lastInSyl : firstInSyl) : -1;
+      if (hitIdx >= 0) {
+        const a = anchor >= 0 ? anchor : hitIdx;
+        chantEd.range = a === hitIdx ? null : {a, b: hitIdx};
+        chantEd.picks = null;
+        chantEd.sel = {ii: flat[hitIdx].ii, gi: flat[hitIdx].gi, ni: flat[hitIdx].ni};
+        chantAuditionNote(p, flat[hitIdx].n);
+        syncChantBar(); render();
+      }
+      return;
+    }
+    if (e.ctrlKey || e.metaKey) return;
+    /* Plain click on empty 4-line staff inserts a note at that exact horizontal spot & pitch */
     const pos = Math.max(-3, Math.min(9, Math.round((top + 3 - pt.y) * 2)));
     mutateChant(p => {
       const newNote = {pos, incl: false, dot: false, epiH: false, epiV: false, virga: false, acc: ''};
@@ -9310,13 +9389,24 @@ document.addEventListener('pointermove', e => {
   const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
   const pos = Math.max(-3, Math.min(9, Math.round((chantDrag.top + 3 - pt.y) * 2)));
   if (pos === chantDrag.lastPos) return;
+  const delta = pos - chantDrag.origPos;
   chantDrag.lastPos = pos;
   const p = parseGabcChant(ch.gabc || '');
-  const n = p.items[chantDrag.ii] && p.items[chantDrag.ii].groups && p.items[chantDrag.ii].groups[chantDrag.gi] && p.items[chantDrag.ii].groups[chantDrag.gi].notes[chantDrag.ni];
-  if (!n) return;
-  n.pos = pos;
-  ch.gabc = serializeGabcChant(p);
-  chantAuditionNote(p, n);
+  if (chantDrag.multi) {
+    for (const q of chantDrag.multi) {
+      const qn = p.items[q.ii] && p.items[q.ii].groups && p.items[q.ii].groups[q.gi] && p.items[q.ii].groups[q.gi].notes[q.ni];
+      if (qn) qn.pos = Math.max(-3, Math.min(9, q.origPos + delta));
+    }
+    const lead = p.items[chantDrag.ii] && p.items[chantDrag.ii].groups && p.items[chantDrag.ii].groups[chantDrag.gi] && p.items[chantDrag.ii].groups[chantDrag.gi].notes[chantDrag.ni];
+    ch.gabc = serializeGabcChant(p);
+    chantAuditionNote(p, lead);
+  } else {
+    const n = p.items[chantDrag.ii] && p.items[chantDrag.ii].groups && p.items[chantDrag.ii].groups[chantDrag.gi] && p.items[chantDrag.ii].groups[chantDrag.gi].notes[chantDrag.ni];
+    if (!n) return;
+    n.pos = pos;
+    ch.gabc = serializeGabcChant(p);
+    chantAuditionNote(p, n);
+  }
   render();
   syncChantBar();
 });
@@ -9326,6 +9416,11 @@ document.addEventListener('pointerup', () => {
   if (d.moved && d.lastPos !== d.origPos && piece) {
     commit(() => {});
     syncChantBar();
+  } else if (!d.moved && d.multi && chantEd.idx === d.ci) {
+    /* Plain click (no drag) on a note inside a multi-selection narrows back to just that note */
+    chantEd.range = null; chantEd.picks = null;
+    chantEd.sel = {ii: d.ii, gi: d.gi, ni: d.ni};
+    syncChantBar(); render();
   }
 });
 /* Unified keyboard editing — mirrors mensural NoteInput + lyrics.js shortcuts identically */
@@ -9357,17 +9452,34 @@ document.addEventListener('keydown', e => {
     e.preventDefault(); e.stopImmediatePropagation();
     const dir = k === 'ArrowRight' ? 1 : -1;
     if (e.shiftKey) {
-      const anchor = chantEd.range ? chantEd.range.a : Math.max(0, chantFlatIdxOf(flat, chantEd.sel));
-      const head = chantEd.range ? chantEd.range.b : anchor;
+      let anchor, head;
+      if (chantEd.range) {
+        anchor = chantEd.range.a; head = chantEd.range.b;
+      } else if (chantEd.picks && chantEd.picks.size) {
+        const ks = [...chantEd.picks].sort((x, y) => x - y);
+        anchor = ks[0]; head = ks[ks.length - 1];
+      } else {
+        anchor = Math.max(0, chantFlatIdxOf(flat, chantEd.sel));
+        head = anchor;
+      }
       const next = Math.max(0, Math.min(flat.length - 1, head + dir));
-      chantEd.range = {a: anchor, b: next};
+      chantEd.range = next === anchor ? null : {a: anchor, b: next};
       chantEd.picks = null;
       chantEd.sel = {ii: flat[next].ii, gi: flat[next].gi, ni: flat[next].ni};
       chantAuditionNote(p, flat[next].n);
     } else {
-      let idx = chantFlatIdxOf(flat, chantEd.sel);
-      if (idx < 0) idx = 0;
-      else idx = Math.max(0, Math.min(flat.length - 1, idx + dir));
+      let idx;
+      if (chantEd.range) {
+        /* Plain Left/Right leaves a range at its first (or last) note — exact match with mensural moveSel */
+        idx = dir < 0 ? Math.min(chantEd.range.a, chantEd.range.b) : Math.max(chantEd.range.a, chantEd.range.b);
+      } else if (chantEd.picks && chantEd.picks.size) {
+        const ks = [...chantEd.picks].sort((x, y) => x - y);
+        idx = dir < 0 ? ks[0] : ks[ks.length - 1];
+      } else {
+        idx = chantFlatIdxOf(flat, chantEd.sel);
+        if (idx < 0) idx = 0;
+        else idx = Math.max(0, Math.min(flat.length - 1, idx + dir));
+      }
       chantEd.range = null; chantEd.picks = null;
       chantEd.sel = {ii: flat[idx].ii, gi: flat[idx].gi, ni: flat[idx].ni};
       chantAuditionNote(p, flat[idx].n);
@@ -9436,7 +9548,7 @@ document.addEventListener('click', e => {
   });
   syncAdv();
 });
-document.head.insertAdjacentHTML('beforeend', '<style>.betapill{display:inline-block;margin-left:5px;padding:1px 5px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;background:var(--accent,#8B2E22);color:#FAF5EA;vertical-align:middle}.advset{min-width:290px;max-width:340px}.advset .subhead{grid-column:1/-1;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}.advset .subhead:first-child{margin-top:0;padding-top:0;border-top:none}.adv-list{grid-column:1/-1;display:flex;flex-direction:column;gap:3px;max-height:110px;overflow:auto;padding:4px 6px;border-radius:6px;background:rgba(42,34,24,.04);font-size:12px}.adv-item{display:flex;align-items:center;justify-content:space-between;gap:6px}.adv-del{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px}.adv-del:hover{color:var(--accent,#8B2E22)}#pages .sf-badge{fill:var(--accent,#8B2E22);font-family:Georgia,serif;font-weight:700}#pages .orig-lyr{fill:var(--muted,#6B5E4E);font-style:italic;font-family:"IM Fell English",Georgia,serif}#pages .lacuna rect{fill:rgba(139,46,34,.08);stroke:var(--accent,#8B2E22);stroke-width:.12;stroke-dasharray:.4 .25}#pages .lacuna text{fill:var(--accent,#8B2E22);font-style:italic;font-family:Georgia,serif}#pages .ann-badge{cursor:pointer}#pages .ann-badge rect{fill:var(--accent,#8B2E22)}#pages .ann-badge text{fill:#FAF5EA;font-family:sans-serif;font-weight:700}#pages .var-br path{stroke:var(--muted,#6B5E4E)}#pages .var-br text{fill:var(--muted,#6B5E4E);font-family:sans-serif}#pages .chant-sys .cs-hit{cursor:crosshair}#pages .chant-sys .clyr{cursor:text}#pages .chant-sys .clyr:hover{fill:var(--accent,#8B2E22)}#pages .ch-ghost rect{fill:var(--accent,#8B2E22);opacity:.48}#pages .cn-hit,#pages .cb-hit{cursor:pointer}#pages .cn-hit .cn-bg,#pages .cb-hit .cn-bg{fill:transparent;transition:fill .1s}#pages .cn-hit:hover .cn-bg,#pages .cb-hit:hover .cn-bg{fill:rgba(139,46,34,.14)}#pages .cn-sel .cn-bg{fill:rgba(180,82,36,.24) !important;stroke:var(--accent,#8B2E22);stroke-width:.1}#pages .chant-title{fill:var(--ink,#2A2218);font-family:"IM Fell English",Georgia,serif}.chbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tph,56px) + 10px);z-index:55;pointer-events:auto;display:flex;flex-direction:column;gap:6px;padding:8px 12px;border-radius:12px;border:1px solid var(--line,rgba(42,34,24,.18));background:color-mix(in srgb,var(--ground,#FAF5EA) 95%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 10px 28px -8px rgba(42,34,24,.36);max-width:calc(100vw - 24px);box-sizing:border-box}html.embedded .chbar{position:absolute;bottom:auto;top:var(--chTop,68px)}html.dark .chbar{background:rgba(34,28,21,.95);box-shadow:0 10px 28px -6px rgba(0,0,0,.65)}.chbar[hidden]{display:none !important}.chbar .chrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.chbar .chnote.chdim{opacity:.52}.chbar .chlab{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#6B5E4E);min-width:62px}.chbar input[type=text],.chbar select{height:30px;padding:0 8px;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;background:var(--surface,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:13.5px;box-sizing:border-box}.chbar #chTitle{width:118px}.chbar #chSyl{width:136px}.chbar .chsep{width:1px;height:20px;background:var(--line,rgba(42,34,24,.18));margin:0 2px}.chbar .chseg{display:inline-flex;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;overflow:hidden}.chbar .chseg .chbtn{border:none;border-radius:0}.chbar .chbtn{display:inline-flex;align-items:center;justify-content:center;height:30px;min-width:30px;padding:0 9px;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;background:var(--surface,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:13.5px;line-height:1;cursor:pointer;white-space:nowrap}.chbar .chbtn:hover:not(:disabled){background:color-mix(in srgb,var(--accent,#8B2E22) 10%,var(--surface,#FFFDF8))}.chbar .chbtn[aria-pressed="true"],.chbar .chbtn.chprimary{background:var(--accent,#8B2E22);color:#FAF5EA;border-color:var(--accent,#8B2E22)}.chbar .chbtn.chdanger:hover:not(:disabled){background:#A12C1C;color:#FAF5EA;border-color:#A12C1C}.chbar .chbtn:disabled{opacity:.38;cursor:default}@media print{#chantBar{display:none !important}}</style>');
+document.head.insertAdjacentHTML('beforeend', '<style>#pages svg{user-select:none;-webkit-user-select:none}.betapill{display:inline-block;margin-left:5px;padding:1px 5px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;background:var(--accent,#8B2E22);color:#FAF5EA;vertical-align:middle}.advset{min-width:290px;max-width:340px}.advset .subhead{grid-column:1/-1;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}.advset .subhead:first-child{margin-top:0;padding-top:0;border-top:none}.adv-list{grid-column:1/-1;display:flex;flex-direction:column;gap:3px;max-height:110px;overflow:auto;padding:4px 6px;border-radius:6px;background:rgba(42,34,24,.04);font-size:12px}.adv-item{display:flex;align-items:center;justify-content:space-between;gap:6px}.adv-del{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px}.adv-del:hover{color:var(--accent,#8B2E22)}#pages .sf-badge{fill:var(--accent,#8B2E22);font-family:Georgia,serif;font-weight:700}#pages .orig-lyr{fill:var(--muted,#6B5E4E);font-style:italic;font-family:"IM Fell English",Georgia,serif}#pages .lacuna rect{fill:rgba(139,46,34,.08);stroke:var(--accent,#8B2E22);stroke-width:.12;stroke-dasharray:.4 .25}#pages .lacuna text{fill:var(--accent,#8B2E22);font-style:italic;font-family:Georgia,serif}#pages .ann-badge{cursor:pointer}#pages .ann-badge rect{fill:var(--accent,#8B2E22)}#pages .ann-badge text{fill:#FAF5EA;font-family:sans-serif;font-weight:700}#pages .var-br path{stroke:var(--muted,#6B5E4E)}#pages .var-br text{fill:var(--muted,#6B5E4E);font-family:sans-serif}#pages .chant-sys .cs-hit{cursor:crosshair}#pages .chant-sys .clyr{cursor:text}#pages .chant-sys .clyr:hover{fill:var(--accent,#8B2E22)}#pages .ch-ghost rect{fill:var(--accent,#8B2E22);opacity:.48}#pages .cn-hit,#pages .cb-hit{cursor:pointer}#pages .cn-hit .cn-bg,#pages .cb-hit .cn-bg{fill:transparent;transition:fill .1s}#pages .cn-hit:hover .cn-bg,#pages .cb-hit:hover .cn-bg{fill:rgba(139,46,34,.14)}#pages .cn-sel .cn-bg{fill:rgba(180,82,36,.24) !important;stroke:var(--accent,#8B2E22);stroke-width:.1}#pages .chant-title{fill:var(--ink,#2A2218);font-family:"IM Fell English",Georgia,serif}.chbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tph,56px) + 10px);z-index:55;pointer-events:auto;display:flex;flex-direction:column;gap:6px;padding:8px 12px;border-radius:12px;border:1px solid var(--line,rgba(42,34,24,.18));background:color-mix(in srgb,var(--ground,#FAF5EA) 95%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 10px 28px -8px rgba(42,34,24,.36);max-width:calc(100vw - 24px);box-sizing:border-box}html.embedded .chbar{position:absolute;bottom:auto;top:var(--chTop,68px)}html.dark .chbar{background:rgba(34,28,21,.95);box-shadow:0 10px 28px -6px rgba(0,0,0,.65)}.chbar[hidden]{display:none !important}.chbar .chrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.chbar .chnote.chdim{opacity:.52}.chbar .chlab{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#6B5E4E);min-width:62px}.chbar input[type=text],.chbar select{height:30px;padding:0 8px;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;background:var(--surface,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:13.5px;box-sizing:border-box}.chbar #chTitle{width:118px}.chbar #chSyl{width:136px}.chbar .chsep{width:1px;height:20px;background:var(--line,rgba(42,34,24,.18));margin:0 2px}.chbar .chseg{display:inline-flex;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;overflow:hidden}.chbar .chseg .chbtn{border:none;border-radius:0}.chbar .chbtn{display:inline-flex;align-items:center;justify-content:center;height:30px;min-width:30px;padding:0 9px;border:1px solid var(--line,rgba(42,34,24,.2));border-radius:7px;background:var(--surface,#FFFDF8);color:var(--ink,#2A2218);font:inherit;font-size:13.5px;line-height:1;cursor:pointer;white-space:nowrap}.chbar .chbtn:hover:not(:disabled){background:color-mix(in srgb,var(--accent,#8B2E22) 10%,var(--surface,#FFFDF8))}.chbar .chbtn[aria-pressed="true"],.chbar .chbtn.chprimary{background:var(--accent,#8B2E22);color:#FAF5EA;border-color:var(--accent,#8B2E22)}.chbar .chbtn.chdanger:hover:not(:disabled){background:#A12C1C;color:#FAF5EA;border-color:#A12C1C}.chbar .chbtn:disabled{opacity:.38;cursor:default}@media print{#chantBar{display:none !important}}</style>');
 $('#keepBtn').addEventListener('click', () => {
   if (!piece) return;
   closePops();
