@@ -6367,8 +6367,9 @@ function ovrResize(v, k, was){
     if (r.d <= need + EPS) {
       need = rt(need - r.d); v.events.splice(j, 1); fix(j, -1);
     } else {
+      /* the note that is only partly covered is shortened, and stays the same note (its pitch, accidental and words): the rhythm moves along, no note is lost */
       r.d = rt(r.d - need); r.kd = r.d; r.t = rt(r.t + need); need = 0;
-      if (!r.rest) { r.rest = true; r.tieStart = r.tieEnd = r.tieMid = false; r.syl = []; r.lig = 0; r.alt = null; r.ed = false; r.long = false; }
+      if (!r.rest) { r.tieStart = r.tieEnd = r.tieMid = false; r.lig = 0; r.long = false; r.colH = false; r.cdot = false; r.dd = false; r.pa = false; r.altd = false; }
     }
   }
 }
