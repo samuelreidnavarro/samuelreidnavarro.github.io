@@ -591,6 +591,7 @@ function parseNoteTok(raw){
   ev.ferm = tok.includes(';');
   ev.signum = tok.includes('$'); /* signum congruentiae (no playback pause) */
   ev.colH = tok.includes('@');   /* coloured as written (CMME), user signifier */
+  ev.cdot = ev.colH && tok.includes('Z');   /* a coloured note that keeps its dot: black, dotted, and sounding two thirds of the dotted value */
   { const lk = lookOfTok(tok); if (lk) ev.look = lk; }   /* how the note is shown only (black, white, red): no effect on its value */
   ev.altd = tok.includes('~');
   ev.dd = tok.includes('Y');      /* punctus divisionis: divides the perfection, adds nothing */
@@ -851,6 +852,11 @@ function shapeReal(w, T, P, M = 2, X = 2){
   for (const [g, v] of tab) if (eq(w * 1.5, v)) return {g, col:true};
   /* last resort, before splitting into tied notes: a dot of addition even on a perfect value */
   for (const [g, v] of tab) if (eq(w, v * 1.5)) return {g, dot:true};
+  return null;
+}
+/* a black dotted note: it sounds two thirds of its dotted value, which is the plain value of its shape */
+function shapeColDot(w, T, P, M, X){
+  for (const [g, v] of valueTable(T, P, M, X)) if (eq(w, v)) return {g, col: true, dot: true};
   return null;
 }
 /* an altered note is written as the shape half its value (alteration is not marked in white or black notation) */
@@ -1152,7 +1158,7 @@ function notate(piece, v, mode){
       }
       continue;
     }
-    const sh = (e.altd && shapeAlt(w, mi.T, mi.P, mi.M, mi.X)) || (e.colH && shapeCol(w, mi.T, mi.P, mi.M, mi.X)) || shapeReal(w, mi.T, mi.P, mi.M, mi.X);
+    const sh = (e.altd && shapeAlt(w, mi.T, mi.P, mi.M, mi.X)) || (e.colH && e.cdot && shapeColDot(w, mi.T, mi.P, mi.M, mi.X)) || (e.colH && shapeCol(w, mi.T, mi.P, mi.M, mi.X)) || shapeReal(w, mi.T, mi.P, mi.M, mi.X);
     if (!sh) { pushSplit(out, base, w, mi.T, mi.P, false, mi.p); continue; }
     const pos = rt(((rt(e.t - segStart) * mi.p) % (mi.T * (mi.P === 3 ? 1.5 : 1))));
     out.push(Object.assign(base, {g: sh.g, dot: !!sh.dot || (!!(e.dd || e.pa) && !e.rest), dd: !!e.dd, pa: !!e.pa, col: !!sh.col, imp: !!sh.imp, w, pos}));
@@ -5745,6 +5751,7 @@ function singleNoteTok(e, tie){
   if (e.ferm) s += ';';
   if (e.signum) s += '$';
   if (e.colH && !e.rest) s += '@';
+  if (e.colH && e.cdot && !e.rest) s += 'Z';
   if (e.altd && !e.rest) s += '~';
   if (e.dd && !e.rest) s += 'Y';
   if (e.pa && !e.rest) s += 'W';
@@ -7548,7 +7555,7 @@ function stretch(dir){
   if (nx === undefined) { toast(dir > 0 ? 'That is the longest value there is.' : 'That is the shortest value there is.'); return; }
   commit(() => {
     const e = v.events[first];
-    e.d = nx; e.tieStart = e.tieEnd = e.tieMid = false; e.long = false; e.colH = false; e.altd = false;
+    e.d = nx; e.tieStart = e.tieEnd = e.tieMid = false; e.long = false; e.colH = false; e.cdot = false; e.altd = false;
     dropEvents(v, src.slice(1));
     if (ed.ovr) ovrResize(v, first, total);
   });
@@ -7932,8 +7939,8 @@ const CBA = {
       const anyWhite = it.some(x => { const q = symAt(x.v.idx, x.v.events.indexOf(x.e)); return q && !isColoured(q); });
       commit(() => {
         for (const {v, e} of it) {
-          if (anyWhite) { if (!e.colH) { e.d = rt(e.d * 2 / 3); e.colH = true; } }
-          else { if (e.colH) { e.colH = false; e.d = rt(e.d * 1.5); } }
+          if (anyWhite) { if (!e.colH) { { const q = symAt(v.idx, v.events.indexOf(e)); e.cdot = !!(q && q.dot && !e.dd && !e.pa && q.src && q.src.length === 1); } e.d = rt(e.d * 2 / 3); e.colH = true; } }
+          else { if (e.colH) { e.colH = false; e.d = rt(e.d * 1.5); e.cdot = false; } }
           e.tieStart = e.tieEnd = e.tieMid = false;
         }
       });
@@ -7942,12 +7949,16 @@ const CBA = {
     const s = selSym(), v = curVoice();
     if (!s || s.rest) { ed.colArm = !ed.colArm; syncEdit(); toast(ed.colArm ? 'Coloration: the notes you enter now are black, two thirds of their value.' : 'Coloration off.'); return; }
     if (!v) return;
-    const on = !isColoured(s), first = s.src[0];
+    const on = !isColoured(s), first = s.src[0], hadCdot = !!v.events[first].cdot;
     commit(() => {
       const e = v.events[first];
       const total = s.src.reduce((a, i) => a + v.events[i].d, 0);
       if (on) {
+        /* a dotted note made black keeps its dot: black and dotted, sounding two thirds of the dotted value */
+        e.cdot = !!((s.dot || e.dots > 0) && !e.dd && !e.pa && s.src.length === 1);
         e.d = rt(total * 2 / 3); e.colH = true;
+      } else if (e.cdot) {
+        e.colH = false; e.cdot = false; e.d = rt(total * 1.5);
       } else {
         const mi = mensInfo(metAt(v, e.t)), tab = valueTable(mi.T, mi.P, mi.M, mi.X);
         const w = rt(total * mi.p);
@@ -7960,7 +7971,7 @@ const CBA = {
     });
     if (st.nota === 'real') {
       const q = symAt(v.idx, first);
-      if (!q || !!q.col !== on || q.tieNext || q.dot) { undo(); ed.redo.pop(); syncEdit(); toast(on ? 'This note cannot be coloured here.' : 'This note cannot be made white here.'); }
+      if (!q || !!q.col !== on || q.tieNext || (q.dot && !(on ? v.events[first].cdot : hadCdot))) { undo(); ed.redo.pop(); syncEdit(); toast(on ? 'This note cannot be coloured here.' : 'This note cannot be made white here.'); }
     }
   },
   /* ligature: a note joins the ligature just before it, or starts one with the next note; on a note already in a
