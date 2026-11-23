@@ -7859,15 +7859,18 @@ const CBA = {
   toggleEdit(){ if (piece) setEdit(!ed.on); },
   state(){
     const s = selSym(), t = targetSym(), v = curVoice(), ta = accTarget();
-    return {selected: !!s, signSel: mensOpen(), dur: s ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
+    return {selected: !!s, signSel: mensOpen(), dur: s && !(ed.on && !ed.ovr) ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
       acc: ta && {r: ta.rest, a: accOf(ta), p: !!(ta.dot && !ta.dd), pd: !!ta.dd, ed: !!ta.edAcc}, canAcc: !!(ed.on || ed.sel || ed.range || ed.picks), armAcc: ed.accArm || '', armDot: ed.dotArm === true || ed.dotArm === 'add', armDiv: ed.dotArm === 'div',
       target: t && {r: t.rest, a: accOf(t), p: !!(t.dot && !t.dd), pd: !!t.dd, ed: !!t.edAcc, lig: !!t.lig}, ligOn: ligSelOn(), edArm: !!ed.edArm, ovr: !!ed.ovr,
       col: s && !s.rest ? isColoured(s) : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
       hasNotes: !!(piece && piece.voices.length), durs: ed.range || ed.picks ? ['B'] : xfVoices().flatMap(q => q.syms ? q.syms.map(valKey) : []), range: !!(ed.range || ed.picks)};
   },
+  /* In note input with Insert on, a note value chosen is the value of the next note written: it never changes a note that is
+     already there (a minim put between two semibreves leaves both semibreves as they are). With Overwrite, or outside note
+     input, a selected note takes the value. */
   setDur(k){
     ed.val = k;
-    if (selSym()) OPS.value(k);
+    if (selSym() && !(ed.on && !ed.ovr)) OPS.value(k);
     else { ed.inRest = false; syncEdit(); }
   },
   setRestMode(rest){
@@ -10093,7 +10096,7 @@ const HELP_ENTRIES = [
    desc:'Toggles Rest entry mode (press zero (0) in Note input to insert a rest, or on a selected note to turn it into a rest). Rest shapes are rendered automatically according to mensural rules.'},
   {id:'overwrite-insert', cat:'Note Input', title:'Overwrite vs Insert mode', keys:'I', tags:'overwrite insert push shift timing voices',
    where:'Editing bar → Overwrite / Insert', sel:'#ovrBtn', openEditBar:true,
-   desc:'In Overwrite mode, entering or resizing a note replaces what stands at that beat so all other voices stay aligned. In Insert mode, new notes push the following music forward. Works identically in both mensural and plainchant (GABC) editors.'},
+   desc:'In Overwrite mode, entering or resizing a note replaces what stands at that beat so all other voices stay aligned. In Insert mode, new notes push the following music forward, and the value keys (1–8) only set the value of the next note, so a note that is selected keeps its length (to change it, use ⇧⌘←/→, or leave Note input). Works identically in both mensural and plainchant (GABC) editors.'},
   {id:'selection', cat:'Note Input', title:'Selection & Range (Shift+Click / Shift+Arrows)', keys:'Shift+Click · Shift+←/→/↑/↓', tags:'select range multi multiple notes between passage highlight',
    where:'Click any note on the score', sel:'#pages g[class^="n"]',
    desc:'Click a note to select it. Hold Shift and click another note to select every note in between (across voices too in mensural scores), or press Shift+ArrowLeft/Right to extend or shrink the selection in either direction. Hold Cmd/Ctrl and click to pick non-contiguous notes. Works identically in both mensural and plainchant (GABC) modes.'},
