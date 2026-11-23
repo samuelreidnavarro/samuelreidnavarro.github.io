@@ -1034,7 +1034,19 @@ function wire(){
       el.addEventListener('mouseleave', () => { if (hov()) hide(); }); });
     if (side) side.addEventListener('focusout', () => { if (hov()) hide(); });
     /* a click or tap anywhere else shuts it at once */
-    document.addEventListener('pointerdown', e => { if (hov() && S.setOpen && !e.target.closest('#tpSide, #toggleSet, #findPop')) { clearTimeout(tm); S.setOpen = false; applySettingsOpen(); } }, true);
+    /* the list of a drop-down (the organ sound, a voice's sound) is drawn by the browser, and a click on one of its choices can reach the page
+       behind it: while such a list is in use, and for a moment after, a click elsewhere does not shut the panel */
+    let listUse = 0;
+    if (side) {
+      side.addEventListener('pointerdown', e => { if (e.target.closest('select')) listUse = Date.now(); }, true);
+      side.addEventListener('focusin', e => { if (e.target.matches && e.target.matches('select')) listUse = Date.now(); });
+      side.addEventListener('change', () => { listUse = Date.now(); });
+    }
+    document.addEventListener('pointerdown', e => {
+      if (!hov() || !S.setOpen || e.target.closest('#tpSide, #toggleSet, #findPop')) return;
+      if (Date.now() - listUse < 2500 || (side && side.contains(document.activeElement) && document.activeElement.matches('select'))) return;
+      clearTimeout(tm); S.setOpen = false; applySettingsOpen();
+    }, true);
     tg.addEventListener('click', e => {
       if (hov()) { e.preventDefault(); show(); return; }
       S.setOpen = !S.setOpen; applySettingsOpen(); H.save(); });
