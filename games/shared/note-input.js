@@ -53,7 +53,7 @@ function markup(o){
         <button class="tb popbtn" id="durSum" aria-haspopup="true" aria-label="Note value"></button>
         <div class="popbody"><div class="btns" id="durBtns" role="group" aria-labelledby="durLabel"></div></div>
       </div>
-      <button class="ib" id="restBtn" aria-pressed="false" aria-label="Enter rests" title="Enter rests (R)"></button>
+      <button class="ib" id="restBtn" aria-pressed="false" aria-label="Enter rests" title="Enter rests (0)"></button>
       </div>
       <div class="podg"><div class="btns" id="accBtns" role="group" aria-label="Accidental"></div></div>
       <div class="podg"><div class="pop" id="popXform">
@@ -180,7 +180,7 @@ function fill(A, iconSVG){
   Object.entries(ACC).forEach(([a, X]) => {
     const b = document.createElement('button');
     b.className = 'ib'; b.dataset.a = a;
-    b.title = `${X.name} (${a === 'n' && A.toggleEdit ? '0' : X.key})`;
+    b.title = `${X.name} (${a === 'n' && A.toggleEdit ? (A.repeat ? 'Q' : '0') : X.key})`;
     b.setAttribute('aria-label', X.name);
     b.innerHTML = iconSVG(X.g, 2.9);
     b.addEventListener('click', () => A.toggleAcc(a));
@@ -326,22 +326,26 @@ function wire(A){
     /* a selected note is changed in any mode: accidentals, dot and note value (in note input, with nothing selected, they are
        for the note the caret stands on, or else for the next note written) */
     const sel = A.hasSel ? A.hasSel() : false;
+    /* R repeats the selected note or passage (in note input, with nothing selected: the note just written) */
+    if (A.repeat && (k === 'r' || k === 'R') && (edit || sel)) { e.preventDefault(); A.repeat(); return; }
+    const restKey = A.repeat ? k === '0' : (k === 'r' || k === 'R');
     if (edit || sel) {
       if (k === '-' || k === '_') { e.preventDefault(); A.toggleAcc('b'); return; }
       if (k === '=' || k === '+' || k === '#') { e.preventDefault(); A.toggleAcc('#'); return; }
-      if ((k === '0' && A.toggleEdit) || ((k === 'n' || k === 'N') && !A.toggleEdit && edit)) { e.preventDefault(); A.toggleAcc('n'); return; }
+      /* with Repeat on R (as in Dorico) the rest is on 0 and the natural on Q (b quadratum); otherwise the natural is on 0 */
+      if ((A.repeat ? (k === 'q' || k === 'Q') && A.toggleEdit : k === '0' && A.toggleEdit) || ((k === 'n' || k === 'N') && !A.toggleEdit && edit)) { e.preventDefault(); A.toggleAcc('n'); return; }
       if (k === '.') { e.preventDefault(); A.toggleDot(); return; }
       if (/^[1-8]$/.test(k) && Number(k) <= dkeys(A).length) { e.preventDefault(); A.setDur(DKEYS[Number(k) - 1]); return; }
     }
     /* what can be changed on a selected note is changed in any mode: rest, coloration, ligature */
     if (!edit && sel) {
-      if (k === 'r' || k === 'R') { const S = A.state(); if (S.selected) { e.preventDefault(); A.setRestMode(!S.rest); } return; }
+      if (restKey) { const S = A.state(); if (S.selected) { e.preventDefault(); A.setRestMode(!S.rest); } return; }
       if ((k === 'k' || k === 'K') && A.toggleCol) { e.preventDefault(); A.toggleCol(); return; }
       if ((k === 'l' || k === 'L') && A.toggleLig) { e.preventDefault(); A.toggleLig(); return; }
     }
     if (!edit) return;
     if (/^[a-gA-G]$/.test(k)) { e.preventDefault(); A.typeNote(k.toUpperCase()); return; }
-    if (k === 'r' || k === 'R') { e.preventDefault(); A.typeRest(); return; }
+    if (restKey) { e.preventDefault(); A.typeRest(); return; }
     if (k === 'Backspace' || k === 'Delete') { e.preventDefault(); A.deleteTarget(); return; }
     if ((k === 'i' || k === 'I') && A.toggleOverwrite) { e.preventDefault(); A.toggleOverwrite(); return; }
     if ((k === 'k' || k === 'K') && A.toggleCol) { e.preventDefault(); A.toggleCol(); return; }

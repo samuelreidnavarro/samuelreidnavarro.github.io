@@ -219,7 +219,7 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
       <button type="button" class="chbtn" id="chUp" title="Pitch up (↑, Shift+↑ octave)">↑</button>
       <button type="button" class="chbtn" id="chDn" title="Pitch down (↓, Shift+↓ octave)">↓</button>
       <button type="button" class="chbtn" id="chFlat" title="Flat (-)">♭</button>
-      <button type="button" class="chbtn" id="chNat" title="Natural (0)">♮</button>
+      <button type="button" class="chbtn" id="chNat" title="Natural (Q or 0)">♮</button>
       <button type="button" class="chbtn" id="chDot" title="Dot / punctum mora (.)">·</button>
       <button type="button" class="chbtn" id="chEpiH" title="Horizontal episema (_)">—</button>
       <button type="button" class="chbtn" id="chEpiV" title="Vertical episema (')">|</button>
@@ -8079,6 +8079,37 @@ const CBA = {
     const idx = insertionIndex(v);
     insertEvent(v.idx, idx, refStepBefore(v, idx), true, caretPad(v, idx));
   },
+  /* R: the selected note or passage is written again right after itself (as in Dorico); in note input with nothing selected,
+     the note just written is written again at the caret. What the copy lands on is overwritten, as with a paste. */
+  repeat(){
+    if (!piece || !CBA.guard()) return;
+    pickToRange();
+    if (ed.range) {
+      const R = ed.range, len = rt(R.t1 - R.t0);
+      const targets = rangeVoices().map(v => [v, spanCopy(v, R.t0, R.t1)]).filter(([v]) => writable(v));
+      if (!targets.length) { refuse(); return; }
+      commit(() => { for (const [v, list] of targets) overwriteSpan(v, R.t1, len, list); });
+      ed.range = {a: {vi: R.v0, t: R.t1, te: rt(R.t1 + len)}, v0: R.v0, v1: R.v1, t0: R.t1, t1: rt(R.t1 + len)};
+      ed.sel = null; ed.ins = null; showSel(true);
+      return;
+    }
+    const q = targetSym();
+    if (!q) { toast('Select a note or a passage first, then press R to repeat it.'); return; }
+    const vi = ed.sel ? ed.sel.vi : ed.ins.vi, v0 = piece.voices[vi];
+    if (!v0 || !writable(v0)) { refuse(); return; }
+    const t0 = q.t, t1 = rt(q.t + q.d), len = rt(t1 - t0);
+    /* the copy goes right after the symbol: after the selected note, or at the caret in note input */
+    const T = ed.sel ? t1 : (ed.ins && ed.ins.off > EPS ? t1 : caretTime(v0));
+    const list = spanCopy(v0, t0, t1);
+    commit(() => { overwriteSpan(v0, T, len, list); });
+    const v = piece.voices[vi], te = rt(T + len);
+    const first = v.events.findIndex(e => Math.abs(e.t - T) < EPS);
+    let after = v.events.findIndex(e => e.t > te - EPS);
+    if (after < 0) after = v.events.length;
+    if (ed.sel && first >= 0) { ed.sel = {vi, ei: first}; ed.ins = {vi, ei: after}; }
+    else { ed.sel = null; ed.ins = {vi, ei: after, off: 0, pad: 0}; }
+    showSel(true);
+  },
   undo: () => undo(), redo: () => redo(),
   deselect(){ if (ed.sel || ed.range || ed.picks) { ed.sel = null; ed.range = null; ed.picks = null; showSel(); } },
   togglePlay(){ togglePlayHold(); },
@@ -9915,7 +9946,7 @@ document.addEventListener('keydown', e => {
   }
   /* Accidentals & dot — exact same keys as mensural note-input.js */
   if (k === '-' || k === '_') { e.preventDefault(); e.stopImmediatePropagation(); chantModToggle(n => n.acc === 'fl', (n, v) => { n.acc = v ? 'fl' : ''; }); return; }
-  if (k === '0') { e.preventDefault(); e.stopImmediatePropagation(); chantModToggle(n => n.acc === 'na', (n, v) => { n.acc = v ? 'na' : ''; }); return; }
+  if (k === '0' || k === 'q' || k === 'Q') { e.preventDefault(); e.stopImmediatePropagation(); chantModToggle(n => n.acc === 'na', (n, v) => { n.acc = v ? 'na' : ''; }); return; }
   if (k === '.') { e.preventDefault(); e.stopImmediatePropagation(); chantModToggle(n => n.dot, (n, v) => { n.dot = v; }); return; }
   /* K: inclinatum diamond (chant analog of coloration/shape toggle) */
   if (k === 'k' || k === 'K') { e.preventDefault(); e.stopImmediatePropagation(); chantModToggle(n => n.incl, (n, v) => { n.incl = v; }); return; }
@@ -9983,22 +10014,22 @@ const HELP_ENTRIES = [
   /* Note Input & Selection */
   {id:'note-input', cat:'Note Input', title:'Note input mode', keys:'N', tags:'pen edit write enter notes keyboard',
    where:'Top bar → Pen icon', sel:'#editBtn',
-   desc:'Turns Note Input on or off. When on, a vertical caret shows where new notes go: press A–G to write pitches, 1–8 for note values, R for rests, or click directly on any staff. Press Escape to exit.'},
+   desc:'Turns Note Input on or off. When on, a vertical caret shows where new notes go: press A–G to write pitches, 1–8 for note values, 0 for rests, R to repeat the last note, or click directly on any staff. Press Escape to exit.'},
   {id:'note-values', cat:'Note Input', title:'Note values (Maxima – Semifusa)', keys:'1–8', tags:'duration rhythm maxima longa brevis semibrevis minima semiminima fusa semifusa',
    where:'Editing bar → Note value', sel:'#durSum', openEditBar:true,
    desc:'Choose the rhythmic value (Maxima 1, Longa 2, Brevis 3, Semibrevis 4, Minima 5, Semiminima 6, Fusa 7, Semifusa 8). With a note selected, changes its duration; otherwise sets the value of the next note entered.'},
-  {id:'rests', cat:'Note Input', title:'Rests', keys:'R', tags:'rest silence pause pausa',
+  {id:'rests', cat:'Note Input', title:'Rests', keys:'0', tags:'rest silence pause pausa',
    where:'Editing bar → Rest button', sel:'#restBtn', openEditBar:true,
-   desc:'Toggles Rest entry mode (press R in Note input to insert a rest, or press R on a selected note to turn it into a rest). Rest shapes are rendered automatically according to mensural rules.'},
+   desc:'Toggles Rest entry mode (press 0 in Note input to insert a rest, or press 0 on a selected note to turn it into a rest). Rest shapes are rendered automatically according to mensural rules.'},
   {id:'overwrite-insert', cat:'Note Input', title:'Overwrite vs Insert mode', keys:'I', tags:'overwrite insert push shift timing voices',
    where:'Editing bar → Overwrite / Insert', sel:'#ovrBtn', openEditBar:true,
    desc:'In Overwrite mode, entering or resizing a note replaces what stands at that beat so all other voices stay aligned. In Insert mode, new notes push the following music forward. Works identically in both mensural and plainchant (GABC) editors.'},
   {id:'selection', cat:'Note Input', title:'Selection & Range (Shift+Click / Shift+Arrows)', keys:'Shift+Click · Shift+←/→/↑/↓', tags:'select range multi multiple notes between passage highlight',
    where:'Click any note on the score', sel:'#pages g[class^="n"]',
    desc:'Click a note to select it. Hold Shift and click another note to select every note in between (across voices too in mensural scores), or press Shift+ArrowLeft/Right to extend or shrink the selection in either direction. Hold Cmd/Ctrl and click to pick non-contiguous notes. Works identically in both mensural and plainchant (GABC) modes.'},
-  {id:'accidentals', cat:'Note Input', title:'Accidentals (Flat, Natural, Sharp)', keys:'- · 0 · =', tags:'accidental flat sharp natural bmol diesis quadratum musica ficta',
+  {id:'accidentals', cat:'Note Input', title:'Accidentals (Flat, Natural, Sharp)', keys:'- · Q · =', tags:'accidental flat sharp natural bmol diesis quadratum musica ficta',
    where:'Editing bar → Accidentals', sel:'#accBtns', openEditBar:true,
-   desc:'Applies or toggles a flat (-), natural (0), or sharp (=) on the selected note(s), or arms it for the next note. Toggle Ed. to place the accidental editorially above the staff (musica ficta).'},
+   desc:'Applies or toggles a flat (-), natural (Q), or sharp (=) on the selected note(s), or arms it for the next note. Toggle Ed. to place the accidental editorially above the staff (musica ficta).'},
   {id:'editorial-acc', cat:'Note Input', title:'Editorial accidentals (Musica ficta)', keys:'Ed.', tags:'ficta editorial accidental above staff',
    where:'Editing bar → Ed.', sel:'#edBtn', openEditBar:true,
    desc:'Marks an accidental as editorial so it prints in smaller type above the staff rather than inline. You can globally show or hide editorial accidentals under Engraving → Editorial accidentals.'},
@@ -10108,9 +10139,9 @@ const HELP_ENTRIES = [
    desc:'Export your score to Superset .krn, full CMME 0.95 XML, MusicXML, MuseScore, LilyPond, MIDI, GABC, printable PDF, SVG, PNG, or a shareable link.'},
 
   /* Shortcuts quick reference */
-  {id:'shortcuts', cat:'Shortcuts', title:'Essential Keyboard Shortcuts', keys:'⌘K · ? · N · L · K · I · R · Space', tags:'shortcuts hotkeys keys keyboard cheat sheet reference',
+  {id:'shortcuts', cat:'Shortcuts', title:'Essential Keyboard Shortcuts', keys:'⌘K · ? · N · L · K · I · R · 0 · Space', tags:'shortcuts hotkeys keys keyboard cheat sheet reference',
    where:'Works anywhere on the score', sel:'#editBtn',
-   desc:'N: Note input · A–G: Enter pitch · 1–8: Value · R: Rest · I: Overwrite/Insert · ↑/↓: Pitch step (Shift/⌘ octave) · Shift+Click / Shift+←→: Range select · L: Ligature (2+ notes) or Lyrics (1 note) · Shift+L: Original text · K: Coloration (Inclinatum in chant) · Shift+K: Cycle display colour · - / 0 / =: Flat/Natural/Sharp · . : Dot · Space: Play · ⌘Z: Undo · ⌘K or /: Find feature · ?: Help.'}
+   desc:'N: Note input · A–G: Enter pitch · 1–8: Value · R: Repeat the note or selection · 0: Rest · I: Overwrite/Insert · ↑/↓: Pitch step (Shift/⌘ octave) · Shift+Click / Shift+←→: Range select · L: Ligature (2+ notes) or Lyrics (1 note) · Shift+L: Original text · K: Coloration (Inclinatum in chant) · Shift+K: Cycle display colour · - / 0 / =: Flat/Natural/Sharp · . : Dot · Space: Play · ⌘Z: Undo · ⌘K or /: Find feature · ?: Help.'}
 ];
 
 let spotTimer = null;
@@ -10282,10 +10313,11 @@ const FIND_ALIAS = {dotBtn:'dot punctus additionis augmentation point', pdivBtn:
   addClef:'clef change c clef g clef f clef treble bass', addKey:'key signature flats sharps', addFerm:'fermata corona hold', printBtn:'pdf print', lyBtn:'ly lilypond', mxlBtn:'xml sibelius dorico musescore', play:'playback listen start stop pause',
   undo:'take back revert', redo:'again', del2:'', tap:'tap beat pulse', unitBtn:'tempo beat value', ovrBtn:'insert overwrite replace push', toggleSet:'sound organ stops temperament mixer tone brightness room', fsBtn:'fullscreen full screen',
   loop:'repeat again', tempo:'bpm speed metronome pulse', countIn:'lead in click bars before', ref:'tuning pitch a440 diapason frequency', vol:'loud quiet sound level', libQ:'find piece composer josquin search', mic:'sing singing voice input pitch', recGo:'recording record', kbdBtn:'piano midi keys', openBtn:'import load file', libBtn:'repertoire library pieces corpus', newBtn:'empty blank create'};
-const FIND_KEY = {editBtn:'N', restBtn:'R', ovrBtn:'I', colBtn:'K', ligBtn:'L', dotBtn:'.', play:'Space', undo:'⌘Z', redo:'⇧⌘Z', del:'⌫', findBtn:'⌘K', helpBtn:'?', stepUp:'↑', stepDown:'↓', selPrev:'←', selNext:'→'};
+const FIND_KEY = {editBtn:'N', restBtn:'0', ovrBtn:'I', colBtn:'K', ligBtn:'L', dotBtn:'.', play:'Space', undo:'⌘Z', redo:'⇧⌘Z', del:'⌫', findBtn:'⌘K', helpBtn:'?', stepUp:'↑', stepDown:'↓', selPrev:'←', selNext:'→'};
 const FIND_VALS = ['maxima', 'longa', 'brevis', 'semibrevis', 'minima', 'semiminima', 'fusa', 'semifusa'];
 /* things done with keys only, or by a combination: sent to the app as a key press */
 const FIND_KEYCMDS = [
+  {name:'Repeat the note or selection', keys:'R', alias:'repeat again duplicate copy twice write again', key:{key:'r'}, acts:1, hint:'Writes the selected note or passage again right after itself (in note input, the note just written)'},
   {name:'Make the note longer', keys:'⇧⌘→', alias:'longer next value augment lengthen dotted double', key:{key:'ArrowRight', metaKey:true, shiftKey:true}, acts:1, hint:'Gives the selected note or rest its next longer value'},
   {name:'Make the note shorter', keys:'⇧⌘←', alias:'shorter previous value diminish shorten halve', key:{key:'ArrowLeft', metaKey:true, shiftKey:true}, acts:1, hint:'Gives the selected note or rest its next shorter value'},
   {name:'Move the note later', keys:'⌘→', alias:'move right later along grid shift', key:{key:'ArrowRight', metaKey:true}, acts:1, hint:'Moves the selected notes one grid step later'},
@@ -10353,7 +10385,7 @@ function findBuild(){
     const kind = isMenu ? 'menu' : el.tagName === 'SELECT' ? 'focus' : (el.tagName === 'INPUT' && /^(range|number|text|search)$/.test(el.type)) ? 'focus' : 'click';
     const valIdx = path === 'Note value' || path === 'Grid step' ? FIND_VALS.indexOf(name.toLowerCase()) : -1;
     const accWord = /^(flat|natural|sharp)$/i.test(name);
-    const c = {name, path, hint: desc, kind, el: () => el, id, keys: FIND_KEY[id] || (valIdx >= 0 && path === 'Note value' ? String(valIdx + 1) : accWord ? ({flat:'-', natural:'0', sharp:'='})[name.toLowerCase()] : ''),
+    const c = {name, path, hint: desc, kind, el: () => el, id, keys: FIND_KEY[id] || (valIdx >= 0 && path === 'Note value' ? String(valIdx + 1) : accWord ? ({flat:'-', natural:'Q', sharp:'='})[name.toLowerCase()] : ''),
       prio: path === 'Grid step' ? -8 : path === 'Note value' ? 14 : /^(Note input|Dot|Ligature|Transform)$/.test(path) ? 4 : /^dark mode/i.test(name) ? 7 : path === 'Plainchant' ? -24 : 0,
       acts: /^(dotBtn|pdivBtn|colBtn|ligBtn|restBtn|edBtn|del|stepUp|stepDown)$/.test(id) || path === 'Note value' || accWord ? 1 : 0};
     const aliasStr = (FIND_ALIAS[id] || '') + ' ' + (valIdx >= 0 ? 'note value duration ' + (path === 'Grid step' ? 'grid step snap' : '') : '');
