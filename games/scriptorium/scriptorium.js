@@ -10354,7 +10354,7 @@ function findBuild(){
     const valIdx = path === 'Note value' || path === 'Grid step' ? FIND_VALS.indexOf(name.toLowerCase()) : -1;
     const accWord = /^(flat|natural|sharp)$/i.test(name);
     const c = {name, path, hint: desc, kind, el: () => el, id, keys: FIND_KEY[id] || (valIdx >= 0 && path === 'Note value' ? String(valIdx + 1) : accWord ? ({flat:'-', natural:'0', sharp:'='})[name.toLowerCase()] : ''),
-      prio: path === 'Grid step' ? -8 : path === 'Note value' ? 14 : /^(Note input|Dot|Ligature|Transform)$/.test(path) ? 4 : /^dark mode/i.test(name) ? 7 : path === 'Plainchant' ? -10 : 0,
+      prio: path === 'Grid step' ? -8 : path === 'Note value' ? 14 : /^(Note input|Dot|Ligature|Transform)$/.test(path) ? 4 : /^dark mode/i.test(name) ? 7 : path === 'Plainchant' ? -24 : 0,
       acts: /^(dotBtn|pdivBtn|colBtn|ligBtn|restBtn|edBtn|del|stepUp|stepDown)$/.test(id) || path === 'Note value' || accWord ? 1 : 0};
     const aliasStr = (FIND_ALIAS[id] || '') + ' ' + (valIdx >= 0 ? 'note value duration ' + (path === 'Grid step' ? 'grid step snap' : '') : '');
     c.words = [];
