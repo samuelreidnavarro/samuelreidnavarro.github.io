@@ -21,7 +21,7 @@ const escH = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>'
     ? `<button class="tb openfile" id="libBtn" aria-haspopup="true" aria-expanded="false" aria-controls="library"><span class="of-t">${esc(L.lib)}</span><span class="of-f">${esc(LIBSUB)}</span></button>`
     : `<button class="tb" id="libBtn" aria-haspopup="true" aria-expanded="false" aria-controls="library">${esc(L.lib)}</button>`;
   /* Open menu order (Samuel 2026-11-14): Repertoire, Open file, New score, then Recent scores and My scores */
-  const OPENBTN = `<button class="tb openfile" id="openBtn"${APP.openFile === false ? ' hidden' : ''}><span class="of-t">Open file</span><span class="of-f">.mxl · MuseScore · MEI · MIDI · LilyPond · .krn · .gabc · CMME</span></button>`;
+  const OPENBTN = `<button class="tb openfile" id="openBtn"${APP.openFile === false ? ' hidden' : ''}><span class="of-t">Open file</span><span class="of-f">.choirbook.xml · .mxl · MuseScore · MEI · MIDI · LilyPond · .krn · .gabc · CMME</span></button>`;
   const NEWBTN = `<button class="tb" id="newBtn" title="${esc(L.newTitle)}">${esc(L.newScore)}</button>`;
   document.body.insertAdjacentHTML('afterbegin', `<main class="wrap">
   <header class="top"><h1>${esc(APP.name)}</h1></header>
@@ -149,6 +149,7 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
               <div class="btns col" id="sendList"></div>
               <div class="exph">Save as a file</div>
               <div class="expfiles">
+                <button class="tb xf" id="cbBtn" title="Everything about this piece in one file: the music and words, the layout, the incipit, the clefs and staves. Opens again exactly as it is now"><b>.choirbook.xml</b><i>Everything</i></button>
                 <button class="tb xf" id="saveBtn" title="Save this piece, with your changes, as a .krn file (Humdrum **kern)"><b>.krn</b><i>Humdrum</i></button>
                 <button class="tb xf" id="cmmeBtn" title="Save this piece as CMME XML (.cmme.xml) with full mensural metadata and pass-through"><b>.cmme.xml</b><i>CMME</i></button>
                 <button class="tb xf" id="mxlBtn" title="MusicXML (.mxl), for MuseScore, Dorico, Sibelius, Finale: in modern notation"><b>.mxl</b><i>MusicXML</i></button>
@@ -167,7 +168,7 @@ ${APP.catalogue ? LIBBTN + OPENBTN + NEWBTN + '<div class="rhead" id="recentHead
           <button type="button" class="ib" id="helpBtn" aria-label="Help &amp; Glossary" title="Help &amp; Glossary: search any term (?)"><span style="font-family:Georgia,serif;font-weight:700;font-size:16px;line-height:1">?</span></button>
         </div>
       </div>
-      <input type="file" id="fileIn" accept=".krn,.kern,.txt,.musicxml,.xml,.mxl,.mscz,.mscx,.mei,.mid,.midi,.ly,.gabc,.cmme" hidden>
+      <input type="file" id="fileIn" accept=".krn,.kern,.txt,.musicxml,.xml,.mxl,.mscz,.mscx,.mei,.mid,.midi,.ly,.gabc,.cmme,.choirbook" hidden>
     </div>
     <div class="bar editbar" id="editBar" hidden></div>
   </section>
@@ -5728,9 +5729,98 @@ function meiToKern(txt, fileName){
   const P = {title, composer, voices, bars: bars.filter(b => b.t > EPS && b.t < end - EPS), sections, end, meta, barNums: []};
   return writeKern(P);
 }
+/* ------------------------------------------------------------------ */
+/* The ChoirBook file (.choirbook.xml): everything about one piece in one file                */
+/* ------------------------------------------------------------------ */
+/* What it holds: the music exactly as the **kern text of the piece (which carries the words, the credits and all that came from CMME, MEI and the
+   other formats), the layout and look settings, and what belongs to this piece alone (which voices show, their clefs, the staves they share,
+   the incipit and its clefs, black notation).
+   Compatibility, for ever: files only ever GROW. Nothing is renamed or taken away; a new setting is added to CB_SETTINGS (or a new piece
+   item to CB_PIECE_ITEMS) and a file without it simply leaves it as the person has it. A reader ignores what it does not know and warns when
+   a file is newer than itself. A change that cannot be only an addition raises CB_VERSION and adds a step to CB_MIGRATE, which turns a file
+   of the old version into the new one before it is read. */
+const CB_VERSION = 1;
+/* the settings of the layout and look that go into the file (not personal choices such as dark mode, window transparency, volume or tempo) */
+const CB_SETTINGS = ['size', 'noteSize', 'sizeLock', 'thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'mens', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'dashes', 'ed', 'lig', 'lines', 'paperCol', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'measAcross', 'origText', 'ann', 'ossia', 'verse', 'view', 'paper', 'printPaper', 'orient', 'flow', 'webScroll'];
+/* what belongs to one piece: kept in st under the key of the piece */
+const CB_PIECE_ITEMS = ['vis', 'inc', 'incClef', 'staves', 'black', 'bounds'];
+/* from an older version of the file to the next: {from: object} where the object is {settings, items} (nothing yet: this is version 1) */
+const CB_MIGRATE = {};
+const xmlEsc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const cdata = t => '<![CDATA[' + String(t).replace(/]]>/g, ']]]]><![CDATA[>') + ']]>';
+function exportChoirbook(P){
+  const kern = P.text || writeKern(P);
+  const o = ['<?xml version="1.0" encoding="UTF-8"?>',
+    `<choirbook version="${CB_VERSION}" app="${xmlEsc(APP.name || 'ChoirBook')}" saved="${new Date().toISOString()}">`,
+    '  <piece>', `    <title>${xmlEsc(P.title || '')}</title>`, `    <music format="humdrum-kern">${cdata(kern)}</music>`, '  </piece>', '  <layout>'];
+  for (const k of CB_SETTINGS) {
+    const v = st[k]; if (v === undefined || v === null) continue;
+    const t = typeof v === 'number' ? 'number' : typeof v === 'boolean' ? 'boolean' : 'string';
+    o.push(`    <setting name="${k}" type="${t}">${xmlEsc(v)}</setting>`);
+  }
+  o.push('  </layout>', '  <pieceState>');
+  for (const k of CB_PIECE_ITEMS) {
+    const v = st[k] && typeof st[k] === 'object' ? st[k][pieceKey] : undefined;
+    if (v === undefined) continue;
+    o.push(`    <item name="${k}">${cdata(JSON.stringify(v))}</item>`);
+  }
+  o.push('  </pieceState>', '</choirbook>', '');
+  return o.join('\n');
+}
+/* reads the file into {kern, settings, items}; throws a plain message when it is not one */
+function readChoirbook(txt){
+  const doc = new DOMParser().parseFromString(txt, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('This .choirbook.xml file cannot be read: it is not valid XML.');
+  const root = doc.documentElement;
+  if (!root || root.localName !== 'choirbook') throw new Error('This is not a ChoirBook file.');
+  const kids = (el, name) => [...el.children].filter(c => c.localName === name);
+  const first = (el, name) => (el ? kids(el, name)[0] : null) || null;
+  let ver = parseInt(root.getAttribute('version'), 10); if (!(ver >= 1)) ver = 1;
+  const piece = first(root, 'piece'), music = first(piece, 'music');
+  const kern = music ? music.textContent : '';
+  if (!/\*\*(kern|mens)/.test(kern)) throw new Error('This ChoirBook file has no music in it.');
+  const settings = {}, items = {};
+  const lay = first(root, 'layout');
+  if (lay) for (const el of kids(lay, 'setting')) {
+    const k = el.getAttribute('name'), t = el.getAttribute('type'), raw = el.textContent;
+    if (!k) continue;
+    settings[k] = t === 'number' ? parseFloat(raw) : t === 'boolean' ? raw === 'true' : raw;
+  }
+  const ps = first(root, 'pieceState');
+  if (ps) for (const el of kids(ps, 'item')) { const k = el.getAttribute('name'); if (!k) continue; try { items[k] = JSON.parse(el.textContent); } catch (e) {} }
+  let obj = {settings, items};
+  for (let v = ver; v < CB_VERSION; v++) if (CB_MIGRATE[v]) obj = CB_MIGRATE[v](obj) || obj;
+  return {kern, settings: obj.settings, items: obj.items, newer: ver > CB_VERSION};
+}
+/* opens it: the music first, then the layout and the things of this piece, each only when the file has it and it is of the right kind */
+function openChoirbook(name, txt){
+  const r = readChoirbook(txt);
+  loadText(name, r.kern);
+  if (!piece) return;
+  for (const k of CB_SETTINGS) {
+    if (!(k in r.settings)) continue;
+    const v = r.settings[k];
+    if (typeof v === 'number' && !isFinite(v)) continue;
+    if (st[k] !== undefined && typeof st[k] !== typeof v) continue;
+    st[k] = v;
+  }
+  for (const k of CB_PIECE_ITEMS) {
+    const v = r.items[k];
+    if (v === undefined || v === null) continue;
+    if (!st[k] || typeof st[k] !== 'object') st[k] = {};
+    st[k][pieceKey] = v;
+  }
+  save();
+  for (const k of ['size', 'noteSize', 'hs', 'vs', 'ss']) { const el = document.getElementById(k); if (el) el.value = st[k]; }
+  try { rngSyncAll(); } catch (e) {}
+  syncUI(); render(); incipitSnap(); incSync();
+  toast(r.newer ? 'This file was saved by a newer version of ' + APP.name + '. It is opened as far as this version understands it.' : 'Opened with the layout saved in the file.');
+}
+window.__choirbook = {write: exportChoirbook, read: readChoirbook, open: openChoirbook, version: CB_VERSION};
 function openFile(file){
   const fail = err => { stopPlay(); pagesEl.innerHTML = `<p class="msg">${esc(err.message)}</p>`; };
   const imp = f => f.text().then(txt => {
+    if (/<choirbook\b/.test(txt.slice(0, 1500))) { openChoirbook(file.name, txt); return; }
     if (/\.mei(\.xml)?$/i.test(file.name) || /<mei\b/i.test(txt.slice(0, 1200))) {
       loadText(file.name, meiToKern(txt, file.name));
       return;
@@ -8949,6 +9039,16 @@ $('#saveBtn').addEventListener('click', () => {
   a.download = (H.fileName ? H.fileName() : (pieceKey.replace(/^file:/, '').replace(/\.(krn|kern|txt)$/i, '') || APP.store)) + '.krn';
   document.body.appendChild(a); a.click(); a.remove();
 });
+if ($('#cbBtn')) $('#cbBtn').addEventListener('click', () => {
+  if (!piece) return;
+  closePops();
+  const xml = exportChoirbook(piece);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([xml], {type: 'application/xml'}));
+  a.download = (H.fileName ? H.fileName() : (pieceKey.replace(/^file:/, '').replace(/\.(krn|kern|cmme|choirbook|xml|txt)$/gi, '') || APP.store)) + '.choirbook.xml';
+  document.body.appendChild(a); a.click(); a.remove();
+  toast('Saved a ChoirBook file (.choirbook.xml) with the music, the layout and the staves.');
+});
 if ($('#cmmeBtn')) $('#cmmeBtn').addEventListener('click', () => {
   if (!piece) return;
   closePops();
@@ -10393,10 +10493,10 @@ const HELP_ENTRIES = [
   {id:'piano-midi', cat:'View & Files', title:'On-screen Keyboard & MIDI Input', keys:'', tags:'piano keyboard midi controller play record notes',
    where:'Transport / Sound controls', sel:'#toggleSet',
    desc:'Play pitches on the on-screen keyboard or a connected USB/Bluetooth MIDI keyboard. In Note Input mode (or Plainchant GABC mode), played notes write directly onto the staff.'},
-  {id:'open-import', cat:'View & Files', title:'Open & Import (.krn, CMME, MXL, MuseScore, MEI, MIDI, GABC)', keys:'', tags:'open import file repertoire library cmme xml musicxml mscz mei midi lilypond gabc kern drag drop',
+  {id:'open-import', cat:'View & Files', title:'Open & Import (.choirbook.xml, .krn, CMME, MXL, MuseScore, MEI, MIDI, GABC)', keys:'', tags:'open import file repertoire library cmme xml musicxml mscz mei midi lilypond gabc kern drag drop',
    where:'Top bar → Open', sel:'#popOpen .popbtn', openPop:'#popOpen',
    desc:'Browse the built-in Repertoire, create a New score, or open (or drag-and-drop) .krn, CMME XML (.cmme.xml), MusicXML (.mxl), MuseScore (.mscz), MEI, MIDI, LilyPond, or GABC files.'},
-  {id:'export', cat:'Export & Share', title:'Export: link, PDF and files (.krn, .cmme.xml, .mxl, .mscz, .ly, .mid, .gabc, .svg, .png)', keys:'', tags:'export download save print pdf svg png share link copy cmme kern musicxml mscz lilypond midi gabc file',
+  {id:'export', cat:'Export & Share', title:'Export: link, PDF and files (.choirbook.xml, .krn, .cmme.xml, .mxl, .mscz, .ly, .mid, .gabc, .svg, .png)', keys:'', tags:'export download save print pdf svg png share link copy cmme kern musicxml mscz lilypond midi gabc file',
    where:'Top bar → Export', sel:'#popExport .popbtn', openPop:'#popExport',
    desc:'At the top: Copy link (a link that opens this score with your changes), Download PDF (the whole score at the paper size chosen in Layout) and Save to My scores. Under Open in: the other apps. Under Save as a file: .krn (Humdrum), .cmme.xml (CMME, with the full mensural detail), .mxl (MusicXML, for Dorico, MuseScore, Sibelius), .mscz (MuseScore), .ly (LilyPond), .mid (MIDI), .gabc (Gregorio chant), and the page as a picture (.svg or .png).'},
 
@@ -10602,7 +10702,7 @@ const FIND_NAME = {tonup:'Transpose up a tone', tondn:'Transpose down a tone', o
   del:'Delete the selected note', restBtn:'Rests', ovrBtn:'Insert / Overwrite', edAccFl:'Editorial flat (ficta)', edAccNa:'Editorial natural (ficta)', edAccSh:'Editorial sharp (ficta)', divisiBtn:'Chord (divisi)', v2Btn:'Second voice (+v)', dotBtn:'Punctus additionis', pdivBtn:'Punctus divisionis',
   colBtn:'Coloration', ligBtn:'Ligature', editBtn:'Note input', editMore:'Editing tools', addMens:'Mensuration sign', addClef:'Clef change', addKey:'Key signature change', addFerm:'Fermata', addSignum:'Signum congruentiae',
   addCustos:'Custos', addLacuna:'Lacuna', addSec:'Section line', addMark:'Rehearsal mark', addText:'Text above the staff', addOrigBtn:'Original text', addAnnBtn:'Commentary note', addVarBtn:'Variant reading (ossia)',
-  addLyr:'Lyrics', addVerse:'Another verse', addInc:'Incipit', addChantBtn:'Plainchant section', saveBtn:'Save as .krn', cmmeBtn:'Export CMME XML', mxlBtn:'Export MusicXML', mscBtn:'Export MuseScore', lyBtn:'Export LilyPond',
+  addLyr:'Lyrics', addVerse:'Another verse', addInc:'Incipit', addChantBtn:'Plainchant section', cbBtn:'Save as .choirbook.xml (everything)', saveBtn:'Save as .krn', cmmeBtn:'Export CMME XML', mxlBtn:'Export MusicXML', mscBtn:'Export MuseScore', lyBtn:'Export LilyPond',
   midBtn:'Export MIDI', gabcBtn:'Export GABC', keepBtn:'Keep a copy in this browser', printBtn:'Print / save as PDF', svgBtn:'Export SVG picture', pngBtn:'Export PNG picture', linkBtn:'Share a link to this score',
   openBtn:'Open a file', newBtn:'New score', libBtn:'Repertoire', myBtn:'My scores', play:'Play / pause', loop:'Loop', metro:'Metronome', tap:'Tap tempo', tempoUp:'Faster', tempoDown:'Slower', heart:'Resting pulse (60)',
   unitBtn:'Beat unit', toggleSet:'Sound settings', mic:'Microphone', recGo:'Record', micNotate:'Record as notation', recAudio:'Record audio', kbdBtn:'Piano keyboard', kbdShow:'Show the key you play', fsBtn:'Full screen',

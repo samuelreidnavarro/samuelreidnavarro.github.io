@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>ChoirBook file compatibility</title>
+<style>body{font:15px/1.5 system-ui,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem}li{margin:.3rem 0}.ok{color:#1a7f37}.bad{color:#c62828}iframe{position:absolute;left:-9999px;width:900px;height:700px}</style>
+<h1>ChoirBook file compatibility</h1>
+<p>Every old file in <code>tests/choirbook-files/</code> must open. Green = fine, red = broken.</p>
+<ul id="out"><li>Running…</li></ul>
+<iframe id="app" src="../games/choirbook.html"></iframe>
+<script>
+/* add the name of every new fixture file here */
+const FILES = ['v1-small.choirbook.xml'];
+const out = document.getElementById('out'), app = document.getElementById('app');
+app.addEventListener('load', async () => {
+  await new Promise(r => setTimeout(r, 1500));
+  out.innerHTML = '';
+  const cb = app.contentWindow.__choirbook;
+  if (!cb) { out.innerHTML = '<li class="bad">The app did not load.</li>'; return; }
+  for (const f of FILES) {
+    const li = document.createElement('li');
+    try {
+      const txt = await (await fetch('choirbook-files/' + f)).text();
+      const r = cb.read(txt);
+      if (!r.kern || !/\*\*kern/.test(r.kern)) throw new Error('no music');
+      li.className = 'ok'; li.textContent = f + ': opens (' + Object.keys(r.settings).length + ' settings, ' + Object.keys(r.items).length + ' piece items)';
+    } catch (e) { li.className = 'bad'; li.textContent = f + ': BROKEN: ' + e.message; }
+    out.appendChild(li);
+  }
+});
+</script>
