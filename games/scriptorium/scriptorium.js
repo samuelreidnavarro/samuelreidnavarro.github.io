@@ -1222,25 +1222,29 @@ function pushSplit(out, base, w, T, P, tieLast, p = 1){
 /* clef for a voice: as encoded, or a mensural C/F clef that keeps the range on the staff */
 const MODERN_CLEFS = ['treble', 'treble8', 'bass'];
 function modernClefOf(cKey, v){
-  if (MODERN_CLEFS.includes(cKey)) return cKey;
+  /* Modern clefs are three: F (bass), G, and G an octave lower (for tenors and most altos). Which one a voice gets follows its range, also when
+     the file has it in a G clef already (a tenor written in a violin clef); the clef the file has stays when it fits about as well. */
   if (v) {
     const steps = v.events.filter(e => !e.rest && !e.tieEnd && !e.tieMid).map(e => e.step);
     if (steps.length) {
-      let best = 'treble', bestCost = Infinity;
-      MODERN_CLEFS.forEach((k, i) => {
+      const cost = k => {
         const b = CLEFS[k].bottom;
-        let cost = 0;
+        let c = 0;
         for (const s of steps) {
           const p = s - b;
-          if (p < -1) cost += Math.ceil((-1 - p) / 2);
-          else if (p > 9) cost += Math.ceil((p - 9) / 2);
-          cost += Math.abs(p - 4) * 0.08;
+          if (p < -1) c += Math.ceil((-1 - p) / 2);
+          else if (p > 9) c += Math.ceil((p - 9) / 2);
+          c += Math.abs(p - 4) * 0.08;
         }
-        if (cost < bestCost - 1e-9) { bestCost = cost; best = k; }
-      });
+        return c;
+      };
+      let best = 'treble', bestCost = Infinity;
+      MODERN_CLEFS.forEach(k => { const c = cost(k); if (c < bestCost - 1e-9) { bestCost = c; best = k; } });
+      if (MODERN_CLEFS.includes(cKey) && cost(cKey) <= bestCost * 1.15 + 1) return cKey;
       return best;
     }
   }
+  if (MODERN_CLEFS.includes(cKey)) return cKey;
   if (cKey === 'f3' || cKey === 'c5') return 'bass';
   if (cKey === 'c3' || cKey === 'c4') return 'treble8';
   return 'treble';
@@ -2570,7 +2574,8 @@ const INC = {key: null, snap: null};
 function incipitSnap(){
   try {
     INC.key = pieceKey;
-    INC.snap = piece.voices.map(v => ({
+    INC.snap = piece.voices.map((v, vi) => ({
+      vi,
       clef: v.oclef && CLEFS[KERN_CLEF[v.oclef]] ? KERN_CLEF[v.oclef] : KERN_CLEF[v.kclef] || 'treble',
       mens: metAt(v, 0), key: Object.assign({}, keyAt(v, 0)),
       notes: (() => { const out = []; let n = 0; for (const q of v.syms || []) { if (n >= 5 || out.length >= 9) break; out.push({rest: !!q.rest, step: q.step, alt: q.alt, glyph: q.glyph, g: q.g, hw: q.hw, dot: !!q.dot}); if (!q.rest) n++; } return out; })()
@@ -2579,11 +2584,13 @@ function incipitSnap(){
   if (incipitOn()) render();
 }
 function incipitOn(){ return !!(piece && INC.snap && INC.key === pieceKey && (st.inc || {})[pieceKey] && INC.snap.length === piece.voices.length); }
+/* the clef an incipit staff shows: the original one, or the one chosen by clicking it (the notes stay as they are, at their pitch) */
+const incClefOf = q => { const k = ((st.incClef || {})[pieceKey] || {})[q.vi]; return k && CLEFS[k] ? k : q.clef; };
 const incAcc = (n, q) => { if (n.rest || n.alt === null || n.alt === undefined) return null; const a = Math.max(-1, Math.min(1, n.alt)); return a !== (q.key[LETTERS[((n.step % 7) + 7) % 7]] || 0) ? ACCG[a] : null; };
 function incipitW(){
   let w = 0;
   for (const q of INC.snap) {
-    let x = 0.4 + gw(CLEFS[q.clef].g) + 0.5 + (q.mens ? mensW(q.mens) + 0.6 : 0);
+    let x = 0.4 + gw(CLEFS[incClefOf(q)].g) + 0.5 + (q.mens ? mensW(q.mens) + 0.6 : 0);
     for (const n of q.notes) { const a = incAcc(n, q); x += (a ? gw(a) + 0.35 : 0) + n.hw + 1.1; }
     w = Math.max(w, x);
   }
@@ -2591,11 +2598,11 @@ function incipitW(){
 }
 function incipitSvg(q, x0, top){
   if (!q) return '';
-  const C = CLEFS[q.clef], W = incipitW() - 1.2;
+  const ck = incClefOf(q), C = CLEFS[ck], W = incipitW() - 1.2;
   let o = '';
   for (let k = 5 - staffLinesN(); k < 5; k++) o += hl(x0, x0 + W, top + k, 'staff', 0.12);
   let x = x0 + 0.4;
-  o += clefSvg(q.clef, x, top); x += gw(C.g) + 0.5;
+  o += `<g class="incclefhit" data-v="${q.vi}"><rect x="${f(x - 0.2)}" y="${f(top - 1.5)}" width="${f(gw(C.g) + 0.4)}" height="7" fill="transparent"/>${clefSvg(ck, x, top)}</g>`; x += gw(C.g) + 0.5;
   if (q.mens) { o += mensSvg(q.mens, x, top); x += mensW(q.mens) + 0.6; }
   for (const n of q.notes) {
     if (n.rest) { o += restSvg(n, x + n.hw / 2, top); x += n.hw + 1.1; continue; }
@@ -6459,21 +6466,23 @@ const pickT = () => clefPick.dataset.t === undefined || clefPick.dataset.t === '
 function markClef(){
   const vi = +clefPick.dataset.v, v = piece && piece.voices[vi], mt = pickT();
   const cm = v && mt !== null ? v.clefs.find(m => m.t > EPS && eq(m.t, mt)) : null;
-  const cur = cm ? KERN_CLEF[cm.c] || '' : v ? vis(vi).clef || '' : '', fl = v && keyAt(v, 0).b === -1;
+  const inc = !!clefPick.dataset.inc;
+  const cur = cm ? KERN_CLEF[cm.c] || '' : inc ? (((st.incClef || {})[pieceKey] || {})[vi] || '') : v ? vis(vi).clef || '' : '', fl = v && keyAt(v, 0).b === -1;
   clefPick.querySelectorAll('li').forEach((li, i) => {
     li.classList.toggle('active', i === clefActive);
     li.setAttribute('aria-selected', String(li.dataset.c === 'flat' ? !!fl : li.dataset.c === cur));
   });
   clefPick.setAttribute('aria-activedescendant', clefPick.children[clefActive].id);
 }
-function openClefPick(vi, e, t){
+function openClefPick(vi, e, t, inc){
   const wr = $('.viewwrap').getBoundingClientRect();
-  clefPick.dataset.v = vi; clefPick.dataset.t = t === undefined ? '' : t; clefPick.hidden = false;
+  clefPick.dataset.v = vi; clefPick.dataset.t = t === undefined ? '' : t; clefPick.dataset.inc = inc ? '1' : ''; clefPick.hidden = false;
   const mid = t !== undefined, cm = mid ? piece.voices[vi].clefs.find(m => m.t > EPS && eq(m.t, t)) : null;
   /* at a clef change the last choice takes the change away again */
   const asis = clefPick.querySelector('.asis');
-  if (asis) { asis.querySelector('span').textContent = mid ? 'Take this clef away' : 'As written'; asis.title = mid ? 'No clef change here: the clef before it goes on' : 'The clef the piece has (or the old clef that fits, with Old clefs)'; }
-  clefActive = Math.max(0, CLEF_KEYS.indexOf(mid ? (cm && KERN_CLEF[cm.c]) || '' : vis(vi).clef || ''));
+  if (asis) { asis.querySelector('span').textContent = mid ? 'Take this clef away' : inc ? 'As in the source' : 'As written'; asis.title = mid ? 'No clef change here: the clef before it goes on' : inc ? 'The clef the voice had in the source' : 'The clef the piece has (or the old clef that fits, with Old clefs)'; }
+  clefPick.querySelectorAll('li[data-c="flat"]').forEach(li => { li.hidden = !!inc; });
+  clefActive = Math.max(0, CLEF_KEYS.indexOf(mid ? (cm && KERN_CLEF[cm.c]) || '' : inc ? (((st.incClef || {})[pieceKey] || {})[vi] || '') : vis(vi).clef || ''));
   markClef();
   clefPick.style.left = Math.max(4, Math.min(wr.width - clefPick.offsetWidth - 4, e.clientX - wr.left)) + 'px';
   clefPick.style.top = (e.clientY - wr.top + 10) + 'px';
@@ -6482,6 +6491,15 @@ function openClefPick(vi, e, t){
 function pickClef(k){
   clefPick.hidden = true;
   const vi = +clefPick.dataset.v, mt = pickT();
+  if (clefPick.dataset.inc) {
+    /* an incipit's clef: only the clef, not the music; "as in the source" takes the choice away */
+    if (k === 'flat') return;
+    st.incClef = st.incClef && typeof st.incClef === 'object' ? st.incClef : {};
+    const all = st.incClef[pieceKey] = st.incClef[pieceKey] || {};
+    if (k && CLEFS[k]) all[vi] = k; else delete all[vi];
+    save(); render();
+    return;
+  }
   if (mt !== null) {
     const v = piece.voices[vi];
     if (!writable(v)) { refuse(); return; }
@@ -6497,11 +6515,15 @@ clefPick.addEventListener('click', e => { const li = e.target.closest('li'); if 
 clefPick.addEventListener('keydown', e => {
   e.stopPropagation();
   const mv = {ArrowDown: 5, ArrowUp: -5, ArrowRight: 1, ArrowLeft: -1}[e.key];
-  if (mv) { e.preventDefault(); clefActive = Math.max(0, Math.min(CLEF_KEYS.length - 1, clefActive + mv)); markClef(); }
+  if (mv) {
+    e.preventDefault(); clefActive = Math.max(0, Math.min(CLEF_KEYS.length - 1, clefActive + mv));
+    if (clefPick.dataset.inc && CLEF_KEYS[clefActive] === 'flat') clefActive = Math.max(0, Math.min(CLEF_KEYS.length - 1, clefActive + (mv > 0 ? 1 : -1)));
+    markClef();
+  }
   else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickClef(CLEF_KEYS[clefActive]); }
   else if (e.key === 'Escape' || e.key === 'Tab') clefPick.hidden = true;
 });
-document.addEventListener('pointerdown', e => { if (!clefPick.hidden && !e.target.closest('#clefMenu') && !e.target.closest('.clefhit')) clefPick.hidden = true; });
+document.addEventListener('pointerdown', e => { if (!clefPick.hidden && !e.target.closest('#clefMenu') && !e.target.closest('.clefhit') && !e.target.closest('.incclefhit')) clefPick.hidden = true; });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') clefPick.hidden = true; });
 /* where a click on a staff would write: the pitch under the pointer, and the place among the voice's notes */
 function staffTarget(rect, e){
@@ -7518,6 +7540,8 @@ pagesEl.addEventListener('click', e => {
   if (ka && piece) { e.stopImmediatePropagation(); e.preventDefault(); const kh = ka.closest('.keyhit'); keyStep(+kh.dataset.v, +ka.dataset.ks, kh.dataset.t !== undefined ? +kh.dataset.t : undefined); return; }
   const kh = e.target.closest && e.target.closest('.keyhit');
   if (kh && piece) { e.stopImmediatePropagation(); e.preventDefault(); openKeyMenu(+kh.dataset.v, kh.dataset.t !== undefined ? +kh.dataset.t : 0, e); return; }
+  const ich = e.target.closest && e.target.closest('.incclefhit');
+  if (ich && piece) { e.stopImmediatePropagation(); e.preventDefault(); openClefPick(+ich.dataset.v, e, undefined, true); return; }
   const ch = e.target.closest && e.target.closest('.clefhit');
   if (ch && piece) { e.stopImmediatePropagation(); openClefPick(+ch.dataset.v, e, ch.dataset.t !== undefined ? +ch.dataset.t : undefined); return; }
   /* Divisi mode: clicking anywhere in the horizontal zone of a note (or on the selected note's staff) stacks/toggles that pitch */
@@ -11458,7 +11482,7 @@ $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
   ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(t => document.addEventListener(t, wake, {passive: true}));
   window.addEventListener('resize', () => wake());
   /* a tap on a blank place of the score: the controls go (and come back with the next tap) */
-  const NOT_BLANK = 'button, a, input, select, textarea, label, .pop, .library, .menu, #tpSide, .tools, .transport, .pagenav, .clefhit, .keyhit, .menshit, .mensadd, .markbar, .chant-sys, #chantBar, .ann-badge, #handBox, .handpop, #clefMenu, #keyMenu, #mensMenu, #notePick, g[class^="n"]';
+  const NOT_BLANK = 'button, a, input, select, textarea, label, .pop, .library, .menu, #tpSide, .tools, .transport, .pagenav, .clefhit, .incclefhit, .keyhit, .menshit, .mensadd, .markbar, .chant-sys, #chantBar, .ann-badge, #handBox, .handpop, #clefMenu, #keyMenu, #mensMenu, #notePick, g[class^="n"]';
   const blank = t => !!(t && t.closest && t.closest('.viewwrap') && !t.closest(NOT_BLANK) && !(ed.on && t.closest('rect.stafhit')));
   document.addEventListener('pointerdown', () => { wasOn = topOn || botOn; }, true);
   document.addEventListener('click', e => {
