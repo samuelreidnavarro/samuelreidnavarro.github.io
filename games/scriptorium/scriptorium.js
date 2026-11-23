@@ -6510,14 +6510,14 @@ function eventIndexFor(tg){
 /* Over a rest, or past the end of the voice, a click writes at the time under the pointer (on the grid of the chosen
    value), not after the last note: the time comes from where the line's columns stand. Over notes it goes between
    them, as before. Returns {T, x} or null. */
-const slotW = () => (ed.inRest ? 0.42 : gw(navVal())) + 1.6;
+const slotW = () => gw(navVal()) + 1.6;   /* the Grid selector's value, never the note value or rest mode */
 const slotT = (v, t) => VALS.find(q => q[0] === navVal())[1] / propAt(v, t);
 /* Single shared coordinate map between musical time T and staff x on a line (used by the rhythmic grid, the caret,
    and click-snapping so all three align pixel-for-pixel). */
 /* the (time, x) points of one voice on one staff line: the middle of each of its symbols, and the place after the last one */
 function staffPtsOf(rect, v){
   const par = rect.parentNode, vi = +rect.dataset.v;
-  const w = ed.inRest ? 0.6 : gw(ed.val);
+  const w = gw(navVal());   /* the grid is the Grid selector's alone: neither the note value nor the rest key changes it */
   const bg = q => { const e = q >= 0 && par.querySelector('g.n' + vi + '-' + q + '>rect.selbg'); return e ? {x: +e.getAttribute('x'), w: +e.getAttribute('width')} : null; };
   const mid = q => { const b = bg(q); return b ? b.x + b.w / 2 : null; };
   const after = q => { const b = bg(q); return b ? b.x + b.w + 0.5 + w / 2 : null; };
@@ -6587,6 +6587,7 @@ function staffGridMap(rect, v){
   };
   return {pts, tMin: pts[0][0], tb, xb, g, sw, xOf, tOf};
 }
+window.__staffGridMap = staffGridMap;   /* for checking the grid from outside */
 function timePlace(rect, tg){
   const v = tg.v, M = staffGridMap(rect, v.subOf >= 0 ? piece.voices[v.subOf] : v);
   if (!M) return null;
@@ -6637,7 +6638,7 @@ function drawEditGrid(){
     const onsets = M.pts.slice(0, -1).map(q => q[0]);   /* where a note begins (the last point is only the end of the last note) */
     const cand = [];
     for (let T = t0; T <= tb + EPS; T = rt(T + stepInc)) cand.push({T, x: xOf(T), major: Math.abs(T - Math.round(T)) < 1e-3, onset: onsets.some(o => Math.abs(o - T) < EPS)});
-    const MINGAP = 1.3;
+    const MINGAP = 0.9;
     const kept = cand.filter(c => c.onset);
     for (const pass of [true, false]) for (const c of cand) if (!c.onset && c.major === pass && kept.every(k => Math.abs(k.x - c.x) >= MINGAP)) kept.push(c);
     kept.sort((a, b) => a.T - b.T);
@@ -8276,7 +8277,7 @@ function drawCaret(scroll){
   /* drawn on the system of the note it stands on (after the last note: the last note's system) */
   let anchor = k >= 0 ? k : at <= last ? at : last;
   if (anchor < 0) return;
-  const w = ed.inRest ? 0.6 : gw(ed.val);
+  const w = gw(navVal());   /* as the grid: the Grid selector's value, not the note value */
   document.querySelectorAll('#pages g.n' + vi + '-' + anchor).forEach((el, n) => {
     const par = el.parentNode;
     let r = null;
