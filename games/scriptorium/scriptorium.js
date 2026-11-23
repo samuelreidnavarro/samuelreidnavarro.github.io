@@ -4697,7 +4697,7 @@ NoteInput.build($('#editBar'), {what: 'voice', whole: 'the whole voice'});
 /* the Add menu belongs to the note input controls: it shows when note input is on */
 { const pod = $('#popAdd').parentNode; $('#editBar').appendChild(pod); }
 /* pop-overs: hover, or click to keep open */
-function closePops(except){ document.querySelectorAll('.pop.open').forEach(p => { if (p !== except) { p.classList.remove('open'); p.querySelector('button').setAttribute('aria-expanded', 'false'); } }); }
+function closePops(except){ document.querySelectorAll('.pop.open, .pop.find-open').forEach(p => { if (p !== except) { p.classList.remove('open', 'find-open'); p.querySelector('button').setAttribute('aria-expanded', 'false'); } }); }
 /* with a mouse a menu follows the pointer: nothing is pinned open by a click. Touch screens tap to open and close. */
 const canHover = () => window.matchMedia && matchMedia('(hover:hover)').matches;
 function shutPop(p){
@@ -4713,7 +4713,7 @@ document.querySelectorAll('.pop > button:not(#mic):not(#recGo)').forEach(b => b.
   closePops(p); setLib(false); p.classList.toggle('open', open); b.setAttribute('aria-expanded', String(open));
   postHeight();
 }));
-document.addEventListener('click', e => { if (!e.target.closest('.pop')) closePops(); if (!e.target.closest('.libwrap')) { if (!libEl.hidden) setLib(false); } });
+document.addEventListener('click', e => { if (!e.target.closest('.pop, #findPop')) closePops(); if (!e.target.closest('.libwrap')) { if (!libEl.hidden) setLib(false); } });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closePops(); setLib(false); }
 });
@@ -10174,76 +10174,432 @@ document.addEventListener('pointerdown', e => {
   if (!e.target.closest('#findPop, #findBtn, #spotTip')) clearSpotlight();
 });
 
-/* Feature Finder (🔍) */
-let findIdx = 0, findMatches = [];
+/* Feature Finder (⌘K or /): every control of the app is found as you type, lit up at once, and applied with Enter.
+   The list is read from the page itself each time the finder opens, so a new button or menu item is found without writing anything here;
+   the tables below only add everyday words (breve, bemol, dot ...), nicer names and keyboard shortcuts. */
+let findIdx = 0, findMatches = [], findCmds = [], findUndo = [], findShown = null;
+
+/* ---- smart search: typos, letters out of order, abbreviations, synonyms ---- */
+const fzNorm = s => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[♭]/g, ' flat ').replace(/[♯]/g, ' sharp ').replace(/[♮]/g, ' natural ').replace(/[^a-z0-9#]+/g, ' ').trim();
+const fzWordsOf = s => fzNorm(s).split(' ').filter(Boolean);
+function fzOsa(a, b){
+  const n = a.length, m = b.length;
+  if (!n) return m; if (!m) return n;
+  let p2 = null, p1 = Array.from({length: m + 1}, (_, j) => j);
+  for (let i = 1; i <= n; i++) {
+    const cur = [i];
+    for (let j = 1; j <= m; j++) {
+      let v = Math.min(p1[j] + 1, cur[j - 1] + 1, p1[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, p2[j - 2] + 1);
+      cur[j] = v;
+    }
+    p2 = p1; p1 = cur;
+  }
+  return p1[m];
+}
+function fzSubset(q, t){ /* every letter of q is in t (each as often as q has it): the letters of the word, in any order */
+  const c = {};
+  for (const ch of t) c[ch] = (c[ch] || 0) + 1;
+  for (const ch of q) { if (!c[ch]) return false; c[ch]--; }
+  return true;
+}
+/* how well does the typed word q fit the word t of a command: 0 (not at all) to 100 */
+function fzTok(q, t){
+  if (q === t) return 100;
+  if (t.startsWith(q)) return q.length === 1 ? 50 : 92 - Math.min(18, t.length - q.length);
+  if (q.length < 3) return 0;
+  if (t.includes(q)) return 64;
+  const allow = q.length < 4 ? 0 : q.length < 6 ? 1 : q.length < 9 ? 2 : 3;
+  let best = fzOsa(q, t);
+  if (t.length > q.length) best = Math.min(best, fzOsa(q, t.slice(0, q.length)) + 0.5, fzOsa(q, t.slice(0, q.length + 1)) + 0.5);
+  if (best <= allow) return Math.round(80 - best * 14);
+  if (q.length >= 4 && Math.abs(q.length - t.length) <= 2 && fzSubset(q, t) && fzSubset(t.slice(0, q.length), q + q)) return 46;
+  if (q.length >= 5 && t.length >= 5 && fzSubset(q, t) && q.length >= t.length - 1) return 44;
+  return 0;
+}
+/* the query against a list of {w: word, k: weight}; 0 = no match */
+function fzScore(q, words){
+  const qs = fzWordsOf(q);
+  if (!qs.length) return 1;
+  let sum = 0;
+  for (const qw of qs) {
+    let best = 0;
+    for (const x of words) { const s = fzTok(qw, x.w) * x.k; if (s > best) best = s; }
+    if (best < 28) return 0;
+    sum += best;
+  }
+  return sum / qs.length + Math.min(qs.length - 1, 3) * 6;
+}
+/* groups of words that mean the same to a musician: any of them finds the others */
+const FZ_SYN = {};
+[
+  'brevis breve double whole alla', 'longa long', 'maxima large duplex', 'semibrevis semibreve whole', 'minima minim half', 'semiminima semiminim crotchet quarter',
+  'fusa quaver eighth', 'semifusa semiquaver sixteenth', 'value duration length rhythm', 'rest pause pausa silence tacet',
+  'dot punctus point additionis augmentation', 'division divisionis perfection', 'flat bemol bemolle molle rotundum bmol', 'sharp diesis cross durum hash #',
+  'natural quadratum becarre bequadro bquadro', 'ficta editorial musica', 'coloration coloratio colour color hemiola sesquialtera', 'ligature ligatura join bind neume',
+  'transpose transposition interval shift', 'octave 8ve', 'tone step second', 'halve half diminution shorten', 'double augmentation lengthen twice',
+  'undo revert back', 'redo again', 'delete remove erase clear', 'export save download write', 'pdf print paper', 'svg picture image vector', 'png picture image bitmap',
+  'midi', 'lilypond ly', 'musicxml mxl xml sibelius dorico', 'open load import file', 'repertoire library corpus pieces collection', 'clef key signature',
+  'mensuration tempus prolatio prolation modus time proportion sign', 'lyrics text words underlay syllable verse', 'fermata corona hold', 'signum congruentiae',
+  'barlines barline mensurstrich ticks tick', 'dark night mode theme', 'paper parchment vellum texture background', 'play playback start listen hear', 'stop halt',
+  'tempo bpm speed metronome tap pulse beat', 'volume loud quiet sound level', 'organ stops registers mixer', 'voice voices part parts staff stave line',
+  'caret cursor', 'select selection pick', 'insert overwrite replace', 'chord divisi stacked', 'second voice layer', 'keyboard piano keys', 'microphone mic sing singing',
+  'record recording', 'fullscreen full screen', 'layout page format size', 'engraving appearance look style', 'view display', 'info metadata title composer credits',
+  'grid snap step', 'custos direct', 'lacuna gap missing', 'incipit', 'ossia variant reading source', 'commentary annotation marginalia note comment',
+  'plainchant gregorian chant gabc', 'accidental accidentals', 'copy duplicate', 'paste', 'cut', 'all everything'
+].forEach(g => {
+  const ws = g.split(' ').filter(w => w.length > 1);
+  for (const w of ws) { const s = FZ_SYN[w] || (FZ_SYN[w] = new Set()); for (const o of ws) if (o !== w) s.add(o); }
+});
+const fzExpand = (words, k) => { const out = [], seen = new Set(words.map(x => x.w)); for (const x of words) { const syn = FZ_SYN[x.w]; if (syn) for (const s of syn) if (!seen.has(s)) { seen.add(s); out.push({w: s, k: k}); } } return out; };
+
+/* the Help glossary searches the same way */
 function scoreMatch(item, q){
   if (!q) return 1;
-  const hay = (item.title + ' ' + item.tags + ' ' + item.where + ' ' + item.desc + ' ' + item.keys).toLowerCase();
-  const titleL = item.title.toLowerCase(), tagsL = item.tags.toLowerCase();
-  const words = q.toLowerCase().trim().split(/\s+/).filter(Boolean);
-  let sc = 0;
-  for (const w of words) {
-    if (titleL.includes(w)) sc += 6;
-    else if (tagsL.includes(w)) sc += 4;
-    else if (hay.includes(w)) sc += 2;
-    else return 0;
+  const words = [];
+  const add = (s, k) => { for (const w of fzWordsOf(s)) words.push({w, k}); };
+  add(item.title, 1); add(item.tags, .9); add(item.where, .5); add(item.keys, .5); add(item.desc, .32);
+  return fzScore(q, words.concat(fzExpand(words.filter(x => x.k >= .9), .8)));
+}
+
+/* ---- the list of commands, read from the page ---- */
+const FIND_PATH = {popDot:'Dot', popLig:'Ligature', popKbd:'Keyboard', popSing:'Sing', popRec:'Record', popMetro:'Metronome', popXform:'Transform', popDur:'Note value', popNav:'Grid step',
+  popAdd:'Add', popLook:'Engraving', popPage:'Layout', popView:'View', popVoices:'Voices', popInfo:'Info', popOpen:'Open', popExport:'Export', popSend:'Send to another app', popReading:'Reading', popVol:'Volume', popCount:'Count-in'};
+/* nicer names where the button has only a long tooltip */
+const FIND_NAME = {tonup:'Transpose up a tone', tondn:'Transpose down a tone', octup:'Transpose up an octave', octdn:'Transpose down an octave', dbl:'Double the note values', hlv:'Halve the note values',
+  advBtn:'Advanced transposition', advGo:'Transpose by the chosen interval', selPrev:'Select the previous note', selNext:'Select the next note', stepUp:'Move the note up a step', stepDown:'Move the note down a step',
+  del:'Delete the selected note', restBtn:'Rests', ovrBtn:'Insert / Overwrite', edBtn:'Editorial accidental (ficta)', divisiBtn:'Chord (divisi)', v2Btn:'Second voice (+v)', dotBtn:'Punctus additionis', pdivBtn:'Punctus divisionis',
+  colBtn:'Coloration', ligBtn:'Ligature', editBtn:'Note input', editMore:'Editing tools', addMens:'Mensuration sign', addClef:'Clef change', addKey:'Key signature change', addFerm:'Fermata', addSignum:'Signum congruentiae',
+  addCustos:'Custos', addLacuna:'Lacuna', addSec:'Section line', addMark:'Rehearsal mark', addText:'Text above the staff', addOrigBtn:'Original text', addAnnBtn:'Commentary note', addVarBtn:'Variant reading (ossia)',
+  addLyr:'Lyrics', addVerse:'Another verse', addInc:'Incipit', addChantBtn:'Plainchant section', saveBtn:'Save as .krn', cmmeBtn:'Export CMME XML', mxlBtn:'Export MusicXML', mscBtn:'Export MuseScore', lyBtn:'Export LilyPond',
+  midBtn:'Export MIDI', gabcBtn:'Export GABC', keepBtn:'Keep a copy in this browser', printBtn:'Print / save as PDF', svgBtn:'Export SVG picture', pngBtn:'Export PNG picture', linkBtn:'Share a link to this score',
+  openBtn:'Open a file', newBtn:'New score', libBtn:'Repertoire', myBtn:'My scores', play:'Play / pause', loop:'Loop', metro:'Metronome', tap:'Tap tempo', tempoUp:'Faster', tempoDown:'Slower', heart:'Resting pulse (60)',
+  unitBtn:'Beat unit', toggleSet:'Sound settings', mic:'Microphone', recGo:'Record', micNotate:'Record as notation', recAudio:'Record audio', kbdBtn:'Piano keyboard', kbdShow:'Show the key you play', fsBtn:'Full screen',
+  durSum:'Note value', navSum:'Grid step', tempo:'Tempo (beats per minute)', countIn:'Count-in beats', ref:'Pitch of a′ (Hz)', vol:'Volume', bright:'Brightness', room:'Room (reverb)', reg:'Organ sound', temperRoot:'Temperament: key', audition:'Hear notes while editing', kbdW:'Keyboard width', kbdH:'Keyboard height', size:'Staff size', noteSize:'Note size', hs:'Horizontal spacing', vs:'Vertical spacing', ss:'Space between systems', thick:'Thicker notes', thickL:'Thicker staff lines', glassRange:'Menu transparency', metaTitle:'Title of the piece', metaComp:'Composer', metaEditor:'Editor', metaSource:'Source', metaLicence:'Licence', libQ:'Search the repertoire', linesNum:'Number of staff lines', lyrPt:'Lyrics size', lyrFontSel:'Lyrics font', bnumSel:'Bar numbers', bunitSel:'What one bar is when counting', micLat:'Microphone latency', chTitle:'Plainchant title', xfSum:'Transform', undo:'Undo', redo:'Redo', findBtn:'Find a feature', helpBtn:'Help and glossary', ackBtn:'Acknowledgments', markClear:'Clear the marking', xfWho:'Transform: which voices', openCritBtn:'Critical notes', readingBtn:'Reading (source)'};
+const FIND_ALIAS = {dotBtn:'dot punctus additionis augmentation point', pdivBtn:'dot of division punctus divisionis', editBtn:'note input mode write pen edit enter notes', colBtn:'coloration coloratio black red hemiola',
+  restBtn:'rest pause pausa silence', ligBtn:'ligature ligatura join bind neume', del:'delete remove erase', tonup:'transpose up a tone higher raise step whole tone second', tondn:'transpose down a tone lower step',
+  octup:'transpose up an octave higher', octdn:'transpose down an octave lower', dbl:'augmentation double values twice longer', hlv:'diminution halve values half shorter', addMens:'tempus prolatio prolation modus time signature proportion cut circle',
+  addClef:'clef change c clef g clef f clef treble bass', addKey:'key signature flats sharps', addFerm:'fermata corona hold', printBtn:'pdf print', lyBtn:'ly lilypond', mxlBtn:'xml sibelius dorico musescore', play:'playback listen start stop pause',
+  undo:'take back revert', redo:'again', del2:'', tap:'tempo bpm speed', unitBtn:'tempo beat value', ovrBtn:'insert overwrite replace push', toggleSet:'sound organ stops temperament mixer tone brightness room', fsBtn:'fullscreen full screen',
+  loop:'repeat again', tempo:'bpm speed metronome pulse', countIn:'lead in click bars before', ref:'tuning pitch a440 diapason frequency', vol:'loud quiet sound level', libQ:'find piece composer josquin search', mic:'sing singing voice input pitch', recGo:'recording record', kbdBtn:'piano midi keys', openBtn:'import load file', libBtn:'repertoire library pieces corpus', newBtn:'empty blank create'};
+const FIND_KEY = {editBtn:'N', restBtn:'R', ovrBtn:'I', colBtn:'K', ligBtn:'L', dotBtn:'.', play:'Space', undo:'⌘Z', redo:'⇧⌘Z', del:'⌫', findBtn:'⌘K', helpBtn:'?', stepUp:'↑', stepDown:'↓', selPrev:'←', selNext:'→'};
+const FIND_VALS = ['maxima', 'longa', 'brevis', 'semibrevis', 'minima', 'semiminima', 'fusa', 'semifusa'];
+/* things done with keys only, or by a combination: sent to the app as a key press */
+const FIND_KEYCMDS = [
+  {name:'Make the note longer', keys:'⇧⌘→', alias:'longer next value augment lengthen dotted double', key:{key:'ArrowRight', metaKey:true, shiftKey:true}, acts:1, hint:'Gives the selected note or rest its next longer value'},
+  {name:'Make the note shorter', keys:'⇧⌘←', alias:'shorter previous value diminish shorten halve', key:{key:'ArrowLeft', metaKey:true, shiftKey:true}, acts:1, hint:'Gives the selected note or rest its next shorter value'},
+  {name:'Move the note later', keys:'⌘→', alias:'move right later along grid shift', key:{key:'ArrowRight', metaKey:true}, acts:1, hint:'Moves the selected notes one grid step later'},
+  {name:'Move the note earlier', keys:'⌘←', alias:'move left earlier along grid shift', key:{key:'ArrowLeft', metaKey:true}, acts:1, hint:'Moves the selected notes one grid step earlier'},
+  {name:'Move the note up an octave', keys:'⌘↑', alias:'octave higher raise up', key:{key:'ArrowUp', metaKey:true}, acts:1, hint:'Raises the selected note by an octave'},
+  {name:'Move the note down an octave', keys:'⌘↓', alias:'octave lower down', key:{key:'ArrowDown', metaKey:true}, acts:1, hint:'Lowers the selected note by an octave'},
+  {name:'Extend the selection to the right', keys:'⇧→', alias:'select more range right', key:{key:'ArrowRight', shiftKey:true}, hint:'Adds the next note to the selection'},
+  {name:'Extend the selection to the left', keys:'⇧←', alias:'select more range left', key:{key:'ArrowLeft', shiftKey:true}, hint:'Adds the previous note to the selection'},
+  {name:'Select all', keys:'⌘A', alias:'everything all notes', key:{key:'a', metaKey:true}, hint:'Selects every note of every voice'},
+  {name:'Copy', keys:'⌘C', alias:'duplicate', key:{key:'c', metaKey:true}, hint:'Copies the selected notes'},
+  {name:'Cut', keys:'⌘X', alias:'remove', key:{key:'x', metaKey:true}, hint:'Cuts the selected notes'},
+  {name:'Paste', keys:'⌘V', alias:'insert', key:{key:'v', metaKey:true}, hint:'Pastes the copied notes at the selection or caret'},
+  {name:'Cycle the note colour', keys:'⇧K', alias:'shift k appearance colour color black white red display', key:{key:'K', shiftKey:true}, acts:1, hint:'Shows the selected notes as notated, black, white or red (display only)'},
+  {name:'Deselect', keys:'Esc', alias:'escape clear selection cancel', key:{key:'Escape'}, hint:'Clears the selection and closes menus'}
+];
+const FIND_DONT = /^(remove|delete)\b/i;
+const findClean = s => String(s || '').replace(/\s+/g, ' ').trim();
+const findShortTitle = t => findClean(t).split(/ \(|[.:;]|, /)[0].slice(0, 46).trim();
+function findPieces(el){ /* the visible text of a control in pieces: name first, then what is written beside it */
+  const out = [];
+  el.childNodes.forEach(n => {
+    if (n.nodeType === 3) { const t = findClean(n.textContent); if (t) out.push(t); }
+    else if (n.nodeType === 1 && !/^(svg|script|style|option)$/i.test(n.tagName) && !n.classList.contains('sr') && !n.classList.contains('chev')) { const t = findClean(n.textContent); if (t) out.push(t); }
+  });
+  return out;
+}
+function findLabelOf(el){
+  if (el.labels && el.labels[0]) { const p = findPieces(el.labels[0])[0]; if (p) return p; }
+  const lb = el.closest('label'); if (lb) { const p = findPieces(lb).filter(x => x !== el.value)[0]; if (p) return p; }
+  let s = el.previousElementSibling; while (s && !/\blab\b|subhead/.test(s.className || '')) s = s.previousElementSibling;
+  return el.getAttribute('aria-label') || (s ? findClean(s.textContent) : '') || findShortTitle(el.title);
+}
+function findBuild(){
+  const cmds = [], seen = new Set(), claimed = new Set();
+  const roots = '#findPop, #helpOv, .library, #recList, #critDrawer, #ackOv, #notePick, .floatcard, #spotTip';
+  const push = c => { const key = c.path + '|' + c.name; if (seen.has(key)) return; seen.add(key); cmds.push(c); };
+  document.querySelectorAll('button, input, select, summary').forEach(el => {
+    if (el.closest(roots) || el.type === 'hidden' || el.type === 'file') return;
+    if (!el.getClientRects().length && !el.closest('.pop, #tpSide, #editBar, .transport, .chbar')) return;
+    const title = findClean(el.title), al = el.getAttribute('aria-label') || '';
+    if (/^Click to change (minimum|maximum)/.test(title + al)) return;
+    if (/kept in this browser/.test(title + el.textContent)) return;
+    const id = el.id || '';
+    let pieces = el.tagName === 'INPUT' || el.tagName === 'SELECT' ? [] : findPieces(el);
+    let name = FIND_NAME[id] || '', desc = '';
+    if (!name) {
+      if (el.tagName === 'INPUT' || el.tagName === 'SELECT') name = findLabelOf(el);
+      else if (pieces[0] && /[a-zA-Z]{2}/.test(pieces[0]) && pieces[0].length <= 40) { name = pieces[0]; desc = pieces.slice(1).join(' '); }
+      else name = findShortTitle(al) || findShortTitle(title) || pieces[0] || '';
+    }
+    if (!name || FIND_DONT.test(name)) return;
+    if (!desc) desc = title && title !== name ? title : '';
+    const popEl = el.closest('.pop');
+    const isMenu = /^(durSum|navSum|xfSum|xfWho)$/.test(id) || (!!popEl && popEl.querySelector(':scope > .popbody') && popEl.firstElementChild === el && !/^(dotBtn|ligBtn|recGo|mic)$/.test(id));
+    const grp = el.closest('.btns[aria-label], .swatches[aria-label]');
+    if (grp && !FIND_NAME[id] && el.tagName === 'BUTTON' && (/Seg$/.test(grp.id) || (grp.previousElementSibling && /\blab\b/.test(grp.previousElementSibling.className || ''))) && grp.querySelectorAll('button').length > 1) {
+      const g = grp.getAttribute('aria-label'); if (g && !name.toLowerCase().startsWith(g.toLowerCase())) name = g + ': ' + name;
+    }
+    let path = '';
+    if (popEl && !isMenu) path = FIND_PATH[popEl.id] || findShortTitle(findPieces(popEl.firstElementChild)[0] || popEl.firstElementChild.title);
+    else if (el.closest('#tpSide')) path = 'Sound';
+    else if (el.closest('.transport')) path = 'Playback';
+    else if (el.closest('#editBar') && !isMenu) path = 'Note input';
+    else if (el.closest('.chbar')) path = 'Plainchant';
+    const kind = isMenu ? 'menu' : el.tagName === 'SELECT' ? 'focus' : (el.tagName === 'INPUT' && /^(range|number|text|search)$/.test(el.type)) ? 'focus' : 'click';
+    const valIdx = path === 'Note value' || path === 'Grid step' ? FIND_VALS.indexOf(name.toLowerCase()) : -1;
+    const accWord = /^(flat|natural|sharp)$/i.test(name);
+    const c = {name, path, hint: desc, kind, el: () => el, id, keys: FIND_KEY[id] || (valIdx >= 0 && path === 'Note value' ? String(valIdx + 1) : accWord ? ({flat:'-', natural:'0', sharp:'='})[name.toLowerCase()] : ''),
+      prio: path === 'Grid step' ? -8 : path === 'Note value' ? 8 : /^(Note input|Dot|Ligature|Transform)$/.test(path) ? 4 : /^dark mode/i.test(name) ? 7 : 0,
+      acts: /^(dotBtn|pdivBtn|colBtn|ligBtn|restBtn|edBtn|del|stepUp|stepDown)$/.test(id) || path === 'Note value' || accWord ? 1 : 0};
+    const aliasStr = (FIND_ALIAS[id] || '') + ' ' + (valIdx >= 0 ? 'note value duration ' + (path === 'Grid step' ? 'grid step snap' : '') : '');
+    c.words = [];
+    const add = (s, k) => { for (const w of fzWordsOf(s)) c.words.push({w, k}); };
+    add(name, 1); add(aliasStr, .9); add(path, .55);
+    if (el.tagName === 'SELECT' || (el.tagName === 'INPUT' && el.type === 'checkbox')) add(desc, .3);
+    c.words = c.words.concat(fzExpand(c.words.filter(x => x.k >= .9), .8));
+    claimed.add(el);
+    push(c);
+    /* each choice of a menu-select is a command of its own: Bar numbers: Every bar */
+    if (el.tagName === 'SELECT' && el.options.length <= 24 && !el.closest('.mxr')) {
+      [...el.options].forEach(o => {
+        const on = findClean(o.textContent); if (!on) return;
+        const oc = {name: name + ': ' + on, path, hint: '', kind: 'option', el: () => el, opt: o, id: '', keys: '', prio: 0, acts: 0, words: []};
+        for (const w of fzWordsOf(name)) oc.words.push({w, k: .8}); for (const w of fzWordsOf(on)) oc.words.push({w, k: 1}); for (const w of fzWordsOf(path)) oc.words.push({w, k: .5});
+        push(oc);
+      });
+    }
+  });
+  /* what the help glossary knows about a control (everyday words) is added to it; glossary entries with no control are listed as pointers */
+  HELP_ENTRIES.forEach(h => {
+    let hel = null; try { hel = h.sel ? document.querySelector(h.sel) : null; } catch (e) {}
+    const hit = hel && cmds.find(c => c.el() === hel);
+    if (hit) { const add = []; for (const w of fzWordsOf(h.tags + ' ' + h.title)) add.push({w, k: .85}); hit.words = hit.words.concat(add); if (!hit.hint) hit.hint = h.desc.split(/(?<=[.!?]) /)[0]; if (!hit.keys && h.keys && h.keys.length < 10) hit.keys = h.keys; }
+    else {
+      const c = {name: h.title, path: h.cat, hint: h.where, kind: 'help', el: () => null, help: h, id: '', keys: h.keys && h.keys.length < 14 ? h.keys : '', prio: -6, acts: 0, words: []};
+      for (const w of fzWordsOf(h.title)) c.words.push({w, k: 1}); for (const w of fzWordsOf(h.tags)) c.words.push({w, k: .9}); for (const w of fzWordsOf(h.cat + ' ' + h.where)) c.words.push({w, k: .5});
+      c.words = c.words.concat(fzExpand(c.words.filter(x => x.k >= .9), .8));
+      push(c);
+    }
+  });
+  FIND_KEYCMDS.forEach(k => {
+    const c = {name: k.name, path: 'Keyboard', hint: k.hint, kind: 'key', key: k.key, el: () => null, id: '', keys: k.keys, prio: 0, acts: k.acts || 0, words: []};
+    for (const w of fzWordsOf(k.name)) c.words.push({w, k: 1}); for (const w of fzWordsOf(k.alias)) c.words.push({w, k: .9});
+    c.words = c.words.concat(fzExpand(c.words.filter(x => x.k >= .9), .8));
+    push(c);
+  });
+  return cmds;
+}
+const findHasSel = () => !!(ed && (ed.sel || ed.range || ed.picks));
+function findAvail(c){ /* null when it can be used now, else why not */
+  const el = c.el();
+  if (c.kind === 'key' || c.kind === 'help') return null;
+  if (!el) return 'not available now';
+  if (el.disabled) return c.acts ? 'select a note first' : 'not available right now';
+  if (el.closest('[hidden]') && !el.closest('.pop, #tpSide, #editBar, .transport')) return 'open it first (' + (c.path || 'its panel') + ')';
+  return null;
+}
+const grpOf = el => { const g = el.closest('.btns'); return g && g.querySelectorAll('button').length > 1; };
+function findState(c){
+  const el = c.el(); if (!el) return '';
+  if (el.tagName === 'BUTTON' && el.hasAttribute('aria-pressed')) return el.getAttribute('aria-pressed') === 'true' ? (grpOf(el) ? 'current' : 'on') : (grpOf(el) ? '' : 'off');
+  if (el.tagName === 'INPUT' && el.type === 'checkbox') return el.checked ? 'on' : 'off';
+  if (c.kind === 'option') return el.value === c.opt.value ? 'current' : '';
+  return '';
+}
+function findDoes(c){
+  const why = findAvail(c);
+  if (why) return 'Not available: ' + why;
+  const lead = c.acts ? (findHasSel() ? 'On the selected note(s): ' : 'For the next note you write: ') : '';
+  if (c.kind === 'menu') return 'Open the ' + c.name + ' menu';
+  if (c.kind === 'focus') return 'Go to it, then change it with the keyboard';
+  if (c.kind === 'option') return 'Set it to “' + c.name.split(': ').slice(1).join(': ') + '”';
+  if (c.kind === 'help') return 'Show where it is';
+  const el = c.el();
+  if (el && el.tagName === 'INPUT' && el.type === 'checkbox') return (el.checked ? 'Turn off' : 'Turn on') + ' “' + c.name + '”';
+  return lead + (c.hint ? c.hint.replace(/\s*\(.*$/, '').slice(0, 110) : 'Use it');
+}
+
+/* ---- showing where a command is, as you type ---- */
+function findTmpDone(keep){ /* put back the menus that were opened only to show a control */
+  const todo = findUndo; findUndo = [];
+  todo.forEach(f => { try { f(keep); } catch (e) {} });
+}
+function findRing(el){ document.querySelectorAll('.spot-ring').forEach(x => { if (x !== el) x.classList.remove('spot-ring'); }); if (el) el.classList.add('spot-ring'); }
+function findReveal(el){ /* make the control visible: open its menu, the editing bar, the Sound panel */
+  if (!el) return;
+  const eb = el.closest('#editBar');
+  if (eb && !barOpen()) {
+    const was = ed.bar; ed.bar = true; syncEdit(); postHeight();
+    findUndo.push(() => { ed.bar = was; syncEdit(); postHeight(); });
   }
-  return sc;
+  const p = el.closest('.pop');
+  if (p && !p.classList.contains('open')) {
+    closePops(p); p.classList.add('open', 'find-open'); const b = p.querySelector('button'); if (b) b.setAttribute('aria-expanded', 'true');
+    findUndo.push(() => { p.classList.remove('open', 'find-open'); if (b) b.setAttribute('aria-expanded', 'false'); });
+  }
+  const sp = $('#tpSide');
+  if (sp && sp.hidden && el.closest('#tpSide')) {
+    $('#toggleSet').click();
+    findUndo.push(keep => { if (!keep && !sp.hidden) $('#toggleSet').click(); });
+  }
+  if (window.__fitMenus) window.__fitMenus();
+}
+function findShow(c){
+  findTmpDone(false); closePops();
+  findShown = c || null;
+  const pop = $('#findPop');
+  if (!c) { findRing(null); findPlace(null); return; }
+  const el = c.el();
+  if (!el || c.kind === 'help') { findRing(null); findPlace(null); return; }
+  findReveal(el);
+  findRing(el);
+  try { el.scrollIntoView({block: 'nearest', inline: 'nearest'}); } catch (e) {}
+  requestAnimationFrame(() => {
+    const rs = [el.getBoundingClientRect()];
+    const p = el.closest('.pop'); const pb = p && p.querySelector(':scope > .popbody'); if (pb && p.classList.contains('open')) rs.push(pb.getBoundingClientRect());
+    const sp = el.closest('#tpSide'); if (sp) rs.push(sp.getBoundingClientRect());
+    findPlace(rs);
+    setTimeout(() => { if (findShown === c) findPlace(rs.map((_, i) => i === 0 ? el.getBoundingClientRect() : rs[i])); }, 90);
+  });
+}
+/* the search box stays out of the way: top middle, or to the right, to the left, or at the bottom, wherever it covers neither the control nor its menu */
+function findPlace(rects){
+  const pop = $('#findPop'); if (!pop || pop.hidden) return;
+  const emb = EMBED && DOCK;
+  const vTop = emb ? Math.max(0, -DOCK.top) : 0;
+  const vH = emb ? Math.max(320, DOCK.vh - Math.max(0, DOCK.top)) : window.innerHeight;
+  const tph = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tph')) || 56;
+  pop.style.position = emb ? 'absolute' : 'fixed';
+  const spot = (h, bottom) => {
+    pop.style.bottom = 'auto';
+    if (h === 'c') { pop.style.left = '50%'; pop.style.right = 'auto'; pop.style.transform = 'translateX(-50%)'; }
+    else if (h === 'r') { pop.style.left = 'auto'; pop.style.right = '14px'; pop.style.transform = 'none'; }
+    else { pop.style.left = '14px'; pop.style.right = 'auto'; pop.style.transform = 'none'; }
+    pop.style.top = (bottom ? Math.max(vTop + 8, vTop + vH - pop.offsetHeight - tph - 22) : vTop + 58) + 'px';
+    return pop.getBoundingClientRect();
+  };
+  const hit = (a, b) => !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom);
+  const tries = [['c', 0], ['r', 0], ['l', 0], ['c', 1], ['r', 1], ['l', 1]];
+  if (!rects || !rects.length) { spot('c', 0); return; }
+  const target = rects[0];
+  let bestFree = null;
+  for (const [h, bt] of tries) {
+    const r = spot(h, bt);
+    if (hit(r, target)) continue;
+    if (!rects.slice(1).some(x => hit(r, x))) { return; }
+    if (!bestFree) bestFree = [h, bt];
+  }
+  if (bestFree) spot(bestFree[0], bestFree[1]); else spot('c', 0);
+}
+
+/* ---- using a command ---- */
+function findFire(key){ document.body.dispatchEvent(new KeyboardEvent('keydown', Object.assign({bubbles: true, cancelable: true}, key))); }
+function findRun(c){
+  if (!c) return;
+  const why = findAvail(c);
+  if (why) { toast(c.name + ': ' + why + '.'); return; }
+  const el = c.el();
+  const keepOpen = c.kind === 'menu' || c.kind === 'focus';
+  if (c.kind === 'help') { closeFindPop(); spotlightFeature(c.help); return; }
+  if (keepOpen && el) { findReveal(el); }
+  const undo = findUndo; findUndo = [];
+  closeFindPop(true);
+  if (keepOpen) { findUndo = []; } else { undo.forEach(f => { try { f(c.el() && c.el().closest('#tpSide') ? true : false); } catch (e) {} }); closePops(); }
+  if (c.kind === 'key') { findFire(c.key); }
+  else if (c.kind === 'option') { el.value = c.opt.value; el.dispatchEvent(new Event('input', {bubbles: true})); el.dispatchEvent(new Event('change', {bubbles: true})); }
+  else if (c.kind === 'focus') { try { el.focus({preventScroll: false}); if (el.select && el.type !== 'range') el.select(); if (el.tagName === 'SELECT' && el.showPicker) el.showPicker(); } catch (e) {} }
+  else if (c.kind === 'menu') { /* stays open, lit for a moment */ el.classList.add('spot-ring'); clearTimeout(spotTimer); spotTimer = setTimeout(clearSpotlight, 2600); }
+  else { el.click(); if (document.activeElement && document.activeElement !== document.body && document.activeElement.blur) document.activeElement.blur(); }
+}
+
+/* ---- the search box ---- */
+const FIND_EMPTY = ['editBtn', 'restBtn', 'dotBtn', 'colBtn', 'ligBtn', 'play', 'undo', 'libBtn', 'toggleSet'];
+function findRank(q){
+  if (!q) return FIND_EMPTY.map(id => findCmds.find(c => c.id === id)).filter(Boolean);
+  const qn = fzNorm(q);
+  return findCmds.map(c => {
+    let s = fzScore(q, c.words); if (!s) return {c, s: 0};
+    const nn = fzNorm(c.name);
+    if (nn === qn) s += 30; else if (nn.startsWith(qn)) s += 14; else if (nn.includes(qn)) s += 7;
+    s += c.prio - nn.length * .08;
+    if (findAvail(c)) s -= 14;
+    return {c, s};
+  }).filter(x => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 10).map(x => x.c);
 }
 function renderFindList(){
   const inp = $('#findInput'), list = $('#findList');
   if (!inp || !list) return;
   const q = inp.value.trim();
-  findMatches = HELP_ENTRIES
-    .map(it => ({it, sc: scoreMatch(it, q)}))
-    .filter(x => x.sc > 0)
-    .sort((a, b) => b.sc - a.sc)
-    .slice(0, 12)
-    .map(x => x.it);
+  findMatches = findRank(q);
   if (findIdx >= findMatches.length) findIdx = 0;
-  list.innerHTML = findMatches.length ? findMatches.map((it, i) =>
-    `<button type="button" class="finditem${i === findIdx ? ' active' : ''}" data-fi="${i}" role="option" aria-selected="${String(i === findIdx)}">` +
-      `<div class="fi-top"><span class="fi-title">${esc(it.title)}</span>${it.keys ? `<kbd>${esc(it.keys)}</kbd>` : ''}</div>` +
-      `<div class="fi-where">${esc(it.where)}</div>` +
-    `</button>`
-  ).join('') : `<div class="findempty">No matching tool found for “${esc(q)}”. Try <b>rest</b>, <b>ligature</b>, <b>gregorian</b>, <b>clef</b>, or <b>ossia</b>.</div>`;
+  list.innerHTML = (q ? '' : `<div class="findtip">Type what you want to do: <b>punctus ad</b> · <b>brevis</b> · <b>flat</b> · <b>barlines</b> · <b>transpose up a tone</b> · <b>export pdf</b></div>`) +
+    (findMatches.length ? findMatches.map((c, i) => {
+      const st = findState(c), off = !!findAvail(c);
+      return `<button type="button" class="finditem${i === findIdx ? ' active' : ''}${off ? ' off' : ''}" data-fi="${i}" role="option" aria-selected="${String(i === findIdx)}">` +
+        `<div class="fi-top"><span class="fi-title">${esc(c.name)}${st ? ` <span class="fi-state">${esc(st)}</span>` : ''}</span>${c.keys ? `<kbd>${esc(c.keys)}</kbd>` : ''}</div>` +
+        `<div class="fi-where">${esc(c.path || 'Anywhere')}</div>` +
+        (i === findIdx ? `<div class="fi-do">↵ ${esc(findDoes(c))}</div>` : '') +
+      `</button>`;
+    }).join('') : `<div class="findempty">Nothing matches “${esc(q)}”. Try a word like <b>rest</b>, <b>dot</b>, <b>clef</b>, <b>export</b> or <b>tempo</b>.</div>`);
+  const act = list.querySelector('.finditem.active'); if (act) act.scrollIntoView({block: 'nearest'});
+  findShow(findMatches[findIdx]);
 }
 function openFindPop(){
   const pop = $('#findPop'), inp = $('#findInput');
   if (!pop || !inp) return;
-  closePops(); closeHelpOv(); closeFloatingCards();
+  closePops(); closeHelpOv(); closeFloatingCards(); clearSpotlight();
+  findCmds = findBuild(); window.__findCmds = findCmds;
   pop.hidden = false;
   inp.value = ''; findIdx = 0;
   renderFindList();
   inp.focus();
 }
-function closeFindPop(){
+function closeFindPop(keepShown){
   const pop = $('#findPop');
   if (pop) pop.hidden = true;
+  if (!keepShown) { findTmpDone(false); closePops(); }
+  findRing(null); findShown = null;
 }
 if ($('#findBtn')) $('#findBtn').addEventListener('click', () => {
   const pop = $('#findPop');
   if (pop && !pop.hidden) closeFindPop(); else openFindPop();
 });
-if ($('#findX')) $('#findX').addEventListener('click', closeFindPop);
+if ($('#findX')) $('#findX').addEventListener('click', () => closeFindPop());
 if ($('#findInput')) {
+  $('#findInput').setAttribute('placeholder', 'What do you want to do? (punctus ad, brevis, flat, barlines …)');
   $('#findInput').addEventListener('input', () => { findIdx = 0; renderFindList(); });
   $('#findInput').addEventListener('keydown', e => {
     e.stopPropagation();
     if (e.key === 'Escape') { e.preventDefault(); closeFindPop(); return; }
-    if (e.key === 'ArrowDown') { e.preventDefault(); if (findMatches.length) { findIdx = (findIdx + 1) % findMatches.length; renderFindList(); } return; }
-    if (e.key === 'ArrowUp') { e.preventDefault(); if (findMatches.length) { findIdx = (findIdx + findMatches.length - 1) % findMatches.length; renderFindList(); } return; }
-    if (e.key === 'Enter' && findMatches[findIdx]) { e.preventDefault(); spotlightFeature(findMatches[findIdx]); }
+    if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) { e.preventDefault(); if (findMatches.length) { findIdx = (findIdx + 1) % findMatches.length; renderFindList(); } return; }
+    if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) { e.preventDefault(); if (findMatches.length) { findIdx = (findIdx + findMatches.length - 1) % findMatches.length; renderFindList(); } return; }
+    if (e.key === 'Enter' && findMatches[findIdx]) { e.preventDefault(); findRun(findMatches[findIdx]); }
   });
 }
-if ($('#findList')) $('#findList').addEventListener('click', e => {
-  const b = e.target.closest('[data-fi]');
-  if (b && findMatches[+b.dataset.fi]) spotlightFeature(findMatches[+b.dataset.fi]);
-});
+if ($('#findList')) {
+  $('#findList').addEventListener('mousemove', e => { const b = e.target.closest('[data-fi]'); if (b && +b.dataset.fi !== findIdx && e.movementX + e.movementY !== 0) { findIdx = +b.dataset.fi; renderFindList(); } });
+  $('#findList').addEventListener('click', e => {
+    const b = e.target.closest('[data-fi]');
+    if (b && findMatches[+b.dataset.fi]) findRun(findMatches[+b.dataset.fi]);
+  });
+}
 document.addEventListener('pointerdown', e => {
   const fp = $('#findPop');
-  if (fp && !fp.hidden && !e.target.closest('#findPop, #findBtn')) closeFindPop();
+  if (fp && !fp.hidden && !e.target.closest('#findPop, #findBtn')) closeFindPop(true), findTmpDone(true);
 });
+document.head.insertAdjacentHTML('beforeend', '<style>' +
+  '.findpop{top:58px}.pop.find-open>.popbody{display:block !important}' +
+  '.findpop .finditem{text-align:left;align-items:stretch;height:auto;min-height:0;font-size:15px;line-height:1.3;gap:1px}.findpop .fi-title{font-size:15px}.findpop .fi-where{font-size:12.5px;line-height:1.3}.findpop .fi-do{font-size:13px}.findpop .findhead input{height:34px;font-size:16px}.findpop .findx{height:auto;min-height:0}' +
+  '.findtip{padding:8px 12px 4px;font-size:12.5px;color:var(--muted,#6B5E4E);line-height:1.5}.findtip b{font-weight:600;color:var(--ink,#2A2218)}html.dark .findtip b{color:#EFE7D8}' +
+  '.finditem.off .fi-title{opacity:.55}.finditem.off .fi-where{opacity:.6}' +
+  '.fi-state{margin-left:6px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:999px;background:color-mix(in srgb,var(--accent,#8B2E22) 14%,transparent);color:var(--accent,#8B2E22);vertical-align:1px}' +
+  '.fi-do{font-size:12.5px;line-height:1.35;margin-top:2px;color:var(--accent,#8B2E22)}html.dark .fi-do{color:#E8A090}.finditem.off .fi-do{color:var(--muted,#6B5E4E)}' +
+'</style>');
 
 /* Help & Glossary Modal (?) */
 let helpCat = 'All';
