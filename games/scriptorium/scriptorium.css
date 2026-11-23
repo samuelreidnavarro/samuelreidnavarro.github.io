@@ -453,7 +453,7 @@ html.dark .cntin input[type=number]{background:rgba(255,238,210,.06)}
   .transport,.tp-main,.tp-stack{gap:8px} .vol input[type=range]{width:44px} }
 
 /* ================= Dark mode: the room goes dark, the parchment stays as it is ================= */
-html.dark{--ground:#15110D;--surface:#211B15;--text:#ECE2D0;--muted:#A5957B;--line:#3A3027;--accent:#A53627;--accent-ink:#FBF4E8;color-scheme:dark}
+html.dark{--ground:#15110D;--surface:#211B15;--text:#ECE2D0;--ink:#ECE2D0;--muted:#C2B499;--line:#3A3027;--accent:#A53627;--accent-ink:#FBF4E8;color-scheme:dark}
 html.dark .podg{background:rgba(255,238,210,.075)}
 html.dark button:hover:not(:disabled),html.dark .podg select:hover{background:rgba(255,238,210,.12)}
 html.dark button[aria-pressed="true"]:hover:not(:disabled){background:#86281C}
@@ -1310,3 +1310,18 @@ html.dark .kk.blk{background:#0E0B08}
 /* the Sound panel stands above the piano keyboard when that is open, not over it */
 html.kbd-on .tp-side{bottom:calc(var(--tph,56px) + var(--kbh,104px) + 16px);max-height:calc(var(--win,100vh) - var(--tph,56px) - var(--kbh,104px) - 32px)}
 html.embedded.kbd-on .tp-side{bottom:auto}
+
+/* Dark mode: the glass bars and menus darken what shows through them (the paper stays light), so their text is always readable */
+html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide,html.dark .tools .podg,html.dark .transport .podg,html.dark .kbd{
+  -webkit-backdrop-filter:blur(10px) saturate(1.05) brightness(.28) !important;backdrop-filter:blur(10px) saturate(1.05) brightness(.28) !important}
+html.dark .btns.dim,html.dark #headSeg.dim{opacity:.7}
+html.dark .rdel{opacity:.7}
+/* Dark mode: the menus and panels are almost solid, so nothing behind them (white paper, black notes) greys them or shows through the text */
+html.dark .popbody,html.dark .menu,html.dark .library,html.dark #library,html.dark .handpop,html.dark #tpSide{
+  background:color-mix(in srgb,var(--surface) 95%,transparent) !important;-webkit-backdrop-filter:blur(10px) !important;backdrop-filter:blur(10px) !important}
+html.dark #openRecent .rdel{opacity:.8}
+html.dark .rng-val,html.dark .crit-cat{color:#E8A090}
+/* Dark mode: red text on a dark ground is too faint, so links and the outline buttons use a lighter red */
+html.dark a{color:#E8A090}
+html.dark .rdx-btn.light{color:#E8A090;border-color:#E8A090}
+html.dark .rdx-btn.light:hover:not(:disabled){color:#F2B5A6}

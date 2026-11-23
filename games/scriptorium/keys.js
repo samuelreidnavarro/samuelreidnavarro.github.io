@@ -276,7 +276,8 @@
   window.addEventListener('keydown', e => {
     if (!K.on) return;
     const t = e.target, tag = t.tagName;
-    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || t.isContentEditable) return;
+    /* only a box where you type words or numbers keeps its keys; a radio button, slider, tick box or list that was just used does not hold the keyboard back */
+    if (tag === 'TEXTAREA' || t.isContentEditable || (tag === 'INPUT' && !/^(radio|checkbox|range|button|submit|reset|color|file|image)$/.test(t.type))) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); setOn(false); return; }
     if (e.shiftKey) return;   /* Shift+L (lyrics) and the Shift keys keep their meaning */
