@@ -167,24 +167,48 @@ function fill(A, iconSVG){
   });
   $('#restBtn').innerHTML = iconSVG('rB', 1.4);
   const accBtns = $('#accBtns');
-  /* Ed.: the next accidental (or the selected note's accidental) becomes editorial, written above the staff */
-  if (A.toggleEd) {
-    const eb = document.createElement('button');
-    eb.className = 'ib edbtn'; eb.id = 'edBtn';
-    eb.title = 'Editorial accidental: the next accidental you enter, or the one on the selected note, goes above the staff';
-    eb.setAttribute('aria-label', 'Editorial accidental');
-    eb.innerHTML = '<span>Ed.</span>';
-    eb.addEventListener('click', () => A.toggleEd());
-    accBtns.appendChild(eb);
-  }
+  /* A click on a flat, natural or sharp writes it in. Hovering it (or holding it down on a touchscreen) opens a small menu below it with
+     the editorial one: the same sign, written small above the staff (musica ficta). */
+  const SUF = {b: 'Fl', n: 'Na', '#': 'Sh'};
   Object.entries(ACC).forEach(([a, X]) => {
     const b = document.createElement('button');
     b.className = 'ib'; b.dataset.a = a;
-    b.title = `${X.name} (${a === 'n' && A.toggleEdit ? (A.repeat ? 'Q' : '0') : X.key})`;
+    b.title = `${X.name} (${a === 'n' && A.toggleEdit ? (A.repeat ? 'Q' : '0') : X.key})` + (A.toggleAccEd ? '. Hover (or hold) for the editorial one' : '');
     b.setAttribute('aria-label', X.name);
     b.innerHTML = iconSVG(X.g, 2.9);
     b.addEventListener('click', () => A.toggleAcc(a));
-    accBtns.appendChild(b);
+    if (!A.toggleAccEd) { accBtns.appendChild(b); return; }
+    const pop = document.createElement('div');
+    pop.className = 'pop accpop'; pop.id = 'popAcc' + SUF[a];
+    pop.appendChild(b);
+    const body = document.createElement('div');
+    body.className = 'popbody';
+    const eb = document.createElement('button');
+    eb.className = 'ib edv'; eb.id = 'edAcc' + SUF[a]; eb.dataset.ea = a;
+    eb.title = `Editorial ${X.name.toLowerCase()}: the same sign, written small above the staff (musica ficta)`;
+    eb.setAttribute('aria-label', 'Editorial ' + X.name.toLowerCase());
+    eb.innerHTML = iconSVG(X.g, 2.9) + '<i>ed.</i>';
+    eb.addEventListener('click', () => { A.toggleAccEd(a); pop.classList.remove('open'); });
+    body.appendChild(eb);
+    pop.appendChild(body);
+    accBtns.appendChild(pop);
+    /* touchscreens: holding the button down opens the menu (the tap itself still writes the sign) */
+    let timer = 0, held = false;
+    const stop = () => { clearTimeout(timer); timer = 0; };
+    b.addEventListener('pointerdown', e => {
+      held = false;
+      if (e.pointerType === 'mouse') return;
+      stop();
+      timer = setTimeout(() => {
+        held = true;
+        document.querySelectorAll('.pop.open').forEach(q => { if (q !== pop) q.classList.remove('open'); });
+        pop.classList.add('open');
+        if (window.__fitMenus) window.__fitMenus();
+      }, 420);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => b.addEventListener(t, stop));
+    b.addEventListener('click', e => { if (held) { held = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+    b.addEventListener('contextmenu', e => { if (e.pointerType !== 'mouse' && window.matchMedia('(hover:none)').matches) e.preventDefault(); });
   });
   const db = document.createElement('button');
   db.className = 'ib'; db.id = 'dotBtn';
@@ -366,7 +390,10 @@ function sync(A){
     b.disabled = !can || (!!ta && ta.r);
   });
   setPressed($('#dotBtn'), ta ? !ta.r && !!ta.p : !!S.armDot);
-  if ($('#edBtn')) setPressed($('#edBtn'), !!S.edArm || (!!ta && !ta.r && !!ta.a && !!ta.ed));
+  document.querySelectorAll('#accBtns button[data-ea]').forEach(b => {
+    setPressed(b, ta ? !ta.r && ta.a === b.dataset.ea && !!ta.ed : S.armAcc === b.dataset.ea && !!S.armEd);
+    b.disabled = !can || (!!ta && ta.r);
+  });
   $('#dotBtn').disabled = !can || (!!ta && ta.r);
   const cb = $('#colBtn'); if (cb) setPressed(cb, !!S.col);
   const lb = $('#ligBtn'); if (lb) { setPressed(lb, !!S.ligOn); lb.disabled = !(S.range || (t && !t.r && t.lig)); }

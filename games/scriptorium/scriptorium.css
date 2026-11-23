@@ -662,7 +662,10 @@ html.playing #pages g.sel:not(.on) .selbg{opacity:0}
 html.playing #pages g.sel:not(.on) use,html.playing #pages g.sel:not(.on) .ink{fill:var(--leaf-ink);color:var(--leaf-ink)}
 html.playing #pages g.sel:not(.on) .ledger{stroke:var(--leaf-ink)}
 html.playing #pages .caret{display:none}
-#accBtns .edbtn span{font-family:"IM Fell English",Georgia,serif;font-style:italic;font-size:17px;line-height:1}
+#accBtns .edv{display:flex;align-items:center;justify-content:center;gap:3px;width:auto;min-width:58px;padding:0 8px}
+#accBtns .edv i{font:italic 13px/1 "IM Fell English",Georgia,serif}
+#accBtns .accpop > button{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+#accBtns .accpop .popbody{padding:4px}
 /* Info, and Download PDF / MXL side by side */
 #popInfo .popbody{left:auto;right:-6px}
 .pagemeta.infobox{margin-top:0;padding-top:0;border-top:0;min-width:min(420px,calc(100vw - 48px))}
@@ -1356,7 +1359,3 @@ html.dark .rdx-btn.light:hover:not(:disabled){color:#F2B5A6}
 .staffset .webnote .tb{display:inline-flex;vertical-align:baseline;height:auto;min-height:0;padding:1px 8px;margin:0 2px}
 
 /* grid lines packed closer than a notehead (a fine grid on a long stretch) are drawn lighter; they are still places */
-#pages .eg-line.crowd{opacity:.4}
-#pages .eg-line.onset{opacity:.32;stroke-dasharray:.1 .2}
-#pages .eg-tick.onset{opacity:.55}
-#pages .eg-tick.crowd{opacity:.5}
