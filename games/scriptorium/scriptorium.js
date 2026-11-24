@@ -1697,6 +1697,9 @@ function mensW(sign){
 /* ------------------------------------------------------------------ */
 /* horizontal spacing: at 0 the notes stand as close as they can without touching; the slider adds room by duration */
 const evenOn = () => ed.on && st.evenWrite !== 'off';
+/* in note input, a note that was clicked (and is still the selection) takes a new value from the number keys, while a note just written
+   leaves them for the next note (Samuel 2026-11-24) */
+const clickedSel = () => !!(ed.clicked && ed.sel && !ed.range && !ed.picks && ed.clicked.vi === ed.sel.vi && ed.clicked.ei === ed.sel.ei);
 /* the room a note takes after it. As printed it grows slowly with the note's length; while writing (Even spacing on) it grows in
    proportion to it, so that the grid, whatever its size, stands in evenly spaced lines. */
 const spring = d => evenOn()
@@ -7816,6 +7819,7 @@ pagesEl.addEventListener('click', e => {
       ed.range = null; ed.picks = null;
       if (n.s.rest) n.s = pickRest(n.vi, n.s);
       ed.sel = {vi: n.vi, ei: n.s.src[0]}; ed.ins = {vi: n.vi, ei: n.s.src[n.s.src.length - 1] + 1};
+      ed.clicked = {vi: n.vi, ei: n.s.src[0]};   /* chosen by a click: in note input the number keys change this note (see setDur) */
       if (!n.s.rest) hear(n.s.step, n.s.alt);
       showSel(); return;
     }
@@ -8240,7 +8244,7 @@ const CBA = {
   toggleEdit(){ if (piece) setEdit(!ed.on); },
   state(){
     const s = selSym(), t = targetSym(), v = curVoice(), ta = accTarget();
-    return {selected: !!s, signSel: mensOpen(), dur: s && !(ed.on && !ed.ovr) ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
+    return {selected: !!s, signSel: mensOpen(), dur: s && (!(ed.on && !ed.ovr) || clickedSel()) ? valKey(s) : ed.val, rest: s ? s.rest : ed.inRest,
       acc: ta && {r: ta.rest, a: accOf(ta), p: !!(ta.dot && !ta.dd), pd: !!ta.dd, ed: !!ta.edAcc}, canAcc: !!(ed.on || ed.sel || ed.range || ed.picks), armAcc: ed.accArm || '', armEd: !!ed.accEd, armDot: ed.dotArm === true || ed.dotArm === 'add', armDiv: ed.dotArm === 'div',
       target: t && {r: t.rest, a: accOf(t), p: !!(t.dot && !t.dd), pd: !!t.dd, ed: !!t.edAcc, lig: !!t.lig}, ligOn: ligSelOn(), edArm: !!ed.edArm, ovr: !!ed.ovr,
       col: s && !s.rest ? isColoured(s) : !!ed.colArm, canUndo: ed.undo.length > 0, canRedo: ed.redo.length > 0,
@@ -8251,7 +8255,7 @@ const CBA = {
      input, a selected note takes the value. */
   setDur(k){
     ed.val = k;
-    if (selSym() && !(ed.on && !ed.ovr)) OPS.value(k);
+    if (selSym() && (!(ed.on && !ed.ovr) || clickedSel())) { const c = clickedSel(); OPS.value(k); if (c && ed.sel) ed.clicked = {vi: ed.sel.vi, ei: ed.sel.ei}; }
     else { ed.inRest = false; syncEdit(); }
   },
   setRestMode(rest){
