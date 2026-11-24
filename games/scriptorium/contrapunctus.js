@@ -1,4 +1,4 @@
-/* Scriptorium add-on: ReDiX Contrapunctus.
+/* Scriptorium add-on: CAT Contrapunctus.
    Two-voice counterpoint analysis per piece on top of the Scriptorium engine.
    Select any two voices of the open piece, choose whether to analyze all vertical slices or only
    notes struck together (filtering out passing notes), and click Run Analysis to generate two
@@ -34,7 +34,7 @@
   let lastResult = null;
   let activeHighlight = null; /* {kind: 'int'|'mot', key: string, idx: number, items: [...]} */
 
-  /* Styles for the ReDiX Contrapunctus analysis dashboard */
+  /* Styles for the CAT Contrapunctus analysis dashboard */
   document.head.insertAdjacentHTML('beforeend', `<style>
     .cp-panel {
       max-width: 74rem; margin: 56px auto 12px; padding: 1rem 1.25rem 1.15rem;
@@ -119,7 +119,7 @@
   panel.innerHTML = `
     <div class="cp-head">
       <div>
-        <h2>ReDiX Contrapunctus — Two-Voice Analysis</h2>
+        <h2>CAT Contrapunctus — Two-Voice Analysis</h2>
         <div class="cp-sub" id="cpPieceTitle">Open any piece from Open → Repertoire (or Open file), pick two voices, and click Run Analysis.</div>
       </div>
       <div style="display:flex;gap:.45rem;align-items:center">

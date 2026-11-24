@@ -1,4 +1,4 @@
-/* Scriptorium add-on: ReDiX Melodia.
+/* Scriptorium add-on: CAT Melodia.
    A melodic search engine across the ~2,870 polyphonic scores of the ReDiX corpus (Josquin Research Project,
    1520s Project, and music21 Palestrina). The query melody is written on the Scriptorium staff above — with
    a clef for exact pitches, or with "No clef" for transposed searches by exact intervallic structure (semitones)
@@ -11,7 +11,7 @@
   let searchMode = 'semi'; /* 'pitch' | 'semi' | 'step' */
   let syncingText = false;
 
-  /* inject layout and ReDiX Melodia panel styles */
+  /* inject layout and CAT Melodia panel styles */
   document.head.insertAdjacentHTML('beforeend', `<style>
     .viewer.frame, .viewer { height: auto !important; max-height: none !important; min-height: 150px !important; padding-top: 96px !important; padding-bottom: 12px !important; }
     @media (max-width: 700px) { .viewer.frame, .viewer { padding-top: 86px !important; } }
@@ -89,7 +89,7 @@
     .rdx-snip .cap { font-size: .94rem; color: var(--muted); font-style: italic; margin-top: .3rem; }
   </style>`);
 
-  /* build the ReDiX Melodia UI panel right below the transport bar */
+  /* build the CAT Melodia UI panel right below the transport bar */
   const wrap = document.querySelector('main.wrap');
   const tp = document.querySelector('.transport');
   const kbd = document.getElementById('kbd');
@@ -103,11 +103,11 @@
   }
   const panel = document.createElement('section');
   panel.className = 'rdx-mel';
-  panel.setAttribute('aria-label', 'ReDiX Melodia search');
+  panel.setAttribute('aria-label', 'CAT Melodia search');
   panel.innerHTML = `
     <p class="rdx-intro">
-      <strong>ReDiX Melodia</strong> searches the ~2,870 fifteenth- and sixteenth-century polyphonic scores of the
-      <a href="../redix-progressio.html">ReDiX</a> corpus (over 2.18 million notes across 10,800 voices).
+      <strong>CAT Melodia</strong> searches the ~2,870 fifteenth- and sixteenth-century polyphonic scores of the
+      corpus analysed in <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">ReDiX</a> by Ugo Bindini (over 2.18 million notes across 10,800 voices; <a href="../redix-progressio.html" target="_top">ReDiX Progressio</a> searches its sonorities).
       Write a melody on the staff above (with any clef you prefer), then choose whether to match its <strong>exact pitches</strong>,
       its <strong>exact intervals</strong> (any transposition preserving half and whole steps), or its <strong>diatonic steps</strong> (any transposition regardless of major or minor).
     </p>
@@ -533,7 +533,7 @@
     });
   });
 
-  /* ---------------- Loading the ReDiX Melodia corpus index ---------------- */
+  /* ---------------- Loading the CAT Melodia corpus index ---------------- */
   let MEL_DATA = null, melPromise = null, CAT_DATA = null;
   const nameOf = c => { const i = c.indexOf(', '); return i < 0 ? c : c.slice(i + 2) + ' ' + c.slice(0, i); };
 
@@ -544,8 +544,8 @@
     if (stEl) stEl.textContent = 'Loading the 2,870-piece melodic corpus…';
     melPromise = Promise.all([
       fetch('choirbook/catalogue.json').then(r => { if (!r.ok) throw new Error('Could not load catalogue.json'); return r.json(); }),
-      fetch('../redix-progressio/melodia.json').then(r => { if (!r.ok) throw new Error('Could not load melodia.json'); return r.json(); }),
-      fetch('../redix-progressio/melodia.bin').then(r => { if (!r.ok) throw new Error('Could not load melodia.bin'); return r.arrayBuffer(); })
+      fetch('../cat-melodia/melodia.json').then(r => { if (!r.ok) throw new Error('Could not load melodia.json'); return r.json(); }),
+      fetch('../cat-melodia/melodia.bin').then(r => { if (!r.ok) throw new Error('Could not load melodia.bin'); return r.arrayBuffer(); })
     ]).then(([cat, meta, bin]) => {
       CAT_DATA = cat;
       const buf = new Uint8Array(bin);
