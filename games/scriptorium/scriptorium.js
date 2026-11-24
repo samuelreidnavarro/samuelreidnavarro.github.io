@@ -856,6 +856,8 @@ function shapeReal(w, T, P, M = 2, X = 2){
   for (const [g, v] of tab) if (eq(w * 1.5, v)) return {g, col:true};
   /* last resort, before splitting into tied notes: a dot of addition even on a perfect value */
   for (const [g, v] of tab) if (eq(w, v * 1.5)) return {g, dot:true};
+  /* prolatio maior: a breve (longa, maxima) that the minim after it has imperfected is one minim short, five minims for a breve */
+  if (P === 3) for (const [g, v] of tab) if ((g === 'B' || g === 'L' || g === 'Mx') && eq(w, v - 0.5)) return {g, part:true};
   return null;
 }
 /* a black dotted note: it sounds two thirds of its dotted value, which is the plain value of its shape */
@@ -982,7 +984,7 @@ function mensurate(v){
       const it = z.items;
       const cand = x => !x.rigid && !x.sh.rest && x.sh.g === lv.g && !x.sh.dot && !x.sh.altd;
       const lower = x => x.rank > lv.rank;
-      let prev = null, run = [];
+      let prev = null, run = [], prevB = null;   /* prevB: in prolatio maior, the breve (two perfections) just before the run of minims */
       const settle = (next, div) => {
         if (!run.length) return;
         const r = run.reduce((a, x) => a + x.val, 0), m = r / lv.u;
@@ -996,6 +998,8 @@ function mensurate(v){
           } else if (k === 2) {
             const last = run[run.length - 1];
             if (imp2 && prev && next && !prev.done && !next.done) { prev.val = lv.imp; prev.done = true; next.val = lv.imp; next.done = true; }
+            /* the same with a breve before the two minims: the first minim takes one from the breve (five minims), the second from the semibrevis after them */
+            else if (imp2 && !prev && prevB && !prevB.done && next && !next.done && lv.g === 'S') { prevB.val = rt(prevB.val - lv.u); prevB.done = true; next.val = lv.imp; next.done = true; }
             else if ((next || (div && (!prev || prev.done))) && !last.rigid && !last.sh.rest && !last.sh.dot && Math.abs(last.val - lv.u) < 1e-6) { last.val = 2 * lv.u; last.altd = true; }
           }
         }
@@ -1003,14 +1007,33 @@ function mensurate(v){
       };
       for (const x of it) {
         /* a dot on a perfect note keeps it perfect; a punctus divisionis also divides the perfection after it */
-        if (cand(x)) { x.val = lv.perf; x.done = !!(x.sh.dd || x.sh.pa); settle(x, false); prev = x.sh.dd ? null : x; }
+        if (cand(x)) { x.val = lv.perf; x.done = !!(x.sh.dd || x.sh.pa); settle(x, false); prev = x.sh.dd ? null : x; prevB = null; }
         else if (lower(x) && !x.rigid) {
           run.push(x);
           if (x.sh.dd && x.rank === lv.rank + 1) { settle(null, true); prev = null; }
         }
-        else { settle(null, false); prev = null; }
+        else { settle(null, false); prev = null; prevB = lv.g === 'S' && mi.T === 2 && !x.rigid && !x.sh.rest && !x.sh.dot && !x.sh.altd && x.sh.g === 'B' ? x : null; }
       }
       settle(null, false);
+    }
+  }
+  /* 3b. prolatio maior, a larger note (breve, longa) followed by minims up to a dot of division: the group between two perfections of
+     the semibrevis must make whole perfections (three minims each), and what is over is taken off the larger note. A breve (six minims)
+     followed by one minim and a punctus divisionis is five minims long: the minim takes one from it. (The semibrevis followed by minims
+     is imperfected above, as always.) */
+  for (const z of zones) {
+    if (z.mi.P !== 3) continue;
+    const perf = 1.5, it = z.items;
+    for (let k = 0; k < it.length; k++) {
+      const x = it[k];
+      if (x.rigid || x.sh.rest || !x.sh.dd || x.rank <= 3) continue;
+      let a = k;
+      while (a - 1 >= 0 && !it[a - 1].rigid && !it[a - 1].sh.rest && it[a - 1].rank > 3 && !(it[a - 1].sh.dd)) a--;
+      const lead = a > 0 ? it[a - 1] : null;
+      if (!lead || lead.rigid || lead.sh.rest || lead.sh.dot || lead.sh.altd || lead.done || lead.rank > 2) continue;
+      let r = lead.val; for (let j = a; j <= k; j++) r += it[j].val;
+      const over = rt(r % perf);
+      if (over > EPS && over < perf - EPS && lead.val - over > EPS) { lead.val = rt(lead.val - over); lead.done = true; }
     }
   }
   /* 4. written back; tied parts leave */
@@ -2081,9 +2104,19 @@ function custosSvg(s, x, top){
 const LIG_W = {B: 1.3, L: 1.3, S: 1.3, M: 1.3, Sm: 1.3, F: 1.3, Mx: 2.5};
 const LIG_SHORT = ['S', 'M', 'Sm', 'F'];   /* the values of the pair cum opposita proprietate */
 function ligBand(xa, ya, xb, yb, filled, red){
-  const P = (pts) => `<path class="ink${red ? ' red' : ''}" d="M${pts.map(p => f(p[0]) + ' ' + f(p[1])).join('L')}Z"/>`;
-  if (filled) return P([[xa, ya - 0.544], [xb, yb - 0.544], [xb, yb + 0.54], [xa, ya + 0.54]]);
-  return P([[xa, ya - 0.544], [xb, yb - 0.544], [xb, yb - 0.296], [xa, ya - 0.296]]) + P([[xa, ya + 0.296], [xb, yb + 0.296], [xb, yb + 0.54], [xa, ya + 0.54]]);
+  const P = (d) => `<path class="ink${red ? ' red' : ''}" d="${d}"/>`;
+  const dy = yb - ya, dx = xb - xa;
+  /* an oblique is drawn as the sources do, a thick band bowed upwards (a falling one bulges at the top right, a rising one at the top left);
+     a square note is a flat band */
+  if (Math.abs(dy) > 0.3) {
+    const cx = xa + (dy > 0 ? 0.62 : 0.38) * dx, cy = ya + (dy > 0 ? 0.12 : 0.88) * dy;
+    const E = (o1, o2) => `M${f(xa)} ${f(ya + o1)}Q${f(cx)} ${f(cy + o1)} ${f(xb)} ${f(yb + o1)}L${f(xb)} ${f(yb + o2)}Q${f(cx)} ${f(cy + o2)} ${f(xa)} ${f(ya + o2)}Z`;
+    if (filled) return P(E(-0.544, 0.54));
+    return P(E(-0.544, -0.296)) + P(E(0.296, 0.54));
+  }
+  const L = (pts) => P(`M${pts.map(p => f(p[0]) + ' ' + f(p[1])).join('L')}Z`);
+  if (filled) return L([[xa, ya - 0.544], [xb, yb - 0.544], [xb, yb + 0.54], [xa, ya + 0.54]]);
+  return L([[xa, ya - 0.544], [xb, yb - 0.544], [xb, yb - 0.296], [xa, ya - 0.296]]) + L([[xa, ya + 0.296], [xb, yb + 0.296], [xb, yb + 0.54], [xa, ya + 0.54]]);
 }
 const ligV = (x, y1, y2) => `<rect class="ink" x="${f(x)}" y="${f(Math.min(y1, y2))}" width="0.12" height="${f(Math.abs(y2 - y1))}"/>`;
 function ligShape(G, top){
