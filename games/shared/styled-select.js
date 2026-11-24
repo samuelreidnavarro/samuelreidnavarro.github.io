@@ -48,6 +48,7 @@ html.dark .ssel-menu{box-shadow:0 14px 34px -10px rgba(0,0,0,.85)}
       const li = document.createElement('li');
       li.setAttribute('role', 'option'); li.id = menu.id + '-' + items.length;
       li.textContent = o.label || o.text;
+      if (o.dataset && o.dataset.font) li.style.fontFamily = o.dataset.font;   /* a font list shows each name in its own font */
       if (o.title) li.title = o.title;
       const dis = o.disabled || (o.parentNode && o.parentNode.tagName === 'OPTGROUP' && o.parentNode.disabled);
       if (dis) li.setAttribute('aria-disabled', 'true');

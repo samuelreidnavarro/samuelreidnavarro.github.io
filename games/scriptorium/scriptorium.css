@@ -197,7 +197,7 @@ label.ctl{display:flex;align-items:center;gap:8px;color:var(--muted)}
 .vignette{width:176px;height:142px;background:var(--leaf);border:1.5px solid var(--leaf-ink);outline:1px solid var(--leaf-ink);
   outline-offset:-5px;overflow:hidden;border-radius:1px}
 .handbox{position:absolute;right:0;top:4px;width:calc(250px * var(--hand-sc,1));height:calc(202px * var(--hand-sc,1));opacity:var(--hand-op,.3);pointer-events:none;z-index:0;transition:top .35s ease}
-.handbox svg{display:block;width:100%;height:100%;transform:scaleX(-1)}
+.handbox svg{display:block;width:100%;height:100%;transform:scaleX(-1);overflow:visible}   /* the raised hand may reach past its box: never cut it off */
 #title,#score{position:relative;z-index:1}
 .tempo-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .eq{font-size:22px;color:var(--text);padding:0 2px}
@@ -511,7 +511,9 @@ html.flatpaper .opening .page + .page{box-shadow:inset 16px 0 20px -18px rgba(0,
 #pages svg .red use,#pages svg .ink.red{fill:#A12C1C;color:#A12C1C}
 #pages svg text.foot{opacity:.8}
 #pages svg text{fill:var(--leaf-ink);font-family:"IM Fell English","Palatino Linotype",Palatino,Georgia,serif}
-#pages svg .title{font-family:"IM Fell Double Pica","IM Fell English",Georgia,serif}
+#pages svg .title{font-family:var(--title-font,"IM Fell Double Pica","IM Fell English",Georgia,serif)}
+#pages svg text.vnamehit{font-family:var(--vname-font,"IM Fell English",Georgia,serif)}
+#pages svg .seclab,#pages svg .seclab text{font-family:var(--stext-font,"IM Fell English",Georgia,serif)}
 #pages svg g.on use,#pages svg g.on .ink{fill:var(--accent);color:var(--accent)}
 #pages svg g.on .ledger{stroke:var(--accent)}
 .msg{color:var(--muted);font-style:italic;padding:30px 0}
@@ -1393,3 +1395,18 @@ html:not(.no-glass) .tools .podg:is(:has(.pop:hover),:has(.pop.open),:has(.pop.f
   html:not(.no-glass) .tools .bar .podg:is(:has(.pop:hover),:has(.pop.open),:has(.pop.find-open),:has(:focus-visible),:has(#library:not([hidden]))){background:color-mix(in srgb,var(--ground,#FBF7EF) 90%,transparent) !important}
   html:not(.no-glass) .tools .bar .podg::before{display:none !important}
 }
+
+/* Engraving: the headings fold their sections (Samuel 2026-11-24) */
+.staffset .sectog{display:flex;align-items:center;gap:6px;width:100%;margin:0;border:0;border-radius:6px;background:transparent;font:inherit;font-size:11px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);cursor:pointer;text-align:left;justify-content:flex-start !important;min-height:0;height:auto;padding:7px 4px 5px;border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent);border-top-left-radius:0;border-top-right-radius:0}
+.staffset .sectog:first-child{border-top:0}
+.staffset .sectog:hover{color:var(--text);background:color-mix(in srgb,var(--ink,#2A2218) 6%,transparent)}
+.staffset .sectog .chev{width:11px;height:11px;fill:currentColor;flex:none;transition:transform .15s ease}
+.staffset .sectog[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.staffset .sec-shut{display:none !important}
+.staffset .secline{grid-column:1/-1;border-top:1px solid var(--line);margin:6px 0 2px}
+
+/* View > System font: menus, buttons and panels in a plain sans-serif; the music, and the words written on it, keep their own fonts */
+:root{--sysfont:"Helvetica Neue",Helvetica,Arial,"Liberation Sans","Nimbus Sans",sans-serif}
+html.sysfont body *:not(#pages):not(#pages *):not(svg *):not(h1):not(kbd):not(code):not(.lyrin):not(.sec-ed):not(.orig-lyrin):not(.vrename):not(select[id$="FontSel"]):not(.ssel-menu li[style*="font-family"]){font-family:var(--sysfont) !important}
+html.sysfont .tb,html.sysfont .lab,html.sysfont .ctl{letter-spacing:0}

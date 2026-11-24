@@ -39,9 +39,8 @@ ${APP.popsBeforeVoices || ''}
         <div class="popbody"><div class="staffset">
           <div class="subhead">Page</div>
           <span class="lab">Format</span><div class="btns" id="viewList" role="group" aria-label="Format"><button class="tb" data-v="score">Score</button><button class="tb" data-v="parts">Parts</button><button class="tb" data-v="choir">Choirbook</button></div>
-          <span class="lab pageonly">Size</span><div class="btns pageonly" id="paperSeg" role="group" aria-label="Paper size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button></div>
+          <span class="lab">Size</span><div class="btns" id="paperSeg" role="group" aria-label="Size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button><button class="tb" data-v="web" title="The music fills the window, without pages">Web</button></div>
           <span class="lab pageonly">Orientation</span><div class="btns pageonly" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
-          <div class="webnote" id="webNote" hidden>Web view fills the window, so it has no paper size or orientation. <button type="button" class="tb" id="toPage">Show Page view</button> to set them (they are also used for the PDF).</div>
           <div class="subhead">Staves &amp; Notes</div>
           <label class="ctl" for="size">Staff size</label><div class="rng-wrap" data-for="size"><input type="range" id="size" min="1" max="7" step="0.05"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
           <span class="lab-lock"><label class="ctl" for="noteSize">Note size</label><button type="button" class="lockbtn" id="sizeLock" aria-pressed="true" aria-label="Lock note size to staff size" title="Locked to staff size — click to adjust independently"></button></span><div class="rng-wrap" data-for="noteSize"><input type="range" id="noteSize" min="1" max="7" step="0.05"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
@@ -80,17 +79,26 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Syllable dashes</span><div class="btns" id="dashSeg" role="group" aria-label="Syllable dashes"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <span class="lab">Text layer</span><div class="btns" id="origTxtSeg" role="group" aria-label="Text layer"><button class="tb" data-v="modern" title="Modern edition lyrics only">Modern</button><button class="tb" data-v="orig" title="Original-orthography text only">Original</button><button class="tb" data-v="both" title="Modern lyrics with original spelling underneath">Both</button></div>
           <span class="lab" id="verseLab">Verse</span><div class="btns" id="verseSeg" role="group" aria-label="Verse"></div>
+          <div class="subhead">Title</div>
+          <label class="lab" for="titleFontSel">Font</label><select id="titleFontSel" title="Font of the title"></select>
+          <div class="subhead">Voice names</div>
+          <label class="lab" for="vnameFontSel">Font</label><select id="vnameFontSel" title="Font of the voice names at the staves"></select>
+          <div class="subhead">Staff text</div>
+          <label class="lab" for="stextFontSel">Font</label><select id="stextFontSel" title="Font of the words written at the staff (section names such as Secunda pars)"></select>
+          <div class="secline" role="separator"></div>
           <span class="lab pslab">Presets</span><div id="presetBox"><div id="presetList"></div><div id="presetNew"><button class="tb" id="presetAdd">Save current settings as preset</button><span id="presetForm" hidden><input id="presetName" type="text" placeholder="Name" maxlength="30" autocomplete="off"><button class="tb" id="presetOk">Save</button></span></div></div>
         </div></div>
       </div></div>
       <div class="podg"><div class="pop" id="popView">
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">View<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="staffset">
-          <span class="lab">Display</span><div class="btns" id="dispSeg" role="group" aria-label="Display"><button class="tb" data-v="page">Page</button><button class="tb" data-v="web">Web</button></div>
+          <div id="viewMirror" style="display:contents"></div>
           <span class="lab" id="flowLab">Pages</span><div class="btns" id="flowSeg" role="group" aria-label="Pages"><button class="tb" data-v="vertical">Vertical</button><button class="tb" data-v="horizontal">Horizontal</button></div>
           <span class="lab" id="scrollLab">Scroll</span><div class="btns" id="scrollSeg" role="group" aria-label="Scroll"><button class="tb" data-v="vertical" title="Systems below each other">Vertical</button><button class="tb" data-v="horizontal" title="The score as one long line, scrolling sideways">Horizontal</button></div>
           <span class="lab">Paper colour</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
           <span class="lab">Dark mode</span><div class="btns" id="darkSeg" role="group" aria-label="Dark mode"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
+          <span class="lab">System font</span><div class="btns" id="sysFontSeg" role="group" aria-label="System font"><button class="tb" data-v="on" title="Menus, buttons and panels in a plain sans-serif (Helvetica, or a free look-alike); the music is not changed">On</button><button class="tb" data-v="off" title="Menus, buttons and panels in IM Fell English, like the music">Off</button></div>
+          <label class="ctl" for="idleSec" title="How long the controls wait, after the mouse stops, before they fold away (0 = never)">Hide controls after</label><span class="pt-field"><input type="number" id="idleSec" min="0" max="600" step="1" inputmode="numeric" aria-label="Hide controls after, in seconds (0 = never)"><span>s (0 = never)</span></span>
           <label class="ctl" for="glassRange" title="How transparent the menus and buttons are">Window transparency</label><input type="range" id="glassRange" min="0" max="0.95" step="0.01">
           <label class="ctl" for="gridRange" title="How strongly the grid lines show in Note input">Grid intensity</label><input type="range" id="gridRange" min="0.3" max="5" step="0.05">
           <span class="lab">Even spacing in Edit Mode</span><div class="btns" id="evenSeg" role="group" aria-label="Even spacing in Edit Mode"><button class="tb" data-v="on" title="In Edit Mode (Note input) every note takes room in proportion to its length, so the grid is evenly spaced and every click has a place">On</button><button class="tb" data-v="off" title="In Edit Mode the music keeps its printed spacing; the grid follows it, unevenly">Off</button></div>
@@ -1299,7 +1307,7 @@ const KEY = APP.store + ':v1';
 const st = {
   inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', noteCol: 'black', colLock: 'off', dashes: 'on', ed: 'on', heads: 'modern', stems: 'adaptive', accStyle: 'modern', origText: 'modern', ann: 'on', ossia: 'on',
   size: 1.75, noteSize: 1.75, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, printPaper: 'A4', bounds: {}, staves: {},
-  evenWrite: 'on', measAcross: 'on', hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 0.3, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
+  evenWrite: 'on', measAcross: 'on', hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 1, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
   ...(APP.defaults || {})
 };
 const HAD_SAVED = !!localStorage.getItem(KEY);
@@ -1321,6 +1329,11 @@ if (st.sizeLock !== 'off') st.sizeLock = 'on';
 if (!st.noteCol) st.noteCol = 'black';
 if (st.colLock !== 'on' && st.colLock !== 'off') st.colLock = st.staff === st.noteCol ? 'on' : 'off';
 if (!st.lyrFont) st.lyrFont = 'fell';
+if (!st.titleFont) st.titleFont = 'pica'; if (!st.vnameFont) st.vnameFont = 'fell'; if (!st.stextFont) st.stextFont = 'fell';
+if (st.sysFont !== 'on') st.sysFont = 'off';
+/* the tactus hand is now the beige of the site's name box (Samuel 2026-11-24): a pale colour, so it is drawn fully opaque unless one changes that */
+if (!st.handBeige) { if (st.handOp === 0.3 || typeof st.handOp !== 'number') st.handOp = 1; st.handBeige = 1; }
+if (typeof st.idleSec !== 'number' || !isFinite(st.idleSec) || st.idleSec < 0) st.idleSec = 3;
 if (!st.stems) st.stems = 'adaptive';
 if (st.accStyle !== 'old') st.accStyle = 'modern';
 if (typeof st.lyrPt !== 'number' || !isFinite(st.lyrPt)) st.lyrPt = typeof st.lyrSize === 'number' && isFinite(st.lyrSize) ? Math.round(st.lyrSize * 5 * 2) / 2 : 8.5;
@@ -1330,7 +1343,7 @@ if (st.bars === 'mstrich') st.bars = 'full';
 /* barlines now stand in each staff only; everyone starts again from those */
 if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
 /* presets (shared by the apps through the browser): the two built-in ones and the ones Samuel saves; one of them opens every score */
-const PRESET_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'printPaper', 'orient', 'flow'];
+const PRESET_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'printPaper', 'orient', 'flow'];
 const MENS1 = {eq: 'off', nota: 'real', stems: 'adaptive', accStyle: 'modern', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'black', noteCol: 'black', colLock: 'on', lines: '5', paperCol: 'white', size: 1.5, noteSize: 1.5, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', printPaper: 'A4', orient: 'portrait', flow: 'vertical'};
 const MENS2 = {...MENS1, clefs: 'mens', size: 1.65, noteSize: 1.65, dashes: 'off'};
 const CF1 = {eq: 'off', nota: 'real', stems: 'adaptive', accStyle: 'modern', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', noteCol: 'black', colLock: 'off', lines: '5', paperCol: 'parchment', size: 3.6, noteSize: 3.6, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web', printPaper: 'A4'};
@@ -1345,7 +1358,7 @@ const presetAll = () => [...BUILTIN, ...presetStore().custom];
 function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; if (pr.s.noteSize === undefined || st.sizeLock !== 'off') st.noteSize = st.size; if (pr.s.noteCol === undefined) st.noteCol = 'black'; if (pr.s.colLock === undefined) st.colLock = st.staff === st.noteCol ? 'on' : 'off'; }
 { const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } if (IS_CAT) { st.paperCol = 'white'; st.staff = 'black'; st.noteCol = 'black'; st.colLock = 'on'; st.clefs = 'modern'; if (APP.id === 'cat-melodia') { st.view = 'score'; st.paper = 'web'; } } }
 /* changing an engraving setting unticks the ticked preset: the settings are now "current settings" of their own */
-const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
+const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
 function presetDrift(){
   const S = presetStore(); if (!S.active) return;
   const P = presetAll().find(q => q.name === S.active);
@@ -1462,8 +1475,12 @@ const LYR_FONTS = [
   ['baskerville', 'Baskerville', 'Baskerville, "Libre Baskerville", Georgia, serif'],
   ['georgia', 'Georgia', 'Georgia, "Times New Roman", serif'],
   ['times', 'Times', '"Times New Roman", Times, serif'],
-  ['sans', 'Sans-serif', 'system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif']
+  ['sans', 'Sans-serif', 'system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif'],
+  ['pica', 'IM Fell Double Pica', '"IM Fell Double Pica", "IM Fell English", Georgia, serif']
 ];
+const fontCss = (k, def) => (LYR_FONTS.find(x => x[0] === k) || LYR_FONTS.find(x => x[0] === def) || LYR_FONTS[0])[2];
+/* fonts of the title, the voice names and the staff text (Engraving) */
+const TEXT_FONTS = [['titleFont', '#titleFontSel', '--title-font', 'pica'], ['vnameFont', '#vnameFontSel', '--vname-font', 'fell'], ['stextFont', '#stextFontSel', '--stext-font', 'fell']];
 const lyrFontCss = () => (LYR_FONTS.find(x => x[0] === st.lyrFont) || LYR_FONTS[0])[2];
 const lyrSize = () => Math.max(0.5, Math.min(6, (+st.lyrPt || 8.5) / 5));
 const staffLinesN = () => Math.max(1, Math.min(15, parseInt(st.lines, 10) || 5));
@@ -1718,6 +1735,25 @@ function columns(vlist, a, b, withLyrics){
       else if (withLyrics(v) && s.text && !s.cont) lastSyl.set(v, x + s.hw / 2 + s.lyo + s.tw / 2 + (s.hy ? 0.9 : 0));
     }
     prev = c;
+  }
+  /* Even spacing in Edit Mode: the place of a column follows its time, so the music (and the grid drawn with it) stands evenly, a breve
+     twice as wide as a semibreve in every voice. The scale is the one half of the columns need to keep clear of each other (more would spread a line of quick notes very thin); where a
+     column needs more room than that (a long syllable, a crowd of accidentals) it keeps its own, and the even flow goes on after it.
+     (Before 2026-11-24 only the room after each note grew with its length, which the crowding of the other voices mostly hid.) */
+  if (evenOn() && cols.length > 2) {
+    const r = [];
+    for (let i = 1; i < cols.length; i++) { const dt = cols[i].t - cols[i - 1].t; if (dt > EPS) r.push((cols[i].x - cols[i - 1].x) / dt); }
+    r.sort((p, q) => p - q);
+    const k = r.length ? r[Math.floor((r.length - 1) * 0.5)] : 0;
+    if (k > 0) {
+      let px = cols[0].x;
+      for (let i = 1; i < cols.length; i++) {
+        const gap = cols[i].x - cols[i - 1].x, dt = Math.max(0, cols[i].t - cols[i - 1].t);
+        cols[i - 1].x = px;
+        px = px + Math.max(gap, k * dt);
+      }
+      cols[cols.length - 1].x = px;
+    }
   }
   /* clean break points: no voice holds a note across the column */
   const ptr = new Map(vlist.map(v => [v, 0]));
@@ -3984,7 +4020,8 @@ const colorOf = (v, fb = '#2A2218') => { const c = STAFF_COLORS.find(x => x[0] =
 const SWATCH_HTML = STAFF_COLORS.map(([k, c, n]) => `<button class="tb swatch" data-v="${k}" style="--c:${c}" aria-label="${n}" title="${n}"><i></i></button>`).join('');
 $('#staffSeg').innerHTML = SWATCH_HTML + `<label class="tb swatch pick" id="staffPickL" title="Any colour" aria-label="Any colour"><i></i><input type="color" id="staffPick" value="#2a2218"></label>`;
 $('#noteColSeg').innerHTML = SWATCH_HTML + `<label class="tb swatch pick" id="noteColPickL" title="Any colour" aria-label="Any colour"><i></i><input type="color" id="noteColPick" value="#2a2218"></label>`;
-$('#lyrFontSel').innerHTML = LYR_FONTS.map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join('');
+$('#lyrFontSel').innerHTML = LYR_FONTS.map(([k, n, css]) => `<option value="${k}" data-font="${esc(css)}">${esc(n)}</option>`).join('');
+for (const [, sel] of TEXT_FONTS) $(sel).innerHTML = $('#lyrFontSel').innerHTML;
 const LOCK_ON_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 7V5.2a3 3 0 0 1 6 0V7h.8c.66 0 1.2.54 1.2 1.2v5.1c0 .66-.54 1.2-1.2 1.2H4.2c-.66 0-1.2-.54-1.2-1.2V8.2C3 7.54 3.54 7 4.2 7H5Zm1.4 0h3.2V5.2a1.6 1.6 0 0 0-3.2 0V7Z"/></svg>';
 const LOCK_OFF_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.4 4.8a1.6 1.6 0 0 0-3-.75l-1.3-.54A3 3 0 0 1 11.8 5v2h.2c.66 0 1.2.54 1.2 1.2v5.1c0 .66-.54 1.2-1.2 1.2H4.2c-.66 0-1.2-.54-1.2-1.2V8.2C3 7.54 3.54 7 4.2 7h6.2V4.8Z"/></svg>';
 const RNG_DEF = {
@@ -4070,18 +4107,20 @@ function segInit(id, key, after){
 function syncUI(){
   try { sendList(); } catch (e) {}
   if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
-  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#stemSeg': 'stems', '#accSeg': 'accStyle', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#evenSeg': 'evenWrite', '#measSeg': 'measAcross', '#bposSeg': 'bpos'};
+  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#stemSeg': 'stems', '#accSeg': 'accStyle', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#evenSeg': 'evenWrite', '#measSeg': 'measAcross', '#bposSeg': 'bpos', '#sysFontSeg': 'sysFont'};
   $('#bnumSel').value = st.bnum || 'off'; $('#bunitSel').value = st.bunit || 'bar';
   $('#lyrFontSel').value = st.lyrFont || 'fell';
+  for (const sel of ['#lyrFontSel', ...TEXT_FONTS.map(x => x[1])]) { const o = $(sel).selectedOptions[0]; $(sel).style.fontFamily = o ? o.dataset.font : ''; }
+  for (const [k, sel, v, def] of TEXT_FONTS) { $(sel).value = st[k] || def; document.documentElement.style.setProperty(v, fontCss(st[k], def)); }
+  document.documentElement.classList.toggle('sysfont', st.sysFont === 'on');
+  if ($('#idleSec') && document.activeElement !== $('#idleSec')) $('#idleSec').value = String(st.idleSec);
   if ($('#lyrPt') && document.activeElement !== $('#lyrPt')) $('#lyrPt').value = String(+(+st.lyrPt || 8.5).toFixed(2));
   if ($('#linesNum') && document.activeElement !== $('#linesNum')) $('#linesNum').value = String(staffLinesN());
   document.querySelectorAll('.bnx').forEach(el => { el.hidden = !st.bnum || st.bnum === 'off'; });
   for (const [id, k] of Object.entries(segs)) $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st[k])));
-  const activePaper = st.paper === 'web' ? (st.printPaper || 'A4') : st.paper;
-  $('#paperSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === activePaper)));
-  $('#dispSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === (st.paper === 'web' ? 'web' : 'page'))));
-  /* paper size and orientation belong to Page view (and the PDF); Web view has none, so they are not offered there */
-  { const web = st.paper === 'web'; document.querySelectorAll('#popPage .pageonly').forEach(e => { e.hidden = web; }); const wn = $('#webNote'); if (wn) wn.hidden = !web; }
+  $('#paperSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st.paper)));
+  /* orientation belongs to Page view (and the PDF); Web view has none, so it is not offered there */
+  { const web = st.paper === 'web'; document.querySelectorAll('#popPage .pageonly').forEach(e => { e.hidden = web; }); }
   const sLocked = st.sizeLock !== 'off', cLocked = st.colLock !== 'off';
   if (sLocked) st.noteSize = st.size;
   const slBtn = $('#sizeLock'), clBtn = $('#colLock');
@@ -4247,10 +4286,51 @@ segInit('#eqSeg', 'eq'); segInit('#viewList', 'view'); $('#notaSeg').addEventLis
   else { st.nota = 'real'; if (pieceKey) { if (b.dataset.v === 'black') st.black[pieceKey] = 1; else delete st.black[pieceKey]; } }
   save(); syncUI(); render();
 }); segInit('#headSeg', 'heads'); segInit('#stemSeg', 'stems'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars'); segInit('#bposSeg', 'bpos');
-[['#bnumSel', 'bnum'], ['#bunitSel', 'bunit'], ['#lyrFontSel', 'lyrFont']].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; save(); syncUI(); render(); }));
-$('#paperSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.printPaper = b.dataset.v; if (st.paper !== 'web') st.paper = b.dataset.v; save(); syncUI(); render(); });
-$('#toPage').addEventListener('click', () => { const b = $('#dispSeg').querySelector('button[data-v="page"]'); if (b) b.click(); });
-$('#dispSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.v === 'web') { if (st.paper !== 'web') st.printPaper = st.paper; st.paper = 'web'; } else { st.paper = st.printPaper || 'A4'; } save(); syncUI(); render(); });
+[['#bnumSel', 'bnum'], ['#bunitSel', 'bunit'], ['#lyrFontSel', 'lyrFont'], ...TEXT_FONTS.map(([k, sel]) => [sel, k])].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; save(); syncUI(); render(); }));
+segInit('#sysFontSeg', 'sysFont');
+$('#idleSec').addEventListener('change', e => { const v = Math.round(+e.target.value); st.idleSec = isFinite(v) && v >= 0 ? Math.min(600, v) : 3; save(); syncUI(); document.dispatchEvent(new Event('idlesec')); });
+/* Size: A3, A4, A5 (pages) or Web (the music fills the window); the last paper size is kept for the PDF */
+$('#paperSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.v === 'web') { if (st.paper !== 'web') st.printPaper = st.paper; st.paper = 'web'; } else { st.printPaper = st.paper = b.dataset.v; } save(); syncUI(); render(); });
+/* Engraving: each heading folds its section away (Samuel 2026-11-24); which ones are open is remembered */
+{
+  const box = $('#popLook .staffset'); let sec = null;
+  if (!st.lookOpen || typeof st.lookOpen !== 'object') st.lookOpen = {Notation: true};
+  for (const el of [...box.children]) {
+    if (el.classList.contains('secline')) { sec = null; continue; }
+    if (el.classList.contains('subhead')) {
+      const name = el.textContent.trim(); sec = name;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'subhead sectog'; b.dataset.sec = name;
+      b.innerHTML = '<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg><span></span>';
+      b.lastChild.textContent = name; el.replaceWith(b); continue;
+    }
+    if (sec) el.dataset.sec = sec;
+  }
+  const show = () => box.querySelectorAll('.sectog').forEach(b => {
+    const on = !!st.lookOpen[b.dataset.sec]; b.setAttribute('aria-expanded', String(on));
+    box.querySelectorAll(`[data-sec="${CSS.escape(b.dataset.sec)}"]:not(.sectog)`).forEach(e => e.classList.toggle('sec-shut', !on));
+  });
+  box.addEventListener('click', e => { const b = e.target.closest('.sectog'); if (!b) return; st.lookOpen[b.dataset.sec] = !st.lookOpen[b.dataset.sec]; save(); show(); });
+  show();
+}
+/* View offers Format, Size and Orientation too (Samuel 2026-11-24): copies of the Layout rows, kept in step with them; a click on a copy
+   is a click on the original, so both places are two ways to change the same setting */
+{
+  const host = $('#viewMirror');
+  ['viewList', 'paperSeg', 'orientSeg'].forEach(id => {
+    const seg = $('#' + id), lab = seg.previousElementSibling;
+    const l2 = lab.cloneNode(true), s2 = seg.cloneNode(true);
+    l2.removeAttribute('id'); s2.id = id + 'V'; host.append(l2, s2);
+    const copy = () => {
+      s2.innerHTML = seg.innerHTML;
+      for (const [a, b] of [[lab, l2], [seg, s2]]) { b.hidden = a.hidden; b.className = a.className; }
+    };
+    copy();
+    const mo = new MutationObserver(copy);
+    mo.observe(seg, {subtree: true, childList: true, attributes: true, characterData: true});
+    mo.observe(lab, {attributes: true});
+    s2.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const o = seg.querySelector(`button[data-v="${CSS.escape(b.dataset.v)}"]`); if (o) o.click(); });
+  });
+}
 segInit('#evenSeg', 'evenWrite', () => { if (!ed.on) toast('Even spacing in Edit Mode: ' + (st.evenWrite === 'off' ? 'off' : 'on') + '. It shows once you turn on Edit Mode.'); }); segInit('#measSeg', 'measAcross'); segInit('#orientSeg', 'orient'); segInit('#flowSeg', 'flow', () => { viewerEl.scrollLeft = 0; syncNav(); });
 $('#staffSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.staff = b.dataset.v; if (st.colLock !== 'off') st.noteCol = st.staff; save(); syncUI(); render(); });
 $('#staffPick').addEventListener('input', e => { st.staff = e.target.value; if (st.colLock !== 'off') st.noteCol = st.staff; save(); syncUI(); });
@@ -5774,7 +5854,7 @@ function meiToKern(txt, fileName){
    of the old version into the new one before it is read. */
 const CB_VERSION = 1;
 /* the settings of the layout and look that go into the file (not personal choices such as dark mode, window transparency, volume or tempo) */
-const CB_SETTINGS = ['size', 'noteSize', 'sizeLock', 'thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'mens', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'dashes', 'ed', 'lig', 'lines', 'paperCol', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'measAcross', 'origText', 'ann', 'ossia', 'verse', 'view', 'paper', 'printPaper', 'orient', 'flow', 'webScroll'];
+const CB_SETTINGS = ['size', 'noteSize', 'sizeLock', 'thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'mens', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'dashes', 'ed', 'lig', 'lines', 'paperCol', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'hs', 'vs', 'ss', 'measAcross', 'origText', 'ann', 'ossia', 'verse', 'view', 'paper', 'printPaper', 'orient', 'flow', 'webScroll'];
 /* what belongs to one piece: kept in st under the key of the piece */
 const CB_PIECE_ITEMS = ['vis', 'inc', 'incClef', 'staves', 'black', 'bounds'];
 /* from an older version of the file to the next: {from: object} where the object is {settings, items} (nothing yet: this is version 1) */
@@ -11605,7 +11685,7 @@ document.addEventListener('fullscreenchange', fsSync); document.addEventListener
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && fsFake) fsFakeSet(false); });
 function fsWake(){
   wrapEl.classList.remove('idle'); clearTimeout(fsTimer);
-  if (wrapEl.classList.contains('fs')) fsTimer = setTimeout(() => { if (!$('#fsCtl').matches(':hover') && !$('#fsBtn').matches(':hover')) wrapEl.classList.add('idle'); }, 3000);
+  if (wrapEl.classList.contains('fs') && st.idleSec > 0) fsTimer = setTimeout(() => { if (!$('#fsCtl').matches(':hover') && !$('#fsBtn').matches(':hover')) wrapEl.classList.add('idle'); }, st.idleSec * 1000);
 }
 ['pointermove', 'pointerdown', 'wheel'].forEach(t => wrapEl.addEventListener(t, fsWake, {passive: true}));
 viewerEl.addEventListener('scroll', fsWake, {passive: true});
@@ -11641,7 +11721,7 @@ $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
     if (pt === 'mouse' || pt === 'pen' || (e && e.type === 'wheel')) touchMode = false;
     else if (pt === 'touch' || (e && e.type === 'touchstart')) touchMode = true;
     apply(true, true);
-    if (wide() && !touchMode) timer = setTimeout(rest, 3000);
+    if (wide() && !touchMode && st.idleSec > 0) timer = setTimeout(rest, st.idleSec * 1000);
   };
   ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(t => document.addEventListener(t, wake, {passive: true}));
   window.addEventListener('resize', () => wake());
@@ -11653,7 +11733,8 @@ $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
     if (!touchMode || !wide() || !blank(e.target)) return;
     if (wasOn) apply(false, false); else apply(true, true);
   });
-  if (!touchMode) timer = setTimeout(rest, 3000);
+  if (!touchMode && st.idleSec > 0) timer = setTimeout(rest, st.idleSec * 1000);
+  document.addEventListener('idlesec', () => wake());
 }
 
 /* the playback row stays at the bottom of the browser window. Alone it is simply fixed there; in the site's frame (which is as
