@@ -1366,3 +1366,30 @@ html.dark .cat-btn.light:hover:not(:disabled){color:#F2B5A6}
 .staffset .webnote .tb{display:inline-flex;vertical-align:baseline;height:auto;min-height:0;padding:1px 8px;margin:0 2px}
 
 /* grid lines packed closer than a notehead (a fine grid on a long stretch) are drawn lighter; they are still places */
+
+/* A glass button group keeps its frosted look while its menu is open (Samuel 2026-11-24). The group cannot blur through its own
+   backdrop-filter then (its menu's glass would only see the group, and a fixed menu would be placed inside it), so the tint and blur
+   move to a layer behind the buttons, which is not an ancestor of the menu. Where the rows scroll sideways (medium windows, and the
+   playback row up to 1200px) the groups never blur themselves, so there that layer is always on, and they look as on a big screen.
+   Phones keep their own layout: the top groups there are not positioned, so they keep their plain tint. */
+html:not(.no-glass) .tools .podg::before,html:not(.no-glass) .transport .podg::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;display:none;
+  background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent);-webkit-backdrop-filter:blur(10px) saturate(1.08);backdrop-filter:blur(10px) saturate(1.08)}
+html.dark:not(.no-glass) .tools .podg::before,html.dark:not(.no-glass) .transport .podg::before{
+  -webkit-backdrop-filter:blur(10px) saturate(1.05) brightness(.28);backdrop-filter:blur(10px) saturate(1.05) brightness(.28)}
+html:not(.no-glass) .tools .podg:is(:has(.pop:hover),:has(.pop.open),:has(.pop.find-open),:has(:focus-visible),:has(#library:not([hidden]))),html:not(.no-glass) .transport .podg:is(:has(.pop:hover),:has(.pop.open),:has(:focus-visible)){background:transparent !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+html:not(.no-glass) .tools .podg:is(:has(.pop:hover),:has(.pop.open),:has(.pop.find-open),:has(:focus-visible),:has(#library:not([hidden])))::before,html:not(.no-glass) .transport .podg:is(:has(.pop:hover),:has(.pop.open),:has(:focus-visible))::before{display:block}
+@media (min-width:701px) and (max-width:1100px){
+  html:not(.no-glass) .tools .bar .podg{background:transparent !important}
+  html:not(.no-glass) .tools .bar .podg::before{display:block}
+}
+@media (max-width:1200px){
+  html:not(.no-glass) .transport .podg{background:transparent !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+  html:not(.no-glass) .transport .podg::before{display:block}
+}
+@media (max-width:700px), (max-height:520px) and (orientation:landscape){
+  html:not(.no-glass) .tools .bar .podg{background:color-mix(in srgb,var(--ground,#FBF7EF) var(--glass-bg,58%),transparent) !important}
+  /* here the open group cannot blur at all (it would become the frame its menu is placed in), so it gets a denser tint instead */
+  html:not(.no-glass) .tools .bar .podg:is(:has(.pop:hover),:has(.pop.open),:has(.pop.find-open),:has(:focus-visible),:has(#library:not([hidden]))){background:color-mix(in srgb,var(--ground,#FBF7EF) 90%,transparent) !important}
+  html:not(.no-glass) .tools .bar .podg::before{display:none !important}
+}
