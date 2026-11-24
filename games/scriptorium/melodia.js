@@ -30,6 +30,10 @@
     @media (max-width: 700px) { html.embedded .viewer.frame, html.embedded .viewer, html .viewer.frame, html .viewer { padding-top: 92px !important; } }
     #pages .mel-int { font-family: "IM Fell English", Georgia, serif; font-size: 1.05px; font-style: italic; fill: var(--accent); text-anchor: middle; pointer-events: none; }
     .cat-mel { max-width: 72rem; margin: 0 auto 40px; padding: 0 clamp(8px, 1.4vw, 24px); display: grid; gap: 1.15rem; color: var(--text); }
+    /* the app's name, large and clear (Samuel 2026-11-24) */
+    .cat-top { text-align: center; margin-top: .4rem; }
+    .cat-title { margin: 0; font-family: "IM Fell Double Pica", "IM Fell English", Georgia, serif; font-weight: 400; font-size: clamp(2rem, 3.6vw, 2.8rem); line-height: 1.05; color: var(--text); letter-spacing: -.01em; }
+    .cat-kind { font-size: 1.05rem; color: var(--muted); margin-top: .2rem; }
     .cat-intro { max-width: 54rem; margin: 0 auto; font-size: 1.04rem; line-height: 1.48; color: var(--muted); text-align: center; }
     .cat-intro strong { color: var(--text); }
     .cat-intro a { color: var(--accent); }
@@ -111,6 +115,7 @@
   panel.className = 'cat-mel';
   panel.setAttribute('aria-label', 'CAT Melodia search');
   panel.innerHTML = `
+    <header class="cat-top"><h1 class="cat-title">CAT Melodia</h1></header>
     <p class="cat-intro">
       <strong>CAT Melodia</strong> searches the ~2,870 fifteenth- and sixteenth-century polyphonic scores of the
       corpus analysed in <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">ReDiX</a> by Ugo Bindini (over 2.18 million notes across 10,800 voices; <a href="../redix-progressio.html" target="_top">ReDiX Progressio</a> searches its sonorities).

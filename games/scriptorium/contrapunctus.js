@@ -48,6 +48,9 @@
     .cp-panel[hidden] { display: none !important; }
     @media (max-width: 700px) { .cp-panel { margin-top: 10px; padding: .85rem .9rem; } }
     .cp-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1rem; }
+    /* the app's name, large and clear at the top (Samuel 2026-11-24) */
+    .cat-title { margin: 0; font-family: "IM Fell Double Pica", "IM Fell English", Georgia, serif; font-weight: 400; font-size: clamp(2rem, 3.6vw, 2.8rem); line-height: 1.05; color: var(--text); letter-spacing: -.01em; }
+    .cat-kind { font-size: 1.05rem; color: var(--muted); margin: .15rem 0 .35rem; }
     .cp-head h2 { margin: 0; font-family: "IM Fell Double Pica", "IM Fell English", Georgia, serif; font-weight: 400; font-size: 1.4rem; }
     .cp-head .cp-sub { font-size: .96rem; color: var(--muted); font-style: italic; }
     .cp-controls { display: flex; flex-wrap: wrap; gap: .6rem 1rem; align-items: flex-end; }
@@ -122,7 +125,8 @@
   panel.innerHTML = `
     <div class="cp-head">
       <div>
-        <h2>CAT Contrapunctus — Two-Voice Analysis</h2>
+        <h1 class="cat-title">CAT Contrapunctus</h1>
+        <div class="cat-kind">Two-voice analysis</div>
         <div class="cp-sub" id="cpPieceTitle">Open any piece from Open → Repertoire (or Open file), pick two voices, and click Run Analysis.</div>
       </div>
       <div style="display:flex;gap:.45rem;align-items:center">
