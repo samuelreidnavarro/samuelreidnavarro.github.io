@@ -10,4 +10,4 @@ Before publishing or pushing any web app changes to `main`, automatically check 
 3. **All score-loading & editing paths:**
    - Any UI or add-on hook that reacts to a score must work for Repertoire loading (`loadPiece`), `Open file` / drag-and-drop (`loadText`), and voice/title edits—always using the piece's actual voice names and metadata.
 4. **Cache-busters in sync across every app:**
-   - Whenever `games/scriptorium/scriptorium.js`, `scriptorium.css`, or `style.css` changes, bump `?v=N` in **all** Scriptorium apps (`games/choirbook.html`, `games/cantus-firmus.html`, `games/canon-maker.html`, `games/redix-melodia.html`, `games/redix-contrapunctus.html`) and their outer wrapper pages.
+   - Whenever `games/scriptorium/scriptorium.js`, `scriptorium.css`, or `style.css` changes, bump `?v=N` in **all** Scriptorium apps (`games/choirbook.html`, `games/cantus-firmus.html`, `games/canon-maker.html`, `games/cat-melodia.html`, `games/cat-contrapunctus.html`) and their outer wrapper pages.

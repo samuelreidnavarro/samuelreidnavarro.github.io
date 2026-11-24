@@ -1336,14 +1336,14 @@ const MENS2 = {...MENS1, clefs: 'mens', size: 1.65, noteSize: 1.65, dashes: 'off
 const CF1 = {eq: 'off', nota: 'real', stems: 'adaptive', accStyle: 'modern', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', noteCol: 'black', colLock: 'off', lines: '5', paperCol: 'parchment', size: 3.6, noteSize: 3.6, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web', printPaper: 'A4'};
 const CF2 = {...CF1, clefs: 'mens', dashes: 'off'};
 const IS_CF = APP.id === 'cantus-firmus';
-const IS_REDIX = APP.id === 'redix-melodia' || APP.id === 'redix-contrapunctus';
+const IS_CAT = APP.id === 'cat-melodia' || APP.id === 'cat-contrapunctus';
 const BUILTIN = IS_CF ? [{name: 'Preset 1', s: CF1, fixed: true}, {name: 'Preset 2', s: CF2, fixed: true}] : [{name: 'Preset 1', s: MENS1, fixed: true}, {name: 'Preset 2', s: MENS2, fixed: true}];
-const PKEY = IS_CF ? 'scriptorium:presets:cf' : IS_REDIX ? 'scriptorium:presets:redix' : 'scriptorium:presets';
+const PKEY = IS_CF ? 'scriptorium:presets:cf' : IS_CAT ? 'scriptorium:presets:cat' : 'scriptorium:presets';
 function presetStore(){ let o = {}; try { o = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch (e) {} return {custom: Array.isArray(o.custom) ? o.custom : [], active: o.active === undefined || o.active === 'Mensural 1' ? 'Preset 1' : o.active === 'Mensural 2' ? 'Preset 2' : o.active}; }
 function presetPut(o){ try { localStorage.setItem(PKEY, JSON.stringify(o)); } catch (e) {} }
 const presetAll = () => [...BUILTIN, ...presetStore().custom];
 function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; if (pr.s.noteSize === undefined || st.sizeLock !== 'off') st.noteSize = st.size; if (pr.s.noteCol === undefined) st.noteCol = 'black'; if (pr.s.colLock === undefined) st.colLock = st.staff === st.noteCol ? 'on' : 'off'; }
-{ const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } if (IS_REDIX) { st.paperCol = 'white'; st.staff = 'black'; st.noteCol = 'black'; st.colLock = 'on'; st.clefs = 'modern'; if (APP.id === 'redix-melodia') { st.view = 'score'; st.paper = 'web'; } } }
+{ const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } if (IS_CAT) { st.paperCol = 'white'; st.staff = 'black'; st.noteCol = 'black'; st.colLock = 'on'; st.clefs = 'modern'; if (APP.id === 'cat-melodia') { st.view = 'score'; st.paper = 'web'; } } }
 /* changing an engraving setting unticks the ticked preset: the settings are now "current settings" of their own */
 const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
 function presetDrift(){
@@ -4581,8 +4581,8 @@ $('#newBtn').addEventListener('click', () => { (H.newScore || newScore)().catch(
 /* ---------------- between the apps: the square with the arrow opens the score (or one voice) in another one ---------------- */
 const APPS = [{id: 'choirbook', name: 'ChoirBook', page: 'choirbook.html', whole: true},
   {id: 'cantus-firmus', name: 'CantusFirmus', page: 'cantus-firmus.html', whole: false},
-  {id: 'redix-melodia', name: 'ReDiX Melodia', page: 'redix-melodia.html', whole: false},
-  {id: 'redix-contrapunctus', name: 'ReDiX Contrapunctus', page: 'redix-contrapunctus.html', whole: true},
+  {id: 'cat-melodia', name: 'CAT Melodia', page: 'cat-melodia.html', whole: false},
+  {id: 'cat-contrapunctus', name: 'CAT Contrapunctus', page: 'cat-contrapunctus.html', whole: true},
   {id: 'canon', name: 'Canon Maker', page: 'canon-maker.html', whole: false}];
 /* Export > Open in: a score opens whole in an app that takes a whole score; an app that takes a melody asks which voice */
 function sendList(){
@@ -10561,9 +10561,9 @@ const HELP_ENTRIES = [
    where:'Bottom bar, left (microphone and record buttons)', sel:'#mic',
    desc:'The microphone follows the pitch you sing and shows it on the staff. Record plays the music and writes down what you sing or play as staves of their own (Notate), or keeps your voice as an audio recording. The Latency setting lines the notes up with what you heard.'},
   /* Export */
-  {id:'open-in', cat:'Export & Share', title:'Open in another app', keys:'', tags:'open in send cantus firmus redix melodia contrapunctus canon choirbook transfer app',
+  {id:'open-in', cat:'Export & Share', title:'Open in another app', keys:'', tags:'open in send cantus firmus cat redix melodia contrapunctus canon choirbook transfer app',
    where:'Export → Open in', sel:'#popExport .popbtn', openPop:'#popExport',
-   desc:'The Export menu lists the other apps. Whole scores open in ChoirBook and ReDiX Contrapunctus; CantusFirmus and ReDiX Melodia take one voice, which you choose from the list. The score is passed on directly from this browser and is kept in the other app under My scores.'},
+   desc:'The Export menu lists the other apps. Whole scores open in ChoirBook and CAT Contrapunctus; CantusFirmus and CAT Melodia take one voice, which you choose from the list. The score is passed on directly from this browser and is kept in the other app under My scores.'},
   {id:'my-scores', cat:'Export & Share', title:'My scores: keeping your work', keys:'', tags:'save keep my scores browser storage recent local autosave',
    where:'Export → Save to My scores; Open → My scores', sel:'#popExport .popbtn', openPop:'#popExport',
    desc:'Your scores are kept in this browser, not on a server: Save to My scores keeps a copy, and Open → My scores brings it back. Clearing the browser’s data removes them, so download a file (.krn or .cmme.xml) of anything you want to keep for good.'},
