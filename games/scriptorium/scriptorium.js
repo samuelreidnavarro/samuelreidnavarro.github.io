@@ -3180,6 +3180,7 @@ function drawChantSystem(chant, chantIdx, W, y){
       }
       /* Podatus (2-note ascending neume): stack upper note right above lower note */
       const isPodTop = (ns.length === 2 && i === 1 && nt.pos > ns[0].pos);
+      const pes2 = ns.length === 2 && ns[1].pos - ns[0].pos === 1 && !ns[0].incl && !ns[1].incl;
       const nx = isPodTop ? prevX : x;
       /* Ledger lines outside 4-line staff (pos <= -2 or pos >= 8) */
       for (let lp = -2; lp >= nt.pos; lp -= 2) no += hl(nx - 0.25, nx + PW + 0.25, top + 3 - lp * 0.5, 'ledger', 0.13);
@@ -3196,6 +3197,11 @@ function drawChantSystem(chant, chantIdx, W, y){
       if (nt.incl) {
         const cx = nx + PW / 2;
         no += `<path class="ink" d="M${f(cx)} ${f(ny - 0.34)}L${f(cx + 0.34)} ${f(ny)}L${f(cx)} ${f(ny + 0.34)}L${f(cx - 0.34)} ${f(ny)}Z"/>`;
+      } else if (pes2) {
+        /* a pes of a second: the two squares would touch and read as one tall block (Samuel 2026-11-24), so, as in the printed chant books,
+           each is a little flatter and they stand a hair apart, the upper one joined to the lower by the stem at the right */
+        const h = PH - 0.1, cy = ny + (i === 0 ? 0.03 : -0.03);
+        no += `<rect class="ink" x="${f(nx)}" y="${f(cy - h / 2)}" width="${f(PW)}" height="${f(h)}" rx="0.05"/>`;
       } else {
         no += `<rect class="ink" x="${f(nx)}" y="${f(ny - PH / 2)}" width="${f(PW)}" height="${f(PH)}" rx="0.06"/>`;
       }
