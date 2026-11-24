@@ -1333,8 +1333,8 @@ html.dark #openRecent .rdel{opacity:.8}
 html.dark .rng-val,html.dark .crit-cat{color:#E8A090}
 /* Dark mode: red text on a dark ground is too faint, so links and the outline buttons use a lighter red */
 html.dark a{color:#E8A090}
-html.dark .rdx-btn.light{color:#E8A090;border-color:#E8A090}
-html.dark .rdx-btn.light:hover:not(:disabled){color:#F2B5A6}
+html.dark .cat-btn.light{color:#E8A090;border-color:#E8A090}
+html.dark .cat-btn.light:hover:not(:disabled){color:#F2B5A6}
 
 /* Export: the quick things on top, Open in, then the files by their extension */
 #exportList.expbody{display:flex;flex-direction:column;gap:8px;min-width:21em;max-width:min(26em,calc(100vw - 24px));align-items:stretch}

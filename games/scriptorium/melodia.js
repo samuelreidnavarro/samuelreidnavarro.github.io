@@ -23,70 +23,70 @@
     .kbd, html.embedded .kbd { position: relative !important; top: auto !important; bottom: auto !important; left: auto !important; right: auto !important; margin: 4px auto 12px !important; }
     #handBox, #pendBox, .framegrip, .fsbtn { display: none !important; }
     #pages .mel-int { font-family: "IM Fell English", Georgia, serif; font-size: 1.05px; font-style: italic; fill: var(--accent); text-anchor: middle; pointer-events: none; }
-    .rdx-mel { max-width: 72rem; margin: 0 auto 40px; padding: 0 clamp(8px, 1.4vw, 24px); display: grid; gap: 1.15rem; color: var(--text); }
-    .rdx-intro { max-width: 54rem; margin: 0 auto; font-size: 1.04rem; line-height: 1.48; color: var(--muted); text-align: center; }
-    .rdx-intro strong { color: var(--text); }
-    .rdx-intro a { color: var(--accent); }
-    .rdx-card { display: grid; gap: 1rem; padding: 1.15rem 1.35rem; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--surface) 78%, var(--ground)); box-shadow: 0 6px 20px -12px rgba(42,34,24,.18); }
-    .rdx-card h2 { margin: 0; font-family: "IM Fell Double Pica", "IM Fell English", Georgia, serif; font-weight: 400; font-size: 1.35rem; }
-    .rdx-modes { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; }
-    .rdx-modes .mbtn { font: inherit; font-size: 1.04rem; padding: .38rem .95rem; border: 1px solid var(--line); border-radius: 999px; background: var(--ground); color: var(--muted); cursor: pointer; transition: border-color .12s, background .12s, color .12s; }
-    .rdx-modes .mbtn:hover { color: var(--text); border-color: var(--text); }
-    .rdx-modes .mbtn[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-    .rdx-formula { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; align-items: baseline; padding: .55rem .8rem; border-radius: 7px; background: var(--ground); border: 1px solid var(--line); font-size: 1.02rem; }
-    .rdx-formula .f-tag { font-style: italic; color: var(--muted); }
-    .rdx-formula .f-val { font-family: "IM Fell Double Pica", "IM Fell English", Georgia, serif; font-size: 1.15rem; letter-spacing: .01em; }
-    .rdx-quick { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
-    .rdx-quick label { font-size: 1rem; color: var(--muted); font-style: italic; }
-    .rdx-quick input[type=text] { flex: 1 1 16rem; font: inherit; font-size: 1.05rem; color: var(--text); background: var(--ground); border: 1px solid var(--line); border-radius: 6px; padding: .32rem .6rem; min-height: 36px; }
-    .rdx-examples { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; font-size: .95rem; color: var(--muted); }
-    .rdx-examples button { font: inherit; font-size: .93rem; padding: .15rem .55rem; min-height: 28px; height: auto; border-radius: 999px; border: 1px solid var(--line); background: var(--ground); color: var(--text); cursor: pointer; }
-    .rdx-examples button:hover { border-color: var(--accent); color: var(--accent); }
-    .rdx-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(18.5rem, 1fr)); gap: .85rem 1.5rem; }
-    .rdx-fld { display: grid; gap: .25rem; font-size: 1.02rem; align-content: start; }
-    .rdx-fld > label, .rdx-fld > span { color: var(--muted); font-size: .96rem; }
-    .rdx-fld input[type=text], .rdx-fld select { font: inherit; font-size: 1.02rem; color: var(--text); background: var(--ground); border: 1px solid var(--line); border-radius: 6px; padding: .32rem .55rem; width: 100%; min-height: 36px; }
-    .rdx-checks { display: flex; flex-wrap: wrap; gap: .35rem 1.35rem; font-size: 1.01rem; align-items: center; }
-    .rdx-checks label { display: inline-flex; align-items: center; gap: .4rem; cursor: pointer; }
-    .rdx-checks input[type=checkbox] { accent-color: var(--accent); width: 1.02rem; height: 1.02rem; }
-    details.rdx-comp { border: 1px solid var(--line); border-radius: 6px; background: var(--ground); }
-    details.rdx-comp summary { padding: .34rem .6rem; cursor: pointer; font-size: 1.02rem; }
-    details.rdx-comp .box { padding: .45rem .65rem .65rem; border-top: 1px solid var(--line); }
-    details.rdx-comp .clist { max-height: 15rem; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr)); gap: .08rem 1rem; font-size: .98rem; margin-top: .4rem; }
-    details.rdx-comp .clist label { display: flex; gap: .4rem; align-items: baseline; cursor: pointer; }
-    details.rdx-comp .clist .n { color: var(--muted); font-size: .88rem; }
-    .rdx-btnrow { display: flex; gap: .65rem; flex-wrap: wrap; align-items: center; }
-    .rdx-btn { font: inherit; font-size: 1.08rem; padding: .42rem 1.25rem; min-height: 38px; height: auto; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; }
-    .rdx-btn:hover:not(:disabled) { background: #6F2017; color: var(--accent-ink); }
-    .rdx-btn.light { background: transparent; color: var(--accent); }
-    .rdx-btn.light:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); }
-    .rdx-btn.small { font-size: .93rem; padding: .15rem .65rem; min-height: 28px; }
-    .rdx-status { color: var(--muted); font-style: italic; }
-    .rdx-err { color: #9b2a1a; }
-    .rdx-summary { margin: 0; font-size: 1.06rem; }
-    table.rdx-groups, table.rdx-items { width: 100%; border-collapse: collapse; font-size: 1.03rem; }
-    table.rdx-groups th, table.rdx-items th { text-align: left; font-weight: 400; color: var(--muted); border-bottom: 1px solid var(--line); padding: .25rem .5rem; font-size: .94rem; font-style: italic; }
-    table.rdx-groups td { padding: .34rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
-    table.rdx-groups td.num, table.rdx-groups th.num { text-align: right; font-variant-numeric: tabular-nums; }
-    .rdx-gbtn { font: inherit; font-size: 1.05rem; background: var(--ground); border: 1px solid var(--line); border-radius: 6px; padding: .14rem .65rem; min-height: 30px; height: auto; cursor: pointer; color: var(--text); text-align: left; }
-    .rdx-gbtn:hover, .rdx-gbtn[aria-expanded="true"] { border-color: var(--accent); }
-    td.rdx-sub { padding: .25rem 0 .85rem 1.1rem !important; background: color-mix(in srgb, var(--ground) 65%, transparent); }
-    table.rdx-items td { padding: .28rem .5rem; border-bottom: 1px dotted var(--line); vertical-align: middle; }
-    table.rdx-items td.where { white-space: nowrap; font-variant-numeric: tabular-nums; }
-    table.rdx-items a { white-space: nowrap; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-    .rdx-snip { padding: .55rem 0 .85rem; overflow-x: auto; }
-    .rdx-snip .cb-prev { display: block; width: fit-content; max-width: 100%; overflow-x: auto; background: #ffffff; background-image: none; border-radius: 6px; border: 1px solid var(--line); box-shadow: 0 6px 18px -10px rgba(42,34,24,.32); padding: 4px 6px; }
-    .rdx-snip svg { display: block; max-width: 100%; height: auto; pointer-events: none; }
-    .rdx-snip svg .staff { stroke: #2A2218; }
-    .rdx-snip svg .ledger, .rdx-snip svg .barl, .rdx-snip svg .tie, .rdx-snip svg .ms { stroke: var(--leaf-ink, #2A2218); fill: none; }
-    .rdx-snip svg use, .rdx-snip svg .ink { fill: var(--leaf-ink, #2A2218); color: var(--leaf-ink, #2A2218); }
-    .rdx-snip svg .red use, .rdx-snip svg .ink.red { fill: #A12C1C; color: #A12C1C; }
-    .rdx-snip svg text { fill: var(--leaf-ink, #2A2218); font-family: "IM Fell English", "Palatino Linotype", Palatino, Georgia, serif; }
-    .rdx-snip svg .hit, .rdx-snip svg .selbg, .rdx-snip svg .stafhit, .rdx-snip svg .clefhit rect, .rdx-snip svg .menshit rect, .rdx-snip svg .keyhit rect, .rdx-snip svg .dothit rect, .rdx-snip svg .mensadd, .rdx-snip svg .ksarr, .rdx-snip svg .dotkind { fill: transparent !important; opacity: 0 !important; }
-    .rdx-snip svg g.mel-hit use, .rdx-snip svg g.mel-hit .ink, .rdx-snip svg g.mel-hit circle, .rdx-snip svg g.mel-hit text { fill: #1B56B8 !important; color: #1B56B8 !important; }
-    .rdx-snip svg g.mel-hit .ledger, .rdx-snip svg g.mel-hit line, .rdx-snip svg g.mel-hit path.tie { stroke: #1B56B8 !important; }
-    .rdx-snip svg .mel-hi-bg { fill: #1B56B8; fill-opacity: .14; rx: 0.45; pointer-events: none; }
-    .rdx-snip .cap { font-size: .94rem; color: var(--muted); font-style: italic; margin-top: .3rem; }
+    .cat-mel { max-width: 72rem; margin: 0 auto 40px; padding: 0 clamp(8px, 1.4vw, 24px); display: grid; gap: 1.15rem; color: var(--text); }
+    .cat-intro { max-width: 54rem; margin: 0 auto; font-size: 1.04rem; line-height: 1.48; color: var(--muted); text-align: center; }
+    .cat-intro strong { color: var(--text); }
+    .cat-intro a { color: var(--accent); }
+    .cat-card { display: grid; gap: 1rem; padding: 1.15rem 1.35rem; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--surface) 78%, var(--ground)); box-shadow: 0 6px 20px -12px rgba(42,34,24,.18); }
+    .cat-card h2 { margin: 0; font-family: "IM Fell Double Pica", "IM Fell English", Georgia, serif; font-weight: 400; font-size: 1.35rem; }
+    .cat-modes { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; }
+    .cat-modes .mbtn { font: inherit; font-size: 1.04rem; padding: .38rem .95rem; border: 1px solid var(--line); border-radius: 999px; background: var(--ground); color: var(--muted); cursor: pointer; transition: border-color .12s, background .12s, color .12s; }
+    .cat-modes .mbtn:hover { color: var(--text); border-color: var(--text); }
+    .cat-modes .mbtn[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .cat-formula { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; align-items: baseline; padding: .55rem .8rem; border-radius: 7px; background: var(--ground); border: 1px solid var(--line); font-size: 1.02rem; }
+    .cat-formula .f-tag { font-style: italic; color: var(--muted); }
+    .cat-formula .f-val { font-family: "IM Fell Double Pica", "IM Fell English", Georgia, serif; font-size: 1.15rem; letter-spacing: .01em; }
+    .cat-quick { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+    .cat-quick label { font-size: 1rem; color: var(--muted); font-style: italic; }
+    .cat-quick input[type=text] { flex: 1 1 16rem; font: inherit; font-size: 1.05rem; color: var(--text); background: var(--ground); border: 1px solid var(--line); border-radius: 6px; padding: .32rem .6rem; min-height: 36px; }
+    .cat-examples { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; font-size: .95rem; color: var(--muted); }
+    .cat-examples button { font: inherit; font-size: .93rem; padding: .15rem .55rem; min-height: 28px; height: auto; border-radius: 999px; border: 1px solid var(--line); background: var(--ground); color: var(--text); cursor: pointer; }
+    .cat-examples button:hover { border-color: var(--accent); color: var(--accent); }
+    .cat-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(18.5rem, 1fr)); gap: .85rem 1.5rem; }
+    .cat-fld { display: grid; gap: .25rem; font-size: 1.02rem; align-content: start; }
+    .cat-fld > label, .cat-fld > span { color: var(--muted); font-size: .96rem; }
+    .cat-fld input[type=text], .cat-fld select { font: inherit; font-size: 1.02rem; color: var(--text); background: var(--ground); border: 1px solid var(--line); border-radius: 6px; padding: .32rem .55rem; width: 100%; min-height: 36px; }
+    .cat-checks { display: flex; flex-wrap: wrap; gap: .35rem 1.35rem; font-size: 1.01rem; align-items: center; }
+    .cat-checks label { display: inline-flex; align-items: center; gap: .4rem; cursor: pointer; }
+    .cat-checks input[type=checkbox] { accent-color: var(--accent); width: 1.02rem; height: 1.02rem; }
+    details.cat-comp { border: 1px solid var(--line); border-radius: 6px; background: var(--ground); }
+    details.cat-comp summary { padding: .34rem .6rem; cursor: pointer; font-size: 1.02rem; }
+    details.cat-comp .box { padding: .45rem .65rem .65rem; border-top: 1px solid var(--line); }
+    details.cat-comp .clist { max-height: 15rem; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr)); gap: .08rem 1rem; font-size: .98rem; margin-top: .4rem; }
+    details.cat-comp .clist label { display: flex; gap: .4rem; align-items: baseline; cursor: pointer; }
+    details.cat-comp .clist .n { color: var(--muted); font-size: .88rem; }
+    .cat-btnrow { display: flex; gap: .65rem; flex-wrap: wrap; align-items: center; }
+    .cat-btn { font: inherit; font-size: 1.08rem; padding: .42rem 1.25rem; min-height: 38px; height: auto; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+    .cat-btn:hover:not(:disabled) { background: #6F2017; color: var(--accent-ink); }
+    .cat-btn.light { background: transparent; color: var(--accent); }
+    .cat-btn.light:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); }
+    .cat-btn.small { font-size: .93rem; padding: .15rem .65rem; min-height: 28px; }
+    .cat-status { color: var(--muted); font-style: italic; }
+    .cat-err { color: #9b2a1a; }
+    .cat-summary { margin: 0; font-size: 1.06rem; }
+    table.cat-groups, table.cat-items { width: 100%; border-collapse: collapse; font-size: 1.03rem; }
+    table.cat-groups th, table.cat-items th { text-align: left; font-weight: 400; color: var(--muted); border-bottom: 1px solid var(--line); padding: .25rem .5rem; font-size: .94rem; font-style: italic; }
+    table.cat-groups td { padding: .34rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    table.cat-groups td.num, table.cat-groups th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .cat-gbtn { font: inherit; font-size: 1.05rem; background: var(--ground); border: 1px solid var(--line); border-radius: 6px; padding: .14rem .65rem; min-height: 30px; height: auto; cursor: pointer; color: var(--text); text-align: left; }
+    .cat-gbtn:hover, .cat-gbtn[aria-expanded="true"] { border-color: var(--accent); }
+    td.cat-sub { padding: .25rem 0 .85rem 1.1rem !important; background: color-mix(in srgb, var(--ground) 65%, transparent); }
+    table.cat-items td { padding: .28rem .5rem; border-bottom: 1px dotted var(--line); vertical-align: middle; }
+    table.cat-items td.where { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    table.cat-items a { white-space: nowrap; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+    .cat-snip { padding: .55rem 0 .85rem; overflow-x: auto; }
+    .cat-snip .cb-prev { display: block; width: fit-content; max-width: 100%; overflow-x: auto; background: #ffffff; background-image: none; border-radius: 6px; border: 1px solid var(--line); box-shadow: 0 6px 18px -10px rgba(42,34,24,.32); padding: 4px 6px; }
+    .cat-snip svg { display: block; max-width: 100%; height: auto; pointer-events: none; }
+    .cat-snip svg .staff { stroke: #2A2218; }
+    .cat-snip svg .ledger, .cat-snip svg .barl, .cat-snip svg .tie, .cat-snip svg .ms { stroke: var(--leaf-ink, #2A2218); fill: none; }
+    .cat-snip svg use, .cat-snip svg .ink { fill: var(--leaf-ink, #2A2218); color: var(--leaf-ink, #2A2218); }
+    .cat-snip svg .red use, .cat-snip svg .ink.red { fill: #A12C1C; color: #A12C1C; }
+    .cat-snip svg text { fill: var(--leaf-ink, #2A2218); font-family: "IM Fell English", "Palatino Linotype", Palatino, Georgia, serif; }
+    .cat-snip svg .hit, .cat-snip svg .selbg, .cat-snip svg .stafhit, .cat-snip svg .clefhit rect, .cat-snip svg .menshit rect, .cat-snip svg .keyhit rect, .cat-snip svg .dothit rect, .cat-snip svg .mensadd, .cat-snip svg .ksarr, .cat-snip svg .dotkind { fill: transparent !important; opacity: 0 !important; }
+    .cat-snip svg g.mel-hit use, .cat-snip svg g.mel-hit .ink, .cat-snip svg g.mel-hit circle, .cat-snip svg g.mel-hit text { fill: #1B56B8 !important; color: #1B56B8 !important; }
+    .cat-snip svg g.mel-hit .ledger, .cat-snip svg g.mel-hit line, .cat-snip svg g.mel-hit path.tie { stroke: #1B56B8 !important; }
+    .cat-snip svg .mel-hi-bg { fill: #1B56B8; fill-opacity: .14; rx: 0.45; pointer-events: none; }
+    .cat-snip .cap { font-size: .94rem; color: var(--muted); font-style: italic; margin-top: .3rem; }
   </style>`);
 
   /* build the CAT Melodia UI panel right below the transport bar */
@@ -102,28 +102,28 @@
     }
   }
   const panel = document.createElement('section');
-  panel.className = 'rdx-mel';
+  panel.className = 'cat-mel';
   panel.setAttribute('aria-label', 'CAT Melodia search');
   panel.innerHTML = `
-    <p class="rdx-intro">
+    <p class="cat-intro">
       <strong>CAT Melodia</strong> searches the ~2,870 fifteenth- and sixteenth-century polyphonic scores of the
       corpus analysed in <a href="https://github.com/ugobindini/redix" target="_blank" rel="noopener">ReDiX</a> by Ugo Bindini (over 2.18 million notes across 10,800 voices; <a href="../redix-progressio.html" target="_top">ReDiX Progressio</a> searches its sonorities).
       Write a melody on the staff above (with any clef you prefer), then choose whether to match its <strong>exact pitches</strong>,
       its <strong>exact intervals</strong> (any transposition preserving half and whole steps), or its <strong>diatonic steps</strong> (any transposition regardless of major or minor).
     </p>
-    <form class="rdx-card" id="melForm" autocomplete="off">
+    <form class="cat-card" id="melForm" autocomplete="off">
       <div style="display:grid;gap:.65rem">
         <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.6rem">
           <h2>Melodic &amp; rhythmic search</h2>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:.6rem 1.4rem;align-items:center">
-          <div class="rdx-modes" role="group" aria-label="Pitch and interval matching">
+          <div class="cat-modes" role="group" aria-label="Pitch and interval matching">
             <span style="font-style:italic;color:var(--muted);margin-right:.2rem">Match:</span>
             <button type="button" class="mbtn" data-m="pitch" aria-selected="false" title="Match these exact note names as written on the staff">Exact pitches</button>
             <button type="button" class="mbtn" data-m="semi" aria-selected="true" title="Match any transposition preserving the exact major and minor intervals (half and whole steps)">Exact intervals</button>
             <button type="button" class="mbtn" data-m="step" aria-selected="false" title="Match any transposition preserving generic diatonic steps (2nds, 3rds, etc.) regardless of major or minor">Diatonic steps</button>
           </div>
-          <div class="rdx-modes" id="melRhyBar" role="group" aria-label="Rhythm mode">
+          <div class="cat-modes" id="melRhyBar" role="group" aria-label="Rhythm mode">
             <span style="font-style:italic;color:var(--muted);margin-right:.2rem">Rhythm:</span>
             <button type="button" class="rbtn mbtn" data-r="any" aria-selected="true" title="Rhythm OFF: match the pitches or intervals in any rhythm">Off (any rhythm)</button>
             <button type="button" class="rbtn mbtn" data-r="prop" aria-selected="false" title="Rhythm ON (proportional): match the pitches/intervals together with the relative duration ratios written on the staff (e.g. 2:1:1:2)">On: Relative durations</button>
@@ -132,16 +132,16 @@
         </div>
       </div>
 
-      <div class="rdx-formula" id="melFormula"></div>
+      <div class="cat-formula" id="melFormula"></div>
 
-      <div class="rdx-quick">
+      <div class="cat-quick">
         <label for="melQuickIn">Quick entry:</label>
         <input type="text" id="melQuickIn" placeholder="e.g. C D E F D E C   or   F G A Bb G A F" aria-label="Quick melody entry">
-        <button type="button" class="rdx-btn light small" id="melQuickApply">Put on staff</button>
-        <button type="button" class="rdx-btn light small" id="melClearBtn">Clear staff</button>
+        <button type="button" class="cat-btn light small" id="melQuickApply">Put on staff</button>
+        <button type="button" class="cat-btn light small" id="melClearBtn">Clear staff</button>
       </div>
 
-      <div class="rdx-examples">
+      <div class="cat-examples">
         <span>Examples:</span>
         <button type="button" data-ex="1C 1D 1E 1F 1D 1E 0C" data-mode="semi" data-rhy="any">C D E F D E C (exact intervals)</button>
         <button type="button" data-ex="1C 1D 1E 1F 1D 1E 0C" data-mode="pitch" data-rhy="any">C D E F D E C (exact pitches)</button>
@@ -150,8 +150,8 @@
         <button type="button" data-ex="1G3 2G3 1C4 2C4 1D4 2D4 0E4" data-mode="semi" data-rhy="prop">L’homme armé (intervals + rhythm)</button>
       </div>
 
-      <div class="rdx-grid2">
-        <div class="rdx-fld">
+      <div class="cat-grid2">
+        <div class="cat-fld">
           <label for="melRhythm">Rhythm</label>
           <select id="melRhythm">
             <option value="any" selected>Any rhythm (pitches / intervals only)</option>
@@ -159,7 +159,7 @@
             <option value="exact">Exact note values as written on the staff</option>
           </select>
         </div>
-        <div class="rdx-fld">
+        <div class="cat-fld">
           <label for="melVoice">Voice</label>
           <select id="melVoice">
             <option value="">All voices</option>
@@ -172,7 +172,7 @@
         </div>
       </div>
 
-      <div class="rdx-checks">
+      <div class="cat-checks">
         <label><input type="checkbox" id="melNoRest" checked> no rests between notes</label>
         <label><input type="checkbox" id="melCollapse"> collapse repeated pitches</label>
         <label id="melAccWrap"><input type="checkbox" id="melAcc" checked> match exact accidentals (B♮ ≠ B♭)</label>
@@ -180,24 +180,24 @@
       </div>
 
       <h2>Which pieces</h2>
-      <div class="rdx-grid2">
-        <div class="rdx-fld">
+      <div class="cat-grid2">
+        <div class="cat-fld">
           <span>Composers</span>
-          <details class="rdx-comp" id="melCompBox">
+          <details class="cat-comp" id="melCompBox">
             <summary id="melCompSum">All composers</summary>
             <div class="box">
-              <div class="rdx-btnrow">
-                <button type="button" class="rdx-btn light small" id="melCompAll">All</button>
-                <button type="button" class="rdx-btn light small" id="melCompNone">None</button>
+              <div class="cat-btnrow">
+                <button type="button" class="cat-btn light small" id="melCompAll">All</button>
+                <button type="button" class="cat-btn light small" id="melCompNone">None</button>
               </div>
               <div class="clist" id="melCompList"></div>
             </div>
           </details>
-          <div class="rdx-checks" style="margin-top:.3rem">
+          <div class="cat-checks" style="margin-top:.3rem">
             <label><input type="checkbox" id="melAttr" checked> include pieces whose attribution is uncertain</label>
           </div>
         </div>
-        <div class="rdx-fld">
+        <div class="cat-fld">
           <label for="melTitle">Title contains</label>
           <input type="text" id="melTitle" placeholder="e.g. Ave Maria or homme">
           <label for="melGenre" style="margin-top:.35rem">Genre</label>
@@ -211,9 +211,9 @@
         </div>
       </div>
 
-      <div class="rdx-btnrow">
-        <button type="submit" class="rdx-btn" id="melGo">Search corpus</button>
-        <span class="rdx-status" id="melStatus"></span>
+      <div class="cat-btnrow">
+        <button type="submit" class="cat-btn" id="melGo">Search corpus</button>
+        <span class="cat-status" id="melStatus"></span>
       </div>
     </form>
     <div id="melResults"></div>
@@ -355,7 +355,7 @@
 
     const rhySel = document.getElementById('melRhythm');
     const rhyMode = rhySel ? rhySel.value : 'any';
-    document.querySelectorAll('.rdx-modes .mbtn[data-m]').forEach(b => {
+    document.querySelectorAll('.cat-modes .mbtn[data-m]').forEach(b => {
       b.setAttribute('aria-selected', String(b.dataset.m === searchMode));
     });
     document.querySelectorAll('#melRhyBar .rbtn').forEach(b => {
@@ -407,7 +407,7 @@
     syncModeUI();
   }
 
-  document.querySelectorAll('.rdx-modes .mbtn[data-m]').forEach(b => {
+  document.querySelectorAll('.cat-modes .mbtn[data-m]').forEach(b => {
     b.addEventListener('click', () => setSearchMode(b.dataset.m));
   });
   document.querySelectorAll('#melRhyBar .rbtn').forEach(b => {
@@ -525,7 +525,7 @@
   document.getElementById('melClearBtn').addEventListener('click', () => {
     setStaffMelody([], lastRealClef || 'treble', searchMode);
   });
-  document.querySelectorAll('.rdx-examples button[data-ex]').forEach(b => {
+  document.querySelectorAll('.cat-examples button[data-ex]').forEach(b => {
     b.addEventListener('click', () => {
       if (b.dataset.rhy && document.getElementById('melRhythm')) document.getElementById('melRhythm').value = b.dataset.rhy;
       const notes = parseQuickText(b.dataset.ex);
@@ -781,19 +781,19 @@
     }
     groups = [...by.entries()].map(([key, list]) => ({key, list, shown: 0})).sort((a, b) => b.list.length - a.list.length);
     const nPieces = new Set(res.map(r => r.p)).size;
-    let h = `<div class="rdx-card"><p class="rdx-summary">Found <strong>${n.toLocaleString('en')}</strong> occurrence${n === 1 ? '' : 's'} in <strong>${nPieces.toLocaleString('en')}</strong> piece${nPieces === 1 ? '' : 's'} (${out.notesExamined.toLocaleString('en')} notes across ${out.voicesExamined.toLocaleString('en')} voices examined).</p>`;
+    let h = `<div class="cat-card"><p class="cat-summary">Found <strong>${n.toLocaleString('en')}</strong> occurrence${n === 1 ? '' : 's'} in <strong>${nPieces.toLocaleString('en')}</strong> piece${nPieces === 1 ? '' : 's'} (${out.notesExamined.toLocaleString('en')} notes across ${out.voicesExamined.toLocaleString('en')} voices examined).</p>`;
     if (n) {
-      h += `<table class="rdx-groups"><thead><tr><th>Melodic realization (click to expand)</th><th class="num">Occurrences</th><th class="num">Share</th></tr></thead><tbody>`;
+      h += `<table class="cat-groups"><thead><tr><th>Melodic realization (click to expand)</th><th class="num">Occurrences</th><th class="num">Share</th></tr></thead><tbody>`;
       groups.forEach((g, gi) => {
-        h += `<tr><td><button type="button" class="rdx-gbtn" data-g="${gi}" aria-expanded="false">${esc(g.key)}</button></td><td class="num">${g.list.length.toLocaleString('en')}</td><td class="num">${(g.list.length * 100 / n).toFixed(2)} %</td></tr>`;
-        h += `<tr hidden id="mgr${gi}"><td class="rdx-sub" colspan="3"></td></tr>`;
+        h += `<tr><td><button type="button" class="cat-gbtn" data-g="${gi}" aria-expanded="false">${esc(g.key)}</button></td><td class="num">${g.list.length.toLocaleString('en')}</td><td class="num">${(g.list.length * 100 / n).toFixed(2)} %</td></tr>`;
+        h += `<tr hidden id="mgr${gi}"><td class="cat-sub" colspan="3"></td></tr>`;
       });
       h += `</tbody></table>`;
     }
     h += `</div>`;
     document.getElementById('melResults').innerHTML = h;
     if (groups.length === 1) {
-      const row = document.getElementById('mgr0'), btn = document.querySelector('.rdx-gbtn[data-g="0"]');
+      const row = document.getElementById('mgr0'), btn = document.querySelector('.cat-gbtn[data-g="0"]');
       if (row && btn) { openGroup(0); row.hidden = false; btn.setAttribute('aria-expanded', 'true'); }
     }
     postHeight();
@@ -804,15 +804,15 @@
     for (let k = from; k < to; k++) {
       const r = g.list[k], e = CAT_DATA.pieces[r.p], id = `ms${gi}-${k}`;
       h += `<tr>` +
-        `<td style="white-space:nowrap"><button type="button" class="rdx-btn light small mshow" data-g="${gi}" data-k="${k}" aria-expanded="false">Show</button> ` +
-        `<button type="button" class="rdx-btn light small mput" data-g="${gi}" data-k="${k}" title="Load this matched melody onto the staff above">On staff</button></td>` +
+        `<td style="white-space:nowrap"><button type="button" class="cat-btn light small mshow" data-g="${gi}" data-k="${k}" aria-expanded="false">Show</button> ` +
+        `<button type="button" class="cat-btn light small mput" data-g="${gi}" data-k="${k}" title="Load this matched melody onto the staff above">On staff</button></td>` +
         `<td>${esc(nameOf(e.c))}${e.a ? ' (attr.)' : ''}</td>` +
         `<td>${esc(e.t)}</td>` +
         `<td><em>${esc(r.vName)}</em></td>` +
         `<td class="where">${esc(whereText(r))}</td>` +
         `<td><a href="${esc(cbLink(r))}" target="_blank" rel="noopener">Open in ChoirBook ↗</a></td>` +
         `</tr>` +
-        `<tr hidden id="${id}"><td colspan="6"><div class="rdx-snip"></div></td></tr>`;
+        `<tr hidden id="${id}"><td colspan="6"><div class="cat-snip"></div></td></tr>`;
     }
     return h;
   }
@@ -821,8 +821,8 @@
     const g = groups[gi], row = document.getElementById('mgr' + gi), cell = row.firstElementChild;
     if (!g.shown) {
       g.shown = Math.min(SHOW_STEP, g.list.length);
-      cell.innerHTML = `<table class="rdx-items"><thead><tr><th></th><th>Composer</th><th>Title</th><th>Voice</th><th>Where</th><th></th></tr></thead><tbody>${itemRows(g, gi, 0, g.shown)}</tbody></table>` +
-        (g.shown < g.list.length ? `<button type="button" class="rdx-btn light small mmore" style="margin-top:.5rem" data-g="${gi}">Show more (${(g.list.length - g.shown).toLocaleString('en')} left)</button>` : '');
+      cell.innerHTML = `<table class="cat-items"><thead><tr><th></th><th>Composer</th><th>Title</th><th>Voice</th><th>Where</th><th></th></tr></thead><tbody>${itemRows(g, gi, 0, g.shown)}</tbody></table>` +
+        (g.shown < g.list.length ? `<button type="button" class="cat-btn light small mmore" style="margin-top:.5rem" data-g="${gi}">Show more (${(g.list.length - g.shown).toLocaleString('en')} left)</button>` : '');
     }
   }
 
@@ -963,12 +963,12 @@
   }
 
   async function toggleSnippet(btn){
-    const gi = +btn.dataset.g, k = +btn.dataset.k, row = document.getElementById(`ms${gi}-${k}`), box = row.querySelector('.rdx-snip');
+    const gi = +btn.dataset.g, k = +btn.dataset.k, row = document.getElementById(`ms${gi}-${k}`), box = row.querySelector('.cat-snip');
     if (openSnip && openSnip.row === row) { closeSnip(); return; }
     closeSnip();
     openSnip = {row, btn};
     row.hidden = false; btn.textContent = 'Hide'; btn.setAttribute('aria-expanded', 'true');
-    box.innerHTML = '<p class="rdx-status">Loading ChoirBook preview…</p>';
+    box.innerHTML = '<p class="cat-status">Loading ChoirBook preview…</p>';
     postHeight();
     const r = groups[gi].list[k], e = CAT_DATA.pieces[r.p];
     try {
@@ -1003,14 +1003,14 @@
         });
       }
     } catch (err) {
-      box.innerHTML = `<p class="rdx-err">${esc(err.message || err)}</p>`;
+      box.innerHTML = `<p class="cat-err">${esc(err.message || err)}</p>`;
     }
     postHeight();
   }
   function closeSnip(){
     if (!openSnip) return;
     openSnip.row.hidden = true;
-    openSnip.row.querySelector('.rdx-snip').innerHTML = '';
+    openSnip.row.querySelector('.cat-snip').innerHTML = '';
     openSnip.btn.textContent = 'Show';
     openSnip.btn.setAttribute('aria-expanded', 'false');
     openSnip = null;
@@ -1018,7 +1018,7 @@
   }
 
   document.getElementById('melResults').addEventListener('click', ev => {
-    const gb = ev.target.closest('.rdx-gbtn');
+    const gb = ev.target.closest('.cat-gbtn');
     if (gb) {
       const gi = +gb.dataset.g, row = document.getElementById('mgr' + gi), open = row.hidden;
       openGroup(gi); row.hidden = !open; gb.setAttribute('aria-expanded', String(open));
@@ -1059,7 +1059,7 @@
       renderResults(out);
       stEl.textContent = `Done in ${((performance.now() - t0) / 1000).toFixed(2)} s.`;
     } catch (err) {
-      stEl.innerHTML = `<span class="rdx-err">${esc(err.message || err)}</span>`;
+      stEl.innerHTML = `<span class="cat-err">${esc(err.message || err)}</span>`;
     } finally {
       go.disabled = false;
       postHeight();
