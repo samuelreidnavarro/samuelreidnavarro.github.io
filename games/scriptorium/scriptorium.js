@@ -1302,6 +1302,7 @@ function chooseClef(v, mode){
 /* ------------------------------------------------------------------ */
 /* State                                                               */
 /* ------------------------------------------------------------------ */
+if (APP.stickyTools) document.documentElement.classList.add('sticky-tools');
 let DOCK = null;     /* where the site page says the browser window is, when embedded: {top, vh, pageTop} */
 const KEY = APP.store + ':v1';
 const st = {
@@ -1357,6 +1358,8 @@ function presetPut(o){ try { localStorage.setItem(PKEY, JSON.stringify(o)); } ca
 const presetAll = () => [...BUILTIN, ...presetStore().custom];
 function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined) st[k] = pr.s[k]; if (pr.s.noteSize === undefined || st.sizeLock !== 'off') st.noteSize = st.size; if (pr.s.noteCol === undefined) st.noteCol = 'black'; if (pr.s.colLock === undefined) st.colLock = st.staff === st.noteCol ? 'on' : 'off'; }
 { const P = presetAll().find(q => q.name === presetStore().active); if (P) { presetApply(P); st.barsV = 2; } if (IS_CF) { st.view = 'score'; st.paper = 'web'; } if (IS_CAT) { st.paperCol = 'white'; st.staff = 'black'; st.noteCol = 'black'; st.colLock = 'on'; st.clefs = 'modern'; if (APP.id === 'cat-melodia') { st.view = 'score'; st.paper = 'web'; } } }
+/* an app may open at a staff size of its own, whatever the preset says (CAT Melodia: a big staff for the query melody, Samuel 2026-11-24) */
+if (APP.startSize) { st.size = st.noteSize = APP.startSize; }
 /* changing an engraving setting unticks the ticked preset: the settings are now "current settings" of their own */
 const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
 function presetDrift(){
@@ -2914,12 +2917,13 @@ function footTop(G, first){
 /* Web: the page ends just below the music */
 function webGeom(G, yEnd, first){
   const fs = footFont(G), lh = fs * 1.35, n = first ? Math.max(1, footLines(G).length) : 1;
-  const H = yEnd + 2.8 + (n - 1) * lh + fs * 1.2 + G.M * 0.42;
+  const H = APP.noFoot ? yEnd + 1.5 : yEnd + 2.8 + (n - 1) * lh + fs * 1.2 + G.M * 0.42;   /* noFoot: no credit line under the music (CAT Melodia's query staff) */
   return {...G, H, hmm: H * G.sp};
 }
 function footSvg(G, first, num){
   const fs = footFont(G), lh = fs * 1.35, base = G.H - G.M * 0.42;
   let s = '';
+  if (APP.noFoot) return '';
   if (first) {
     const L = footLines(G);
     L.forEach((t, i) => { s += `<text class="foot" x="${f((G.titleW || G.W) / 2)}" y="${f(base - (L.length - 1 - i) * lh)}" font-size="${f(fs)}" text-anchor="middle"${t === creditText().made ? ' font-style="italic"' : ''}>${esc(t)}</text>`; });
@@ -3363,7 +3367,7 @@ function paginate(G, lines, vlist, optsFor, sub){
   let body = '', y = G.M, first = true;
   const sysGap = Math.max(1, 2.2 * st.ss + Math.min(1, st.ss));
   const newPage = () => { pages.push(body); body = ''; y = G.M; };
-  if (first) { const tb = titleBlock(G, G.M, (G.titleW || G.W) - G.M, y, sub); body += tb.svg; y += tb.h; }
+  if (first && !APP.noTitle) { const tb = titleBlock(G, G.M, (G.titleW || G.W) - G.M, y, sub); body += tb.svg; y += tb.h; }   /* noTitle: an app whose page is one query staff (CAT Melodia) */
   const bottom1 = footTop(G, true) - 0.8, bottom = footTop(G, false) - 0.8;
   const W = G.W - 2 * G.M;
   lines.forEach((item, idx) => {
@@ -11386,6 +11390,9 @@ function sizeViewer(){
   let win = window.innerHeight;
   if (EMBED) { if (DOCK) win = DOCK.vh - DOCK.pageTop; else { try { win = window.top.innerHeight - 200; } catch (e) { win = Math.max(window.screen.availHeight - 360, 600); } } }
   const top = wrapEl.getBoundingClientRect().top + window.scrollY;
+  /* with the top controls sticking (CAT Contrapunctus: the Scriptorium starts low on the page), the music box is as tall as the window,
+     so that scrolled down the Scriptorium fills it */
+  if (APP.stickyTools) { document.documentElement.style.setProperty('--vh', Math.max(380, Math.round(win - 2)) + 'px'); return; }
   document.documentElement.style.setProperty('--vh', Math.max(380, Math.round(win - top - 2)) + 'px');
 }
 /* Room above the page: the music can be scrolled down past its own top, until the page fills only the lower third of the frame
@@ -11769,6 +11776,13 @@ $('#fsPlay').addEventListener('click', () => { togglePlayHold(); fsWake(); });
     const visH = Math.max(320, Math.round(DOCK.vh - Math.max(0, DOCK.top)));
     root.style.setProperty('--visTop', visTop + 'px');
     root.style.setProperty('--visH', visH + 'px');
+    /* sticky top controls in the site's frame (which does not scroll itself): they are moved down to the window's top, never past the music */
+    if (APP.stickyTools) {
+      const tl = $('.tools'), cur = parseFloat(root.style.getPropertyValue('--toolsShift')) || 0;
+      const nat = tl.getBoundingClientRect().top + window.scrollY - cur;
+      const maxShift = Math.max(0, wrapEl.offsetTop + wrapEl.offsetHeight - nat - 140);
+      root.style.setProperty('--toolsShift', Math.round(Math.min(maxShift, Math.max(0, visTop - nat))) + 'px');
+    }
   };
   window.addEventListener('message', e => {
     const d = e.data && e.data.scriptoriumDock; if (!d || typeof d.top !== 'number') return;

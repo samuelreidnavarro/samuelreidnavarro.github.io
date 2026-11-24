@@ -22,6 +22,12 @@
     .transport, html.embedded .transport { position: relative !important; top: auto !important; bottom: auto !important; left: auto !important; right: auto !important; margin: 2px auto 12px !important; max-width: 72rem; border-top: 0 !important; background: transparent !important; justify-content: center; }
     .kbd, html.embedded .kbd { position: relative !important; top: auto !important; bottom: auto !important; left: auto !important; right: auto !important; margin: 4px auto 12px !important; }
     #handBox, #pendBox, .framegrip, .fsbtn { display: none !important; }
+    /* the query staff sits right under the two rows of controls, never under them, and no room is kept above it for scrolling (Samuel 2026-11-24) */
+    html .viewer.frame::before { display: none !important; }
+    .transport, .transport .tp-main, .transport .tp-stack, .transport .tp-tools { flex-wrap: nowrap !important; }
+    .transport { max-width: none !important; gap: 10px 12px !important; }
+    html.embedded .viewer.frame, html.embedded .viewer, html .viewer.frame, html .viewer { padding-top: 104px !important; }
+    @media (max-width: 700px) { html.embedded .viewer.frame, html.embedded .viewer, html .viewer.frame, html .viewer { padding-top: 92px !important; } }
     #pages .mel-int { font-family: "IM Fell English", Georgia, serif; font-size: 1.05px; font-style: italic; fill: var(--accent); text-anchor: middle; pointer-events: none; }
     .cat-mel { max-width: 72rem; margin: 0 auto 40px; padding: 0 clamp(8px, 1.4vw, 24px); display: grid; gap: 1.15rem; color: var(--text); }
     .cat-intro { max-width: 54rem; margin: 0 auto; font-size: 1.04rem; line-height: 1.48; color: var(--muted); text-align: center; }

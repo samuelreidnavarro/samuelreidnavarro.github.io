@@ -1410,3 +1410,8 @@ html:not(.no-glass) .tools .podg:is(:has(.pop:hover),:has(.pop.open),:has(.pop.f
 :root{--sysfont:"Helvetica Neue",Helvetica,Arial,"Liberation Sans","Nimbus Sans",sans-serif}
 html.sysfont body *:not(#pages):not(#pages *):not(svg *):not(h1):not(kbd):not(code):not(.lyrin):not(.sec-ed):not(.orig-lyrin):not(.vrename):not(select[id$="FontSel"]):not(.ssel-menu li[style*="font-family"]){font-family:var(--sysfont) !important}
 html.sysfont .tb,html.sysfont .lab,html.sysfont .ctl{letter-spacing:0}
+
+/* Sticky top controls (APP.stickyTools, CAT Contrapunctus): alone, the controls stick to the window's top; in the site's frame the page
+   tells where the window is and they are moved there (--toolsShift, set by the engine) */
+html.sticky-tools:not(.embedded) .tools{position:sticky;top:0}
+html.sticky-tools.embedded .tools{top:var(--toolsShift,0px)}

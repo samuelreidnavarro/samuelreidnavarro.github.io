@@ -37,14 +37,16 @@
   /* Styles for the CAT Contrapunctus analysis dashboard */
   document.head.insertAdjacentHTML('beforeend', `<style>
     .cp-panel {
-      max-width: 74rem; margin: 56px auto 12px; padding: 1rem 1.25rem 1.15rem;
+      max-width: 74rem; margin: 14px auto 18px; padding: 1rem 1.25rem 1.15rem; box-sizing: border-box; align-content: start;
+      /* the analysis fills the top two thirds of the window; the Scriptorium starts below it (Samuel 2026-11-24) */
+      min-height: calc(var(--win, 100vh) * 2 / 3 - 76px);
       border: 1px solid var(--line); border-radius: 10px;
       background: color-mix(in srgb, var(--surface) 84%, var(--ground));
       box-shadow: 0 8px 24px -14px rgba(42,34,24,.22);
       color: var(--text); display: grid; gap: .95rem; position: relative; z-index: 12;
     }
     .cp-panel[hidden] { display: none !important; }
-    @media (max-width: 700px) { .cp-panel { margin-top: 52px; padding: .85rem .9rem; } }
+    @media (max-width: 700px) { .cp-panel { margin-top: 10px; padding: .85rem .9rem; } }
     .cp-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1rem; }
     .cp-head h2 { margin: 0; font-family: "IM Fell Double Pica", "IM Fell English", Georgia, serif; font-weight: 400; font-size: 1.4rem; }
     .cp-head .cp-sub { font-size: .96rem; color: var(--muted); font-style: italic; }
@@ -110,7 +112,8 @@
     toggleBtn = pod.querySelector('#cpToggleBtn');
   }
 
-  /* Insert the Counterpoint Analysis panel right above .viewwrap */
+  /* The Counterpoint Analysis panel goes above the whole Scriptorium (its controls too), which follows below it; scrolled down, the
+     Scriptorium fills the window and its top controls stay at the top (APP.stickyTools in the engine) */
   const viewWrap = document.querySelector('.viewwrap');
   const panel = document.createElement('section');
   panel.className = 'cp-panel';
@@ -168,7 +171,8 @@
 
     <div class="cp-charts" id="cpCharts"></div>
   `;
-  if (viewWrap && viewWrap.parentNode) viewWrap.parentNode.insertBefore(panel, viewWrap);
+  const toolsEl = document.querySelector('main.wrap > .tools') || viewWrap;
+  if (toolsEl && toolsEl.parentNode) toolsEl.parentNode.insertBefore(panel, toolsEl);
 
   if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {
