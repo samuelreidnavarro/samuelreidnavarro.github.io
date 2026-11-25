@@ -4075,9 +4075,10 @@ function libList(){
   }
   html += `<p class="libhint">${n} piece${n === 1 ? '' : 's'}${n > show.length ? ` (showing ${show.length})` : ''}</p>`;
   const favs = favAll();
-  html += show.map(e => `<div class="lrow">${itemHtml(e.k, e.t, `${nameOf(e.c)}${e.a ? ' (attributed)' : ''}${e.d ? ', ' + e.d : ''} · ${e.v} voices · ${(GENRES[e.g] || e.g).replace(/s$/, '')}`.replace(' · 0 voices', ''))}${favBtn(e.k, !!favs[e.k], e.t)}</div>`).join('');
+  html += show.map(e => `<div class="lrow">${prevSlot(e.k)}${itemHtml(e.k, e.t, `${nameOf(e.c)}${e.a ? ' (attributed)' : ''}${e.d ? ', ' + e.d : ''} · ${e.v} voices · ${(GENRES[e.g] || e.g).replace(/s$/, '')}`.replace(' · 0 voices', ''))}${favBtn(e.k, !!favs[e.k], e.t)}</div>`).join('');
   if (n > show.length) html += `<button class="more" id="libMore">Show more</button>`;
   box.innerHTML = html;
+  prevWatch(box);
 }
 /* pieces from the library starred into My scores: kept in this browser as links, the pieces themselves stay as they are */
 const FAV_KEY = APP.store + ':fav:v1';
@@ -4090,8 +4091,8 @@ function favBtn(key, on, title){
 function mineRows(){
   const all = mineAll(), favs = favAll();
   return [
-    ...Object.keys(all).filter(id => !mineEmpty(id, all)).map(id => ({key: id, own: true, title: all[id].title || 'Untitled', at: all[id].at, pc: itemHtml(id, all[id].title || 'Untitled', (L.mineSub ? L.mineSub + 'last edited ' : 'Last edited ') + whenEdited(all[id].at)), html: `<div class="mine">${itemHtml(id, all[id].title || 'Untitled', (L.mineSub ? L.mineSub + 'last edited ' : 'Last edited ') + whenEdited(all[id].at))}<button class="mdel" data-del="${esc(id)}" aria-label="Remove ${esc(all[id].title || 'this score')}" title="Remove from ${esc(L.mine)}">×</button></div>`})),
-    ...Object.keys(favs).map(k => ({key: k, own: false, title: favs[k].t || k, at: favs[k].at, pc: itemHtml(k, favs[k].t, favs[k].c), html: `<div class="mine">${itemHtml(k, favs[k].t, favs[k].c)}${favBtn(k, true, favs[k].t)}</div>`}))
+    ...Object.keys(all).filter(id => !mineEmpty(id, all)).map(id => ({key: id, own: true, title: all[id].title || 'Untitled', at: all[id].at, pc: itemHtml(id, all[id].title || 'Untitled', (L.mineSub ? L.mineSub + 'last edited ' : 'Last edited ') + whenEdited(all[id].at)), html: `<div class="mine">${prevSlot(id)}${itemHtml(id, all[id].title || 'Untitled', (L.mineSub ? L.mineSub + 'last edited ' : 'Last edited ') + whenEdited(all[id].at))}<button class="mdel" data-del="${esc(id)}" aria-label="Remove ${esc(all[id].title || 'this score')}" title="Remove from ${esc(L.mine)}">×</button></div>`})),
+    ...Object.keys(favs).map(k => ({key: k, own: false, title: favs[k].t || k, at: favs[k].at, pc: itemHtml(k, favs[k].t, favs[k].c), html: `<div class="mine">${prevSlot(k)}${itemHtml(k, favs[k].t, favs[k].c)}${favBtn(k, true, favs[k].t)}</div>`}))
   ].sort((a, b) => b.at - a.at);
 }
 function mineHtml(){
@@ -4105,8 +4106,9 @@ function mineHtml(){
    with Undo in the message for a few seconds */
 /* a small incipit of each piece (the first voice to come in, or the top one; five notes), kept when the piece is shown */
 const PREV_KEY = APP.store + ':prev:v1';
-function prevAll(){ try { return JSON.parse(localStorage.getItem(PREV_KEY) || '{}'); } catch (e) { return {}; } }
-function prevPut(o){ try { const ks = Object.keys(o); if (ks.length > 60) for (const k of ks.sort((a, b) => (o[a].at || 0) - (o[b].at || 0)).slice(0, ks.length - 60)) delete o[k]; localStorage.setItem(PREV_KEY, JSON.stringify(o)); } catch (e) {} }
+let PREV_MEM = null;
+function prevAll(){ if (PREV_MEM) return PREV_MEM; try { PREV_MEM = JSON.parse(localStorage.getItem(PREV_KEY) || '{}'); } catch (e) { PREV_MEM = {}; } return PREV_MEM; }
+function prevPut(o){ PREV_MEM = o; try { const ks = Object.keys(o); if (ks.length > 3000) for (const k of ks.sort((a, b) => (o[a].at || 0) - (o[b].at || 0)).slice(0, ks.length - 3000)) delete o[k]; localStorage.setItem(PREV_KEY, JSON.stringify(o)); } catch (e) {} }
 function prevSnap(){
   if (!piece || !pieceKey) return;
   let best = null, bt = Infinity;
@@ -4122,6 +4124,41 @@ function prevSnap(){
   snap.at = Date.now(); all[pieceKey] = snap; prevPut(all);
   recentSync();
 }
+/* the Repertoire's rows get their incipit as they come into sight: the file is fetched and read (not drawn), a few at a time */
+const PREV_GLY = [[4, 'L'], [2, 'B'], [1, 'S'], [0.5, 'M'], [0.25, 'Sm'], [0, 'F']];
+function prevFromText(text){
+  const P = parseKern(text);
+  let best = null, bt = Infinity;
+  for (const v of P.voices) { const e = v.events.find(x => !x.rest && x.step !== null && x.step !== undefined); if (e && e.t < bt - EPS) { bt = e.t; best = v; } }
+  if (!best) return null;
+  let c = null; try { c = chooseClef(best, st.clefs); } catch (e) {}
+  if (!CLEFS[c]) c = KERN_CLEF[best.kclef] && CLEFS[KERN_CLEF[best.kclef]] ? KERN_CLEF[best.kclef] : 'treble';
+  const n = best.events.filter(x => !x.rest && x.step !== null && x.step !== undefined && !x.tieEnd && !x.tieMid).slice(0, 5)
+    .map(x => { let d = x.d; for (let j = best.events.indexOf(x) + 1; j < best.events.length && (best.events[j].tieMid || best.events[j].tieEnd); j++) d += best.events[j].d; return [(PREV_GLY.find(([v]) => d >= v * 0.99) || PREV_GLY[5])[1], x.step - CLEFS[c].bottom]; });
+  return {c, n, at: Date.now()};
+}
+let prevIO = null; const prevQ = [], prevBusy = new Set();
+function prevPump(){
+  while (prevBusy.size < 3 && prevQ.length) {
+    const el = prevQ.shift(), key = el.dataset.prev; if (!el.isConnected || prevBusy.has(key)) continue;
+    prevBusy.add(key);
+    (async () => {
+      let text = cache[key];
+      if (!text && key.startsWith('mine:')) { try { text = localStorage.getItem(EKEY(key)); } catch (e) {} if (!text) { const m = mineAll()[key]; text = m && m.text; } }
+      else if (!text && key.startsWith('uma/')) { if (CATBY[key]) text = await umaLoad(CATBY[key]); }
+      if (!text && !key.startsWith('mine:')) { const r = await fetch(await pieceUrl(key)); if (r.ok) text = await r.text(); }
+      const snap = text ? prevFromText(text) : null;
+      if (snap) { const all = prevAll(); all[key] = snap; prevPut(all); }
+      document.querySelectorAll(`.lprev[data-prev="${CSS.escape(key)}"]`).forEach(x => { x.innerHTML = prevSvg(key); x.classList.add('done'); });
+    })().catch(() => {}).finally(() => { prevBusy.delete(key); prevPump(); });
+  }
+}
+function prevWatch(box){
+  if (!('IntersectionObserver' in window)) return;
+  if (!prevIO) prevIO = new IntersectionObserver(es => { for (const e of es) if (e.isIntersecting) { prevIO.unobserve(e.target); prevQ.unshift(e.target); } prevPump(); }, {root: libEl, rootMargin: '120px 0px'});
+  box.querySelectorAll('.lprev:not(.done)').forEach(el => prevIO.observe(el));
+}
+const prevSlot = key => { const h = prevSvg(key); return `<span class="lprev${h ? ' done' : ''}" data-prev="${esc(key)}">${h}</span>`; };
 function prevSvg(key){
   const p = prevAll()[key]; if (!p || !CLEFS[p.c] || !p.n || !p.n.length) return '';
   let o = '', x = 0.4 + clefW(p.c) + 1.0;
@@ -4138,7 +4175,7 @@ function recentSync(){
 }
 function refreshMine(){
   recentSync();
-  const box = $('#libMine'); if (box) box.innerHTML = mineHtml();
+  const box = $('#libMine'); if (box) { box.innerHTML = mineHtml(); prevWatch(box); }
   const favs = favAll();
   document.querySelectorAll('#libList .fav').forEach(b => {
     const on = !!favs[b.dataset.fav], t = b.closest('.lrow').querySelector('.t').textContent;
@@ -4972,7 +5009,7 @@ $('#voiceTable').addEventListener('change', e => {
 });
 /* pieces */
 const libEl = $('#library'), libBtn = $('#libBtn');
-function setLib(open, mode){ if (mode !== undefined) libEl.dataset.mode = mode; libEl.hidden = !open; libBtn.setAttribute('aria-expanded', String(open)); postHeight(); if (open) { const q = $('#libQ'); if (q) setTimeout(() => q.focus(), 0); } }
+function setLib(open, mode){ if (mode !== undefined) libEl.dataset.mode = mode; if (open && libEl.hidden) libEl.dataset.entered = ''; libEl.hidden = !open; libBtn.setAttribute('aria-expanded', String(open)); postHeight(); if (open) { const q = $('#libQ'); if (q) setTimeout(() => q.focus(), 0); } }
 $('#markClear').addEventListener('click', () => { mark = null; document.querySelectorAll('#pages g.mark').forEach(g => g.classList.remove('mark')); $('#markBar').hidden = true; setAddress(pieceKey); postHeight(); });
 const libMode = () => APP.catalogue ? 'rep' : '';
 libBtn.addEventListener('click', e => { e.stopPropagation(); const open = libEl.hidden || (libEl.dataset.mode || '') !== libMode(); closePops(); setLib(open, libMode()); if (open) shutPop($('#popOpen')); });
@@ -4984,8 +5021,8 @@ if ($('#myBtn')) $('#myBtn').addEventListener('click', e => { e.stopPropagation(
   let tShut = 0, libNavAt = 0;
   /* clicks inside the library (composer, genre, back, category) can resize its contents under a stationary pointer;
      ignore the synthetic mouseleave that fires right after such a click */
-  libEl.addEventListener('pointerdown', e => { if (!e.target.closest('.pc')) libNavAt = performance.now(); }, true);
-  libEl.addEventListener('click', e => { if (!e.target.closest('.pc')) libNavAt = performance.now(); }, true);
+  libEl.addEventListener('pointerdown', e => { if (!e.target.closest('.pc:not(.cbtn)')) libNavAt = performance.now(); }, true);
+  libEl.addEventListener('click', e => { if (!e.target.closest('.pc:not(.cbtn)')) libNavAt = performance.now(); }, true);
   /* passing over the other choices of the Open menu (New score, Open file) closes the panel */
   $('#openList').addEventListener('mouseover', e => {
     const b = e.target.closest('button'); if (!mouse() || !b || b === libBtn || b.id === 'myBtn') return;
@@ -4996,11 +5033,14 @@ if ($('#myBtn')) $('#myBtn').addEventListener('click', e => { e.stopPropagation(
     clearTimeout(tShut);
     if (libEl.hidden || !mouse()) return;
     if (performance.now() - libNavAt < 450) return;
+    /* opened by a click: it stays until the pointer has been over it once (a short list may open away from the pointer) */
+    if (!libEl.dataset.entered) return;
     if (wrap.matches(':hover') || ssOpenHere()) { if (ssOpenHere()) tShut = setTimeout(shutNow, 100); return; }
     setLib(false); if (libEl.contains(document.activeElement)) document.activeElement.blur();
   };
   wrap.addEventListener('mouseleave', () => { if (mouse()) shutNow(); });
   wrap.addEventListener('mouseenter', () => clearTimeout(tShut));
+  libEl.addEventListener('mouseenter', () => { libEl.dataset.entered = '1'; });
   /* + Show the links: opens while the mouse is over it */
   libEl.addEventListener('mouseover', e => {
     const d = e.target.closest && e.target.closest('details.morelinks'); if (!d || !mouse()) return;

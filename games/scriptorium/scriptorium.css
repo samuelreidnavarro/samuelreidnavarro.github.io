@@ -1419,3 +1419,10 @@ html.sticky-tools.embedded .tools{top:var(--toolsShift,0px)}
 #openRecent .rprev{flex:none;width:auto;height:40px;max-width:96px;margin:0 4px 0 2px;color:var(--ink,#2A2218);opacity:.85}
 #openRecent .rprev line{stroke:currentColor}
 #openRecent .rprev use,#openRecent .rprev path,#openRecent .rprev rect{fill:currentColor}
+/* Repertoire: the incipit before each piece, filled in as the rows come into sight */
+.library .lprev{flex:none;width:112px;height:46px;display:flex;align-items:center;justify-content:flex-start;color:var(--ink,#2A2218);opacity:.85}
+.library .lprev:not(.done){background:linear-gradient(transparent 46%,color-mix(in srgb,var(--line,#ccc) 60%,transparent) 46%,color-mix(in srgb,var(--line,#ccc) 60%,transparent) 54%,transparent 54%);opacity:.35}
+.library .lprev svg{height:46px;width:auto;max-width:112px}
+.library .lprev line{stroke:currentColor}
+.library .lprev use,.library .lprev path,.library .lprev rect{fill:currentColor}
+@media (max-width:600px){.library .lprev{width:64px;height:30px}.library .lprev svg{height:30px;max-width:64px}}
