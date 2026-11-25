@@ -1415,3 +1415,7 @@ html.sysfont .tb,html.sysfont .lab,html.sysfont .ctl{letter-spacing:0}
    tells where the window is and they are moved there (--toolsShift, set by the engine) */
 html.sticky-tools:not(.embedded) .tools{position:sticky;top:0}
 html.sticky-tools.embedded .tools{top:var(--toolsShift,0px)}
+/* Recent scores: a small incipit before each title (Samuel 2026-11-25) */
+#openRecent .rprev{flex:none;width:auto;height:40px;max-width:96px;margin:0 4px 0 2px;color:var(--ink,#2A2218);opacity:.85}
+#openRecent .rprev line{stroke:currentColor}
+#openRecent .rprev use,#openRecent .rprev path,#openRecent .rprev rect{fill:currentColor}

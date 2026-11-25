@@ -114,7 +114,7 @@ ${APP.popsBeforeVoices || ''}
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Add<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="btns col" id="addList">
           <button class="tb" id="addInc" title="The original clefs, mensuration signs and first notes of every voice, before the staves">Incipit</button>
-          <button class="tb" id="addAmb" title="The range of every voice (its lowest and highest note) before its first staff, as in modern transcriptions. Again to take it off">Ambitus</button>
+          <button class="tb" id="addAmb" title="The range of every voice (its lowest and highest note) after the clef of its first staff, as in modern transcriptions. Again to take it off">Ambitus</button>
           <button class="tb" id="addChantBtn" title="Insert a 4-line Gregorian plainchant section (GABC) as its own system">Plainchant (GABC)</button>
           <button class="tb" id="addMens" title="Put a mensuration sign at the selected note, in the selected voice or voices only (select several voices to give them all one)">Mensuration sign</button>
           <button class="tb" id="addClef" title="A new clef at the selected note, in the selected voice or voices only; click it to choose which. Again to take it off">Clef change</button>
@@ -2291,6 +2291,7 @@ function staffLine(o){
   s += `<rect class="stafhit" data-v="${v.idx}" data-tx="${tx.join(',')}" data-top="${f(top)}" data-end="${f(x1)}" data-k0="${o.k0 ?? ''}" data-k1="${o.k1 ?? ''}" x="${f(x0)}" y="${f(top - 2.6)}" width="${f(hx1 - x0)}" height="9.2" fill="transparent"/>`;
   s += `<g class="clefhit" data-v="${v.idx}"${govC ? ` data-t="${govC.t}"` : ''}><rect x="${f(x0 + 0.2)}" y="${f(top - 1.5)}" width="${f(clefW(clef) + 0.4)}" height="7" fill="transparent"/>${clefSvg(clef, x0 + 0.5, top)}</g>`;
   let x = x0 + 0.5 + clefW(clef) + 0.5;
+  if (o.amb) { s += ambitusSvg(v, x, top, clef); x += o.amb; }
   /* the key signature: hovering it shows arrows, down adds flats, up goes to no accidental and then sharps */
   { const ks = keySig(v, t0, clef), kx = x; let g = '';
     for (const k of ks) { g += use(k.g, x, top + 4 - k.pos * 0.5); x += gw(k.g) + 0.15; }
@@ -2537,22 +2538,24 @@ function buildLines(vlist, a, b, W, opts = {}){
   const emptyAll = vlist.every(v => !v.events.length);   /* nothing written yet: the staves run the whole width */
   const indent = opts.indent || 0;
   const avail = W - hw;
-  const br = breakLines(cols, avail, avail - indent);
+  /* the ambitus stands after the clef on the piece's first line */
+  const amb = ambOn() && a < EPS ? AMB_IN : 0;
+  const br = breakLines(cols, avail, avail - indent - amb);
   const allEnd = b >= piece.end - EPS;
   return br.map((L, li) => {
-    const ind = li === 0 ? indent : 0;
-    const startX = ind + hw + cols[L.from].left;
+    const ind = li === 0 ? indent : 0, ab = li === 0 ? amb : 0;
+    const startX = ind + ab + hw + cols[L.from].left;
     const last = li === br.length - 1;
     const lastCol = cols[L.to - 1];
     const natural = lastCol.x - cols[L.from].x;
-    const room = W - ind - hw - cols[L.from].left - lastCol.right - (last && allEnd ? 1.6 : 2.4);
+    const room = W - ind - ab - hw - cols[L.from].left - lastCol.right - (last && allEnd ? 1.6 : 2.4);
     let k = natural > 0 ? room / natural : 1;
     if (last && (k > 1.3 || opts.ragged)) k = 1;
     if (last && opts.raggedLast) k = Math.min(k, 1);
     const xs = [];
     for (let i = L.from; i < L.to; i++) xs[i] = startX + (cols[i].x - cols[L.from].x) * k;
     const endX = last ? (allEnd ? xs[L.to - 1] + lastCol.right + 1.2 : Math.max(xs[L.to - 1] + lastCol.right + 2.4, opts.ragged ? 0 : W)) : W;
-    return {cols, from: L.from, to: L.to, xs, x0: ind, x1: last && !opts.fullLast && !emptyAll ? Math.min(W, endX + (allEnd ? 0.9 : 0)) : W, last, W, endsPiece: last && allEnd, t0: cols[L.from].t, tEnd: L.to < cols.length ? cols[L.to].t : b};
+    return {cols, from: L.from, to: L.to, xs, x0: ind, amb: ab, x1: last && !opts.fullLast && !emptyAll ? Math.min(W, endX + (allEnd ? 0.9 : 0)) : W, last, W, endsPiece: last && allEnd, t0: cols[L.from].t, tEnd: L.to < cols.length ? cols[L.to].t : b};
   });
 }
 /* vertical room a voice needs in a line */
@@ -2700,7 +2703,7 @@ function incipitSnap(){
 }
 /* Ambitus (Samuel 2026-11-25): Add > Ambitus shows before every voice's first staff its range, the lowest and the highest
    note as two black heads joined by a line, on a short staff with the voice's clef; worked out from the music each time */
-const AMB_W = 8;
+const AMB_IN = 4.2;
 const ambOn = () => !!(piece && (st.amb || {})[pieceKey]);
 function ambitusOf(v){
   let lo = null, hi = null;
@@ -2710,19 +2713,16 @@ function ambitusOf(v){
   }
   return lo ? {lo, hi} : null;
 }
-function ambitusSvg(v, x0, top){
-  const a = ambitusOf(v), ck = lineClef(v, 0), C = CLEFS[ck]; if (!a || !C) return '';
-  const W = AMB_W - 1.0;
-  let o = '';
-  for (let k = 5 - staffLinesN(); k < 5; k++) o += hl(x0, x0 + W, top + k, 'staff', 0.12);
-  o += clefSvg(ck, x0 + 0.3, top);
-  const xb = x0 + W - 0.9, xa = Math.max(x0 + 0.3 + clefW(ck) + 0.9, xb - 2.4);
+/* the ambitus drawn on the voice's own first staff, right after its clef (x: where it starts); AMB_IN wide */
+function ambitusSvg(v, x, top, clef){
+  const a = ambitusOf(v), C = CLEFS[clef]; if (!a || !C) return '';
+  const xa = x + 1.2, xb = x + AMB_IN - 1.0;
   const pa = a.lo.step - C.bottom, pb = a.hi.step - C.bottom, ya = top + 4 - pa * 0.5, yb = top + 4 - pb * 0.5;
   const head = (cx, cy) => `<ellipse class="ink" cx="${f(cx)}" cy="${f(cy)}" rx="0.6" ry="0.42" transform="rotate(-20 ${f(cx)} ${f(cy)})"/>`;
-  o += ledgers(pa, xa - 0.6, 1.2, top) + head(xa, ya);
+  let o = ledgers(pa, xa - 0.6, 1.2, top) + head(xa, ya);
   if (pb !== pa) {
     o += ledgers(pb, xb - 0.6, 1.2, top) + head(xb, yb);
-    o += `<line class="ledger amb-line" x1="${f(xa + 0.55)}" y1="${f(ya - 0.2)}" x2="${f(xb - 0.55)}" y2="${f(yb + 0.2)}" stroke="currentColor" stroke-width="0.13"/>`;
+    o += `<line class="ledger amb-line" x1="${f(xa + 0.5)}" y1="${f(ya - 0.25)}" x2="${f(xb - 0.5)}" y2="${f(yb + 0.25)}" stroke-width="0.13"/>`;
   }
   return `<g class="ambitus" data-v="${v.idx}">${o}</g>`;
 }
@@ -2731,7 +2731,6 @@ $('#addAmb').addEventListener('click', () => {
   if (!piece) return;
   st.amb = st.amb || {}; if (st.amb[pieceKey]) delete st.amb[pieceKey]; else st.amb[pieceKey] = true;
   save(); ambSync(); render();
-  if (st.amb[pieceKey] && st.view !== 'score') toast('The ambitus shows in the Score view.');
 });
 function incipitOn(){ return !!(piece && INC.snap && INC.key === pieceKey && (st.inc || {})[pieceKey] && INC.snap.length === piece.voices.length); }
 /* the clef an incipit staff shows: the original one, or the one chosen by clicking it (the notes stay as they are, at their pitch) */
@@ -2854,13 +2853,12 @@ function drawSystem(vlist, line, y, opts = {}){
     const v = grp.voices[0], sh = vis(v.idx);
     let k0 = null, k1 = null;
     for (let ci = line.from; ci < line.to; ci++) { const q = line.cols[ci].items.get(v); if (q) { const kk = +q.id.split('-')[1]; if (k0 === null) k0 = kk; k1 = kk; } }
-    s += staffLine({v, group: grp.voices.length > 1 ? grp.voices : null, k0, k1, cols: line.cols, from: line.from, to: line.to, xs: line.xs, top: tops[k], x0: line.x0, x1: line.x1,
+    s += staffLine({v, group: grp.voices.length > 1 ? grp.voices : null, k0, k1, cols: line.cols, from: line.from, to: line.to, xs: line.xs, top: tops[k], x0: line.x0, x1: line.x1, amb: line.amb,
       last: line.endsPiece, tail: line.last ? line.W : null, t0: line.t0, showNotes: sh.notes, showLyr: sh.lyr, lyrY: tops[k] + rooms[k].lyrY, lyrTopY: tops[k] + (rooms[k].lyrTopY || 0), diffLyr: !!rooms[k].diffLyr, lineEnd: line.x1,
       next: nextSym(v, line.tEnd), tEnd: line.tEnd});
-    if (opts.inc && grp.voices.length === 1) s += incipitSvg(INC.snap[v.idx], line.x0 - opts.inc - (opts.amb || 0), tops[k]);
-    if (opts.amb && grp.voices.length === 1) s += ambitusSvg(v, line.x0 - opts.amb, tops[k]);
+    if (opts.inc && grp.voices.length === 1) s += incipitSvg(INC.snap[v.idx], line.x0 - opts.inc, tops[k]);
     if (opts.names) {
-      const nX = line.x0 - 0.8 - (opts.inc || 0) - (opts.amb || 0);
+      const nX = line.x0 - 0.8 - (opts.inc || 0);
       if (grp.voices.length === 1) {
         const vi = vlist.indexOf(v);
         if (vi >= 0 && opts.names[vi]) s += `<text class="vnamehit" data-v="${v.idx}" x="${f(nX)}" y="${f(tops[k] + 2.6)}" font-size="${f(ptU('vnamePt'))}" text-anchor="end" font-style="italic">${esc(opts.names[vi])}</text>`;
@@ -3009,16 +3007,37 @@ function mensToChantItems(list, cl){
   /* keep it on the four-line staff: move by octaves while it sticks out */
   for (let g = 0; g < 4 && Math.max(...poss) > 9; g++) poss = poss.map(x => x - 7);
   for (let g = 0; g < 4 && Math.min(...poss) < -3 && Math.max(...poss) + 7 <= 9; g++) poss = poss.map(x => x + 7);
+  /* a rest between notes is a breath: a small division bar, and what follows is a new neume */
+  const restBefore = new Set(); { let k = 0, seenNote = false, rest = false; for (const e of list) { if (e.rest) { if (seenNote) rest = true; continue; } if (rest) restBefore.add(k); rest = false; seenNote = true; k++; } }
+  let last = null;
   notes.forEach((e, k) => {
     const raw = e.syl && e.syl[0] && !/^[._]$/.test(e.syl[0]) ? String(e.syl[0]) : '';
+    if (restBefore.has(k)) { items.push({kind: 'bar', bar: ','}); if (cur) cur.joinNext = false; cur = null; last = null; }
     if (raw || !cur) {
       cur = {kind: 'syl', text: raw.replace(/^-|-$/g, ''), groups: [{notes: []}], joinNext: /-$/.test(raw)};
-      items.push(cur);
+      items.push(cur); last = null;
     }
     const acc = e.alt === -1 ? 'fl' : e.alt === 0 ? 'na' : '';
-    cur.groups[0].notes.push({pos: Math.max(-3, Math.min(9, poss[k])), incl: false, dot: false, epiH: false, epiV: false, virga: false, acc});
+    const pos = Math.max(-3, Math.min(9, poss[k]));
+    /* the same note again: a new neume on the same syllable */
+    if (last !== null && last === pos) cur.groups.push({notes: []});
+    cur.groups[cur.groups.length - 1].notes.push({pos, incl: false, dot: false, epiH: false, epiV: false, virga: false, acc});
+    last = pos;
   });
   return items;
+}
+/* text under a note inside a neume starts a new syllable there, and with it a new neume (Samuel 2026-11-25);
+   returns the index of the item that now carries the text */
+function chantSetText(p, x, txt){
+  const it = p.items[x.ii];
+  if (!txt || (x.gi <= 0 && x.ni <= 0)) { it.text = txt; return x.ii; }
+  const g = it.groups[x.gi];
+  const moved = [{notes: g.notes.splice(x.ni)}, ...it.groups.splice(x.gi + 1)];
+  if (!g.notes.length) it.groups.splice(x.gi, 1);
+  const nu = {kind: 'syl', text: txt, groups: moved, joinNext: !!it.joinNext};
+  it.joinNext = false;
+  p.items.splice(x.ii + 1, 0, nu);
+  return x.ii + 1;
 }
 function chantPasteClip(){
   let clip = ed.clip;
@@ -3033,11 +3052,11 @@ function chantPasteClip(){
     const items = mensToChantItems(clip.voices[0], cl);
     if (!items.length) { toast('The copied passage has no notes.'); return false; }
     p.items.splice(at, 0, ...items);
-    added = items.reduce((n, it) => n + it.groups[0].notes.length, 0);
+    added = items.reduce((n, it) => n + (it.groups || []).reduce((m, g) => m + (g.notes ? g.notes.length : 0), 0), 0);
     const flat = chantFlatNotes(p);
-    const a = flat.findIndex(x => x.ii === at && x.gi === 0 && x.ni === 0);
+    const a = flat.findIndex(x => x.ii >= at);
     if (a >= 0) {
-      chantEd.sel = {ii: flat[a].ii, gi: 0, ni: 0};
+      chantEd.sel = {ii: flat[a].ii, gi: flat[a].gi, ni: flat[a].ni};
       chantEd.range = added > 1 ? {a, b: Math.min(flat.length - 1, a + added - 1)} : null;
       chantEd.picks = null;
     }
@@ -3441,8 +3460,8 @@ function layoutScore(G){
   const vlist = visibleVoices();
   if (!vlist.length) return [];
   const names = vlist.map(v => APP.voiceNames === false ? '' : v.name);   /* CantusFirmus: no names before the staves */
-  const inc = incipitOn() ? incipitW() : 0, amb = ambOn() ? AMB_W : 0;
-  const indent = Math.max(...names.map(n => textW(n, ptU('vnamePt'), true))) + 1.4 + inc + amb;
+  const inc = incipitOn() ? incipitW() : 0;
+  const indent = Math.max(...names.map(n => textW(n, ptU('vnamePt'), true))) + 1.4 + inc;
   /* Web, scrolling sideways: the whole score as one line, as long as the music */
   if (G.web && st.webScroll === 'horizontal') {
     const items = buildScoreItems(vlist, 1e6, {indent, ragged: true});
@@ -3450,12 +3469,12 @@ function layoutScore(G){
     if (items.length) {
       const need = Math.max(G.W, maxX1 + 2 * G.M + 1);
       const G2 = {...G, W: need, wmm: need * G.sp, titleW: G.W};
-      return paginate(G2, items, vlist, (line, li) => li === 0 ? {names, join: true, inc, amb} : {join: true}, null);
+      return paginate(G2, items, vlist, (line, li) => li === 0 ? {names, join: true, inc} : {join: true}, null);
     }
   }
   const W = G.W - 2 * G.M;
   const items = buildScoreItems(vlist, W, {indent});
-  return paginate(G, items, vlist, (line, li) => li === 0 ? {names, join: true, inc, amb} : {join: true}, null);
+  return paginate(G, items, vlist, (line, li) => li === 0 ? {names, join: true, inc} : {join: true}, null);
 }
 function paginate(G, lines, vlist, optsFor, sub){
   const pages = [];
@@ -3677,6 +3696,7 @@ function render(){
   viewerEl.style.width = '';
   pagesEl.innerHTML = html;
   applyThick();
+  try { prevSnap(); } catch (e) {}
   /* the frame is as wide as one page (one opening in the choir book), measured afresh for every view */
   const framed = !horiz && window.innerWidth > 700;
   viewerEl.classList.toggle('frame', framed); wrapEl.classList.toggle('framed', framed);
@@ -4083,10 +4103,37 @@ function mineHtml(){
 /* the five most recent scores, listed in the Open menu itself (ChoirBook) */
 /* each with a small × that takes it off: a starred piece is unstarred; a score of your own is removed from My scores,
    with Undo in the message for a few seconds */
+/* a small incipit of each piece (the first voice to come in, or the top one; five notes), kept when the piece is shown */
+const PREV_KEY = APP.store + ':prev:v1';
+function prevAll(){ try { return JSON.parse(localStorage.getItem(PREV_KEY) || '{}'); } catch (e) { return {}; } }
+function prevPut(o){ try { const ks = Object.keys(o); if (ks.length > 60) for (const k of ks.sort((a, b) => (o[a].at || 0) - (o[b].at || 0)).slice(0, ks.length - 60)) delete o[k]; localStorage.setItem(PREV_KEY, JSON.stringify(o)); } catch (e) {} }
+function prevSnap(){
+  if (!piece || !pieceKey) return;
+  let best = null, bt = Infinity;
+  for (const v of piece.voices) {
+    const q = (v.syms || []).find(x => !x.rest && !x.phantom);
+    if (q && q.t < bt - EPS) { bt = q.t; best = v; }
+  }
+  if (!best || !CLEFS[best.clef]) return;
+  const notes = best.syms.filter(x => !x.rest && !x.phantom && x.glyph && x.pos !== null && x.pos !== undefined).slice(0, 5).map(x => [x.glyph, x.pos]);
+  const snap = {c: best.clef, n: notes};
+  const all = prevAll(), was = all[pieceKey];
+  if (was && JSON.stringify([was.c, was.n]) === JSON.stringify([snap.c, snap.n])) return;
+  snap.at = Date.now(); all[pieceKey] = snap; prevPut(all);
+  recentSync();
+}
+function prevSvg(key){
+  const p = prevAll()[key]; if (!p || !CLEFS[p.c] || !p.n || !p.n.length) return '';
+  let o = '', x = 0.4 + clefW(p.c) + 1.0;
+  const notes = p.n.map(([g, pos]) => { const h = ledgers(pos, x, gw(g), 0) + use(g, x, 4 - pos * 0.5); x += gw(g) + 1.1; return h; }).join('');
+  const W = x + 0.3;
+  for (let k = 0; k < 5; k++) o += hl(0, W, k, 'staff', 0.12);
+  return `<svg class="rprev" viewBox="-0.2 -3.2 ${f(W + 0.4)} 10.4" aria-hidden="true">${o}${clefSvg(p.c, 0.4, 0)}${notes}</svg>`;
+}
 function recentSync(){
   const box = $('#openRecent'); if (!box) return;
   const rows = mineRows().slice(0, 5);
-  box.innerHTML = rows.map(r => `<div class="rrow">${r.pc}<button class="rdel" data-del="${esc(r.key)}" aria-label="Remove ${esc(r.title)}" title="${r.own ? 'Delete this score' : 'Take it off My scores'}">×</button></div>`).join('');
+  box.innerHTML = rows.map(r => `<div class="rrow">${prevSvg(r.key)}${r.pc}<button class="rdel" data-del="${esc(r.key)}" aria-label="Remove ${esc(r.title)}" title="${r.own ? 'Delete this score' : 'Take it off My scores'}">×</button></div>`).join('');
   const hd = $('#recentHead'); if (hd) hd.hidden = !rows.length;
 }
 function refreshMine(){
@@ -6423,6 +6470,22 @@ function commit(mutate){
   ed.undo.push(before); ed.redo = [];
   applyText(text);
 }
+/* a piece from the Repertoire (or an opened file) that is changed is kept at once, as a copy in My scores, so a reload
+   opens the edited version and it stands in Recent scores (Samuel 2026-11-25); its per-piece settings go with it */
+function adoptPiece(text){
+  const old = pieceKey;
+  if (old.startsWith('file:')) fileKeep(old.slice(5), text);
+  const all = mineAll(), id = 'mine:' + Date.now().toString(36);
+  all[id] = {title: piece.title, text, at: Date.now(), from: old};
+  mineSave(all);
+  try { localStorage.setItem(EKEY(id), text); } catch (e) {}
+  for (const k of CB_PIECE_ITEMS) if (st[k] && typeof st[k] === 'object' && st[k][old] !== undefined) st[k][id] = JSON.parse(JSON.stringify(st[k][old]));
+  const prev = prevAll(); if (prev[old]) { prev[id] = prev[old]; prevPut(prev); }
+  if (INC.key === old) INC.key = id;
+  pieceKey = id; st.piece = id; save();
+  if (typeof refreshMine === 'function') refreshMine();
+  if (!ed.warned) { ed.warned = true; toast('Your changes are kept: the edited piece is in Recent scores and opens again after a reload.'); }
+}
 function applyText(text){
   const sel = ed.sel;
   const keep = piece;
@@ -6430,8 +6493,7 @@ function applyText(text){
   try { piece = parseKern(text); } catch (e) { piece = keep; return; }
   piece.text = text;
   if (pieceKey && pieceKey.startsWith('mine:')) { try { localStorage.setItem(EKEY(pieceKey), text); } catch (e) {} }
-  else if (pieceKey && pieceKey.startsWith('file:')) fileKeep(pieceKey.slice(5), text);
-  else if (!ed.warned) { ed.warned = true; toast('Changes to this piece are not kept once you leave it. Export, Save to My scores keeps a copy.'); }
+  else if (pieceKey) adoptPiece(text);
   if (pieceKey && pieceKey.startsWith('mine:')) { const all = mineAll(); if (all[pieceKey]) { all[pieceKey].title = piece.title; all[pieceKey].at = Date.now(); mineSave(all); } recentSync(); }
   if (sel) { const v = piece.voices[sel.vi]; if (!v || sel.ei >= v.events.length) ed.sel = v && v.events.length ? {vi: sel.vi, ei: v.events.length - 1} : null; }
   if (ed.ins) { const v = piece.voices[ed.ins.vi]; if (!v) ed.ins = null; else ed.ins.ei = Math.min(ed.ins.ei, v.events.length); }
@@ -10075,7 +10137,8 @@ if ($('#chSyl')) $('#chSyl').addEventListener('change', e => {
   mutateChant(p => {
     const sel = chantSelectedItems(p);
     if (!sel.length) return false;
-    sel[0].it.text = txt;
+    const at = chantSetText(p, sel[0], txt);
+    if (at !== sel[0].ii) { chantEd.sel = {ii: at, gi: 0, ni: 0}; chantEd.range = null; chantEd.picks = null; }
   });
 });
 const chantMovePitch = delta => mutateChant(p => {
@@ -10258,8 +10321,7 @@ if ($('#chSyl')) $('#chSyl').addEventListener('keydown', e => {
     const p = parseGabcChant(ch.gabc || '');
     const sel = chantSelectedItems(p);
     if (!sel.length) return;
-    const curIi = sel[0].ii;
-    if (p.items[curIi] && p.items[curIi].kind === 'syl') p.items[curIi].text = txt;
+    const curIi = p.items[sel[0].ii] && p.items[sel[0].ii].kind === 'syl' ? chantSetText(p, sel[0], txt) : sel[0].ii;
     const dir = e.shiftKey ? -1 : 1;
     let nextIi = curIi + dir;
     while (nextIi >= 0 && nextIi < p.items.length && p.items[nextIi].kind !== 'syl') nextIi += dir;
