@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<choirbook version="1" app="ChoirBook" saved="2026-11-25T18:00:00.000Z">
+  <piece>
+    <title>Plainchant centred (chAlign)</title>
+    <music format="humdrum-kern"><![CDATA[!!!OTL: Test
+**kern	**kern	**text
+*I"Tenor	*I"Cantus	*
+=1-	=1-	=1-
+*clefC4	*clefC1	*
+!!section: Kyrie
+*	*chant	*
+*	*chclef(c4)	*
+1%11r	1F	Ky-
+*	*lig	*
+.	1G	-ri-
+.	1F	.
+.	1G	.
+*	*Xlig	*
+.	1.A	-e
+*	*div(;)	*
+*	*lig	*
+.	1A	e-
+.	1c	.
+.	1A	.
+*	*Xlig	*
+.	1G	-lei-
+.	1.F	-son.
+*	*div(::)	*
+*	*Xchant	*
+*met(C)	*met(C)	*
+1c	1e	.
+1d	1f	.
+*	*chant	*
+*	*chclef(c3)	*
+00r	1B	Chri-
+*	*lig	*
+.	1c	-ste
+.	1B	.
+*	*Xlig	*
+*	*div(,)	*
+.	1c	e
+*	*Xchant	*
+=	=	=
+1e	1g	.
+1f	1a	.
+==	==	==
+*-	*-	*-
+]]></music>
+  </piece>
+  <layout>
+    <setting name="size" type="number">1.9</setting>
+    <setting name="chAlign" type="string">center</setting>
+  </layout>
+  <pieceState>
+  </pieceState>
+</choirbook>

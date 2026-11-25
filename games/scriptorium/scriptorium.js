@@ -71,6 +71,7 @@ ${APP.popsBeforeVoices || ''}
           <label class="lab" for="bnumSel">Bar numbers</label><select id="bnumSel" title="Bar numbers above the staff, placed by time: they work with the barlines hidden too"><option value="off">None</option><option value="line">At the start of every line</option><option value="1">Every bar</option><option value="5">Every 5 bars</option><option value="10">Every 10 bars</option></select>
           <label class="lab bnx" for="bunitSel">A bar is</label><select class="bnx" id="bunitSel" title="What one bar is when counting"><option value="bar">From barline to barline</option><option value="mens">A breve of the mensuration sign</option><option value="S">A semibreve</option><option value="B">A breve</option><option value="Bp">A perfect breve (dotted)</option><option value="L">A long</option><option value="Lp">A perfect long</option></select>
           <span class="lab bnx">Bar numbers over</span><div class="btns bnx" id="bposSeg" role="group" aria-label="Bar numbers over"><button class="tb" data-v="top" title="Above the highest staff of each system">Top staff</button><button class="tb" data-v="all" title="Above every staff">Every staff</button></div>
+          <span class="lab">Plainchant lines</span><div class="btns" id="chAlignSeg" role="group" aria-label="Plainchant alignment"><button class="tb" data-v="left" title="Chant lines start at the left margin">Left</button><button class="tb" data-v="center" title="Chant lines centred on the page">Center</button><button class="tb" data-v="right" title="Chant lines end at the right margin">Right</button></div>
           <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <span class="lab">Accidentals</span><div class="btns" id="accSeg" role="group" aria-label="Accidental style"><button class="tb" data-v="modern" title="Standard vertical sharp and natural">Modern</button><button class="tb" data-v="old" title="Renaissance diagonal double-cross sharp (diesis) and square b quadratum">Old</button></div>
           <div class="subhead">Lyrics</div>
@@ -1308,7 +1309,7 @@ const KEY = APP.store + ':v1';
 const st = {
   inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', noteCol: 'black', colLock: 'off', dashes: 'on', ed: 'on', heads: 'modern', stems: 'adaptive', accStyle: 'modern', origText: 'modern', ann: 'on', ossia: 'on',
   size: 1.75, noteSize: 1.75, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, printPaper: 'A4', bounds: {}, staves: {},
-  evenWrite: 'on', measAcross: 'on', hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 1, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top',
+  evenWrite: 'on', measAcross: 'on', hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 1, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top', chAlign: 'left',
   ...(APP.defaults || {})
 };
 const HAD_SAVED = !!localStorage.getItem(KEY);
@@ -2841,7 +2842,13 @@ function groupRoom(grp, line){
 function drawSystem(vlist, line, y, opts = {}){
   if (!line.chant) return drawSystem0(vlist, line, y, opts);
   CH_FORCE = 4;
-  try { return drawSystem0(line.vlist || vlist, line, y, {}); } finally { CH_FORCE = 0; }
+  try {
+    const r = drawSystem0(line.vlist || vlist, line, y, {});
+    /* plainchant alignment: the line keeps its own width, the whole system moves to the centre or the right of the page */
+    const al = st.chAlign, free = (line.W || 0) - (line.x1 || 0);
+    if ((al === 'center' || al === 'right') && free > 0.5) r.svg = `<g transform="translate(${f(al === 'center' ? free / 2 : free)},0)">${r.svg}</g>`;
+    return r;
+  } finally { CH_FORCE = 0; }
 }
 function drawSystem0(vlist, line, y, opts = {}){
   const groups = (st.view === 'score' || vlist.some(v => v.subOf >= 0)) ? staffGroups(vlist) : vlist.map(v => ({id: v.idx, voices: [v]}));
@@ -4284,7 +4291,7 @@ function segInit(id, key, after){
 function syncUI(){
   try { sendList(); } catch (e) {}
   if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
-  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#stemSeg': 'stems', '#accSeg': 'accStyle', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#evenSeg': 'evenWrite', '#measSeg': 'measAcross', '#bposSeg': 'bpos', '#sysFontSeg': 'sysFont'};
+  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#stemSeg': 'stems', '#accSeg': 'accStyle', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#evenSeg': 'evenWrite', '#measSeg': 'measAcross', '#bposSeg': 'bpos', '#chAlignSeg': 'chAlign', '#sysFontSeg': 'sysFont'};
   $('#bnumSel').value = st.bnum || 'off'; $('#bunitSel').value = st.bunit || 'bar';
   $('#lyrFontSel').value = st.lyrFont || 'fell';
   for (const sel of ['#lyrFontSel', ...TEXT_FONTS.map(x => x[1])]) { const o = $(sel).selectedOptions[0]; $(sel).style.fontFamily = o ? o.dataset.font : ''; }
@@ -4463,7 +4470,7 @@ segInit('#eqSeg', 'eq'); segInit('#viewList', 'view'); $('#notaSeg').addEventLis
   if (b.dataset.v === 'fake') st.nota = 'fake';
   else { st.nota = 'real'; if (pieceKey) { if (b.dataset.v === 'black') st.black[pieceKey] = 1; else delete st.black[pieceKey]; } }
   save(); syncUI(); render();
-}); segInit('#headSeg', 'heads'); segInit('#stemSeg', 'stems'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars'); segInit('#bposSeg', 'bpos');
+}); segInit('#headSeg', 'heads'); segInit('#stemSeg', 'stems'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars'); segInit('#bposSeg', 'bpos'); segInit('#chAlignSeg', 'chAlign');
 [['#bnumSel', 'bnum'], ['#bunitSel', 'bunit'], ['#lyrFontSel', 'lyrFont'], ...TEXT_FONTS.map(([k, sel]) => [sel, k])].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; save(); syncUI(); render(); }));
 segInit('#sysFontSeg', 'sysFont');
 $('#idleSec').addEventListener('change', e => { const v = Math.round(+e.target.value); st.idleSec = isFinite(v) && v >= 0 ? Math.min(600, v) : 3; save(); syncUI(); document.dispatchEvent(new Event('idlesec')); });
@@ -6041,7 +6048,7 @@ function meiToKern(txt, fileName){
    of the old version into the new one before it is read. */
 const CB_VERSION = 1;
 /* the settings of the layout and look that go into the file (not personal choices such as dark mode, window transparency, volume or tempo) */
-const CB_SETTINGS = ['size', 'noteSize', 'sizeLock', 'thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'mens', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'dashes', 'ed', 'lig', 'lines', 'paperCol', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'titlePt', 'vnamePt', 'stextPt', 'hs', 'vs', 'ss', 'measAcross', 'origText', 'ann', 'ossia', 'verse', 'view', 'paper', 'printPaper', 'orient', 'flow', 'webScroll'];
+const CB_SETTINGS = ['chAlign', 'size', 'noteSize', 'sizeLock', 'thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'mens', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'dashes', 'ed', 'lig', 'lines', 'paperCol', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'titlePt', 'vnamePt', 'stextPt', 'hs', 'vs', 'ss', 'measAcross', 'origText', 'ann', 'ossia', 'verse', 'view', 'paper', 'printPaper', 'orient', 'flow', 'webScroll'];
 /* what belongs to one piece: kept in st under the key of the piece */
 const CB_PIECE_ITEMS = ['vis', 'inc', 'incClef', 'staves', 'black', 'bounds', 'amb'];
 /* from an older version of the file to the next: {from: object} where the object is {settings, items} (nothing yet: this is version 1) */
