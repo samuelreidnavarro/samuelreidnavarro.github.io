@@ -7202,7 +7202,7 @@ function setMens(sign, justThis){
   });
 }
 /* the modern equivalent's two fields: filled from the sign, with the usual equivalent shown faintly as a hint */
-const MOD_HINT = {'O': '3/1', 'C': '2/1', 'O|': '3/1', 'C|': '2/1', 'O.': '9/2', 'C.': '6/2', 'Cr': '2/1', '3': '3/1', 'O3': '3/1', 'C3': '3/1', 'C|3': '3/1', 'C2': '2/1'};
+const MOD_HINT = {'O': '3/1', 'C': '2/1', 'O|': '6/2', 'C|': '2/1', 'O.': '9/2', 'C.': '6/2', 'Cr': '2/1', '3': '3/1', 'O3': '3/1', 'C3': '3/1', 'C|3': '3/1', 'C2': '2/1'};
 /* modus, maximodus, the rules and the two editorial choices: their buttons show what is in force */
 /* the usual modern equivalent of a sign, counted in the values as written (a minim is a half note): one bar = one breve of the sign.
    O 3/1, C 2/1, O. 9/2, C. 6/2; a stroke (O|, C|) leaves the count as it is (it is about speed); 3 and O3/C3 3/1, 2 2/1 */
