@@ -1092,7 +1092,7 @@ html.site-s .tools .bar:not(.editbar){padding-left:calc(4px + var(--site-s,0px))
 .mixcol{display:flex;flex-direction:column;gap:6px;min-width:0}
 .mixcol .tg{font-style:italic;color:var(--muted);font-size:15px;margin:0 0 2px}
 .mixlist{display:flex;flex-direction:column;gap:7px}
-.mxr{display:grid;grid-template-columns:5.6em 30px 190px 100px;gap:6px 10px;align-items:center}
+.mxr{display:grid;grid-template-columns:5.6em 30px 190px 130px;gap:6px 10px;align-items:center}
 .mxn{color:var(--muted);font-size:16px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mxr .mxs{width:100%;max-width:none;min-width:0}
 .mxr .mxs:not(.own){color:var(--muted)}

@@ -397,7 +397,7 @@
         </div>
         <div class="slider-container">
             <label>Mensura (Game Speed) <span id="speedLabel" class="speed-name">Tempus perfectum prolatio minor</span>
-            <input type="range" id="speedSlider" min="0" max="4" step="1" value="2" oninput="updateSpeedLabel()"></label>
+            <input type="range" id="speedSlider" data-num="off" min="0" max="4" step="1" value="2" oninput="updateSpeedLabel()"></label>
         </div>
         <div class="slider-container">
             <label>Musica Vol <span class="slider-value" id="musicVolValue">0.8</span><input type="range" id="musicVol" min="0" max="1" step="0.05" value="0.8" oninput="updateSliderValue('musicVolValue', this.value)"></label>
@@ -486,7 +486,7 @@
     });
 
     // The date of the last change to the game, shown on the title page; set it with every update
-    const LAST_UPDATE = '2026-11-14';
+    const LAST_UPDATE = '2026-11-25';
     function lastUpdateText() { return new Date(LAST_UPDATE + 'T12:00:00').toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); }
     // Earlier builds, kept beside the game and opened from the developer panel
     const BUILDS = [
@@ -3427,5 +3427,6 @@ let devInvincible = false;
     requestAnimationFrame(loop);
 </script>
 <script src="shared/styled-select.js?v=2"></script>
+<script src="shared/rangenum.js?v=1"></script>
 </body>
 </html>
