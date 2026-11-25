@@ -5258,6 +5258,9 @@ function cmmeToKernRich(text, fileName){
     for (const vx of msVoices) {
       const vi = (+tx(vx, 'VoiceNum') || 1) - 1, V = voices[vi];
       if (!V) continue;
+      /* a voice that was silent in the sections before (not written there at all) rests until this one starts */
+      { const lastE = V.events[V.events.length - 1], end = lastE ? rt(lastE.t + lastE.d) : 0;
+        if (t0 - end > EPS) V.events.push({t: end, d: rt(t0 - end), rest: true, syl: [], gap: true}); }
       let t = t0, effP = 1, curTc = baseTc, propF = 1, curInk = '', curSign = 'C', open = false;
       let sig = V.keys.length ? Object.assign({}, V.keys[V.keys.length - 1].alts) : {};
       let sigDirty = false;
@@ -5546,7 +5549,10 @@ function cmmeToKernRich(text, fileName){
   }
 
   for (const V of voices) {
-    V.events.forEach(e => { delete e.longa; delete e.isDottedAdd; });
+    /* and one silent in the last sections rests to the end */
+    { const lastE = V.events[V.events.length - 1], end = lastE ? rt(lastE.t + lastE.d) : 0;
+      if (lastE && t0 - end > EPS && !(lastE.long && t0 - lastE.t < 2 * lastE.d + EPS)) V.events.push({t: end, d: rt(t0 - end), rest: true, syl: [], gap: true}); }
+    V.events.forEach(e => { delete e.longa; delete e.isDottedAdd; delete e.gap; });
     if (!V.clefs.length || V.clefs[0].t > EPS) {
       const c0 = !V.oclef ? 'G2' : /^F/.test(V.oclef) ? 'F4' : /^(G|C1|C2)/.test(V.oclef) ? 'G2' : 'Gv2';
       V.clefs.unshift({t: 0, c: c0, ei: 0});
