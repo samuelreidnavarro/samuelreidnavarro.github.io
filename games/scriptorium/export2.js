@@ -162,6 +162,11 @@
     const v = P.voices[vi] || P.voices[0];
     const notes = v.events.filter(e => !e.rest);
     if (!notes.length) return null;
+    /* a voice with plainchant: its chant passages as they stand (clefs, neumes, marks, division bars) */
+    if (v.events.some(e => e.ch && !e.rest)) {
+      const ch = v.events.filter(e => e.ch);
+      return `name: ${(P.title || 'Chant').replace(/;/g, ',')};\n` + (P.composer ? `author: ${P.composer.replace(/;/g, ',')};\n` : '') + '%%\n' + serializeGabcChant(eventsToGabc(ch, autoChantClef(ch.filter(e => !e.rest).map(e => e.step)))) + '\n';
+    }
     const lo = Math.min(...notes.map(e => e.step)), hi = Math.max(...notes.map(e => e.step));
     let best = null;
     for (const [c, line] of [['c', 4], ['c', 3], ['f', 3], ['c', 2], ['f', 4], ['c', 1], ['f', 2]]) {

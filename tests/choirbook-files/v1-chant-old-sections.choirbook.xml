@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<choirbook version="1" app="ChoirBook" saved="2026-11-25T18:00:00.000Z">
+  <piece>
+    <title>Old plainchant sections (EXT chants)</title>
+    <music format="humdrum-kern"><![CDATA[!!!OTL: Test
+**kern	**kern
+*I"Tenor	*I"Cantus
+*clefC4	*clefC1
+*met(C)	*met(C)
+=1-	=1-
+1c	1e
+1d	1f
+=	=
+1e	1g
+1f	1a
+==	==
+*-	*-
+!!!EXT: {"chants":[{"t":0,"title":"Kyrie","gabc":"(c4) Ky(f)ri(gfg)e(h.) (;) e(hjh)lei(g)son.(f.) (::)"},{"t":2,"title":"","gabc":"(c3) Chri(g)ste(hg) (,) e(h)"}]}
+]]></music>
+  </piece>
+  <layout>
+    <setting name="size" type="number">1.9</setting>
+  </layout>
+  <pieceState>
+  </pieceState>
+</choirbook>

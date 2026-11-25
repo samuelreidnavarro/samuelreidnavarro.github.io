@@ -8,7 +8,7 @@
 <iframe id="app" src="../games/choirbook.html"></iframe>
 <script>
 /* add the name of every new fixture file here */
-const FILES = ['v1-small.choirbook.xml', 'v1-text-fonts.choirbook.xml', 'v1-text-sizes.choirbook.xml', 'v1-ambitus.choirbook.xml'];
+const FILES = ['v1-small.choirbook.xml', 'v1-text-fonts.choirbook.xml', 'v1-text-sizes.choirbook.xml', 'v1-ambitus.choirbook.xml', 'v1-chant-old-sections.choirbook.xml', 'v1-chant-notes.choirbook.xml'];
 const out = document.getElementById('out'), app = document.getElementById('app');
 app.addEventListener('load', async () => {
   await new Promise(r => setTimeout(r, 1500));
@@ -21,7 +21,10 @@ app.addEventListener('load', async () => {
       const txt = await (await fetch('choirbook-files/' + f)).text();
       const r = cb.read(txt);
       if (!r.kern || !/\*\*kern/.test(r.kern)) throw new Error('no music');
-      li.className = 'ok'; li.textContent = f + ': opens (' + Object.keys(r.settings).length + ' settings, ' + Object.keys(r.items).length + ' piece items)';
+      let extra = '';
+      const eng = app.contentWindow.__cb;
+      if (eng && eng.parseKern) { const P = eng.parseKern(r.kern); if (!P.voices.length) throw new Error('no voices'); const ch = P.voices.reduce((n, v) => n + v.events.filter(e => e.ch).length, 0); if (ch) extra = ', ' + ch + ' chant notes'; }
+      li.className = 'ok'; li.textContent = f + ': opens (' + Object.keys(r.settings).length + ' settings, ' + Object.keys(r.items).length + ' piece items' + extra + ')';
     } catch (e) { li.className = 'bad'; li.textContent = f + ': BROKEN: ' + e.message; }
     out.appendChild(li);
   }

@@ -131,7 +131,6 @@
   }
   /* in note input a key writes its note at the caret (as typing its letter does), in the value chosen */
   function write(m){
-    if (typeof window.chantWriteMidi === 'function' && window.chantWriteMidi(m)) return;
     if (!piece || !CBA.guard()) return;
     /* outside note input a key changes the pitch of the note that is selected (nothing else is written) */
     if (!ed.on) {

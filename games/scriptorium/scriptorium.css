@@ -1426,3 +1426,13 @@ html.sticky-tools.embedded .tools{top:var(--toolsShift,0px)}
 .library .lprev line{stroke:currentColor}
 .library .lprev use,.library .lprev path,.library .lprev rect{fill:currentColor}
 @media (max-width:600px){.library .lprev{width:64px;height:30px}.library .lprev svg{height:30px;max-width:64px}}
+/* plainchant (2026-11-25): the chant clef menu, the division marks row in Add */
+#chClefMenu{position:absolute;z-index:25;min-width:230px}
+#chClefMenu[hidden]{display:none}
+#chClefMenu li{padding:3px 12px 3px 4px;display:flex;align-items:center;gap:8px}
+#chClefMenu li.hd{cursor:default;font-size:13px;opacity:.7;padding:2px 8px;background:none}
+#chClefMenu li svg{width:26px;height:30px;flex:none;fill:currentColor}
+#chClefMenu li[aria-checked="true"]{font-weight:700}
+.divrow{display:flex;align-items:center;gap:4px;flex-wrap:nowrap}
+.divrow span{flex:1;white-space:nowrap;padding-left:2px}
+.divrow .tb{min-width:34px;padding:0 6px;font-weight:700}
