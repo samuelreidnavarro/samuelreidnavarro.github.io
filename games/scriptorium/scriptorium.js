@@ -41,6 +41,9 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab">Format</span><div class="btns" id="viewList" role="group" aria-label="Format"><button class="tb" data-v="score">Score</button><button class="tb" data-v="parts">Parts</button><button class="tb" data-v="choir">Choirbook</button></div>
           <span class="lab">Size</span><div class="btns" id="paperSeg" role="group" aria-label="Size"><button class="tb" data-v="A3">A3</button><button class="tb" data-v="A4">A4</button><button class="tb" data-v="A5">A5</button><button class="tb" data-v="web" title="The music fills the window, without pages">Web</button></div>
           <span class="lab pageonly">Orientation</span><div class="btns pageonly" id="orientSeg" role="group" aria-label="Orientation"><button class="tb" data-v="portrait">Portrait</button><button class="tb" data-v="landscape">Landscape</button></div>
+          <div class="subhead">Plainchant</div>
+          <span class="lab">Chant lines</span><div class="btns" id="chAlignSeg" role="group" aria-label="Plainchant alignment"><button class="tb" data-v="left" title="Chant lines start at the left margin">Left</button><button class="tb" data-v="center" title="Chant lines centred on the page">Center</button><button class="tb" data-v="right" title="Chant lines end at the right margin">Right</button></div>
+          <span class="lab">Chant notes</span><div class="btns" id="chStyleSeg" role="group" aria-label="Plainchant note style"><button class="tb" data-v="classic" title="Light square notes">Classic</button><button class="tb" data-v="solid" title="Bigger, blockier notes of an older look">Solid</button></div>
           <div class="subhead">Staves &amp; Notes</div>
           <label class="ctl" for="size">Staff size</label><div class="rng-wrap" data-for="size"><input type="range" id="size" min="1" max="7" step="0.05"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
           <span class="lab-lock"><label class="ctl" for="noteSize">Note size</label><button type="button" class="lockbtn" id="sizeLock" aria-pressed="true" aria-label="Lock note size to staff size" title="Locked to staff size — click to adjust independently"></button></span><div class="rng-wrap" data-for="noteSize"><input type="range" id="noteSize" min="1" max="7" step="0.05"><div class="rng-meta"><button type="button" class="rng-bound" data-end="min" title="Click to change minimum"></button><span class="rng-val" title="Current value"></span><button type="button" class="rng-bound" data-end="max" title="Click to change maximum"></button></div></div>
@@ -73,8 +76,6 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab bnx">Bar numbers over</span><div class="btns bnx" id="bposSeg" role="group" aria-label="Bar numbers over"><button class="tb" data-v="top" title="Above the highest staff of each system">Top staff</button><button class="tb" data-v="all" title="Above every staff">Every staff</button></div>
           <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <span class="lab">Accidentals</span><div class="btns" id="accSeg" role="group" aria-label="Accidental style"><button class="tb" data-v="modern" title="Standard vertical sharp and natural">Modern</button><button class="tb" data-v="old" title="Renaissance diagonal double-cross sharp (diesis) and square b quadratum">Old</button></div>
-          <div class="subhead">Plainchant</div>
-          <span class="lab">Chant lines</span><div class="btns" id="chAlignSeg" role="group" aria-label="Plainchant alignment"><button class="tb" data-v="left" title="Chant lines start at the left margin">Left</button><button class="tb" data-v="center" title="Chant lines centred on the page">Center</button><button class="tb" data-v="right" title="Chant lines end at the right margin">Right</button></div>
           <div class="subhead">Lyrics</div>
           <label class="lab" for="lyrFontSel">Font</label><select id="lyrFontSel" title="Font used for lyrics"></select>
           <label class="ctl" for="lyrPt">Size</label><span class="pt-field"><input type="number" id="lyrPt" min="4" max="36" step="0.5" inputmode="decimal" aria-label="Lyrics size in points"><span>pt</span></span>
@@ -1310,7 +1311,7 @@ const KEY = APP.store + ':v1';
 const st = {
   inc: {}, thick: 0, thickL: 0, eq: 'off', piece: FIRST, view: 'score', nota: 'real', clefs: 'mens', bars: 'full', staff: 'red', noteCol: 'black', colLock: 'off', dashes: 'on', ed: 'on', heads: 'modern', stems: 'adaptive', accStyle: 'modern', origText: 'modern', ann: 'on', ossia: 'on',
   size: 1.75, noteSize: 1.75, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, printPaper: 'A4', bounds: {}, staves: {},
-  evenWrite: 'on', measAcross: 'on', hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 1, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top', chAlign: 'left',
+  evenWrite: 'on', measAcross: 'on', hs: 0.6, vs: 1, tempo: 60, unit: 'S', beatHand: true, beatPend: false, beatTick: false, handOp: 1, handSize: 1, vol: 70, loop: false, verse: 0, paper: 'A4', orient: 'portrait', flow: 'vertical', paperCol: 'parchment', vis: {}, lines: '5', dark: 'off', lig: 'on', mens: 'on', webScroll: 'vertical', zoom: 1, bnum: 'off', bunit: 'bar', bpos: 'top', chAlign: 'left', chStyle: 'classic',
   ...(APP.defaults || {})
 };
 const HAD_SAVED = !!localStorage.getItem(KEY);
@@ -2299,7 +2300,7 @@ function ligatures(v, list, top){
 function staffLine(o){
   const {v, top, x0, x1} = o;
   let s = '';
-  for (let k = 5 - staffLinesN(); k < 5; k++) s += hl(x0, x1, top + k, 'staff', 0.12);
+  for (let k = 5 - staffLinesN(); k < 5; k++) s += hl(x0, x1, top + k, 'staff', o.chant && CH_BLK ? 0.2 : 0.12);
   /* clef, key */
   const t0 = o.t0;
   /* a plainchant line: the chant clef of its first note (a click opens the chant clefs) */
@@ -3048,7 +3049,9 @@ function visibleVoices(){ return piece.voices.filter(v => vis(v.idx).on); }
    without a B flat; *chclef(cb3)), and where the other voices rest such a passage gets its own system, the chant voice
    alone. The marks of the chant books stay with the notes: *neu(...) holds D (inclinatum, the diamond), _ (horizontal
    episema), ' (vertical episema), v (virga). The division marks (DIV_MARKS) belong to every notation. */
-const CH_PW = 0.66, CH_PH = 0.52;
+let CH_PW = 0.66, CH_PH = 0.52, CH_BLK = false;
+/* the chant note style (Layout > Plainchant): 'classic' = the light square notes, 'solid' = bigger, blockier notes of an older look */
+function chDims(){ CH_BLK = st.chStyle === 'solid'; CH_PW = CH_BLK ? 1.0 : 0.66; CH_PH = CH_BLK ? 0.8 : 0.52; }
 const CH_CLEFS = {c1: {k: 'c1', type: 'c', line: 1}, c2: {k: 'c2', type: 'c', line: 2}, c3: {k: 'c3', type: 'c', line: 3}, c4: {k: 'c4', type: 'c', line: 4}, f3: {k: 'f3', type: 'f', line: 3}, f4: {k: 'bass', type: 'f', line: 4}};
 function parseChClef(str){
   const m = String(str || '').match(/^([cf])(b?)([1-4])$/i); if (!m) return null;
@@ -3122,7 +3125,8 @@ const isIncl = q => /D/.test(q.neu || '');
 /* the neumes of a chant line: notes joined in a ligature (neuCont) drawn as one neume, each note's drawing in ligSvg at ligX
    (so the editor's selection and hit areas stay with every note) */
 function chantNeumes(list, top){
-  const PW = CH_PW, PH = CH_PH;
+  chDims();
+  const PW = CH_PW, PH = CH_PH, HW = CH_BLK ? 0.18 : 0.1, RX = CH_BLK ? 0 : 0.06;
   for (let i = 0; i < list.length; ) {
     const q0 = list[i][0];
     if (!q0.chant || q0.rest) { i++; continue; }
@@ -3139,22 +3143,22 @@ function chantNeumes(list, top){
       for (let lp = -2; lp >= q.pos; lp -= 2) no += hl(nx - 0.25, nx + PW + 0.25, top + 4 - lp * 0.5, 'ledger', 0.13);
       for (let lp = 8; lp <= q.pos; lp += 2) no += hl(nx - 0.25, nx + PW + 0.25, top + 4 - lp * 0.5, 'ledger', 0.13);
       /* clivis: the stem down on the left of a neume's first note when the next is lower */
-      if (k === 0 && n >= 2 && G[1][0].pos < q.pos) no += `<rect class="ink" x="${f(nx)}" y="${f(ny)}" width="0.1" height="${f(Math.max(1.2, (top + 4 - G[1][0].pos * 0.5) - ny + 0.7))}"/>`;
+      if (k === 0 && n >= 2 && G[1][0].pos < q.pos) no += `<rect class="ink" x="${f(nx)}" y="${f(ny)}" width="${HW}" height="${f(Math.max(1.2, (top + 4 - G[1][0].pos * 0.5) - ny + 0.7))}"/>`;
       /* the hairline joining it to the note before */
-      if (prevX !== null) { const vx = podTop ? nx + PW - 0.1 : nx; no += `<rect class="ink" x="${f(vx)}" y="${f(Math.min(prevY, ny))}" width="0.1" height="${f(Math.max(0.1, Math.abs(ny - prevY)))}"/>`; }
+      if (prevX !== null) { const vx = podTop ? nx + PW - HW : nx; no += `<rect class="ink" x="${f(vx)}" y="${f(Math.min(prevY, ny))}" width="${HW}" height="${f(Math.max(0.1, Math.abs(ny - prevY)))}"/>`; }
       if (isIncl(q)) {
         const cx = nx + PW / 2;
         no += `<path class="ink" d="M${f(cx)} ${f(ny - 0.36)}L${f(cx + 0.36)} ${f(ny)}L${f(cx)} ${f(ny + 0.36)}L${f(cx - 0.36)} ${f(ny)}Z"/>`;
       } else if (pes2) {
         /* a pes of a second: two flatter squares a hair apart (Samuel 2026-11-24) */
         const h = PH - 0.1, cy = ny + (k === 0 ? 0.03 : -0.03);
-        no += `<rect class="ink" x="${f(nx)}" y="${f(cy - h / 2)}" width="${f(PW)}" height="${f(h)}" rx="0.05"/>`;
-      } else no += `<rect class="ink" x="${f(nx)}" y="${f(ny - PH / 2)}" width="${f(PW)}" height="${f(PH)}" rx="0.06"/>`;
+        no += `<rect class="ink" x="${f(nx)}" y="${f(cy - h / 2)}" width="${f(PW)}" height="${f(h)}" rx="${RX}"/>`;
+      } else no += `<rect class="ink" x="${f(nx)}" y="${f(ny - PH / 2)}" width="${f(PW)}" height="${f(PH)}" rx="${RX}"/>`;
       const nu = q.neu || '';
-      if (/v/.test(nu)) no += `<rect class="ink" x="${f(nx + PW - 0.1)}" y="${f(ny)}" width="0.1" height="1.5"/>`;
-      if (/_/.test(nu)) no += `<rect class="ink" x="${f(nx - 0.04)}" y="${f(ny - 0.52)}" width="${f(PW + 0.08)}" height="0.1"/>`;
+      if (/v/.test(nu)) no += `<rect class="ink" x="${f(nx + PW - HW)}" y="${f(ny)}" width="${HW}" height="1.5"/>`;
+      if (/_/.test(nu)) no += `<rect class="ink" x="${f(nx - 0.04)}" y="${f(ny - 0.52)}" width="${f(PW + 0.08)}" height="${HW}"/>`;
       if (/'/.test(nu)) no += `<rect class="ink" x="${f(nx + PW / 2 - 0.05)}" y="${f(ny + 0.42)}" width="0.1" height="0.45"/>`;
-      if (q.dot) no += `<circle class="ink" cx="${f(nx + PW + 0.28)}" cy="${f(q.pos % 2 === 0 ? ny - 0.35 : ny)}" r="0.15"/>`;
+      if (q.dot) no += `<circle class="ink" cx="${f(nx + PW + 0.28)}" cy="${f(q.pos % 2 === 0 ? ny - 0.35 : ny)}" r="${CH_BLK ? 0.2 : 0.15}"/>`;
       q.ligSvg = no; q.ligX = nx;
       prevX = nx; prevY = ny;
     });
@@ -3165,6 +3169,7 @@ function chantNeumes(list, top){
 function chantCustosSvg(s, x, top){
   if (!s || s.rest || s.pos === null || s.pos === undefined) return '';
   const ny = top + 4 - s.pos * 0.5;
+  if (CH_BLK) return `<rect class="ink" x="${f(x)}" y="${f(ny - 0.3)}" width="0.6" height="0.6"/><rect class="ink" x="${f(x + 0.5)}" y="${f(ny - 1.1)}" width="0.14" height="1.2"/>`;
   return `<rect class="ink" x="${f(x)}" y="${f(ny - 0.24)}" width="0.46" height="0.48" rx="0.05"/><rect class="ink" x="${f(x + 0.41)}" y="${f(ny - 1.05)}" width="0.09" height="1.15"/>`;
 }
 /* the stretches of [a, b) to draw as chant systems: where every voice shown has chant or rests and some voice chant notes;
@@ -3627,6 +3632,7 @@ function applyThick(){
   });
 }
 function render(){
+  chDims();
   if (!piece) return;
   wideCache = null;
   defs();
@@ -4292,7 +4298,7 @@ function segInit(id, key, after){
 function syncUI(){
   try { sendList(); } catch (e) {}
   if (st.webWas) { st.webWas = false; if (st.paper === 'A4') st.paper = 'web'; save(); }   /* the old Web-to-A4 stand-in */
-  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#stemSeg': 'stems', '#accSeg': 'accStyle', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#evenSeg': 'evenWrite', '#measSeg': 'measAcross', '#bposSeg': 'bpos', '#chAlignSeg': 'chAlign', '#sysFontSeg': 'sysFont'};
+  const segs = {'#viewList': 'view', '#headSeg': 'heads', '#stemSeg': 'stems', '#accSeg': 'accStyle', '#clefSeg': 'clefs', '#barSeg': 'bars', '#orientSeg': 'orient', '#flowSeg': 'flow', '#staffSeg': 'staff', '#noteColSeg': 'noteCol', '#dashSeg': 'dashes', '#edSeg': 'ed', '#linesSeg': 'lines', '#darkSeg': 'dark', '#ligSeg': 'lig', '#scrollSeg': 'webScroll', '#eqSeg': 'eq', '#evenSeg': 'evenWrite', '#measSeg': 'measAcross', '#bposSeg': 'bpos', '#chAlignSeg': 'chAlign', '#chStyleSeg': 'chStyle', '#sysFontSeg': 'sysFont'};
   $('#bnumSel').value = st.bnum || 'off'; $('#bunitSel').value = st.bunit || 'bar';
   $('#lyrFontSel').value = st.lyrFont || 'fell';
   for (const sel of ['#lyrFontSel', ...TEXT_FONTS.map(x => x[1])]) { const o = $(sel).selectedOptions[0]; $(sel).style.fontFamily = o ? o.dataset.font : ''; }
@@ -4471,7 +4477,7 @@ segInit('#eqSeg', 'eq'); segInit('#viewList', 'view'); $('#notaSeg').addEventLis
   if (b.dataset.v === 'fake') st.nota = 'fake';
   else { st.nota = 'real'; if (pieceKey) { if (b.dataset.v === 'black') st.black[pieceKey] = 1; else delete st.black[pieceKey]; } }
   save(); syncUI(); render();
-}); segInit('#headSeg', 'heads'); segInit('#stemSeg', 'stems'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars'); segInit('#bposSeg', 'bpos'); segInit('#chAlignSeg', 'chAlign');
+}); segInit('#headSeg', 'heads'); segInit('#stemSeg', 'stems'); segInit('#clefSeg', 'clefs'); segInit('#barSeg', 'bars'); segInit('#bposSeg', 'bpos'); segInit('#chAlignSeg', 'chAlign'); segInit('#chStyleSeg', 'chStyle');
 [['#bnumSel', 'bnum'], ['#bunitSel', 'bunit'], ['#lyrFontSel', 'lyrFont'], ...TEXT_FONTS.map(([k, sel]) => [sel, k])].forEach(([id, k]) => $(id).addEventListener('change', e => { st[k] = e.target.value; save(); syncUI(); render(); }));
 segInit('#sysFontSeg', 'sysFont');
 $('#idleSec').addEventListener('change', e => { const v = Math.round(+e.target.value); st.idleSec = isFinite(v) && v >= 0 ? Math.min(600, v) : 3; save(); syncUI(); document.dispatchEvent(new Event('idlesec')); });
@@ -6050,7 +6056,7 @@ function meiToKern(txt, fileName){
    of the old version into the new one before it is read. */
 const CB_VERSION = 1;
 /* the settings of the layout and look that go into the file (not personal choices such as dark mode, window transparency, volume or tempo) */
-const CB_SETTINGS = ['chAlign', 'size', 'noteSize', 'sizeLock', 'thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'mens', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'dashes', 'ed', 'lig', 'lines', 'paperCol', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'titlePt', 'vnamePt', 'stextPt', 'hs', 'vs', 'ss', 'measAcross', 'origText', 'ann', 'ossia', 'verse', 'view', 'paper', 'printPaper', 'orient', 'flow', 'webScroll'];
+const CB_SETTINGS = ['chAlign', 'chStyle', 'size', 'noteSize', 'sizeLock', 'thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'mens', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'dashes', 'ed', 'lig', 'lines', 'paperCol', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'titlePt', 'vnamePt', 'stextPt', 'hs', 'vs', 'ss', 'measAcross', 'origText', 'ann', 'ossia', 'verse', 'view', 'paper', 'printPaper', 'orient', 'flow', 'webScroll'];
 /* what belongs to one piece: kept in st under the key of the piece */
 const CB_PIECE_ITEMS = ['vis', 'inc', 'incClef', 'staves', 'black', 'bounds', 'amb'];
 /* from an older version of the file to the next: {from: object} where the object is {settings, items} (nothing yet: this is version 1) */
