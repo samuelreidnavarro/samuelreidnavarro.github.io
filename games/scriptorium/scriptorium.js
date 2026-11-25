@@ -114,6 +114,7 @@ ${APP.popsBeforeVoices || ''}
         <button class="tb popbtn" aria-haspopup="true" aria-expanded="false">Add<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.2 6 8.4 10 4.2 8.9 3.1 6 6.1 3.1 3.1Z"/></svg></button>
         <div class="popbody"><div class="btns col" id="addList">
           <button class="tb" id="addInc" title="The original clefs, mensuration signs and first notes of every voice, before the staves">Incipit</button>
+          <button class="tb" id="addAmb" title="The range of every voice (its lowest and highest note) before its first staff, as in modern transcriptions. Again to take it off">Ambitus</button>
           <button class="tb" id="addChantBtn" title="Insert a 4-line Gregorian plainchant section (GABC) as its own system">Plainchant (GABC)</button>
           <button class="tb" id="addMens" title="Put a mensuration sign at the selected note, in the selected voice or voices only (select several voices to give them all one)">Mensuration sign</button>
           <button class="tb" id="addClef" title="A new clef at the selected note, in the selected voice or voices only; click it to choose which. Again to take it off">Clef change</button>
@@ -2697,6 +2698,41 @@ function incipitSnap(){
   } catch (e) { INC.snap = null; }
   if (incipitOn()) render();
 }
+/* Ambitus (Samuel 2026-11-25): Add > Ambitus shows before every voice's first staff its range, the lowest and the highest
+   note as two black heads joined by a line, on a short staff with the voice's clef; worked out from the music each time */
+const AMB_W = 8;
+const ambOn = () => !!(piece && (st.amb || {})[pieceKey]);
+function ambitusOf(v){
+  let lo = null, hi = null;
+  for (const e of v.events) {
+    if (e.rest || e.step === null || e.step === undefined) continue;
+    for (const q of [e, ...(e.chord || [])]) { if (lo === null || q.step < lo.step) lo = q; if (hi === null || q.step > hi.step) hi = q; }
+  }
+  return lo ? {lo, hi} : null;
+}
+function ambitusSvg(v, x0, top){
+  const a = ambitusOf(v), ck = lineClef(v, 0), C = CLEFS[ck]; if (!a || !C) return '';
+  const W = AMB_W - 1.0;
+  let o = '';
+  for (let k = 5 - staffLinesN(); k < 5; k++) o += hl(x0, x0 + W, top + k, 'staff', 0.12);
+  o += clefSvg(ck, x0 + 0.3, top);
+  const xb = x0 + W - 0.9, xa = Math.max(x0 + 0.3 + clefW(ck) + 0.9, xb - 2.4);
+  const pa = a.lo.step - C.bottom, pb = a.hi.step - C.bottom, ya = top + 4 - pa * 0.5, yb = top + 4 - pb * 0.5;
+  const head = (cx, cy) => `<ellipse class="ink" cx="${f(cx)}" cy="${f(cy)}" rx="0.6" ry="0.42" transform="rotate(-20 ${f(cx)} ${f(cy)})"/>`;
+  o += ledgers(pa, xa - 0.6, 1.2, top) + head(xa, ya);
+  if (pb !== pa) {
+    o += ledgers(pb, xb - 0.6, 1.2, top) + head(xb, yb);
+    o += `<line class="ledger amb-line" x1="${f(xa + 0.55)}" y1="${f(ya - 0.2)}" x2="${f(xb - 0.55)}" y2="${f(yb + 0.2)}" stroke="currentColor" stroke-width="0.13"/>`;
+  }
+  return `<g class="ambitus" data-v="${v.idx}">${o}</g>`;
+}
+function ambSync(){ $('#addAmb').textContent = ambOn() ? 'Remove ambitus' : 'Ambitus'; }
+$('#addAmb').addEventListener('click', () => {
+  if (!piece) return;
+  st.amb = st.amb || {}; if (st.amb[pieceKey]) delete st.amb[pieceKey]; else st.amb[pieceKey] = true;
+  save(); ambSync(); render();
+  if (st.amb[pieceKey] && st.view !== 'score') toast('The ambitus shows in the Score view.');
+});
 function incipitOn(){ return !!(piece && INC.snap && INC.key === pieceKey && (st.inc || {})[pieceKey] && INC.snap.length === piece.voices.length); }
 /* the clef an incipit staff shows: the original one, or the one chosen by clicking it (the notes stay as they are, at their pitch) */
 const incClefOf = q => { const k = ((st.incClef || {})[pieceKey] || {})[q.vi]; return k && CLEFS[k] ? k : q.clef; };
@@ -2821,9 +2857,10 @@ function drawSystem(vlist, line, y, opts = {}){
     s += staffLine({v, group: grp.voices.length > 1 ? grp.voices : null, k0, k1, cols: line.cols, from: line.from, to: line.to, xs: line.xs, top: tops[k], x0: line.x0, x1: line.x1,
       last: line.endsPiece, tail: line.last ? line.W : null, t0: line.t0, showNotes: sh.notes, showLyr: sh.lyr, lyrY: tops[k] + rooms[k].lyrY, lyrTopY: tops[k] + (rooms[k].lyrTopY || 0), diffLyr: !!rooms[k].diffLyr, lineEnd: line.x1,
       next: nextSym(v, line.tEnd), tEnd: line.tEnd});
-    if (opts.inc && grp.voices.length === 1) s += incipitSvg(INC.snap[v.idx], line.x0 - opts.inc, tops[k]);
+    if (opts.inc && grp.voices.length === 1) s += incipitSvg(INC.snap[v.idx], line.x0 - opts.inc - (opts.amb || 0), tops[k]);
+    if (opts.amb && grp.voices.length === 1) s += ambitusSvg(v, line.x0 - opts.amb, tops[k]);
     if (opts.names) {
-      const nX = line.x0 - 0.8 - (opts.inc || 0);
+      const nX = line.x0 - 0.8 - (opts.inc || 0) - (opts.amb || 0);
       if (grp.voices.length === 1) {
         const vi = vlist.indexOf(v);
         if (vi >= 0 && opts.names[vi]) s += `<text class="vnamehit" data-v="${v.idx}" x="${f(nX)}" y="${f(tops[k] + 2.6)}" font-size="${f(ptU('vnamePt'))}" text-anchor="end" font-style="italic">${esc(opts.names[vi])}</text>`;
@@ -2961,6 +2998,52 @@ function visibleVoices(){ return piece.voices.filter(v => vis(v.idx).on); }
 /* ------------------------------------------------------------------ */
 /* Plainchant Section Rendering Engine (4-line Gregorian square neumes)*/
 /* ------------------------------------------------------------------ */
+/* mensural notes (the Scriptorium clipboard) into chant: the note values go, the pitches and the text stay; every
+   syllable (or textless group) with more than one note becomes one neume (Samuel 2026-11-25) */
+function mensToChantItems(list, cl){
+  const items = []; let cur = null;
+  const notes = list.filter(e => !e.rest && e.step !== null && e.step !== undefined);
+  if (!notes.length) return [];
+  const base = (cl.type === 'f' ? 24 : 28) - 2 * (cl.line - 1);
+  let poss = notes.map(e => e.step - base);
+  /* keep it on the four-line staff: move by octaves while it sticks out */
+  for (let g = 0; g < 4 && Math.max(...poss) > 9; g++) poss = poss.map(x => x - 7);
+  for (let g = 0; g < 4 && Math.min(...poss) < -3 && Math.max(...poss) + 7 <= 9; g++) poss = poss.map(x => x + 7);
+  notes.forEach((e, k) => {
+    const raw = e.syl && e.syl[0] && !/^[._]$/.test(e.syl[0]) ? String(e.syl[0]) : '';
+    if (raw || !cur) {
+      cur = {kind: 'syl', text: raw.replace(/^-|-$/g, ''), groups: [{notes: []}], joinNext: /-$/.test(raw)};
+      items.push(cur);
+    }
+    const acc = e.alt === -1 ? 'fl' : e.alt === 0 ? 'na' : '';
+    cur.groups[0].notes.push({pos: Math.max(-3, Math.min(9, poss[k])), incl: false, dot: false, epiH: false, epiV: false, virga: false, acc});
+  });
+  return items;
+}
+function chantPasteClip(){
+  let clip = ed.clip;
+  try { const c = JSON.parse(localStorage.getItem(CLIP_KEY) || 'null'); if (c && c.voices) clip = c; } catch (e) {}
+  if (!clip || !clip.voices || !clip.voices.length) { toast('Nothing copied yet: select notes in mensural notation and press ' + (/Mac|iP/.test(navigator.platform) ? '⌘' : 'Ctrl') + '+C.'); return; }
+  let added = 0;
+  mutateChant(p => {
+    /* the clef in force where the notes go */
+    let at = p.items.length;
+    if (chantEd.sel && chantEd.sel.ii !== undefined) at = Math.min(p.items.length, chantEd.sel.ii + 1);
+    let cl = p.clef; for (let i = 0; i < at; i++) if (p.items[i].kind === 'clef') cl = p.items[i].clef;
+    const items = mensToChantItems(clip.voices[0], cl);
+    if (!items.length) { toast('The copied passage has no notes.'); return false; }
+    p.items.splice(at, 0, ...items);
+    added = items.reduce((n, it) => n + it.groups[0].notes.length, 0);
+    const flat = chantFlatNotes(p);
+    const a = flat.findIndex(x => x.ii === at && x.gi === 0 && x.ni === 0);
+    if (a >= 0) {
+      chantEd.sel = {ii: flat[a].ii, gi: 0, ni: 0};
+      chantEd.range = added > 1 ? {a, b: Math.min(flat.length - 1, a + added - 1)} : null;
+      chantEd.picks = null;
+    }
+  });
+  if (added) { render(); toast('Pasted ' + added + ' note' + (added > 1 ? 's' : '') + ' as chant (values dropped, text kept).'); }
+}
 function parseGabcChant(raw){
   let src = String(raw || '').trim();
   let headerTitle = '';
@@ -3358,8 +3441,8 @@ function layoutScore(G){
   const vlist = visibleVoices();
   if (!vlist.length) return [];
   const names = vlist.map(v => APP.voiceNames === false ? '' : v.name);   /* CantusFirmus: no names before the staves */
-  const inc = incipitOn() ? incipitW() : 0;
-  const indent = Math.max(...names.map(n => textW(n, ptU('vnamePt'), true))) + 1.4 + inc;
+  const inc = incipitOn() ? incipitW() : 0, amb = ambOn() ? AMB_W : 0;
+  const indent = Math.max(...names.map(n => textW(n, ptU('vnamePt'), true))) + 1.4 + inc + amb;
   /* Web, scrolling sideways: the whole score as one line, as long as the music */
   if (G.web && st.webScroll === 'horizontal') {
     const items = buildScoreItems(vlist, 1e6, {indent, ragged: true});
@@ -3367,12 +3450,12 @@ function layoutScore(G){
     if (items.length) {
       const need = Math.max(G.W, maxX1 + 2 * G.M + 1);
       const G2 = {...G, W: need, wmm: need * G.sp, titleW: G.W};
-      return paginate(G2, items, vlist, (line, li) => li === 0 ? {names, join: true, inc} : {join: true}, null);
+      return paginate(G2, items, vlist, (line, li) => li === 0 ? {names, join: true, inc, amb} : {join: true}, null);
     }
   }
   const W = G.W - 2 * G.M;
   const items = buildScoreItems(vlist, W, {indent});
-  return paginate(G, items, vlist, (line, li) => li === 0 ? {names, join: true, inc} : {join: true}, null);
+  return paginate(G, items, vlist, (line, li) => li === 0 ? {names, join: true, inc, amb} : {join: true}, null);
 }
 function paginate(G, lines, vlist, optsFor, sub){
   const pages = [];
@@ -4190,7 +4273,7 @@ function syncUI(){
   $('#noteColPickL').setAttribute('aria-pressed', String(noteCustom));
   if (noteCustom) { $('#noteColPickL').style.setProperty('--c', noteHex); $('#noteColPick').value = noteHex; }
   document.documentElement.style.setProperty('--lyr-font', lyrFontCss());
-  applyPaper(); if (typeof incSync === 'function') incSync();
+  applyPaper(); if (typeof incSync === 'function') incSync(); if (typeof ambSync === 'function') ambSync();
   const horiz = isHoriz();
   viewerEl.classList.toggle('horiz', horiz); $('.viewwrap').classList.toggle('horiz', horiz);
   /* verses */
@@ -5910,7 +5993,7 @@ const CB_VERSION = 1;
 /* the settings of the layout and look that go into the file (not personal choices such as dark mode, window transparency, volume or tempo) */
 const CB_SETTINGS = ['size', 'noteSize', 'sizeLock', 'thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'mens', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'dashes', 'ed', 'lig', 'lines', 'paperCol', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'titlePt', 'vnamePt', 'stextPt', 'hs', 'vs', 'ss', 'measAcross', 'origText', 'ann', 'ossia', 'verse', 'view', 'paper', 'printPaper', 'orient', 'flow', 'webScroll'];
 /* what belongs to one piece: kept in st under the key of the piece */
-const CB_PIECE_ITEMS = ['vis', 'inc', 'incClef', 'staves', 'black', 'bounds'];
+const CB_PIECE_ITEMS = ['vis', 'inc', 'incClef', 'staves', 'black', 'bounds', 'amb'];
 /* from an older version of the file to the next: {from: object} where the object is {settings, items} (nothing yet: this is version 1) */
 const CB_MIGRATE = {};
 const xmlEsc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -5980,7 +6063,7 @@ function openChoirbook(name, txt){
   save();
   for (const k of ['size', 'noteSize', 'hs', 'vs', 'ss']) { const el = document.getElementById(k); if (el) el.value = st[k]; }
   try { rngSyncAll(); } catch (e) {}
-  syncUI(); render(); incipitSnap(); incSync();
+  syncUI(); render(); incipitSnap(); incSync(); ambSync();
   toast(r.newer ? 'This file was saved by a newer version of ' + APP.name + '. It is opened as far as this version understands it.' : 'Opened with the layout saved in the file.');
 }
 window.__cmme = {toKern: (t, n) => cmmeToKernRich(t, n), write: P => exportCMME(P)};   /* for checking the CMME reading and writing from outside */
@@ -8272,7 +8355,7 @@ function rangePaste(){
 }
 document.addEventListener('keydown', e => {
   const t = e.target, tag = t.tagName;
-  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || t.isContentEditable || !piece) return;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || t.isContentEditable || !piece || chantEd.idx >= 0) return;
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
   const k = e.key.toLowerCase();
   if (k === 'c' && (ed.range || ed.picks)) { if (window.getSelection && String(window.getSelection())) return; e.preventDefault(); rangeCopy(); }
@@ -10417,6 +10500,8 @@ document.addEventListener('keydown', e => {
   /* Undo / Redo */
   if (mod && (k === 'z' || k === 'Z')) { e.preventDefault(); e.stopImmediatePropagation(); e.shiftKey ? redo() : undo(); syncChantBar(); return; }
   if (mod && (k === 'y' || k === 'Y')) { e.preventDefault(); e.stopImmediatePropagation(); redo(); syncChantBar(); return; }
+  /* Paste notes copied from mensural notation: pitches and text only (Samuel 2026-11-25) */
+  if (mod && (k === 'v' || k === 'V') && !e.shiftKey) { e.preventDefault(); e.stopImmediatePropagation(); chantPasteClip(); return; }
   /* Escape: clear multi-selection first, then close plainchant bar */
   if (k === 'Escape') {
     e.preventDefault(); e.stopImmediatePropagation();
@@ -10888,7 +10973,7 @@ const FIND_NAME = {tonup:'Transpose up a tone', tondn:'Transpose down a tone', o
   del:'Delete the selected note', restBtn:'Rests', ovrBtn:'Insert / Overwrite', edAccFl:'Editorial flat (ficta)', edAccNa:'Editorial natural (ficta)', edAccSh:'Editorial sharp (ficta)', divisiBtn:'Chord (divisi)', v2Btn:'Second voice (+v)', dotBtn:'Punctus additionis', pdivBtn:'Punctus divisionis',
   colBtn:'Coloration', ligBtn:'Ligature', editBtn:'Note input', editMore:'Editing tools', addMens:'Mensuration sign', addClef:'Clef change', addKey:'Key signature change', addFerm:'Fermata', addSignum:'Signum congruentiae',
   addCustos:'Custos', addLacuna:'Lacuna', addSec:'Section line', addMark:'Rehearsal mark', addText:'Text above the staff', addOrigBtn:'Original text', addAnnBtn:'Commentary note', addVarBtn:'Variant reading (ossia)',
-  addLyr:'Lyrics', addVerse:'Another verse', addInc:'Incipit', addChantBtn:'Plainchant section', cbBtn:'Save as .choirbook.xml (everything)', saveBtn:'Save as .krn', cmmeBtn:'Export CMME XML', mxlBtn:'Export MusicXML', mscBtn:'Export MuseScore', lyBtn:'Export LilyPond',
+  addLyr:'Lyrics', addVerse:'Another verse', addInc:'Incipit', addAmb:'Ambitus', addChantBtn:'Plainchant section', cbBtn:'Save as .choirbook.xml (everything)', saveBtn:'Save as .krn', cmmeBtn:'Export CMME XML', mxlBtn:'Export MusicXML', mscBtn:'Export MuseScore', lyBtn:'Export LilyPond',
   midBtn:'Export MIDI', gabcBtn:'Export GABC', keepBtn:'Keep a copy in this browser', printBtn:'Print / save as PDF', svgBtn:'Export SVG picture', pngBtn:'Export PNG picture', linkBtn:'Share a link to this score',
   openBtn:'Open a file', newBtn:'New score', libBtn:'Repertoire', myBtn:'My scores', play:'Play / pause', loop:'Loop', metro:'Metronome', tap:'Tap tempo', tempoUp:'Faster', tempoDown:'Slower', heart:'Resting pulse (60)',
   unitBtn:'Beat unit', toggleSet:'Sound settings', mic:'Microphone', recGo:'Record', micNotate:'Record as notation', recAudio:'Record audio', kbdBtn:'Piano keyboard', kbdShow:'Show the key you play', fsBtn:'Full screen',

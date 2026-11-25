@@ -26,7 +26,7 @@
     html .viewer.frame::before { display: none !important; }
     .transport, .transport .tp-main, .transport .tp-stack, .transport .tp-tools { flex-wrap: nowrap !important; }
     .transport { max-width: none !important; gap: 10px 12px !important; }
-    html.embedded .viewer.frame, html.embedded .viewer, html .viewer.frame, html .viewer { padding-top: 104px !important; }
+    html.embedded .viewer.frame, html.embedded .viewer, html .viewer.frame, html .viewer { padding-top: 104px !important; padding-bottom: 30px !important; }
     @media (max-width: 700px) { html.embedded .viewer.frame, html.embedded .viewer, html .viewer.frame, html .viewer { padding-top: 92px !important; } }
     #pages .mel-int { font-family: "IM Fell English", Georgia, serif; font-size: 1.05px; font-style: italic; fill: var(--accent); text-anchor: middle; pointer-events: none; }
     .cat-mel { max-width: 72rem; margin: 0 auto 40px; padding: 0 clamp(8px, 1.4vw, 24px); display: grid; gap: 1.15rem; color: var(--text); }
@@ -341,20 +341,36 @@
       const alt = (s.alt !== null && s.alt !== undefined) ? s.alt : sig;
       noteEls.push({g, step: s.step, semi: stepToSemi(s.step, alt)});
     });
+    /* the labels stand in one row above the melody; one that would touch its neighbour goes a row higher (Samuel 2026-11-25) */
+    const lab = [];
     for (let i = 1; i < noteEls.length; i++) {
       const a = noteEls[i - 1], b = noteEls[i];
       const ba = a.g.getBBox(), bb = b.g.getBBox();
       if (!ba.width || !bb.width || a.g.parentNode !== b.g.parentNode) continue;
-      const x = (ba.x + ba.width / 2 + bb.x + bb.width / 2) / 2;
-      const y = Math.min(ba.y, bb.y) - 0.85;
       const lbl = intervalLabel(b.step - a.step, b.semi - a.semi, exact);
-      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      t.setAttribute('class', 'mel-int');
-      t.setAttribute('x', x.toFixed(2));
-      t.setAttribute('y', y.toFixed(2));
-      t.textContent = lbl;
-      b.g.parentNode.appendChild(t);
+      lab.push({p: b.g.parentNode, x: (ba.x + ba.width / 2 + bb.x + bb.width / 2) / 2, y: Math.min(ba.y, bb.y) - 0.85, w: lbl.length * 0.5, lbl});
     }
+    for (const P of new Set(lab.map(q => q.p))) {
+      const mine = lab.filter(q => q.p === P), base = Math.min(...mine.map(q => q.y)), rows = [];
+      for (const q of mine) {
+        let k = 0; while (rows[k] !== undefined && q.x - q.w / 2 < rows[k] + 0.25) k++;
+        rows[k] = q.x + q.w / 2;
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('class', 'mel-int');
+        t.setAttribute('x', q.x.toFixed(2));
+        t.setAttribute('y', (base - k * 1.15).toFixed(2));
+        t.textContent = q.lbl;
+        P.appendChild(t);
+      }
+    }
+    /* the page grows upwards when the labels stand above its top edge */
+    document.querySelectorAll('#pages svg').forEach(svg => {
+      const ls = svg.querySelectorAll('.mel-int'); if (!ls.length) return;
+      const vb = svg.viewBox.baseVal; if (!vb || !vb.height) return;
+      let top = Infinity; ls.forEach(l => { try { const r = l.getBBox(); const m = l.getCTM && svg.getCTM ? null : null; top = Math.min(top, r.y + (l.parentNode.transform && l.parentNode.transform.baseVal.numberOfItems ? l.parentNode.transform.baseVal.consolidate().matrix.f : 0)); } catch (e) {} });
+      const need = vb.y + 0.6 - top;
+      if (need > 0 && isFinite(need)) svg.setAttribute('viewBox', `${vb.x} ${(vb.y - need).toFixed(2)} ${vb.width} ${(vb.height + need).toFixed(2)}`);
+    });
   }
 
   function syncModeUI(){
@@ -1084,9 +1100,9 @@
 
   /* ---------------- Plug into the Scriptorium engine ---------------- */
   async function defaultMelody(){
-    /* Start in Web view with C D E F D E C in G2 clef, searching by exact intervals */
+    /* Start in Web view with The Lick (D E F G E C D, Samuel 2026-11-25) in G2 clef, searching by exact intervals */
     st.view = 'score'; st.paper = 'web'; st.clefs = 'modern';
-    const notes = parseQuickText('C D E F D E C');
+    const notes = parseQuickText('Sm:D5 Sm:E5 Sm:F5 Sm:G5 M:E5 Sm:C5 M.:D5');
     await setStaffMelody(notes, clefForNotes(notes), 'semi');
     loadCorpus().then(() => runSearch()).catch(() => {});
   }
