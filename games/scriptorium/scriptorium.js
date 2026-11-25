@@ -71,9 +71,10 @@ ${APP.popsBeforeVoices || ''}
           <label class="lab" for="bnumSel">Bar numbers</label><select id="bnumSel" title="Bar numbers above the staff, placed by time: they work with the barlines hidden too"><option value="off">None</option><option value="line">At the start of every line</option><option value="1">Every bar</option><option value="5">Every 5 bars</option><option value="10">Every 10 bars</option></select>
           <label class="lab bnx" for="bunitSel">A bar is</label><select class="bnx" id="bunitSel" title="What one bar is when counting"><option value="bar">From barline to barline</option><option value="mens">A breve of the mensuration sign</option><option value="S">A semibreve</option><option value="B">A breve</option><option value="Bp">A perfect breve (dotted)</option><option value="L">A long</option><option value="Lp">A perfect long</option></select>
           <span class="lab bnx">Bar numbers over</span><div class="btns bnx" id="bposSeg" role="group" aria-label="Bar numbers over"><button class="tb" data-v="top" title="Above the highest staff of each system">Top staff</button><button class="tb" data-v="all" title="Above every staff">Every staff</button></div>
-          <span class="lab">Plainchant lines</span><div class="btns" id="chAlignSeg" role="group" aria-label="Plainchant alignment"><button class="tb" data-v="left" title="Chant lines start at the left margin">Left</button><button class="tb" data-v="center" title="Chant lines centred on the page">Center</button><button class="tb" data-v="right" title="Chant lines end at the right margin">Right</button></div>
           <span class="lab">Editorial accidentals</span><div class="btns" id="edSeg" role="group" aria-label="Editorial accidentals"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
           <span class="lab">Accidentals</span><div class="btns" id="accSeg" role="group" aria-label="Accidental style"><button class="tb" data-v="modern" title="Standard vertical sharp and natural">Modern</button><button class="tb" data-v="old" title="Renaissance diagonal double-cross sharp (diesis) and square b quadratum">Old</button></div>
+          <div class="subhead">Plainchant</div>
+          <span class="lab">Chant lines</span><div class="btns" id="chAlignSeg" role="group" aria-label="Plainchant alignment"><button class="tb" data-v="left" title="Chant lines start at the left margin">Left</button><button class="tb" data-v="center" title="Chant lines centred on the page">Center</button><button class="tb" data-v="right" title="Chant lines end at the right margin">Right</button></div>
           <div class="subhead">Lyrics</div>
           <label class="lab" for="lyrFontSel">Font</label><select id="lyrFontSel" title="Font used for lyrics"></select>
           <label class="ctl" for="lyrPt">Size</label><span class="pt-field"><input type="number" id="lyrPt" min="4" max="36" step="0.5" inputmode="decimal" aria-label="Lyrics size in points"><span>pt</span></span>
@@ -4480,6 +4481,7 @@ $('#paperSeg').addEventListener('click', e => { const b = e.target.closest('butt
 {
   const box = $('#popLook .staffset'); let sec = null;
   if (!st.lookOpen || typeof st.lookOpen !== 'object') st.lookOpen = {Notation: true};
+  if (st.lookOpen.Plainchant === undefined) st.lookOpen.Plainchant = true;   /* a new section starts open, so it is found */
   for (const el of [...box.children]) {
     if (el.classList.contains('secline')) { sec = null; continue; }
     if (el.classList.contains('subhead')) {
@@ -6699,6 +6701,25 @@ function moveCaret(dir){
   let vi = ed.sel ? ed.sel.vi : ed.ins ? ed.ins.vi : null;
   if (vi === null) { const vs = visibleVoices(); if (!vs.length) return; vi = vs[0].idx; }
   const v = piece.voices[vi]; if (!v) return;
+  /* inside a chant passage the arrows go one chant note at a time and stop at its ends: they never walk on into the polyphony */
+  {
+    const evs = v.events, isCh = i => !!(evs[i] && evs[i].ch);
+    const pos = ed.sel ? ed.sel.ei : ed.ins ? ed.ins.ei : -1;
+    const onNote = !!ed.sel;
+    const nextCh = onNote ? isCh(pos) : (isCh(pos) || isCh(pos - 1));
+    if (pos >= 0 && nextCh) {
+      const pick = ei => { ed.sel = {vi, ei}; ed.ins = {vi, ei: ei + 1, off: 0, pad: 0}; showSel(true); syncEdit(); };
+      const caretAt = ei => { ed.sel = null; ed.ins = {vi, ei, off: 0, pad: 0}; showSel(true); syncEdit(); };
+      if (dir > 0) {
+        if (onNote) { if (isCh(pos + 1)) pick(pos + 1); else caretAt(pos + 1); }
+        else if (isCh(pos)) pick(pos);
+      } else {
+        if (onNote) { if (isCh(pos - 1)) pick(pos - 1); }
+        else if (isCh(pos - 1)) pick(pos - 1);
+      }
+      return;
+    }
+  }
   const T = caretTime(v);
   const g = navGrid(v, T);
   const q = T / g;
@@ -10175,7 +10196,7 @@ function openChantClef(vi, ei, e){
     const val = k.replace(/^f(\d)b$/, 'fb$1'), c = parseChClef(val);
     const label = !k ? 'Automatic (the clef that fits)' : (c.type === 'c' ? 'C' : 'F') + ' clef, line ' + c.line + (c.flat ? ', with B♭' : '');
     return `<li role="menuitemradio" data-chc="${val}" aria-checked="${val === cur}" aria-selected="${val === cur}" title="${esc(label)}">${chClefIcon(k)}<span>${esc(label)}</span></li>`;
-  }).join('');
+  }).join('') + '<li class="hd" role="presentation">Chant lines on the page</li>' + [['left', 'Left'], ['center', 'Center'], ['right', 'Right']].map(a => `<li role="menuitemradio" data-cha="${a[0]}" aria-checked="${(st.chAlign || 'left') === a[0]}"><span>${a[1]}</span></li>`).join('');
   chClefAt = {vi, ei};
   const wr = $('.viewwrap').getBoundingClientRect();
   m.hidden = false;
@@ -10318,7 +10339,7 @@ document.querySelectorAll('#addDivRow [data-div]').forEach(b => b.addEventListen
 {
   const m = $('#chClefMenu');
   m.tabIndex = -1;
-  m.addEventListener('click', e => { const li = e.target.closest('li[data-chc]'); if (li) pickChantClef(li.dataset.chc); });
+  m.addEventListener('click', e => { const al = e.target.closest('li[data-cha]'); if (al) { m.hidden = true; chClefAt = null; st.chAlign = al.dataset.cha; save(); syncUI(); render(); return; } const li = e.target.closest('li[data-chc]'); if (li) pickChantClef(li.dataset.chc); });
   m.addEventListener('keydown', e => {
     e.stopPropagation();
     const items = [...m.querySelectorAll('li[data-chc]')];
