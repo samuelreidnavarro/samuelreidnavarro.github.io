@@ -11387,17 +11387,42 @@ if (window.ResizeObserver) { const ro = new ResizeObserver(() => overRoom()); ro
     viewerEl.classList.toggle('wide', Z > 1.001);
     syncNav(); postHeight();
   };
-  const zoomBy = k => {
+  /* the spot under the pointer (or the middle of the view) stays where it is while the music grows or shrinks */
+  let anchor = null;
+  const takeAnchor = (cx, cy) => {
+    const vr = viewerEl.getBoundingClientRect();
+    if (!isFinite(cx) || !isFinite(cy) || cx < vr.left || cx > vr.right || cy < vr.top || cy > vr.bottom) { cx = vr.left + vr.width / 2; cy = vr.top + Math.min(vr.height, window.innerHeight - vr.top) / 2; }
+    const items = navItems(); let el = null, bd = Infinity;
+    for (const c of items) { const r = c.getBoundingClientRect(); const d = Math.max(r.left - cx, 0, cx - r.right) + Math.max(r.top - cy, 0, cy - r.bottom); if (d < bd) { bd = d; el = c; } if (!d) break; }
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return {el, i: items.indexOf(el), cx, cy, fx: r.width ? (cx - r.left) / r.width : 0.5, fy: r.height ? (cy - r.top) / r.height : 0.5};
+  };
+  const keepAnchor = a => {
+    if (!a) return;
+    let el = a.el; if (!el.isConnected) el = navItems()[a.i]; if (!el) return;
+    const r = el.getBoundingClientRect();
+    const dx = r.left + a.fx * r.width - a.cx, dy = r.top + a.fy * r.height - a.cy;
+    if (Math.abs(dx) > 0.5) viewerEl.scrollLeft += dx;
+    if (Math.abs(dy) > 0.5) viewerEl.scrollTop += dy;
+  };
+  /* one pinch keeps one spot: the anchor is held while the gesture goes on (a page narrower than the window stays centred
+     and cannot follow it; once the page is wider, the spot comes back under the fingers) */
+  let held = null, heldAt = 0;
+  const zoomBy = (k, cx, cy) => {
     if (!piece || !isFinite(k) || k <= 0) return;
+    const now = performance.now();
+    if (!held || now - heldAt > 450 || (isFinite(cx) && Math.hypot(cx - held.cx, cy - held.cy) > 40)) held = takeAnchor(cx, cy);
+    heldAt = now; anchor = held;
     if (st.paper === 'web') { const sb = st.bounds && st.bounds.size; const mn = sb ? sb[0] : 1, mx = sb ? sb[1] : 7; st.size = Math.max(mn, Math.min(mx, Math.round(st.size * k * 100) / 100)); if (st.sizeLock !== 'off') st.noteSize = st.size; rngSync('size'); rngSync('noteSize'); }
     else st.zoom = Math.max(0.5, Math.min(3, (st.zoom || 1) * k));
     save();
-    if (!zRaf) zRaf = requestAnimationFrame(() => { zRaf = 0; applyZoomFast(); });
+    if (!zRaf) zRaf = requestAnimationFrame(() => { zRaf = 0; const a = anchor; anchor = null; applyZoomFast(); if (a && held === a && !a.el.isConnected) { const n = navItems()[a.i]; if (n) a.el = n; } try { keepAnchor(a); } catch (e) {} });
   };
-  document.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); zoomBy(Math.exp(-Math.max(-25, Math.min(25, e.deltaY)) * 0.006)); }, {passive: false});
+  document.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); zoomBy(Math.exp(-Math.max(-25, Math.min(25, e.deltaY)) * 0.006), e.clientX, e.clientY); }, {passive: false});
   let g0 = 1;
   document.addEventListener('gesturestart', e => { e.preventDefault(); g0 = e.scale || 1; });
-  document.addEventListener('gesturechange', e => { e.preventDefault(); const sc = e.scale || 1; zoomBy(sc / g0); g0 = sc; });
+  document.addEventListener('gesturechange', e => { e.preventDefault(); const sc = e.scale || 1; zoomBy(sc / g0, e.clientX, e.clientY); g0 = sc; });
   document.addEventListener('gestureend', e => e.preventDefault());
   /* scrolling sideways with an ordinary mouse wheel, when the music is one long line */
   viewerEl.addEventListener('wheel', e => {
