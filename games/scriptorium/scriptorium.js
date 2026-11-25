@@ -1345,8 +1345,8 @@ if (st.bars === 'mstrich') st.bars = 'full';
 if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
 /* presets (shared by the apps through the browser): the two built-in ones and the ones Samuel saves; one of them opens every score */
 const PRESET_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'printPaper', 'orient', 'flow'];
-const MENS1 = {eq: 'off', nota: 'real', stems: 'adaptive', accStyle: 'modern', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'black', noteCol: 'black', colLock: 'on', lines: '5', paperCol: 'white', size: 1.5, noteSize: 1.5, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', printPaper: 'A4', orient: 'portrait', flow: 'vertical'};
-const MENS2 = {...MENS1, clefs: 'mens', size: 1.65, noteSize: 1.65, dashes: 'off'};
+const MENS1 = {eq: 'off', nota: 'real', stems: 'adaptive', accStyle: 'modern', clefs: 'modern', bars: 'out', bnum: 'line', bunit: 'bar', bpos: 'top', staff: 'black', noteCol: 'black', colLock: 'on', lines: '5', paperCol: 'white', size: 1.5, noteSize: 1.5, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', printPaper: 'A4', orient: 'portrait', flow: 'vertical'};
+const MENS2 = {...MENS1, bars: 'none', bnum: 'off', clefs: 'mens', size: 1.65, noteSize: 1.65, dashes: 'off'};
 const CF1 = {eq: 'off', nota: 'real', stems: 'adaptive', accStyle: 'modern', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', noteCol: 'black', colLock: 'off', lines: '5', paperCol: 'parchment', size: 3.6, noteSize: 3.6, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web', printPaper: 'A4'};
 const CF2 = {...CF1, clefs: 'mens', dashes: 'off'};
 const IS_CF = APP.id === 'cantus-firmus';
@@ -2423,7 +2423,7 @@ function staffLine(o){
         }
       });
     }
-    if (drawCustos && !o.last && lShow) { const nx = nextSym(lv, o.tEnd); if (nx) out += custosSvg(nx, x1 - 2.0, top); }
+    if (drawCustos && !o.last && lShow) { const nx = nextNote(lv, o.tEnd); if (nx) out += custosSvg(nx, x1 - 2.0, top); }
     return out;
   };
   if (o.group && o.group.length > 1) {
@@ -2556,7 +2556,7 @@ function lineRoom(v, line){
   /* per column how far the music reaches above and below the staff (so a neighbouring staff only keeps clear where something really is).
      kind: 'full' stems at their length, 'short' stems that may be cut at the shortest they may be, 'base' without those stems */
   const tEnd = line.tEnd !== undefined ? line.tEnd : line.to < line.cols.length ? line.cols[line.to].t : null;
-  const nx = tEnd !== null && !line.endsPiece ? nextSym(v, tEnd) : null;
+  const nx = tEnd !== null && !line.endsPiece ? nextNote(v, tEnd) : null;
   const stTop = Math.min(0, 5 - staffLinesN());
   const build = kind => {
     const lo = Array(n).fill(stTop - base), hi = Array(n).fill(4 + base);
@@ -2606,6 +2606,10 @@ function lineRoom(v, line){
 }
 function nextSym(v, t){
   return v.syms.find(s => s.t >= t - EPS) || null;
+}
+/* the custos points at the next NOTE: a rest at the start of the next line or page left the line without one (Samuel 2026-11-25) */
+function nextNote(v, t){
+  return v.syms.find(s => s.t >= t - EPS && !s.rest && s.pos !== null && s.pos !== undefined) || null;
 }
 /* Bar numbers (Samuel 2026-11-15): Engraving > Bar numbers (Off, at the start of every line, every bar, every 2, 4, 5 or 10)
    counted in barlines or in a value chosen (semibreve, breve, perfect breve, long, perfect long, or the breve of the
@@ -3399,7 +3403,12 @@ function choirSides(vlist){
   const n = vlist.length;
   if (n === 1) return [[vlist[0]], []];
   if (n === 2) return [[vlist[0]], [vlist[1]]];
-  if (n === 3) return [[vlist[0]], [vlist[1], vlist[2]]];
+  /* three voices: the busiest has a page to itself, the other two share the opposite page (Samuel 2026-11-25) */
+  if (n === 3) {
+    const busy = v => v.syms.filter(q => !q.rest).length;
+    const solo = vlist.reduce((m, v) => (busy(v) > busy(m) * 1.08 ? v : m), vlist[0]);
+    return [[solo], vlist.filter(v => v !== solo)];
+  }
   const L = [], R = [];
   vlist.forEach((v, i) => (i % 2 ? R : L).push(v));
   return [L, R];
@@ -3431,7 +3440,9 @@ function layoutChoir(G){
       const r = lineRoom(v, {cols, from: L.from, to: L.to});
       const t0 = cols[L.from].t, t1 = L.to < cols.length ? cols[L.to].t : b;
       const sec = piece.sections.some(q => q.t >= t0 - EPS && q.t < t1 - EPS) ? 2.6 : 0;
-      h += (i ? gapC : 0) + sec + r.above + 4 + r.below;
+      /* bar numbers stand above the staff (at the start of a line: every line but the piece's first) */
+      const bn = st.bnum && st.bnum !== 'off' && (st.bnum !== 'line' || t0 > EPS) ? 1.4 : 0;
+      h += (i ? gapC : 0) + sec + bn + r.above + 4 + r.below;
     });
     return h;
   };
@@ -3451,7 +3462,15 @@ function layoutChoir(G){
     const top = G.M + (openings.length === 0 ? tb.h : 0) + 0.4;
     const caps = new Map();
     sides.forEach(side => capacity(side, top, openings.length === 0).forEach((c, k) => caps.set(side[k], c)));
-    const fits = b => vlist.every(v => heightNeeded(v, a, b) <= caps.get(v));
+    /* a page shared by two or more voices gives each the room its music needs (Samuel 2026-11-25): a busy tenor may take
+       more than half while a quiet bassus takes less; the spare room is shared out evenly. The opening still ends where
+       no voice holds a note across, at the same time in every voice. */
+    const pageH = openings.length === 0 ? footTop(G, true) - 0.8 - top : footTop(G, false) - 0.8 - top;
+    const sideFits = (side, b) => {
+      if (side.length < 2) return side.every(v => heightNeeded(v, a, b) <= caps.get(v));
+      return side.reduce((h, v) => h + Math.max(3, heightNeeded(v, a, b)) + 2, 0) <= pageH;
+    };
+    const fits = b => sides.every(side => sideFits(side, b));
     if (blank) { openings.push({a: 0, b: 1, top, caps}); break; }
     let lo = cands.findIndex(t => t > a + EPS);
     if (lo < 0) break;
@@ -3471,8 +3490,15 @@ function layoutChoir(G){
       let body = '', yc = op.top;
       if (oi === 0 && si === 0) body += titleBlock(G, G.M, G.W - G.M, G.M, null).svg;
       const H = (oi === 0 ? footTop(G, true) - 0.8 : footTop(G, false) - 0.8) - op.top, per = H / (side.length || 1);
+      /* a shared page: each voice as tall as it really draws, the spare room shared out evenly between them */
+      let y0s = null;
+      if (!G.web && side.length > 1) {
+        const hs = side.map(v => { let h = 2.4; buildLines([v], op.a, op.b, W, {raggedLast: true}).forEach(line => { h += drawSystem([v], line, 0, {}).h + gapC; }); return h + 1.4; });
+        const spare = Math.max(0, (H - hs.reduce((x, y) => x + y, 0)) / side.length);
+        y0s = []; let y = op.top; hs.forEach(h => { y0s.push(y); y += h + spare; });
+      }
       side.forEach((v, k) => {
-        const y0 = G.web ? yc : op.top + per * k;
+        const y0 = G.web ? yc : y0s ? y0s[k] : op.top + per * k;
         if (APP.voiceNames !== false) body += `<text class="vnamehit" data-v="${v.idx}" x="${f(G.M)}" y="${f(y0 + 1.6)}" font-size="1.8" font-style="italic">${esc(v.name)}</text>`;
         const lines = buildLines([v], op.a, op.b, W, {raggedLast: true});
         let cy = y0 + 2.4;
@@ -11546,6 +11572,9 @@ function startPlay(from, again){
     }
   });
   const on = new Set();
+  /* which voice each lit note belongs to: the view follows the voice the reader is looking at (Samuel 2026-11-25) */
+  const idVi = new Map(); voices.forEach(v => { for (const s of v.syms) idVi.set(s.id, v.idx); });
+  followVi = null;
   /* the Mixer: each voice's own sound (or the one for all) and volume */
   const mix = {};
   voices.forEach(v => { const o = vis(v.idx); mix[v.idx] = {reg: mixReg(o), gain: mixGain(o)}; });
@@ -11558,9 +11587,11 @@ function startPlay(from, again){
     onFrame: (ids, tNow, T) => {
       const now = new Set(ids);
       for (const id of [...on]) if (!now.has(id)) { on.delete(id); document.querySelectorAll('svg g.' + id).forEach(g => g.classList.remove('on')); }
-      let first = null;
-      for (const id of now) { const gs = document.querySelectorAll('svg g.' + id); if (!on.has(id)) { on.add(id); gs.forEach(g => g.classList.add('on')); } first = first || gs[0]; }
-      if (first) { followHand(first); followPlay(first, tNow, T); }
+      let first = null; const byVi = new Map();
+      for (const id of now) { const gs = document.querySelectorAll('svg g.' + id); if (!on.has(id)) { on.add(id); gs.forEach(g => g.classList.add('on')); } first = first || gs[0]; const vi = idVi.get(id); if (gs[0] && vi !== undefined && !byVi.has(vi)) byVi.set(vi, gs[0]); }
+      if (followVi === null && performance.now() >= followHold && byVi.size) followVi = pickFollowVi(byVi);
+      const mine = followVi !== null && byVi.get(followVi);
+      if (first) { followHand(mine || first); followPlay(mine || first, tNow, T); }
     },
     onStop: () => { followT = 0; wideStop(); }
   };
@@ -11596,8 +11627,19 @@ $('#play').addEventListener('click', togglePlayHold);
    horizontal Web: the sounding note stays in the middle, eased every frame so it never jerks;
    vertical: when the note leaves the view, quickly to its system; pages side by side: to its page.
    Touching the wheel or the screen hands the view back to the reader for a few seconds. */
-let followT = 0, followHold = 0, followJump = 0;
-const holdFollow = () => { followHold = performance.now() + 2500; wideStop(); };
+let followT = 0, followHold = 0, followJump = 0, followVi = null;
+const holdFollow = () => { followHold = performance.now() + 2500; followVi = null; wideStop(); };
+/* the voice to follow: the one whose sounding note is nearest the middle of what the reader sees (in Parts the tenor stays the tenor) */
+function pickFollowVi(byVi){
+  const vr = viewerEl.getBoundingClientRect(), cx = vr.left + vr.width / 2, cy = vr.top + vr.height / 2;
+  let best = null, bd = Infinity;
+  for (const [vi, el] of byVi) {
+    const r = el.getBoundingClientRect();
+    const d = Math.hypot((r.left + r.width / 2 - cx) * 0.3, r.top + r.height / 2 - cy);
+    if (d < bd) { bd = d; best = vi; }
+  }
+  return best;
+}
 viewerEl.addEventListener('wheel', holdFollow, {passive: true});
 viewerEl.addEventListener('touchstart', holdFollow, {passive: true});
 viewerEl.addEventListener('pointerdown', holdFollow, {passive: true});
