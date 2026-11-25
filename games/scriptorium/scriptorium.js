@@ -81,10 +81,13 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab" id="verseLab">Verse</span><div class="btns" id="verseSeg" role="group" aria-label="Verse"></div>
           <div class="subhead">Title</div>
           <label class="lab" for="titleFontSel">Font</label><select id="titleFontSel" title="Font of the title"></select>
+          <label class="ctl" for="titlePt">Size</label><span class="pt-field"><input type="number" id="titlePt" class="txtpt" data-k="titlePt" min="4" max="48" step="0.5" inputmode="decimal" aria-label="Size of the title in points"><span>pt</span></span>
           <div class="subhead">Voice names</div>
           <label class="lab" for="vnameFontSel">Font</label><select id="vnameFontSel" title="Font of the voice names at the staves"></select>
+          <label class="ctl" for="vnamePt">Size</label><span class="pt-field"><input type="number" id="vnamePt" class="txtpt" data-k="vnamePt" min="4" max="48" step="0.5" inputmode="decimal" aria-label="Size of the voice names in points"><span>pt</span></span>
           <div class="subhead">Staff text</div>
           <label class="lab" for="stextFontSel">Font</label><select id="stextFontSel" title="Font of the words written at the staff (section names such as Secunda pars)"></select>
+          <label class="ctl" for="stextPt">Size</label><span class="pt-field"><input type="number" id="stextPt" class="txtpt" data-k="stextPt" min="4" max="48" step="0.5" inputmode="decimal" aria-label="Size of the staff text in points"><span>pt</span></span>
           <div class="secline" role="separator"></div>
           <span class="lab pslab">Presets</span><div id="presetBox"><div id="presetList"></div><div id="presetNew"><button class="tb" id="presetAdd">Save current settings as preset</button><span id="presetForm" hidden><input id="presetName" type="text" placeholder="Name" maxlength="30" autocomplete="off"><button class="tb" id="presetOk">Save</button></span></div></div>
         </div></div>
@@ -97,7 +100,7 @@ ${APP.popsBeforeVoices || ''}
           <span class="lab" id="scrollLab">Scroll</span><div class="btns" id="scrollSeg" role="group" aria-label="Scroll"><button class="tb" data-v="vertical" title="Systems below each other">Vertical</button><button class="tb" data-v="horizontal" title="The score as one long line, scrolling sideways">Horizontal</button></div>
           <span class="lab">Paper colour</span><div class="swatches" id="paperColSeg" role="group" aria-label="Paper colour"></div>
           <span class="lab">Dark mode</span><div class="btns" id="darkSeg" role="group" aria-label="Dark mode"><button class="tb" data-v="on">On</button><button class="tb" data-v="off">Off</button></div>
-          <span class="lab">System font</span><div class="btns" id="sysFontSeg" role="group" aria-label="System font"><button class="tb" data-v="on" title="Menus, buttons and panels in a plain sans-serif (Helvetica, or a free look-alike); the music is not changed">On</button><button class="tb" data-v="off" title="Menus, buttons and panels in IM Fell English, like the music">Off</button></div>
+          <span class="lab">Interface font</span><div class="btns" id="sysFontSeg" role="group" aria-label="Interface font"><button class="tb" data-v="off" title="Menus, buttons and panels in IM Fell English, like the music">Serif</button><button class="tb" data-v="on" title="Menus, buttons and panels in a plain sans-serif (Helvetica, or a free look-alike); the music is not changed">Sans-serif</button></div>
           <label class="ctl" for="idleSec" title="How long the controls wait, after the mouse stops, before they fold away (0 = never)">Hide controls after</label><span class="pt-field"><input type="number" id="idleSec" min="0" max="600" step="1" inputmode="numeric" aria-label="Hide controls after, in seconds (0 = never)"><span>s (0 = never)</span></span>
           <label class="ctl" for="glassRange" title="How transparent the menus and buttons are">Window transparency</label><input type="range" id="glassRange" min="0" max="0.95" step="0.01">
           <label class="ctl" for="gridRange" title="How strongly the grid lines show in Note input">Grid intensity</label><input type="range" id="gridRange" min="0.3" max="5" step="0.05">
@@ -1330,6 +1333,10 @@ if (st.sizeLock !== 'off') st.sizeLock = 'on';
 if (!st.noteCol) st.noteCol = 'black';
 if (st.colLock !== 'on' && st.colLock !== 'off') st.colLock = st.staff === st.noteCol ? 'on' : 'off';
 if (!st.lyrFont) st.lyrFont = 'fell';
+/* sizes (pt) of the title, voice names and staff text (Samuel 2026-11-25); in drawing units pt / 5 */
+const TEXT_PT = [['titlePt', 17], ['vnamePt', 9], ['stextPt', 9.5]];
+const ptU = k => Math.max(0.6, Math.min(10, (+st[k] || TEXT_PT.find(x => x[0] === k)[1]) / 5));
+for (const [k, d] of TEXT_PT) if (typeof st[k] !== 'number' || !isFinite(st[k])) st[k] = d;
 if (!st.titleFont) st.titleFont = 'pica'; if (!st.vnameFont) st.vnameFont = 'fell'; if (!st.stextFont) st.stextFont = 'fell';
 if (st.sysFont !== 'on') st.sysFont = 'off';
 /* the tactus hand is now the beige of the site's name box (Samuel 2026-11-24): a pale colour, so it is drawn fully opaque unless one changes that */
@@ -1344,10 +1351,10 @@ if (st.bars === 'mstrich') st.bars = 'full';
 /* barlines now stand in each staff only; everyone starts again from those */
 if (st.barsV !== 2) { st.bars = 'full'; st.barsV = 2; }
 /* presets (shared by the apps through the browser): the two built-in ones and the ones Samuel saves; one of them opens every score */
-const PRESET_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'printPaper', 'orient', 'flow'];
-const MENS1 = {eq: 'off', nota: 'real', stems: 'adaptive', accStyle: 'modern', clefs: 'modern', bars: 'out', bnum: 'line', bunit: 'bar', bpos: 'top', staff: 'black', noteCol: 'black', colLock: 'on', lines: '5', paperCol: 'white', size: 1.5, noteSize: 1.5, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', printPaper: 'A4', orient: 'portrait', flow: 'vertical'};
+const PRESET_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'titlePt', 'vnamePt', 'stextPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig', 'view', 'paper', 'printPaper', 'orient', 'flow'];
+const MENS1 = {eq: 'off', nota: 'real', stems: 'adaptive', accStyle: 'modern', clefs: 'modern', bars: 'out', bnum: 'line', bunit: 'bar', bpos: 'top', staff: 'black', noteCol: 'black', colLock: 'on', lines: '5', paperCol: 'white', size: 1.5, noteSize: 1.5, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, titlePt: 17, vnamePt: 9, stextPt: 9.5, hs: 0.47, vs: 0.6, ss: 0.8, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'A4', printPaper: 'A4', orient: 'portrait', flow: 'vertical'};
 const MENS2 = {...MENS1, bars: 'none', bnum: 'off', clefs: 'mens', size: 1.65, noteSize: 1.65, dashes: 'off'};
-const CF1 = {eq: 'off', nota: 'real', stems: 'adaptive', accStyle: 'modern', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', noteCol: 'black', colLock: 'off', lines: '5', paperCol: 'parchment', size: 3.6, noteSize: 3.6, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web', printPaper: 'A4'};
+const CF1 = {eq: 'off', nota: 'real', stems: 'adaptive', accStyle: 'modern', clefs: 'modern', bars: 'none', bnum: 'off', bunit: 'bar', bpos: 'top', staff: 'red', noteCol: 'black', colLock: 'off', lines: '5', paperCol: 'parchment', size: 3.6, noteSize: 3.6, sizeLock: 'on', lyrFont: 'fell', lyrPt: 8.5, titlePt: 17, vnamePt: 9, stextPt: 9.5, hs: 0.47, vs: 0.6, ss: 0.85, dashes: 'on', ed: 'on', lig: 'on', view: 'score', paper: 'web', printPaper: 'A4'};
 const CF2 = {...CF1, clefs: 'mens', dashes: 'off'};
 const IS_CF = APP.id === 'cantus-firmus';
 const IS_CAT = APP.id === 'cat-melodia' || APP.id === 'cat-contrapunctus';
@@ -1361,7 +1368,7 @@ function presetApply(pr){ for (const k of PRESET_KEYS) if (pr.s[k] !== undefined
 /* an app may open at a staff size of its own, whatever the preset says (CAT Melodia: a big staff for the query melody, Samuel 2026-11-24) */
 if (APP.startSize) { st.size = st.noteSize = APP.startSize; }
 /* changing an engraving setting unticks the ticked preset: the settings are now "current settings" of their own */
-const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
+const LOOK_KEYS = ['thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'lines', 'paperCol', 'size', 'noteSize', 'sizeLock', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'titlePt', 'vnamePt', 'stextPt', 'hs', 'vs', 'ss', 'dashes', 'ed', 'lig'];
 function presetDrift(){
   const S = presetStore(); if (!S.active) return;
   const P = presetAll().find(q => q.name === S.active);
@@ -2670,8 +2677,8 @@ function sectionLabels(line, top, W){
     let i = line.cols.findIndex((c, k) => k >= line.from && k < line.to && c.t >= sec.t - EPS);
     if (i < 0) continue;
     const x = sec.t < EPS ? line.x0 : line.xs[i] - 0.5;
-    if (/^[A-Z0-9]{1,3}$/.test(sec.label)) { const w = textW(sec.label, 1.9, false) + 0.9; s += `<g class="seclab" data-t="${sec.t}"><rect x="${f(x - 0.2)}" y="${f(top - 1.55)}" width="${f(w)}" height="2.2" fill="transparent" stroke="currentColor" stroke-width="0.14"/><text x="${f(x + 0.25)}" y="${f(top)}" font-size="1.9">${esc(sec.label)}</text></g>`; }
-    else s += `<text class="seclab" data-t="${sec.t}" x="${f(x)}" y="${f(top)}" font-size="1.9" font-style="italic">${esc(sec.label)}</text>`;
+    if (/^[A-Z0-9]{1,3}$/.test(sec.label)) { const S = ptU('stextPt'), w = textW(sec.label, S, false) + 0.9; s += `<g class="seclab" data-t="${sec.t}"><rect x="${f(x - 0.2)}" y="${f(top - 1.55)}" width="${f(w)}" height="2.2" fill="transparent" stroke="currentColor" stroke-width="0.14"/><text x="${f(x + 0.25)}" y="${f(top)}" font-size="${f(S)}">${esc(sec.label)}</text></g>`; }
+    else s += `<text class="seclab" data-t="${sec.t}" x="${f(x)}" y="${f(top)}" font-size="${f(ptU('stextPt'))}" font-style="italic">${esc(sec.label)}</text>`;
   }
   return s;
 }
@@ -2819,13 +2826,13 @@ function drawSystem(vlist, line, y, opts = {}){
       const nX = line.x0 - 0.8 - (opts.inc || 0);
       if (grp.voices.length === 1) {
         const vi = vlist.indexOf(v);
-        if (vi >= 0 && opts.names[vi]) s += `<text class="vnamehit" data-v="${v.idx}" x="${f(nX)}" y="${f(tops[k] + 2.6)}" font-size="1.8" text-anchor="end" font-style="italic">${esc(opts.names[vi])}</text>`;
+        if (vi >= 0 && opts.names[vi]) s += `<text class="vnamehit" data-v="${v.idx}" x="${f(nX)}" y="${f(tops[k] + 2.6)}" font-size="${f(ptU('vnamePt'))}" text-anchor="end" font-style="italic">${esc(opts.names[vi])}</text>`;
       } else {
         const gn = grp.voices.filter(gv => !(gv.subOf >= 0)).map(gv => ({v: gv, name: opts.names[vlist.indexOf(gv)] || ''})).filter(x => x.name);
         const step = Math.min(2.1, 4.4 / Math.max(1, gn.length));
         const y0 = tops[k] + 2.6 - (gn.length - 1) * step * 0.5;
         gn.forEach((item, idx) => {
-          s += `<text class="vnamehit" data-v="${item.v.idx}" x="${f(nX)}" y="${f(y0 + idx * step)}" font-size="1.65" text-anchor="end" font-style="italic">${esc(item.name)}</text>`;
+          s += `<text class="vnamehit" data-v="${item.v.idx}" x="${f(nX)}" y="${f(y0 + idx * step)}" font-size="${f(ptU('vnamePt') * 0.92)}" text-anchor="end" font-style="italic">${esc(item.name)}</text>`;
         });
       }
     }
@@ -2942,8 +2949,9 @@ function pageSvg(G, body){
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(G.W)} ${f(G.H)}" preserveAspectRatio="xMidYMid meet">${body}</svg>`;
 }
 function titleBlock(G, x0, x1, y, sub){
-  let s = `<text class="title texthit" data-f="title" x="${f((x0 + x1) / 2)}" y="${f(y + 3.2)}" font-size="3.4" text-anchor="middle">${esc(piece.title)}</text>`;
-  let h = 4.6;
+  const T = ptU('titlePt');
+  let s = `<text class="title texthit" data-f="title" x="${f((x0 + x1) / 2)}" y="${f(y + T * 0.94)}" font-size="${f(T)}" text-anchor="middle">${esc(piece.title)}</text>`;
+  let h = T + 1.2;
   if (sub) { s += `<text x="${f((x0 + x1) / 2)}" y="${f(y + h + 1.9)}" font-size="2.2" text-anchor="middle" font-style="italic">${esc(sub)}</text>`; h += 2.8; }
   if (piece.composer) { s += `<text class="texthit" data-f="comp" x="${f(x1)}" y="${f(y + h + 1.6)}" font-size="1.9" text-anchor="end">${esc(piece.composer)}</text>`; h += 2.4; }
   return {svg: s, h: h + 1.2};
@@ -3351,7 +3359,7 @@ function layoutScore(G){
   if (!vlist.length) return [];
   const names = vlist.map(v => APP.voiceNames === false ? '' : v.name);   /* CantusFirmus: no names before the staves */
   const inc = incipitOn() ? incipitW() : 0;
-  const indent = Math.max(...names.map(n => textW(n, 1.8, true))) + 1.4 + inc;
+  const indent = Math.max(...names.map(n => textW(n, ptU('vnamePt'), true))) + 1.4 + inc;
   /* Web, scrolling sideways: the whole score as one line, as long as the music */
   if (G.web && st.webScroll === 'horizontal') {
     const items = buildScoreItems(vlist, 1e6, {indent, ragged: true});
@@ -3499,7 +3507,7 @@ function layoutChoir(G){
       }
       side.forEach((v, k) => {
         const y0 = G.web ? yc : y0s ? y0s[k] : op.top + per * k;
-        if (APP.voiceNames !== false) body += `<text class="vnamehit" data-v="${v.idx}" x="${f(G.M)}" y="${f(y0 + 1.6)}" font-size="1.8" font-style="italic">${esc(v.name)}</text>`;
+        if (APP.voiceNames !== false) body += `<text class="vnamehit" data-v="${v.idx}" x="${f(G.M)}" y="${f(y0 + 1.6)}" font-size="${f(ptU('vnamePt'))}" font-style="italic">${esc(v.name)}</text>`;
         const lines = buildLines([v], op.a, op.b, W, {raggedLast: true});
         let cy = y0 + 2.4;
         lines.forEach(line => {
@@ -4153,6 +4161,7 @@ function syncUI(){
   for (const [k, sel, v, def] of TEXT_FONTS) { $(sel).value = st[k] || def; document.documentElement.style.setProperty(v, fontCss(st[k], def)); }
   document.documentElement.classList.toggle('sysfont', st.sysFont === 'on');
   if ($('#idleSec') && document.activeElement !== $('#idleSec')) $('#idleSec').value = String(st.idleSec);
+  document.querySelectorAll('.txtpt').forEach(el => { if (document.activeElement !== el) el.value = String(+(+st[el.dataset.k]).toFixed(2)); });
   if ($('#lyrPt') && document.activeElement !== $('#lyrPt')) $('#lyrPt').value = String(+(+st.lyrPt || 8.5).toFixed(2));
   if ($('#linesNum') && document.activeElement !== $('#linesNum')) $('#linesNum').value = String(staffLinesN());
   document.querySelectorAll('.bnx').forEach(el => { el.hidden = !st.bnum || st.bnum === 'off'; });
@@ -4392,6 +4401,12 @@ for (const k of ['hs', 'vs', 'ss']) $('#' + k).addEventListener('input', e => { 
 $('#lyrPt').addEventListener('input', e => { const v = parseFloat(e.target.value); if (isFinite(v) && v >= 3 && v <= 48) { st.lyrPt = v; save(); later(); } });
 $('#lyrPt').addEventListener('change', e => { const v = Math.max(4, Math.min(36, parseFloat(e.target.value) || 8.5)); st.lyrPt = v; e.target.value = String(+v.toFixed(2)); save(); render(); });
 $('#lyrPt').addEventListener('keydown', e => { e.stopPropagation(); });
+document.querySelectorAll('.txtpt').forEach(el => {
+  const k = el.dataset.k, def = TEXT_PT.find(x => x[0] === k)[1];
+  el.addEventListener('input', () => { const v = parseFloat(el.value); if (isFinite(v) && v >= 4 && v <= 48) { st[k] = v; save(); later(); } });
+  el.addEventListener('change', () => { const v = Math.max(4, Math.min(48, parseFloat(el.value) || def)); st[k] = v; el.value = String(+v.toFixed(2)); save(); render(); });
+  el.addEventListener('keydown', e => e.stopPropagation());
+});
 $('#thick').addEventListener('input', e => { st.thick = +e.target.value; rngSync('thick'); save(); applyThick(); });
 $('#thickL').addEventListener('input', e => { st.thickL = +e.target.value; rngSync('thickL'); save(); applyThick(); });
 document.addEventListener('pointerdown', e => {
@@ -5893,7 +5908,7 @@ function meiToKern(txt, fileName){
    of the old version into the new one before it is read. */
 const CB_VERSION = 1;
 /* the settings of the layout and look that go into the file (not personal choices such as dark mode, window transparency, volume or tempo) */
-const CB_SETTINGS = ['size', 'noteSize', 'sizeLock', 'thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'mens', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'dashes', 'ed', 'lig', 'lines', 'paperCol', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'hs', 'vs', 'ss', 'measAcross', 'origText', 'ann', 'ossia', 'verse', 'view', 'paper', 'printPaper', 'orient', 'flow', 'webScroll'];
+const CB_SETTINGS = ['size', 'noteSize', 'sizeLock', 'thick', 'thickL', 'eq', 'nota', 'heads', 'stems', 'accStyle', 'clefs', 'bars', 'mens', 'bnum', 'bunit', 'bpos', 'staff', 'noteCol', 'colLock', 'dashes', 'ed', 'lig', 'lines', 'paperCol', 'lyrFont', 'lyrPt', 'titleFont', 'vnameFont', 'stextFont', 'titlePt', 'vnamePt', 'stextPt', 'hs', 'vs', 'ss', 'measAcross', 'origText', 'ann', 'ossia', 'verse', 'view', 'paper', 'printPaper', 'orient', 'flow', 'webScroll'];
 /* what belongs to one piece: kept in st under the key of the piece */
 const CB_PIECE_ITEMS = ['vis', 'inc', 'incClef', 'staves', 'black', 'bounds'];
 /* from an older version of the file to the next: {from: object} where the object is {settings, items} (nothing yet: this is version 1) */

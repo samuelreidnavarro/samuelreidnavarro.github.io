@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<choirbook version="1" app="ChoirBook" saved="2026-11-25T11:00:00.000Z">
+  <piece>
+    <title>Small test (title, voice name and staff text sizes)</title>
+    <music format="humdrum-kern"><![CDATA[!!!OTL: Version 1 test piece
+!!!COM: Test, Composer
+**kern	**kern
+*I"Superius	*I"Bassus
+*clefG2	*clefF4
+*met(O)	*met(O)
+1c	1C
+1d	1D
+1e	1E
+1f	1F
+==	==
+*-	*-
+]]></music>
+  </piece>
+  <layout>
+    <setting name="size" type="number">1.5</setting>
+    <setting name="noteSize" type="number">1.5</setting>
+    <setting name="sizeLock" type="string">on</setting>
+    <setting name="thick" type="number">0</setting>
+    <setting name="thickL" type="number">0</setting>
+    <setting name="eq" type="string">off</setting>
+    <setting name="nota" type="string">real</setting>
+    <setting name="heads" type="string">modern</setting>
+    <setting name="stems" type="string">adaptive</setting>
+    <setting name="accStyle" type="string">modern</setting>
+    <setting name="clefs" type="string">modern</setting>
+    <setting name="bars" type="string">none</setting>
+    <setting name="mens" type="string">on</setting>
+    <setting name="bnum" type="string">off</setting>
+    <setting name="bunit" type="string">bar</setting>
+    <setting name="bpos" type="string">top</setting>
+    <setting name="staff" type="string">black</setting>
+    <setting name="noteCol" type="string">black</setting>
+    <setting name="colLock" type="string">on</setting>
+    <setting name="dashes" type="string">on</setting>
+    <setting name="ed" type="string">on</setting>
+    <setting name="lig" type="string">on</setting>
+    <setting name="lines" type="string">5</setting>
+    <setting name="paperCol" type="string">white</setting>
+    <setting name="lyrFont" type="string">fell</setting>
+    <setting name="lyrPt" type="number">8.5</setting>
+    <setting name="titleFont" type="string">garamond</setting>
+    <setting name="vnameFont" type="string">sans</setting>
+    <setting name="stextFont" type="string">palatino</setting>
+    <setting name="titlePt" type="number">22</setting>
+    <setting name="vnamePt" type="number">11</setting>
+    <setting name="stextPt" type="number">12</setting>
+    <setting name="hs" type="number">0.47</setting>
+    <setting name="vs" type="number">0.6</setting>
+    <setting name="ss" type="number">0.8</setting>
+    <setting name="measAcross" type="string">on</setting>
+    <setting name="origText" type="string">modern</setting>
+    <setting name="ann" type="string">on</setting>
+    <setting name="ossia" type="string">on</setting>
+    <setting name="verse" type="number">0</setting>
+    <setting name="view" type="string">score</setting>
+    <setting name="paper" type="string">A4</setting>
+    <setting name="printPaper" type="string">A4</setting>
+    <setting name="orient" type="string">portrait</setting>
+    <setting name="flow" type="string">vertical</setting>
+    <setting name="webScroll" type="string">vertical</setting>
+  </layout>
+  <pieceState>
+    <item name="vis"><![CDATA[{"0":{"on":true,"notes":true,"lyr":true,"play":true},"1":{"on":true,"notes":true,"lyr":true,"play":true},"2":{"on":true,"notes":true,"lyr":true,"play":true},"3":{"on":true,"notes":true,"lyr":true,"play":true},"undefined":{"on":true,"notes":true,"lyr":true,"play":true}}]]></item>
+  </pieceState>
+</choirbook>
