@@ -6591,15 +6591,45 @@ const refuse = () => { if (H.refuse) H.refuse(); };
    Overwrite: the new note takes the place of what stood there for its length; a note it covers only partly keeps
    what is left as a rest, so the other voices stay where they are. */
 function shiftMarks(v, from, by){ for (const arr of [v.mets, v.keys, v.clefs]) for (const m of arr) if (m.ei > from || (by > 0 && m.ei === from && from > 0)) m.ei += by; }
+/* Plainchant stays in its own system (Samuel 2026-11-25): chant passages as time spans [a, b), and what may be written or walked into them */
+let CTX_CH = null;   /* set by a click: true on a chant staff, false on a polyphony staff */
+function chantPassages(){
+  const out = [];
+  for (const v of piece.voices) {
+    let cur = null;
+    for (const e of v.events) {
+      if (e.ch) { if (cur && Math.abs(cur.b - e.t) < EPS) cur.b = rt(e.t + e.d); else { cur = {a: e.t, b: rt(e.t + e.d)}; out.push(cur); } }
+      else cur = null;
+    }
+  }
+  out.sort((x, y) => x.a - y.a);
+  const m = [];
+  for (const o of out) { const l = m[m.length - 1]; if (l && o.a <= l.b + EPS) l.b = Math.max(l.b, o.b); else m.push({a: o.a, b: o.b}); }
+  return m;
+}
+/* the caret or the selection as chant (true) or polyphony (false); undefined when nothing says */
+function chantCtx(){
+  if (ed.sel) { const v = piece.voices[ed.sel.vi], e = v && v.events[ed.sel.ei]; if (e) return !!e.ch; }
+  return ed.ins ? ed.ins.ch : undefined;
+}
 function insertEvent(vi, at, step, isRest, pad = 0, alt){
   const v = piece.voices[vi]; if (!v) return;
   if (!writable(v)) { refuse(); return; }
   const val = VALS.find(x => x[0] === ed.val)[1];
   const selEv = ed.sel && ed.sel.vi === vi ? v.events[ed.sel.ei] : null;
+  const cctx = CTX_CH !== null ? CTX_CH : (selEv ? !!selEv.ch : (ed.ins && ed.ins.vi === vi ? ed.ins.ch : undefined));
+  CTX_CH = null;
   let off = 0;
   if (!ed.sel && ed.ins && ed.ins.vi === vi && ed.ins.ei === at && at < v.events.length && ed.ins.off > EPS && ed.ins.off < v.events[at].d - EPS) off = ed.ins.off;
   const t = at < v.events.length ? rt(v.events[at].t + off) : rt(v.end + (pad > EPS ? pad : 0));
   /* alt: a sharp, flat or natural of its own (the keyboard's black and white keys); otherwise the signature's */
+  /* polyphony never goes into a chant passage (and chant never into the polyphony) */
+  {
+    const hasCh = v.events.some(x => x.ch);
+    const ps = chantPassages();
+    const inside = ps.some(q => hasCh ? (t > q.a + EPS && t < q.b - EPS) : (t > q.a - EPS && t < q.b - EPS));
+    if (inside && cctx !== true && !(selEv && selEv.ch)) { toast('That is a plainchant passage: it is a system of its own. Click on its staff to write in it.'); return; }
+  }
   const imp = isRest ? null : implied(v, step, t);
   /* a flat, sharp, natural or dot pressed before the note: this note takes it (once) */
   let altU = alt, armedAcc = false, sgNew;
@@ -6644,7 +6674,7 @@ function insertEvent(vi, at, step, isRest, pad = 0, alt){
     if (!e.rest && pv && nx && pv.lig && pv.lig === nx.lig && !pv.rest && !nx.rest) e.lig = pv.lig;
     /* in a plainchant passage (or right after one) the note is chant: one semibreve, or held with the mora; it never writes over
        the music after the passage, it goes in before it */
-    if (selEv ? !!selEv.ch : (pv && pv.ch) || (!pv && nx && nx.ch)) {
+    if (cctx !== undefined ? cctx : (pv && pv.ch) || (!pv && nx && nx.ch)) {
       e.ch = true; e.d = dotted || perfAdd ? rt(CH_UNIT * 1.5) : CH_UNIT; delete e.colH; delete e.cdot; delete e.dd; delete e.pa;
     }
     v.events.splice(k, 0, e);
@@ -6706,10 +6736,11 @@ function moveCaret(dir){
     const evs = v.events, isCh = i => !!(evs[i] && evs[i].ch);
     const pos = ed.sel ? ed.sel.ei : ed.ins ? ed.ins.ei : -1;
     const onNote = !!ed.sel;
-    const nextCh = onNote ? isCh(pos) : (isCh(pos) || isCh(pos - 1));
+    const cx = ed.ins ? ed.ins.ch : undefined;
+    const nextCh = onNote ? isCh(pos) : cx === false ? false : cx === true ? (isCh(pos) || isCh(pos - 1)) : (isCh(pos) || isCh(pos - 1));
     if (pos >= 0 && nextCh) {
       const pick = ei => { ed.sel = {vi, ei}; ed.ins = {vi, ei: ei + 1, off: 0, pad: 0}; showSel(true); syncEdit(); };
-      const caretAt = ei => { ed.sel = null; ed.ins = {vi, ei, off: 0, pad: 0}; showSel(true); syncEdit(); };
+      const caretAt = ei => { ed.sel = null; ed.ins = {vi, ei, off: 0, pad: 0, ch: true}; showSel(true); syncEdit(); };
       if (dir > 0) {
         if (onNote) { if (isCh(pos + 1)) pick(pos + 1); else caretAt(pos + 1); }
         else if (isCh(pos)) pick(pos);
@@ -6724,6 +6755,13 @@ function moveCaret(dir){
   const g = navGrid(v, T);
   const q = T / g;
   let nt = dir > 0 ? (Math.floor(q + 1e-6) + 1) * g : (Math.ceil(q - 1e-6) - 1) * g;
+  /* the polyphony does not walk into a chant passage, nor out of it */
+  for (const q of chantPassages()) {
+    if (dir > 0 && T < q.a + EPS && nt > q.a + EPS) nt = q.a;
+    else if (dir < 0 && T > q.b - EPS && nt < q.b - EPS) nt = q.b;
+    else if (dir > 0 && T > q.a + EPS && T < q.b - EPS) return;
+    else if (dir < 0 && T > q.a + EPS && T < q.b - EPS && !v.events.some(x => x.ch)) return;
+  }
   nt = rt(Math.max(0, Math.min(v.end + 32, nt)));     /* on past the last note, into empty space, where a new note can be written */
   let ei = v.events.length, off = 0, pad = 0;
   for (let i = 0; i < v.events.length; i++) {
@@ -6731,7 +6769,7 @@ function moveCaret(dir){
     if (nt < e.t + e.d - EPS) { ei = i; off = rt(nt - e.t); if (off < EPS) off = 0; break; }
   }
   if (ei >= v.events.length && nt > v.end + EPS) pad = rt(nt - v.end);
-  ed.sel = null; ed.ins = {vi, ei, off, pad};
+  ed.sel = null; ed.ins = {vi, ei, off, pad, ch: false};
   showSel(true); syncEdit();
 }
 const OPS = {
@@ -8106,7 +8144,7 @@ pagesEl.addEventListener('click', e => {
       const tg = staffTarget(r0, e);
       if (tg) {
         const {at} = eventIndexFor(tg);
-        ed.range = null; ed.picks = null; ed.sel = null; ed.ins = {vi: tg.vi, ei: at, off: 0, pad: 0};
+        ed.range = null; ed.picks = null; ed.sel = null; ed.ins = {vi: tg.vi, ei: at, off: 0, pad: 0, ch: !!r0.dataset.chant};
         showSel(); syncEdit();
       }
     }
@@ -8128,8 +8166,22 @@ pagesEl.addEventListener('click', e => {
     const tp = timePlace(rect, tg);
     if (tp) {
       const v = tg.v;
-      if (tp.ei >= 0) { ed.sel = null; ed.ins = {vi: tg.vi, ei: tp.ei, off: rt(tp.T - v.events[tp.ei].t)}; insertEvent(tg.vi, tp.ei, tg.step, ed.inRest); }
-      else insertEvent(tg.vi, v.events.length, tg.step, ed.inRest, rt(tp.T - v.end));
+      const chRect = !!rect.dataset.chant;
+      CTX_CH = chRect;
+      /* a click on a chant staff stays in its passage: past the last note it adds to the end of the passage, never to the polyphony after it */
+      if (chRect) {
+        const s0 = v.syms && v.syms[+rect.dataset.k0], tq = s0 ? s0.t : tp.T;
+        const q = chantPassages().find(q2 => tq > q2.a - EPS && tq < q2.b - EPS);
+        if (q && tp.T > q.b - EPS) {
+          let ei = v.events.findIndex(e => e.t > q.b - EPS); if (ei < 0) ei = v.events.length;
+          ed.sel = null; ed.ins = {vi: tg.vi, ei, off: 0, pad: 0, ch: true};
+          insertEvent(tg.vi, ei, tg.step, ed.inRest); CTX_CH = null;
+          return;
+        }
+      }
+      if (tp.ei >= 0) { ed.sel = null; ed.ins = {vi: tg.vi, ei: tp.ei, off: rt(tp.T - v.events[tp.ei].t), ch: chRect}; insertEvent(tg.vi, tp.ei, tg.step, ed.inRest); }
+      else { ed.ins = {vi: tg.vi, ei: v.events.length, off: 0, pad: 0, ch: chRect}; insertEvent(tg.vi, v.events.length, tg.step, ed.inRest, rt(tp.T - v.end)); }
+      CTX_CH = null;
       return;
     }
     const {at} = eventIndexFor(tg);
