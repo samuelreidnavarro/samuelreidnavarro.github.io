@@ -7187,17 +7187,31 @@ function setMens(sign, justThis){
       /* the same sign as the one already in effect from earlier in the piece: no override at all (Samuel 2026-11-14) */
       let prev = null; for (const q of v.mets) if (q.t < t - EPS) prev = q.sign;
       if (prev !== null && mensBase(prev) === sign) { if (m) v.mets = v.mets.filter(x => x !== m); continue; }
-      if (m) { m.sign = sign + m.sign.slice(mensBase(m.sign).length); continue; }   /* modus, maximodus and equivalence stay */
+      if (m) {
+        /* the modern equivalent follows the sign, unless one was typed by hand (Samuel 2026-11-25): the barlines then follow too */
+        const was = mensBase(m.sign);
+        m.sign = sign + m.sign.slice(was.length);   /* modus, maximodus and equivalence stay */
+        if (!m.mod || m.mod === modFor(was)) { const md = modFor(sign); if (md) m.mod = md; else delete m.mod; }
+        continue;
+      }
       /* in a voice with no notes yet the sign stands at the start, before the first note to come */
       let k = v.events.findIndex(e => eq(e.t, t));
       if (k < 0 && t < EPS && !v.events.length) k = 0;
-      if (k >= 0) { v.mets.push({t, sign, ei: k}); v.mets.sort((a, b) => a.t - b.t); }
+      if (k >= 0) { const md = modFor(sign); v.mets.push(md ? {t, sign, ei: k, mod: md} : {t, sign, ei: k}); v.mets.sort((a, b) => a.t - b.t); }
     }
   });
 }
 /* the modern equivalent's two fields: filled from the sign, with the usual equivalent shown faintly as a hint */
 const MOD_HINT = {'O': '3/1', 'C': '2/1', 'O|': '3/1', 'C|': '2/1', 'O.': '9/2', 'C.': '6/2', 'Cr': '2/1', '3': '3/1', 'O3': '3/1', 'C3': '3/1', 'C|3': '3/1', 'C2': '2/1'};
 /* modus, maximodus, the rules and the two editorial choices: their buttons show what is in force */
+/* the usual modern equivalent of a sign, counted in the values as written (a minim is a half note): one bar = one breve of the sign.
+   O 3/1, C 2/1, O. 9/2, C. 6/2; a stroke (O|, C|) leaves the count as it is (it is about speed); 3 and O3/C3 3/1, 2 2/1 */
+function modFor(sign){
+  const b = mensBase(sign || ''); if (!b) return '';
+  if (MOD_HINT[b]) return MOD_HINT[b];
+  const mi = mensInfo(b);
+  return mi.P === 3 ? `${mi.T * 3}/2` : `${mi.T}/1`;
+}
 function mensOpt(k){ const o = String(piece && piece.meta && piece.meta.MENSOPT || ''); return o.split(',').includes(k); }
 function defaultEquiv(v, m){
   const mi = mensInfo(m ? m.sign : null);
